@@ -160,7 +160,7 @@ export interface InvoiceRelatedPanelProps {
 }
 
 /** Methods with a word in `payment.method.*` — anything else is shown as stored. */
-const NAMED_METHODS = new Set(['cash', 'bank', 'credit', 'mobile_money', 'other'])
+const NAMED_METHODS = new Set(['cash', 'bank', 'credit', 'mobile_money', 'other', 'order_deposit'])
 
 /** «نقدی», not `cash` (seen raw on the live invoice page, 14 Oct). */
 function methodLabel(

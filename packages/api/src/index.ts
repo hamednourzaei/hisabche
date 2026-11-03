@@ -1072,6 +1072,14 @@ export {
   type RateQuote,
 } from './hooks/currency-rates'
 
+// ─── Business profile of the workspace (V53 D4) ───
+export {
+  useWorkspaceProfile,
+  useSaveWorkspaceProfile,
+  workspaceProfileKeys,
+  type WorkspaceProfileView,
+} from './hooks/workspace-profile'
+
 // ─── AI assistant (T13) ───
 export {
   aiKeys,

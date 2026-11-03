@@ -87,7 +87,16 @@ const nowIso = (): string => new Date().toISOString()
 const ESSENTIAL_ENTITIES = ['product', 'customer', 'warehouse', 'product_stock'] as const
 
 /** The rest of the operational set, filled in the background. */
-const BACKGROUND_ENTITIES = ['invoice', 'branch', 'exchange_rate'] as const
+const BACKGROUND_ENTITIES = [
+  'invoice',
+  'branch',
+  'exchange_rate',
+  // Customer advances, then the movements that consume them. A device that had
+  // only the receipt would offer the whole amount again on the next sale.
+  'order_deposits',
+  'order_deposit_applications',
+  'order_deposit_refunds',
+] as const
 
 const DELTA_ENTITIES = [...ESSENTIAL_ENTITIES, ...BACKGROUND_ENTITIES] as const
 type DeltaEntity = (typeof DELTA_ENTITIES)[number]
@@ -203,6 +212,65 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     updated_at: str(r.updated_at) ?? nowIso(),
     version: num(r.version) || 1,
     dirty: 0,
+  }),
+  // ─── Customer advances ───────────────────────────────────────
+  //
+  // ⚠️ THE RECEIPT ROW ALONE IS NOT THE BALANCE. What is left of a deposit is
+  // the receipt minus its applications and refunds, so all three entities are
+  // pulled; a device with only the first would offer spent money again.
+  order_deposits: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    order_id: str(r.order_id) ?? '',
+    customer_id: str(r.customer_id) ?? '',
+    amount_minor: num(r.amount_minor),
+    payment_method: str(r.payment_method) ?? 'cash',
+    applied_invoice_id: str(r.applied_invoice_id),
+    // NULL stays NULL: an unknown currency is not «the books currency».
+    currency: str(r.currency),
+    posting_status: str(r.posting_status),
+    // ⚠️ `journal_entry_id` IS ABSENT ON PURPOSE. It names an entry in the
+    // books that wrote the receipt; writing the server's id over the one this
+    // device's own ledger holds would point at an entry it does not have.
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.created_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
+  order_deposit_applications: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    deposit_id: str(r.deposit_id) ?? '',
+    invoice_id: str(r.invoice_id) ?? '',
+    amount_minor: num(r.amount_minor),
+    currency: str(r.currency) ?? '',
+    idempotency_key: str(r.idempotency_key) ?? '',
+    // ⚠️ NO `payment_id` ON A PULLED MOVEMENT. It names a payment in the
+    // server's books that this device does not have; `countsAgainstDeposit`
+    // only counts a movement whose payment is posted, so filling it in would
+    // hide the application and offer the same money again.
+    sync_status: 'posted',
+    created_by: str(r.created_by),
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.created_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
+  order_deposit_refunds: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    deposit_id: str(r.deposit_id) ?? '',
+    amount_minor: num(r.amount_minor),
+    currency: str(r.currency) ?? '',
+    method: str(r.method) ?? 'cash',
+    reason: str(r.reason) ?? '',
+    idempotency_key: str(r.idempotency_key) ?? '',
+    sync_status: 'posted',
+    created_by: str(r.created_by),
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.created_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
   }),
 }
 
@@ -433,6 +501,55 @@ async function rehydrate(workspaceId: string | null): Promise<number> {
   return written
 }
 
+/**
+ * Deposit movements: one logical move, one row.
+ *
+ * ⚠️ THE DEVICE THAT MADE A MOVE RECOGNISES ITS OWN ECHO HERE.
+ *
+ * A device cannot hold the row lock the server's `order_deposit_apply` holds,
+ * so it writes the movement itself (a local id, a local payment, a local
+ * ledger entry) and then asks the server to do the same thing with the same
+ * idempotency key. The server writes its own row under its own id. Pulling
+ * that row onto the device that made the move would be the same money counted
+ * twice — the balance would show 40 000 applied out of a 40 000 application
+ * that only happened once.
+ *
+ * The idempotency key IS the identity of the move (it is what the server
+ * deduplicates on), so a row that matches one this device already holds by
+ * key and differs only by id is its own echo: skipped, not written.
+ *
+ * Other devices have no row with that key and accept the server's row — which
+ * is exactly how a deposit taken at one counter becomes visible at the next.
+ */
+async function dropOwnDepositMovements(
+  entity: DeltaEntity,
+  rows: Array<Record<string, unknown>>,
+): Promise<Array<Record<string, unknown>>> {
+  if (entity !== 'order_deposit_applications' && entity !== 'order_deposit_refunds') {
+    return rows
+  }
+  const desktop = bridge()
+  if (!desktop) return rows
+
+  const kept: Array<Record<string, unknown>> = []
+  for (const row of rows) {
+    const {
+      rows: [held],
+    } = await desktop.db.query<Record<string, unknown>>({
+      table: entity,
+      where: {
+        workspace_id: String(row.workspace_id ?? ''),
+        deposit_id: String(row.deposit_id ?? ''),
+        idempotency_key: String(row.idempotency_key ?? ''),
+      },
+      limit: 1,
+    })
+    if (held && String(held.id) !== String(row.id)) continue
+    kept.push(row)
+  }
+  return kept
+}
+
 /** Apply one page of the change log to SQLite. */
 export async function applyChanges(page: PullPage): Promise<number> {
   const desktop = bridge()
@@ -443,9 +560,12 @@ export async function applyChanges(page: PullPage): Promise<number> {
     const mine = page.changes.filter((change) => change.entityType === entity)
     if (mine.length === 0) continue
 
-    const upserts = mine
-      .filter((change) => change.operation !== 'delete' && change.data)
-      .map((change) => FROM_LOG[entity](change.data as Record<string, unknown>))
+    const upserts = await dropOwnDepositMovements(
+      entity,
+      mine
+        .filter((change) => change.operation !== 'delete' && change.data)
+        .map((change) => FROM_LOG[entity](change.data as Record<string, unknown>)),
+    )
     if (entity === 'invoice') await attachCustomerNames(upserts)
 
     // ⚠️ `data: null` on a non-delete means ONLY «the row is gone since» — the
@@ -647,6 +767,78 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
     if (!invoiceId) throw new Error('MISSING_INVOICE_ID:invoice_returns')
     await apiClient.post(`/invoices/${invoiceId}/returns`, entry.payload, { headers })
     return
+  }
+
+  // A deposit that was applied to an invoice, or paid back, on the device.
+  //
+  // ⚠️ THE DOMAIN ENDPOINT, NOT A ROW WRITER. What settles an invoice is one
+  // locked Postgres transaction (docs/order-deposit-apply-refund-01-migration.sql):
+  // it re-reads the remaining balance, writes the payment, the allocation, the
+  // ledger entry and the audit row together. The device's queue carries only
+  // WHAT was asked for and the idempotency key the server deduplicates on, so a
+  // retried delivery returns the first result instead of settling twice.
+  if (entry.entity === 'order_deposits') {
+    const payload = entry.payload as Record<string, unknown>
+    const orderId = String(payload.orderId ?? '')
+    if (!orderId) throw new Error('MISSING_DEPOSIT_ORDER_ID:order_deposits')
+
+    // The receipt itself. `id` is the deposit's own id, the one the device
+    // already stored: the server writes THAT row, so pulling it back later
+    // updates the device's deposit instead of creating a second one.
+    if (payload.movement === 'receipt') {
+      const id = String(payload.id ?? entry.clientId ?? '')
+      if (!id) throw new Error('MISSING_DEPOSIT_ID:order_deposits')
+      await apiClient.post(
+        `/orders/${orderId}/deposits`,
+        {
+          id,
+          customerId: payload.customerId,
+          amountMinor: payload.amountMinor,
+          ...(payload.paymentMethod ? { paymentMethod: payload.paymentMethod } : {}),
+          ...(payload.date ? { date: payload.date } : {}),
+        },
+        { headers },
+      )
+      return
+    }
+
+    const depositId = String(payload.depositId ?? '')
+    if (!depositId) throw new Error('MISSING_DEPOSIT_ID:order_deposits')
+
+    if (payload.movement === 'apply') {
+      await apiClient.post(
+        `/orders/${orderId}/deposits/${depositId}/apply`,
+        {
+          invoiceId: payload.invoiceId,
+          amountMinor: payload.amountMinor,
+          idempotencyKey: payload.idempotencyKey,
+          ...(payload.date ? { date: payload.date } : {}),
+        },
+        { headers },
+      )
+      return
+    }
+
+    if (payload.movement === 'refund') {
+      await apiClient.post(
+        `/orders/${orderId}/deposits/${depositId}/refund`,
+        {
+          amountMinor: payload.amountMinor,
+          reason: payload.reason,
+          idempotencyKey: payload.idempotencyKey,
+          ...(payload.method ? { method: payload.method } : {}),
+          ...(payload.date ? { date: payload.date } : {}),
+        },
+        { headers },
+      )
+      return
+    }
+
+    const refusal = new Error('MISSING_DEPOSIT_MOVEMENT:order_deposits') as Error & {
+      permanent: boolean
+    }
+    refusal.permanent = true
+    throw refusal
   }
 
   if (entry.entity === 'pos_cash_movement') {

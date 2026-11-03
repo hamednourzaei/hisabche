@@ -13,6 +13,7 @@
 
 import { useMemo } from 'react'
 import { useAuthStore } from '@hisabche/store'
+import { useWorkspaceProfile } from '@hisabche/api'
 import { resolveBusinessProfile, type BusinessProfile } from '@hisabche/validation'
 
 export interface BusinessProfileState {
@@ -22,8 +23,14 @@ export interface BusinessProfileState {
 }
 
 export function useBusinessProfile(): BusinessProfileState {
-  const businessTypes = useAuthStore((state) => state.user?.businessTypes)
+  const userTypes = useAuthStore((state) => state.user?.businessTypes)
   const ready = useAuthStore((state) => state.user !== null)
+  const workspace = useWorkspaceProfile().data
+
+  // The WORKSPACE profile is authoritative once the business declared one (V53 D4); until then — and
+  // whenever it cannot be read (offline, migration not applied) — the person's own trades are used,
+  // exactly as before. The same resolver runs either way.
+  const businessTypes = workspace?.declared ? workspace.businessTypes : userTypes
 
   const profile = useMemo(() => resolveBusinessProfile(businessTypes ?? []), [businessTypes])
 

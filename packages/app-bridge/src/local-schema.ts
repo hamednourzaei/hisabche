@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 17
+export const SCHEMA_VERSION = 18
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -1143,6 +1143,64 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'cancellation_reason',
     'client_notes',
     'internal_notes',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  // ─── Customer advances (v18) ─────────────────────────────────
+  // The pull writes these; the backup reads every table in `localTableSchema`.
+  order_deposits: [
+    'id',
+    'workspace_id',
+    'order_id',
+    'customer_id',
+    'amount_minor',
+    'payment_method',
+    'currency',
+    'posting_status',
+    'journal_entry_id',
+    'applied_invoice_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  order_deposit_applications: [
+    'id',
+    'workspace_id',
+    'deposit_id',
+    'invoice_id',
+    'amount_minor',
+    'currency',
+    'idempotency_key',
+    'payment_id',
+    'journal_entry_id',
+    'sync_status',
+    'last_error',
+    'created_by',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  order_deposit_refunds: [
+    'id',
+    'workspace_id',
+    'deposit_id',
+    'amount_minor',
+    'currency',
+    'method',
+    'reason',
+    'idempotency_key',
+    'payment_id',
+    'journal_entry_id',
+    'sync_status',
+    'last_error',
+    'created_by',
     'created_at',
     'updated_at',
     'deleted_at',

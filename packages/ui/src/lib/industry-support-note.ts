@@ -18,9 +18,14 @@ import { resolveBusinessProfile } from '@hisabche/validation'
 /** i18n key of the note, or null when there is nothing to say. */
 export const INDUSTRY_NOTE_GENERIC_KEY = 'industry.supportNote.generic'
 
+/** A trade whose specialised capabilities are real but not yet complete (`partial`). */
+export const INDUSTRY_NOTE_PARTIAL_KEY = 'industry.supportNote.partial'
+
 /**
  * `null` when nothing was chosen (an empty selection is not a decision to
- * annotate) or when the resolved profile really is specialised.
+ * annotate) or when the resolved profile is specialised AND complete. A
+ * specialised profile that switches on a partial capability says so — the
+ * screen never lets a half-built chain read as a finished one.
  */
 export function industrySupportNoteKey(
   types: readonly string[] | string | null | undefined,
@@ -28,5 +33,7 @@ export function industrySupportNoteKey(
   const selected = Array.isArray(types) ? types : typeof types === 'string' ? types.split(',') : []
   if (selected.every((value) => typeof value !== 'string' || value.trim() === '')) return null
 
-  return resolveBusinessProfile(types).isGeneric ? INDUSTRY_NOTE_GENERIC_KEY : null
+  const profile = resolveBusinessProfile(types)
+  if (profile.isGeneric) return INDUSTRY_NOTE_GENERIC_KEY
+  return profile.partialCapabilities.length > 0 ? INDUSTRY_NOTE_PARTIAL_KEY : null
 }

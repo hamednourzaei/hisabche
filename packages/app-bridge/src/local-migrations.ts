@@ -20,6 +20,8 @@ import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
 import {
+  ORDER_DEPOSIT_ALTERS,
+  ORDER_DEPOSIT_MOVEMENT_STATEMENTS,
   PACKAGE_CREDIT_LEDGER_STATEMENTS,
   PACKAGE_DEFERRED_REVENUE_ALTERS,
   RETURN_DEDUCTIONS_STATEMENTS,
@@ -630,6 +632,19 @@ const V17_PACKAGE_DEFERRED_REVENUE: LocalMigration = {
   statements: [...PACKAGE_DEFERRED_REVENUE_ALTERS],
 }
 
+/**
+ * v17 -> v18: an order deposit can be applied to an invoice or refunded.
+ *
+ * The deposit gains the currency it was taken in, whether its receipt reached
+ * the ledger, and the entry that booked it; the two movement tables record what
+ * was ASKED FOR on this device. A deposit written before v18 keeps
+ * `currency = NULL` — UNKNOWN, refused rather than guessed.
+ */
+const V18_ORDER_DEPOSIT_MOVEMENTS: LocalMigration = {
+  to: 18,
+  statements: [...ORDER_DEPOSIT_ALTERS, ...ORDER_DEPOSIT_MOVEMENT_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -647,6 +662,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V15_SERVICE_DELIVERY_AUDIT,
   V16_SERVICE_CANCELLATION_REASON,
   V17_PACKAGE_DEFERRED_REVENUE,
+  V18_ORDER_DEPOSIT_MOVEMENTS,
 ]
 
 /**

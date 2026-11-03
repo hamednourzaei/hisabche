@@ -237,6 +237,10 @@ export const FEATURE_REGISTRY = {
   'settings.books_currency': { execution: 'local', plans: ALL },
   'settings.time_zone': { execution: 'local', plans: ALL },
   'settings.workspace_profile': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  // V53 D4: the server's authoritative copy of the workspace profile. READING it is always allowed;
+  // CHANGING it is a separate feature, because a feature that is «always allowed» must not also write.
+  'settings.business_profile': { execution: 'server', plans: ALL, alwaysAllowed: true },
+  'settings.business_profile_edit': { execution: 'server', plans: ALL },
   'settings.business_stamp': { execution: 'local', plans: ALL },
   'settings.hardware': { execution: 'local', plans: ALL },
   'settings.currencies': { execution: 'local', plans: ALL, alwaysAllowed: true },

@@ -1,0 +1,342 @@
+{
+  "version": 1,
+  "mission": "V53 Universal Business Core",
+  "scope": "Phases A-C only (baseline + P13, capability architecture, business-profile composition). Store/Teacher/onboarding deliberately not started.",
+  "currentPhase": "continuation-5 (P1 deposit receipt, apply and refund implemented; refund reason mandatory — owner Option B)",
+  "lastMeasured": {
+    "date": "2026-11-03",
+    "m5Gate": {
+      "G1": "GREEN - 3 files / 18 tests / exit 0",
+      "G2": "RED - no human VERIFY output in the tree",
+      "G3": "RED (BLOCKED_EXTERNAL) - embedded-postgres windows-x64/native/bin holds 29 files and 0 .exe",
+      "G4": "PARTIAL - owner answered OD-5, M5-1, M5-2, M5-4, RG-1, OD-6; still open M5-3 and M5-5; default-only M5-A4, M5-A8, M5-A9, M5-A10, M5-B1, M5-B2",
+      "G5": "GREEN - 9 files in packages/ui/src/components/ui/service-delivery"
+    },
+    "pglite": {
+      "serviceDelivery0203": "setup OK, both VERIFY rows all true, legacy_* = 0, ALL 14 PASSED, exit 0",
+      "cycleCount02": "setup OK, VERIFY pass=true, ALL 10 PASSED, exit 0",
+      "orderDepositApplyRefund01": "setup OK, VERIFY all true (all result sets checked: 12-arg has_refund, refunds_12_columns, reason_mandatory, reason check VALIDATED), ALL 39 PASSED (migration applied twice; real accounting_post_journal_entry + payments_record + invoices_project_settlement extracted from docs/), exit 0"
+    },
+    "v53Tests": {
+      "backend": "workspace-profile + draft-po-route + cycle-count-guard + stock-count: 4 files / 65 tests / exit 0",
+      "validation": "draft-purchase-order + capability-composition: 2 files / 36 tests / exit 0"
+    }
+  },
+  "completedSlices": [
+    {
+      "id": "P1-receipt",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "P1 — a deposit is a liability, not revenue (owner's Dr/Cr table).",
+      "what": "Receiving a deposit books Dr cash|bank / Cr customer advances through the existing ledger port, keyed by the deposit id so a retry cannot book it twice. The amount is converted from stored minor units with the workspace's own fraction digits (AFN 0, USD 2), never a hardcoded 100. A chart of accounts that cannot express the posting still records the deposit and reports `skipped`.",
+      "files": [
+        "packages/validation/src/schemas/accounting.schema.ts",
+        "packages/validation/src/schemas/standard-accounts.ts",
+        "packages/i18n/messages/fa/common.json",
+        "packages/i18n/messages/af/common.json",
+        "packages/i18n/messages/en/common.json",
+        "packages/ui/src/lib/accounting/account-name.ts",
+        "backend/src/services/accounting/ledger.port.ts",
+        "backend/src/services/sales/order-deposit.service.ts",
+        "backend/src/routes/order-deposit.routes.ts",
+        "backend/src/utils/concurrency-safety-map.ts",
+        "backend/src/__tests__/order-deposit-liability.test.ts",
+        "backend/src/__tests__/customer-advances-01.pg.test.ts",
+        "backend/src/__tests__/helpers/customer-advances-01-scenarios.ts",
+        "docs/customer-advances-01-migration.sql",
+        "docs/VERIFY-customer-advances-01.sql"
+      ],
+      "tests": {
+        "backendRoute": "order-deposit-liability.test.ts 9/9, exit 0",
+        "pglite": "customer-advances-01: setup OK, VERIFY all true, ALL 6 PASSED, exit 0",
+        "validation": "53 files / 799 tests, exit 0",
+        "eslint": "0 errors on every changed file"
+      },
+      "notDone": "Applying a deposit to a final invoice (Dr customer advances / Cr receivable) and refunding it (Dr customer advances / Cr cash|bank). Both change invoice or refund state and are their own slice; today the deposit is recorded correctly as a debt and is simply not settled yet. Nothing on the device books a deposit (the device has no local ledger step for it) — phase 11 gap.",
+      "migrationStatus": "PENDING HUMAN CONFIRMATION — docs/customer-advances-01-migration.sql has not been run on the owner's database."
+    },
+    {
+      "id": "P1-apply-refund",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "P1 — applying a deposit settles an invoice; refunding it returns the money. Both are ONE Postgres transaction (owner rejected post-then-update). Owner Option B: refunds use the canonical `payment.record` capability, no `payment.refund`, and the reason is mandatory and server-validated.",
+      "what": "docs/order-deposit-apply-refund-01-migration.sql adds `order_deposit_balance`, `order_deposit_apply` and `order_deposit_refund` (rev2). Each locks the deposit row FOR UPDATE, validates the invoice (same workspace, same customer, same known currency, final document, a posted invoice entry, real remaining balance), then writes a real `payments` row and — for an apply — its `payment_allocations` row, posts the entry through the real `accounting_post_journal_entry`, records the audit row and the SoD action, all inside one call. A failure anywhere rolls everything back. Repeated requests replay by a UNIQUE idempotency key per deposit; a key reused for a different request — or the same key with a different refund reason — is a conflict. `order_deposits` gained `currency`, `posting_status` (`posted` | `pending_posting`, NULL = written before the column) and `journal_entry_id`; a deposit whose receipt never posted is refused and can be recovered through POST …/post. REFUND REASON (owner Option B): mandatory, trimmed 3..500 characters, validated in SQL and in the reusable domain schema; the old 11-argument refund function is DROPPED so it cannot be bypassed; the reason is stored on `order_deposit_refunds.reason` and copied into `audit_logs.new_data` together with actor_id, occurred_at, amount, currency, deposit_id, payment_id and journal_entry_id. A refund row is written only after the posted journal entry is re-read (`DEPOSIT_REFUND_NOT_POSTED` otherwise), inside the same transaction.",
+      "files": [
+        "docs/order-deposit-apply-refund-01-migration.sql",
+        "docs/VERIFY-order-deposit-apply-refund-01.sql",
+        "packages/validation/src/schemas/universal-core/order-deposit.domain.ts",
+        "packages/validation/src/schemas/universal-core/index.ts",
+        "packages/validation/src/__tests__/order-deposit.domain.test.ts",
+        "backend/src/services/sales/order-deposit.service.ts",
+        "backend/src/routes/order-deposit.routes.ts",
+        "backend/src/utils/concurrency-safety-map.ts",
+        "backend/src/__tests__/order-deposit-apply-refund.test.ts",
+        "backend/src/__tests__/order-deposit-apply-refund-01.pg.test.ts",
+        "backend/src/__tests__/helpers/order-deposit-apply-refund-01-scenarios.ts",
+        "backend/src/__tests__/order-deposit-liability.test.ts",
+        "packages/i18n/src/locales/en.json",
+        "packages/i18n/src/locales/fa-AF.json",
+        "packages/i18n/src/locales/fa-IR.json",
+        "packages/ui/src/components/ui/invoice-detail/invoice-related-panel.tsx"
+      ],
+      "tests": {
+        "pglite": "order-deposit-apply-refund-01: setup OK, VERIFY all true, ALL 39 PASSED (migration run twice), exit 0",
+        "backendRoute": "order-deposit-apply-refund.test.ts + order-deposit-liability.test.ts + concurrency-safety-map.test.ts: 3 files / 65 tests, exit 0",
+        "backendUnit": "364 files / 5066 tests, exit 0 (pg files excluded)",
+        "validation": "54 files / 833 tests, exit 0",
+        "eslint": "0 errors on every changed file",
+        "notProven": "two-connection lock contention — needs a real Postgres; the *.pg.test.ts is written and reports SKIPPED when the embedded binary cannot start"
+      },
+      "notDone": "No screen calls apply/refund yet (the existing useOrderDeposits hook has no consumer — a pre-existing gap). Nothing on the device books or applies a deposit (no local ledger step) — offline phase gap. Reversing an APPLY relies on the existing payments cancel path (delete the allocation + cancel the payment), which the scenarios prove reopens the invoice and gives the balance back; no dedicated route was added for it.",
+      "migrationStatus": "PENDING HUMAN CONFIRMATION — docs/order-deposit-apply-refund-01-migration.sql (rev2) has not been run on the owner's database. Run it after docs/customer-advances-01-migration.sql.",
+      "refundPolicy": {
+        "decision": "Option B — owner approved 3 Nov 2026",
+        "capability": "payment.record (canonical; no payment.refund exists or is required)",
+        "reason": "mandatory, server-validated, trimmed, 3..500 characters",
+        "auditTrail": "immutable audit_logs row + order_deposit_refunds.reason",
+        "partialRefunds": "only up to the remaining refundable balance",
+        "concurrency": "deposit row FOR UPDATE + UNIQUE idempotency key",
+        "atomicity": "payment + journal + refund row in one function/transaction",
+        "journalGuard": "DEPOSIT_REFUND_NOT_POSTED when the posted entry cannot be read back"
+      }
+    }
+  ],
+  "repository": {
+    "branch": "main",
+    "headAtStart": "f8a10909",
+    "trackedChangesAtStart": 0,
+    "untrackedAtStart": "docs/audit/* and scripts/audit/* (audit artifacts)"
+  },
+  "statuses": {
+    "A.baseline": "VERIFIED_COMPLETE",
+    "A.P13-registry-honesty": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "A.P13-ui-exposure": "NOT_IMPLEMENTED",
+    "B.dependency-resolver": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "B.registry-integrity-guard": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "C.effective-profile-from-resolver": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "C.policies": "NOT_IMPLEMENTED",
+    "C.terminology-composition": "NOT_IMPLEMENTED",
+    "C.navigation-composition": "NOT_IMPLEMENTED",
+    "D.backend-policy-enforcement": "NOT_IMPLEMENTED",
+    "E.ui-composition": "NOT_IMPLEMENTED",
+    "F.p1-deposit-receipt": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "F.store-slice": "NOT_IMPLEMENTED",
+    "G.teacher-slice": "NOT_IMPLEMENTED",
+    "H.adaptive-onboarding": "NOT_IMPLEMENTED",
+    "real-postgresql-tests": "BLOCKED_EXTERNAL",
+    "graphify-update": "BLOCKED_EXTERNAL",
+    "6.draft-po-consolidation": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "6.cycle-count-warehouse-scope": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "6.cycle-count-idempotent-completion": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "6.cycle-count-db-unique-index (cycle-count-02)": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "6.cycle-count-single-transaction": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "3.backend-profile-authority": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "6.audit-hash-writer": "NOT_IMPLEMENTED",
+    "6.order-deposit": "NOT_IMPLEMENTED",
+    "6.product-variant-binding": "NOT_IMPLEMENTED",
+    "6.branch-restriction-on-device": "NOT_IMPLEMENTED",
+    "6.draft-po-server-route-test": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "local-engine.package-deferred-revenue-device-test": "VERIFIED_COMPLETE",
+    "5.ui-hook-consumers (10 hooks)": "NOT_IMPLEMENTED",
+    "5.navigation-terminology-composition": "NEEDS_OWNER_DECISION",
+    "3.workspace-profile-read-write-api": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "3.capability-guard (variants, auto_fitments writes)": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "3.capability-guard (metal rates, serials, warranty, vehicles)": "NEEDS_OWNER_DECISION",
+    "3.ui-reads-workspace-profile": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "3.device-capability-enforcement": "NOT_IMPLEMENTED",
+    "PO.canonical-draft-status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "PO.purchase-write-permission-on-device": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "PO.draft-never-receivable": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "P1.deposit-as-liability": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "P1.deposit-apply-refund": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+    "P2.variant-binding": "NOT_IMPLEMENTED",
+    "CC.shrinkage-and-gain-accounts": "NOT_IMPLEMENTED",
+    "OD-3.credit-limit-override": "NOT_IMPLEMENTED",
+    "OD-4.order-wip": "NOT_IMPLEMENTED"
+  },
+  "baseline": {
+    "existingResolver": "packages/validation/src/schemas/industry-profiles.ts resolveBusinessProfile (the ONE profile resolver; extended, not duplicated)",
+    "existingRegistry": "packages/validation/src/schemas/business-capabilities.ts (13 keys)",
+    "profileConsumers": [
+      "packages/ui/src/hooks/use-business-profile.ts",
+      "packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx",
+      "packages/ui/src/components/ui/invoice-builder/containers/invoice-builder-container.tsx",
+      "packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx",
+      "packages/ui/src/components/ui/add-product-modal.tsx",
+      "packages/ui/src/lib/industry-support-note.ts"
+    ],
+    "backendProfileConsumers": 0,
+    "industryConditionalsInProductionCode": 0,
+    "financialAndInventoryEngines": "untouched (invoice.service, ledger, costing, stock_movements, payments)"
+  },
+  "decisions": [
+    {
+      "id": "D1",
+      "decision": "Add a third registry status 'partial' instead of demoting variants/serialized_items/auto_fitments/gold_purity/making_charges to 'planned'.",
+      "why": "'planned' would hide working product-level UI (warehouse-detail-container gates variants/fitments/serials on profile.capabilities). 'partial' keeps what works and stops claiming a complete chain.",
+      "evidence": [
+        "packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx:324-330"
+      ]
+    },
+    {
+      "id": "D2",
+      "decision": "Policies, terminology composition and navigation composition are NOT added in this run.",
+      "why": "Each would be a registry with no authoritative consumer (CLAUDE.md section 14, dead code). They are Phase D/E, where enforcement and UI consumers are built together.",
+      "evidence": ["docs/audit/V53-FOUNDATION-PLAN.md section 1 (P4, P5)"]
+    },
+    {
+      "id": "D3",
+      "decision": "The real registry declares requires-edges (weight_pricing, length/volume_pricing -> measurement; gold_purity -> weight_pricing; making_charges -> gold_purity) but NO conflict edges.",
+      "why": "No pair of today's capabilities genuinely conflicts; inventing one would be a guess. The conflict mechanism is covered by tests on patched registries and will have data when a real conflict exists."
+    },
+    {
+      "id": "D4",
+      "decision": "Backend capability enforcement (Phase 3) is NOT wired.",
+      "why": "The business profile is stored per USER (profiles.business_types, backend/src/routes/auth.routes.ts:203-213), and the UI reads the signed-in user's own row. A backend guard needs ONE authoritative profile per workspace; the choice (owner's profile? a new workspaces column?) changes who may use a feature in a multi-user business and would newly lock out API clients on a generic profile. Guessing it is a product/permission decision. NEW EVIDENCE: the repository already contains a workspace-level design (migration above) that nothing consumes, AND an invariant that contradicts the V53 mission item \"backend must reject operations that need an unavailable capability\": IMPLEMENTATION-MAP invariant 1 says business-profile policy NEVER changes authorization or role capabilities (\"emphasis only\"). Capability enforcement therefore needs the owner to either amend that invariant or keep the profile advisory.",
+      "evidence": [
+        "backend/src/routes/auth.routes.ts:203-213",
+        "packages/ui/src/hooks/use-business-profile.ts",
+        "docs/audit/V53-FOUNDATION-PLAN.md P4",
+        "docs/business-profile-01-migration.sql:1-20 (2026-10-27: columns workspaces.business_types / operating_characteristics, \"moves business profile from user account to workspace\"; no backend or UI code reads them)",
+        "docs/business-profile/IMPLEMENTATION-MAP.md invariants 1 and 3"
+      ],
+      "options": [
+        "A: keep the invariant (profile is emphasis only): finish the workspace-level storage + read path (business-profile-01) but do NOT reject API calls by profile",
+        "B: amend the invariant: reject calls for capabilities the workspace profile lacks, only for workspaces that declared a profile (undeclared = unrestricted, backward compatible)",
+        "C: neither now"
+      ],
+      "status": "DECIDED_BY_OWNER: B"
+    },
+    {
+      "id": "D5",
+      "decision": "Cycle count completion is idempotent and warehouse-scoped, but not a single database transaction.",
+      "why": "supabase-js has no transaction. Idempotency (skip products that already have a movement for the count) plus the cycle-count-02 unique index make a retry or a race safe; a crash between the movements and the status close leaves a counting count that a retry finishes. A true single-transaction RPC needs the priced lines passed in and the costing core unchanged; deferred to avoid an unverified plpgsql function (PostgreSQL is BLOCKED_EXTERNAL).",
+      "evidence": [
+        "backend/src/services/inventory/cycle-count.service.ts",
+        "docs/cycle-count-02-migration.sql",
+        "backend/src/__tests__/helpers/cycle-count-02-scenarios.ts"
+      ]
+    },
+    {
+      "id": "D6",
+      "decision": "Audit hash writer deferred (design recorded, not coded).",
+      "why": "The reader (AuditService.verifyChain) hashes a created_at string that JavaScript and PostgreSQL format differently, so a correct writer must live in the database (BEFORE INSERT trigger with a per-workspace advisory lock) and the verifier must be a SQL function the service calls. That replaces the logic the current audit.test.ts exercises, so the old tests must be re-expressed, not weakened; needs its own migration, VERIFY and scenario proof.",
+      "evidence": [
+        "backend/src/services/audit.service.ts:480-505",
+        "backend/src/__tests__/audit.test.ts:30-47"
+      ]
+    },
+    {
+      "id": "D7",
+      "decision": "Order deposit (P1) and variant binding (P2) were inspected and NOT changed.",
+      "why": "P1: whether a deposit is a payment, a liability, refundable or revenue is exactly the semantics the mission forbids guessing; the route only requires invoice.create (backend/src/routes/order-deposit.routes.ts:13-14). P2: binding a variant to invoice lines and stock movements changes the invoice, inventory, sync and offline contracts at once and needs a migration + owner-approved semantics for historical rows."
+    },
+    {
+      "id": "D8",
+      "decision": "Cycle-count completion is now one database transaction (when the function is installed).",
+      "why": "cycle_count_complete() in docs/cycle-count-02-migration.sql writes movements, freezes figures and closes the count under a row lock; the service calls it and falls back to the idempotent two-step path only when the function does not exist (42883 / PGRST202). Proven on PGlite (rollback on a mid-way failure, second completion refused, no duplicate of movements an older run wrote, other workspace not found). Not applied to any database.",
+      "evidence": [
+        "docs/cycle-count-02-migration.sql",
+        "backend/src/services/inventory/cycle-count.service.ts (completeAtomically)",
+        "backend/src/__tests__/helpers/cycle-count-02-scenarios.ts"
+      ]
+    },
+    {
+      "id": "D9",
+      "decision": "The ten capability hooks with no UI consumer were NOT wired to new screens.",
+      "why": "useLatestMetalRate, useRecordMetalRate, useVehicles, useRegisterWarranty, useOrderDeposits, useAppointments, useCropCycles, useFreightTrips, useCourierDeliveries, useDeliveryNotes (and useConsumePackageCredit / usePackageCreditLedger) have no hub destination. Building a screen only so a hook \"has a consumer\" is the decorative UI the mission forbids; each needs a product decision on where it lives. The registry already stops claiming them (partial / not offered).",
+      "evidence": ["docs/audit/LEGACY-DOCUMENT-RECONCILIATION.md M15"]
+    },
+    {
+      "id": "D10",
+      "decision": "D4 = B applied: workspace-level profile + capability as the second half of an authorization.",
+      "contract": "allowed = permission (requireCapability) AND capability (requireProfileCapability). Undeclared workspace (workspaces.business_types NULL/empty, or the migration not applied) is never restricted. A failed read refuses the request (never reads as undeclared). PUT /api/workspace/profile needs workspace.manage, accepts only registry keys, writes the profile columns only, and logs `profile_changed`.",
+      "evidence": [
+        "backend/src/services/workspace-profile.ts",
+        "backend/src/middleware/profile-capability.middleware.ts",
+        "backend/src/routes/workspace-profile.routes.ts",
+        "backend/src/routes/variant.routes.ts",
+        "backend/src/routes/fitment.routes.ts",
+        "backend/src/__tests__/workspace-profile.test.ts",
+        "packages/ui/src/hooks/use-business-profile.ts"
+      ],
+      "notDoneAndWhy": [
+        "Metal-rate, serial, warranty and vehicle writes are NOT guarded: the jewellery profile deliberately has no gold_purity (industry-profiles.test.ts asserts it; OPEN-QUESTIONS #4 says the owner must decide the karat model first), so guarding metal rates would lock out every declared gold shop. A dedicated market-rate permission name is also still to be chosen (P5).",
+        "No capability is enforced on the device (offline): the matrix marks GET/PUT /workspace/profile online_required; a device keeps the profile it already holds.",
+        "docs/business-profile-01-migration.sql must be applied by a human before the workspace profile can be stored; until then PUT answers 409 WORKSPACE_PROFILE_NOT_CONFIGURED and every workspace stays undeclared."
+      ]
+    },
+    {
+      "id": "D11",
+      "decision": "PO = Draft Purchase applied.",
+      "contract": "Reorder suggestions create status `draft` on the server (was `pending`) and on the device; the device asks for `purchase.write` (a manager capability, same threshold as the server); a draft is never receivable (PURCHASE_ORDER_DRAFT); `draft` is a settable status; the default of an ordinary order is still `pending`; legacy `pending` rows are untouched, so no migration.",
+      "evidence": [
+        "backend/src/routes/inventory-insights.routes.ts",
+        "packages/local-engine/src/routes/purchasing.ts",
+        "packages/local-engine/src/auth.ts",
+        "packages/validation/src/schemas/purchasing.schema.ts",
+        "packages/validation/src/schemas/purchasing.domain.ts"
+      ]
+    },
+    {
+      "id": "D12",
+      "decision": "Remaining decided items are specified but not built in this run.",
+      "why": "Each needs a migration, new account roles / permission names and a change to a hot financial path; none can be proven here without PostgreSQL, and a half-built ledger path is worse than none.",
+      "contracts": {
+        "P1 deposit": "ledger roles: customer_advances (liability). Receipt Dr cash|bank Cr customer_advances; apply to a final invoice Dr customer_advances Cr receivable; refund Dr customer_advances Cr cash|bank. Through PaymentsService + ledger.postDocument; idempotency key per deposit; cancelled order refunds in full by default, any retention needs a special permission, a reason and its own entry. Today the route (order-deposit.routes.ts:13-14) only needs invoice.create and posts nothing.",
+        "P2 variant": "nullable variant_id on invoice lines, stock movements, return lines, cost layers; null for every existing row; a variant-bearing product requires a variant on new operations; stock never counted twice (mother vs variant); offline schema bump + sync carries the id.",
+        "CC accounts": "account roles inventory_shrinkage and inventory_gain; cycle_count_complete gains a journal step using stock-count.domain varianceEntry; no valid account => the count stays recoverable in a pending-accounts state (needs the cycle_counts_status_check constraint widened), nothing is guessed.",
+        "OD-3 credit": "workspaces.credit_limit_mode already exists (universal-core-migration.sql) and evaluateCreditLimit exists, but NOTHING on the server reads either. Needs: server read in InvoiceService.create, a named override permission (P5), a mandatory reason, an audit event, the PENDING_CREDIT_VALIDATION state for offline.",
+        "OD-4 WIP": "order-based WIP account(s), cost accumulation per work order (materials from stock movements, labour = actual hours x rate, overhead = predetermined rate), variance account, completion moves WIP -> finished goods. manufacturing_complete is online-only and posts no ledger entry today."
+      }
+    }
+  ],
+  "ownerDecisionsOpen": [
+    "NEW (OD-3): in which currency is customers.credit_limit (numeric(14,2), no currency column) and how is foreign-currency exposure converted? Proposed: the books currency, other currencies at the frozen invoice rate (the existing mechanism).",
+    "NEW (P5): the permission name that lets a person pass the credit limit, and the one that changes market (metal) rates - both do not exist yet.",
+    "NEW (D4 rollout): who may change the workspace profile is fixed as workspace.manage (owner). Confirm that managers must NOT be able to.",
+    "Gold: the karat/making-charge model (OPEN-QUESTIONS #4) - until decided the jewellery profile has no gold_purity, so no gold route can be capability-guarded.",
+    "Q1-Q5 of the owner message were answered by the proposals listed in V53-OWNER-DECISIONS.md section 2; override any of them there."
+  ],
+  "knownBlockers": [
+    {
+      "item": "real PostgreSQL tests (94 *.pg.test.ts)",
+      "status": "BLOCKED_EXTERNAL",
+      "reason": "no PostgreSQL binary starts on this machine"
+    },
+    {
+      "item": "Graphify update",
+      "status": "BLOCKED_EXTERNAL",
+      "reason": "no working Python"
+    }
+  ],
+  "auditFindingsClassification": {
+    "P1-order-deposit-posts-nothing": "prerequisite for Store/Teacher payments - NOT touched (financial semantics; needs owner approval)",
+    "P2-variant-binding-to-invoice-and-stock": "prerequisite for Store (apparel) - NOT touched; registry now says so honestly",
+    "cycle-count-warehouse-and-atomicity": "independent of composition - deferred",
+    "draft-po-duplication": "independent of composition - deferred",
+    "branch-restriction-on-device": "prerequisite for multi-branch Store - deferred to Phase D",
+    "audit-hash-writer": "independent of composition - deferred"
+  },
+  "testCommands": {
+    "validation": "cd packages/validation && npx tsc --noEmit && npx vitest run",
+    "ui": "cd packages/ui && npx tsc --noEmit && npx vitest run <file>",
+    "docGenerator": "node scripts/industry/generate-industry-diff.mjs --check",
+    "backend": "cd backend && NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit && npx vitest run",
+    "localEngine": "cd packages/local-engine && npx vitest run",
+    "pgliteScenarios": "CYCLE02_DOCS=$(pwd)/docs PGLITE_DIR=$TEMP/pglite SCENARIOS=backend/src/__tests__/helpers/cycle-count-02-scenarios.ts SETUP=setupCycleCount02 VERIFY=\"docs/VERIFY-cycle-count-02.sql\" node scripts/pg/run-scenarios.mjs",
+    "backendNoPg": "cd backend && npx vitest run --exclude \"**/*.pg.test.ts\""
+  },
+  "postgresqlBlocker": {
+    "status": "BLOCKED_EXTERNAL",
+    "rootCause": "Every *.exe in the embedded-postgres Windows package is absent while the DLLs are present (29 files, 0 executables): postgres.exe / initdb.exe were removed, most likely quarantined by antivirus. spawn postgres.exe fails with ENOENT.",
+    "evidence": [
+      ".p/@embedd_*/node_modules/@embedded-postgres/windows-x64/native/bin (no .exe)",
+      "node probe: spawn ... postgres.exe ENOENT"
+    ],
+    "consequence": "Each *.pg.test.ts waits for the beforeAll hook to time out (120 s) and reports its tests skipped, so one unfiltered backend run takes hours. Run the suite with --exclude \"**/*.pg.test.ts\" and run pg files separately.",
+    "ownerStep": "Restore/allow the quarantined PostgreSQL binaries (or run the *.pg.test.ts files on a throwaway PostgreSQL elsewhere). Not done here: it is an antivirus/host action.",
+    "proofAvailableInstead": "PGlite scenarios (logic only): cycle-count-02 10/10"
+  },
+  "ownerDecisionsDoc": "docs/implementation/V53-OWNER-DECISIONS.md"
+}

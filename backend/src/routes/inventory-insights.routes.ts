@@ -8,6 +8,11 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import {
+  DRAFT_PURCHASE_LINE_INCOMPLETE,
+  planDraftPurchaseOrders,
+  type DraftPurchaseSuggestion,
+} from '@hisabche/validation'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -59,12 +64,7 @@ export async function inventoryInsightsRoutes(fastify: FastifyInstance) {
   )
 
   interface DraftPOBody {
-    suggestions?: Array<{
-      productId: string
-      supplierId: string
-      suggestedQuantity: number
-      unitPrice?: number
-    }>
+    suggestions?: DraftPurchaseSuggestion[]
   }
 
   // ─── Option 17: POST /api/inventory/reorder-suggestions/draft-po ───
@@ -75,35 +75,16 @@ export async function inventoryInsightsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = (request.body ?? {}) as DraftPOBody
-        const items = body.suggestions ?? []
         // A draft order needs a supplier and a price the owner chose. Neither is
-        // guessed from the suggestion: an unknown supplier or price is refused.
-        const incomplete = items.filter(
-          (i) =>
-            !i.supplierId ||
-            !(typeof i.unitPrice === 'number' && i.unitPrice > 0) ||
-            !(i.suggestedQuantity > 0),
-        )
-        if (items.length === 0 || incomplete.length > 0) {
+        // guessed from the suggestion: the SAME rule the offline engine applies
+        // (`planDraftPurchaseOrders`) refuses an unknown supplier or price.
+        const plan = planDraftPurchaseOrders(body.suggestions ?? [])
+        if (!plan.ok) {
           return reply.code(400).send({
             error:
               'Every line needs productId, supplierId, suggestedQuantity > 0 and unitPrice > 0',
-            code: 'DRAFT_PO_LINE_INCOMPLETE',
-            incomplete: incomplete.map((i) => i.productId),
-          })
-        }
-
-        const bySupplier = new Map<
-          string,
-          Array<{ productId: string; quantity: number; unitPrice?: number }>
-        >()
-        for (const item of items) {
-          const supId = item.supplierId
-          if (!bySupplier.has(supId)) bySupplier.set(supId, [])
-          bySupplier.get(supId)!.push({
-            productId: item.productId,
-            quantity: item.suggestedQuantity,
-            unitPrice: item.unitPrice ?? 0,
+            code: DRAFT_PURCHASE_LINE_INCOMPLETE,
+            incomplete: plan.incomplete.map((line) => line.productId),
           })
         }
 
@@ -111,21 +92,19 @@ export async function inventoryInsightsRoutes(fastify: FastifyInstance) {
         const draftPOs = []
         const orderDate = new Date().toISOString().slice(0, 10)
 
-        for (const [supplierId, supplierItems] of bySupplier.entries()) {
+        for (const { supplierId, lines } of plan.groups) {
           const po = await purchasingService.createPurchaseOrder(request.tenancy, {
             supplierId,
             orderDate,
-            status: 'pending',
-            items: supplierItems.map((si) => {
-              const qty = si.quantity
-              const unitPrice = si.unitPrice ?? 0
-              return {
-                productId: si.productId,
-                quantity: qty,
-                unitPrice,
-                totalPrice: qty * unitPrice,
-              }
-            }),
+            // Canonical: a suggestion creates a DRAFT (owner decision PO), the same status the
+            // offline engine writes. `pending` is for a real approval/wait step.
+            status: 'draft',
+            items: lines.map((line) => ({
+              productId: line.productId,
+              quantity: line.quantity,
+              unitPrice: line.unitPrice,
+              totalPrice: line.quantity * line.unitPrice,
+            })),
           })
           draftPOs.push(po)
         }

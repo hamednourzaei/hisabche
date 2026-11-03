@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
-  AVAILABLE_CAPABILITIES,
+  USABLE_CAPABILITIES,
   CAPABILITIES,
   CAPABILITY_KEYS,
   type CapabilityKey,
@@ -46,16 +46,16 @@ describe('industry registry', () => {
     }
   })
 
-  it('only available capabilities are attached to a profile', () => {
+  it('only usable (available or partial) capabilities are attached to a profile', () => {
     for (const key of INDUSTRY_KEYS) {
       for (const capability of PROFILES[key].capabilities) {
-        expect(CAPABILITIES[capability].status, `${key} → ${capability}`).toBe('available')
+        expect(CAPABILITIES[capability].status, `${key} → ${capability}`).not.toBe('planned')
       }
     }
   })
 
-  it('every available capability resolves its evidence on disk', () => {
-    for (const key of AVAILABLE_CAPABILITIES) {
+  it('every usable capability resolves its evidence on disk', () => {
+    for (const key of USABLE_CAPABILITIES) {
       const definition = CAPABILITIES[key]
       expect(definition.evidence.sources.length, key).toBeGreaterThan(0)
       expect(definition.evidence.tests.length, key).toBeGreaterThan(0)

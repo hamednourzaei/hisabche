@@ -1,0 +1,35 @@
+# V53 — owner decisions (executable contract)
+
+Source: the owner's message of 3 Nov 2026 (the seven decisions) and the three-way split it gave (قطعی / نیازمند قرارداد اجرایی / نیازمند پاسخ مالک).
+These are the owner's decisions. They are not re-opened by the implementation.
+
+## 1. Settled (قطعی)
+
+| ID   | Decision                                                                          | Contract for the code                                                                                                                                                                                                                                                            |
+| ---- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D4   | **B** — the Business Profile lives on the **workspace** and controls capabilities | Operation allowed ⇔ the user holds the **permission** AND the workspace profile has the **capability**. A workspace with no declared profile is never locked out. Changing the profile needs the workspace-management permission, touches no role, permission or historical row. |
+| P1   | Order deposit = **liability**                                                     | Receipt: Dr cash/bank, Cr customer advances. Applied to a final invoice: Dr customer advances, Cr receivable. Refund: Dr customer advances, Cr cash/bank. Never revenue on receipt. Uses `PaymentsService` + the existing ledger.                                                |
+| P2   | Variant: **legacy null**                                                          | Old rows keep no variant; none is invented. New operations on a variant-bearing product require a valid variant. Mother + variant stock is never counted twice. Invoice, inventory, returns, sync carry the id unchanged.                                                        |
+| CC   | **Separate** accounts                                                             | `Inventory Shrinkage` and `Inventory Gain`. Value = the existing valuation method. No valid account ⇒ no guessed journal entry.                                                                                                                                                  |
+| PO   | **Draft purchase**                                                                | Canonical status `draft`; permission = the existing purchase-write permission (`warehouse.manage` is not a substitute); `pending` only for a real approval/wait step; legacy rows stay valid.                                                                                    |
+| OD-3 | **C**                                                                             | Passing the credit limit needs a special permission, a stated reason and an audit record; an ordinary user only gets a warning.                                                                                                                                                  |
+| OD-4 | **Full order WIP**                                                                | Order-based: direct material + direct labour + applied overhead; completing production moves cost WIP → finished goods.                                                                                                                                                          |
+
+## 2. The five details (answered by the owner's own stated proposals; override any of them and the code follows)
+
+The owner said "complete it" without answering the five questions, so the **conservative proposal given with each question is adopted as the default**. None of them is invented by the implementation.
+
+| #   | Question                                    | Adopted default                                                                                                                                                                                                                                                                                                       |
+| --- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Deposit when the order is cancelled         | Refund in full by default. Keeping any part needs a contractual reason, a special permission and its **own** journal entry; **nothing is forfeited automatically**.                                                                                                                                                   |
+| 2   | Credit-limit base                           | Exposure = posted unpaid invoices + other approved receivables − allocated payments − valid credit notes. Approved-but-undelivered orders are shown separately as **reserved**, not as debt.                                                                                                                          |
+| 3   | Credit limit offline                        | A local invoice is allowed in state `PENDING_CREDIT_VALIDATION`; it is **never** shown as credit-approved and never counts as a final document until the server validates it.                                                                                                                                         |
+| 4   | Cycle count without the adjustment accounts | The physical count is kept; the adjustment **and** its journal entry wait (state: pending account setup), as one controlled, recoverable operation. No account is guessed.                                                                                                                                            |
+| 5   | WIP labour and overhead                     | Direct labour = actual hours × valid rate; overhead = predetermined rate per labour hour (or per unit) with a configurable base; the difference to actual goes to a production-variance account; abnormal scrap is kept out of normal cost. (The "manual manager-approved amounts in v1" alternative was not chosen.) |
+
+## 3. Rules that bind every phase
+
+- No migration or production change is executed. Migrations are files + VERIFY + tests, applied by a human.
+- A decision above that cannot be implemented safely stops **only that sub-task**; the rest continues.
+- Everything uses the existing payment, ledger, inventory, costing and sync engines. No parallel engine.
+- Status vocabulary: `VERIFIED_COMPLETE · IMPLEMENTED_NOT_LIVE_VERIFIED · PARTIALLY_IMPLEMENTED · NOT_IMPLEMENTED · BLOCKED_EXTERNAL · NEEDS_OWNER_DECISION · FAILED`.

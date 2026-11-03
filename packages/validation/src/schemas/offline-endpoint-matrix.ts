@@ -134,6 +134,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /customers': ['customer.list', 'available'],
   'GET /customers/:x': ['customer.detail', 'available'],
   'GET /customers/:x/accounting': ['customer.accounting', 'available'],
+  // The customer's order deposits, with what is left of each (routes/order-deposits.ts).
+  'GET /customers/:x/deposits': ['order.deposits', 'available'],
   'GET /customers/:x/documents': ['customer.documents', 'online_required'],
   'GET /customers/:x/documents/:x/url': ['customer.documents', 'online_required'],
   'GET /customers/:x/insights': ['customer.crm', 'online_required'],
@@ -305,6 +307,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /work-orders': ['manufacturing.work_orders', 'online_required'],
   'GET /workplace/time-zone': ['settings.time_zone', 'online_required'],
   'GET /workspaces': ['settings.workspace_profile', 'available'],
+  // V53 D4: the server's copy of the workspace profile. Online only — offline the screens keep the
+  // profile the device already holds, and no capability is enforced on the device.
+  'GET /workspace/profile': ['settings.business_profile', 'online_required'],
+  'PUT /workspace/profile': ['settings.business_profile_edit', 'online_required'],
   'GET /workspaces/:x/invites': ['team.members', 'online_required'],
   'GET /workspaces/:x/members': ['settings.workspace_profile', 'available'],
   'GET /workspaces/backup': ['data.backup', 'available'],
@@ -453,6 +459,12 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /operations/timesheets': ['timesheet.manage', 'online_required'],
   'POST /opportunities': ['customer.crm', 'online_required'],
   'POST /orders/:x/deposits': ['order.deposits', 'available'],
+  // Applying a deposit settles an invoice; refunding it pays money back. Both run
+  // on the device (routes/order-deposits.ts) and are queued for the server's locked
+  // transaction when this edition has one.
+  'POST /orders/:x/deposits/:x/apply': ['order.deposits', 'available'],
+  'POST /orders/:x/deposits/:x/refund': ['order.deposits', 'available'],
+  'POST /orders/:x/deposits/:x/post': ['order.deposits', 'available'],
   'POST /package-credits/consume': ['operations.service_delivery', 'available'],
   'POST /package-credits/expire': ['operations.service_delivery', 'available'],
   // Suspending ONE GRANT is a manager's decision recorded on the server (append-only SUSPEND / RESUME events).

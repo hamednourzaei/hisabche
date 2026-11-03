@@ -197,3 +197,55 @@ export function varianceEntry(
           ],
   }
 }
+
+/* ─── The stock movements a count produces ────────────────────────────────── */
+
+export interface CountAdjustmentMovement {
+  product_id: string
+  type: 'adjustment'
+  /** Signed: negative removes stock, positive adds it. */
+  quantity: number
+  reference_type: 'cycle_count'
+  reference_id: string
+  /**
+   * The warehouse that was counted. A signed adjustment names its warehouse in
+   * `to_warehouse_id` (the projection adds the signed quantity there) — the
+   * same shape the product-page adjustment uses. Without it the movement lands
+   * in «no warehouse»: product 20, warehouse −10 (BUG-080).
+   */
+  to_warehouse_id: string
+  workspace_id: string
+  user_id: string
+  notes: string
+}
+
+/**
+ * The adjustment movements for a priced count.
+ *
+ * Idempotent by product: a product that already has a movement for this count
+ * (`alreadyAppliedProductIds`) gets none, so completing a count a second time
+ * — a retry after a crash, a double click — can never adjust stock twice.
+ * A line with no variance produces nothing.
+ */
+export function countAdjustmentMovements(input: {
+  countId: string
+  warehouseId: string
+  workspaceId: string
+  userId: string
+  lines: readonly VarianceLine[]
+  alreadyAppliedProductIds: ReadonlySet<string>
+}): CountAdjustmentMovement[] {
+  return input.lines
+    .filter((line) => line.varianceQty !== 0 && !input.alreadyAppliedProductIds.has(line.productId))
+    .map((line) => ({
+      product_id: line.productId,
+      type: 'adjustment',
+      quantity: line.varianceQty,
+      reference_type: 'cycle_count',
+      reference_id: input.countId,
+      to_warehouse_id: input.warehouseId,
+      workspace_id: input.workspaceId,
+      user_id: input.userId,
+      notes: `count variance ${line.varianceQty}`,
+    }))
+}

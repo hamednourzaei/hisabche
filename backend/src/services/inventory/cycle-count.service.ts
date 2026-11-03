@@ -29,6 +29,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { costing } from '../inventory-costing'
 import {
+  countAdjustmentMovements,
   priceLine,
   summariseCount,
   type CountLine,
@@ -160,7 +161,7 @@ export class CycleCountService {
     const count = await this.get(ctx, countId)
     if (count.status !== 'counting') throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
 
-    const rows = (count.lines ?? []) as Record<string, any>[]
+    const rows = (count.lines ?? []) as Record<string, unknown>[]
     const counted = rows.filter((row) => row.counted_qty !== null)
 
     if (counted.length === 0) throw new ConflictError('CYCLE_COUNT_NOTHING_COUNTED')
@@ -185,28 +186,53 @@ export class CycleCountService {
 
     const summary = summariseCount(priced)
 
+    // ─── ONE transaction, when the database has the function ───────────────
+    //
+    // `cycle_count_complete` (docs/cycle-count-02-migration.sql) writes the
+    // movements, freezes the figures and closes the count together, under a row
+    // lock — a crash or a second click cannot leave stock moved with the count
+    // still open. Before that migration is applied the function is missing, and
+    // the idempotent two-step path below is used instead (same effect, no
+    // atomicity), so deploying this code first loses nothing.
+    const atomic = await this.completeAtomically(ctx, countId, priced, summary)
+    if (atomic === 'completed') return this.get(ctx, countId)
+    if (atomic === 'not_open') throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
+    if (atomic === 'not_found') throw new NotFoundError('CycleCount')
+
     // ─── variance ≠ 0 → an ADJUSTMENT movement ─────────────────────────────
     //
     // NOT `UPDATE products SET quantity`. The movement is what moves stock
     // (Phase C), and it is what leaves the evidence.
-    const movements = priced
-      .filter((line) => line.varianceQty !== 0)
-      .map((line) => ({
-        product_id: line.productId,
-        type: 'adjustment',
-        quantity: line.varianceQty,
-        reference_type: 'cycle_count',
-        reference_id: countId,
-        workspace_id: ctx.workspaceId,
-        user_id: ctx.userId,
-        notes: `count variance ${line.varianceQty}`,
-      }))
+    //
+    // IDEMPOTENT: a retry after a crash (movements written, count not yet
+    // closed) must not adjust the stock a second time. Products that already
+    // have a movement for this count are skipped, and the unique index from
+    // cycle-count-02 makes two simultaneous completions collide instead of
+    // both writing.
+    const { data: applied, error: appliedError } = await supabase
+      .from('stock_movements')
+      .select('product_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('reference_type', 'cycle_count')
+      .eq('reference_id', countId)
+    if (appliedError) throw new DatabaseError('Failed to read count adjustments', appliedError)
+
+    const movements = countAdjustmentMovements({
+      countId,
+      warehouseId: String(count.warehouse_id),
+      workspaceId: ctx.workspaceId,
+      userId: ctx.userId,
+      lines: priced,
+      alreadyAppliedProductIds: new Set((applied ?? []).map((row) => String(row.product_id))),
+    })
 
     if (movements.length > 0) {
       const { error: movementError } = await supabase.from('stock_movements').insert(movements)
       // Not swallowed. If the movements fail the count must NOT be marked
       // completed, or the document would claim an effect the stock never had.
-      if (movementError) {
+      // 23505 = another completion wrote them first: the adjustment IS applied,
+      // and the status check below decides who closes the count.
+      if (movementError && movementError.code !== '23505') {
         throw new DatabaseError('Failed to write count adjustments', movementError)
       }
     }
@@ -223,7 +249,7 @@ export class CycleCountService {
         .eq('workspace_id', ctx.workspaceId)
     }
 
-    const { error: closeError } = await supabase
+    const { data: closed, error: closeError } = await supabase
       .from('cycle_counts')
       .update({
         status: 'completed',
@@ -239,8 +265,12 @@ export class CycleCountService {
       // Re-checked in the WHERE clause: two concurrent completions would both
       // read `counting` and both write adjustments.
       .eq('status', 'counting')
+      .select('id')
 
     if (closeError) throw new DatabaseError('Failed to complete the count', closeError)
+    // Nothing closed: someone else completed or cancelled it between our read
+    // and our write. Their stock effect (if any) stands; ours added nothing.
+    if (!closed || closed.length === 0) throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
 
     // ⚠️ THE JOURNAL ENTRY IS NOT POSTED HERE — see the note in
     // .claude/HANDOFF-PHASES-G-TO-O.md. Stock adjustments have never posted to
@@ -250,6 +280,44 @@ export class CycleCountService {
     // books (G4). The variance VALUE is computed and frozen above, so the
     // entry can be posted the moment that account is defined.
     return this.get(ctx, countId)
+  }
+
+  /**
+   * Complete the count in one database transaction.
+   *
+   * Returns `'unavailable'` only when the function does not exist yet (the
+   * migration is not applied); every other failure is thrown, so a broken call
+   * is never mistaken for «use the fallback».
+   */
+  private async completeAtomically(
+    ctx: TenancyContext,
+    countId: string,
+    priced: readonly VarianceLine[],
+    summary: ReturnType<typeof summariseCount>,
+  ): Promise<'completed' | 'not_open' | 'not_found' | 'unavailable'> {
+    const { data, error } = await supabase.rpc('cycle_count_complete', {
+      p_workspace_id: ctx.workspaceId,
+      p_count_id: countId,
+      p_user_id: ctx.userId,
+      p_lines: priced.map((line) => ({
+        product_id: line.productId,
+        variance_qty: line.varianceQty,
+        variance_value: line.varianceValue,
+      })),
+      p_shortage_value: summary.shortageValue,
+      p_surplus_value: summary.surplusValue,
+      p_net_loss: summary.netLoss,
+    })
+
+    if (error) {
+      // 42883 = function does not exist; PGRST202 = PostgREST cannot find it.
+      if (error.code === '42883' || error.code === 'PGRST202') return 'unavailable'
+      throw new DatabaseError('Failed to complete the count', error)
+    }
+    if (data === 'completed' || data === 'not_open' || data === 'not_found') return data
+    throw new DatabaseError('Failed to complete the count', {
+      message: `unexpected result from cycle_count_complete: ${String(data)}`,
+    })
   }
 
   async cancel(ctx: TenancyContext, countId: string, reason: string) {

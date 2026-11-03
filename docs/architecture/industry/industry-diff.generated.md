@@ -14,7 +14,8 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | Specialised profile                   | 23    |
 | General-purpose baseline              | 43    |
 | Exact match with `JOURNEY_INDUSTRIES` | 14    |
-| Available capabilities                | 8     |
+| Available capabilities                | 3     |
+| Partial capabilities                  | 5     |
 
 ## Industry registry
 
@@ -104,14 +105,15 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `multi_unit`       | available | فعال                         |
 | `batch_expiry`     | planned   | فعال نیست                    |
 | `recipe_bom`       | planned   | فعال نیست                    |
-| `variants`         | available | فعال                         |
+| `variants`         | partial   | فعال (جزئی)                  |
 | `table_service`    | planned   | فعال نیست                    |
-| `serialized_items` | available | فعال                         |
-| `auto_fitments`    | available | فعال                         |
-| `gold_purity`      | available | فعال                         |
-| `making_charges`   | available | فعال                         |
+| `serialized_items` | partial   | فعال (جزئی)                  |
+| `auto_fitments`    | partial   | فعال (جزئی)                  |
+| `gold_purity`      | partial   | فعال (جزئی)                  |
+| `making_charges`   | partial   | فعال (جزئی)                  |
 
 <!-- /industry-capability-table -->
 
-A capability is active only when its status is `available`. `planned` capabilities are attached
-to no profile and the resolver rejects them.
+A capability is active when its status is `available` or `partial`; a `partial` one is real but
+incomplete and is never presented as complete. `planned` capabilities are attached to no profile and
+the resolver rejects them.

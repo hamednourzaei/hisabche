@@ -19,8 +19,8 @@
 // ============================================
 
 import { z } from 'zod'
-import type { CapabilityKey } from './business-capabilities'
-import { AVAILABLE_CAPABILITIES, CAPABILITIES, CAPABILITY_KEYS } from './business-capabilities'
+import type { CapabilityDiagnostic, CapabilityKey } from './business-capabilities'
+import { USABLE_CAPABILITIES, resolveCapabilities } from './business-capabilities'
 
 /**
  * Canonical industry keys.
@@ -154,7 +154,13 @@ export interface ProfileDefinition {
   readonly key: IndustryKey
   /** `specialized` only when at least one real capability is on. */
   readonly kind: 'specialized' | 'generic'
+  /** What the trade asks for that the product can really do (available or partial). */
   readonly capabilities: readonly CapabilityKey[]
+  /**
+   * Everything the trade asks for, planned ones included. The resolver reports
+   * the planned ones as unsupported instead of forgetting them.
+   */
+  readonly requestedCapabilities: readonly CapabilityKey[]
   readonly invoiceDefaults: InvoiceDefaults
   readonly productDefaults: ProductDefaults
   readonly dashboard: readonly DashboardPartId[]
@@ -178,6 +184,7 @@ const GENERIC_PRODUCT: ProductDefaults = { unit: 'piece', emphasizedFields: [] }
 const GENERIC: Omit<ProfileDefinition, 'key'> = {
   kind: 'generic',
   capabilities: [],
+  requestedCapabilities: [],
   invoiceDefaults: GENERIC_INVOICE,
   productDefaults: GENERIC_PRODUCT,
   dashboard: GENERIC_DASHBOARD,
@@ -324,19 +331,30 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
 }
 
+/** Freezes a plain value and everything inside it. */
+function deepFreeze<T>(value: T): T {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value)
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child)
+  }
+  return value
+}
+
 function build(key: IndustryKey): ProfileDefinition {
   const override = OVERRIDES[key]
-  if (!override) return { ...GENERIC, key }
+  if (!override) return deepFreeze({ ...GENERIC, key })
 
-  const capabilities = (override.capabilities ?? []).filter((capability) =>
-    AVAILABLE_CAPABILITIES.includes(capability),
+  const requestedCapabilities = override.capabilities ?? []
+  const capabilities = requestedCapabilities.filter((capability) =>
+    USABLE_CAPABILITIES.includes(capability),
   )
   const dashboard = override.dashboard ?? GENERIC_DASHBOARD
 
-  return {
+  return deepFreeze({
     key,
     kind: capabilities.length > 0 || Boolean(override.vocabulary) ? 'specialized' : 'generic',
     capabilities,
+    requestedCapabilities,
     invoiceDefaults: {
       extraVisibleColumns: override.extraVisibleColumns ?? [],
       ...(override.priceMultiplierSource
@@ -349,7 +367,7 @@ function build(key: IndustryKey): ProfileDefinition {
     },
     dashboard,
     vocabulary: override.vocabulary ?? {},
-  }
+  })
 }
 
 export const PROFILES: Readonly<Record<IndustryKey, ProfileDefinition>> = Object.fromEntries(
@@ -438,8 +456,12 @@ export interface BusinessProfile {
   /** Null only when nothing recognisable was selected. */
   readonly primary: IndustryKey | null
   readonly primaryDefinition: ProfileDefinition
-  /** Union of AVAILABLE capabilities, in registry order. */
+  /** Capabilities that are really on (available + partial), dependencies included, in registry order. */
   readonly capabilities: readonly CapabilityKey[]
+  /** The subset of `capabilities` that is only partly implemented. Never present these as complete. */
+  readonly partialCapabilities: readonly CapabilityKey[]
+  /** Why each requested capability is on, added, or refused — see `resolveCapabilities`. */
+  readonly diagnostics: readonly CapabilityDiagnostic[]
   readonly invoiceDefaults: InvoiceDefaults
   readonly productDefaults: ProductDefaults
   readonly dashboard: readonly DashboardPartId[]
@@ -503,13 +525,11 @@ export function resolveBusinessProfile(
     ? PROFILES[primary]
     : { ...GENERIC, key: 'other' as IndustryKey }
 
-  const capabilitySet = new Set<CapabilityKey>()
-  for (const definition of selectedDefinitions) {
-    for (const capability of definition.capabilities) {
-      if (CAPABILITIES[capability].status === 'available') capabilitySet.add(capability)
-    }
-  }
-  const capabilities = CAPABILITY_KEYS.filter((key) => capabilitySet.has(key))
+  // ONE decision for which capabilities are really on: dependencies, conflicts
+  // and versions are settled by the registry resolver, never re-derived here.
+  const resolution = resolveCapabilities(
+    selectedDefinitions.flatMap((definition) => definition.requestedCapabilities),
+  )
 
   const extraVisibleColumns = [
     ...new Set(selectedDefinitions.flatMap((d) => d.invoiceDefaults.extraVisibleColumns)),
@@ -549,29 +569,24 @@ export function resolveBusinessProfile(
   }
   recommendedModules.push('settings')
 
-  // Derive unsupported capabilities that chosen profiles want but registry marks planned
-  const allNeededCapabilities = new Set<CapabilityKey>()
-  for (const def of selectedDefinitions) {
-    for (const cap of def.capabilities) {
-      allNeededCapabilities.add(cap)
-    }
-  }
-  const unsupported = CAPABILITY_KEYS.filter(
-    (key) => allNeededCapabilities.has(key) && CAPABILITIES[key].status === 'planned',
-  )
-
   const notes: string[] = []
   if (
     canonical.known.length > 0 &&
     (primaryDefinition.kind === 'generic' || canonical.known.length === 0)
   ) {
     notes.push('industry.supportNote.generic')
+  } else if (resolution.partial.length > 0) {
+    notes.push('industry.supportNote.partial')
   }
 
-  return {
+  // The effective profile is a value: nothing downstream may edit it, so two
+  // screens can never disagree about what the business is allowed to do.
+  return deepFreeze({
     primary,
     primaryDefinition,
-    capabilities,
+    capabilities: [...resolution.capabilities],
+    partialCapabilities: [...resolution.partial],
+    diagnostics: resolution.diagnostics.map((entry) => ({ ...entry })),
     invoiceDefaults: {
       extraVisibleColumns,
       ...(multiplier?.invoiceDefaults.priceMultiplierSource
@@ -588,8 +603,8 @@ export function resolveBusinessProfile(
     recommendedModules,
     inventoryRelevant,
     notes,
-    unsupported,
-  }
+    unsupported: [...resolution.rejected],
+  })
 }
 
 /** Everything an onboarding screen needs, without a second catalogue. */

@@ -131,6 +131,11 @@ export const localTableSchema = z.enum([
   'promotion',
   'package_credit_ledger',
   'service_delivery_sessions',
+  'order_deposits',
+  // The deposit movements (v18). Listed here so the backup carries them and
+  // the pull can write what another device applied or refunded.
+  'order_deposit_applications',
+  'order_deposit_refunds',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>

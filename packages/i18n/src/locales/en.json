@@ -1439,7 +1439,10 @@
     "record": "Record Payment",
     "recorded": "Payment recorded",
     "undone": "Payment undone",
-    "undoneDescription": "Payment amount has been reversed"
+    "undoneDescription": "Payment amount has been reversed",
+    "method": {
+      "order_deposit": "Order deposit"
+    }
   },
   "debt": {
     "total": "Total Debt",

@@ -18,7 +18,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@hisabche/store'
 import { BUSINESS_TYPES, BUSINESS_MODELS } from '@hisabche/ui-contract'
-import { apiErrorMessage } from '@hisabche/api'
+import { apiErrorMessage, useSaveWorkspaceProfile } from '@hisabche/api'
 import { industryEditable } from '../../../lib/industry-edit-access'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 
@@ -49,6 +49,7 @@ export function IndustryProfileSection({
   const storeTypes = useAuthStore((state) => state.user?.businessTypes)
   const storeRole = useAuthStore((state) => state.user?.role)
   const updateProfile = useAuthStore((state) => state.updateProfile)
+  const saveWorkspaceProfile = useSaveWorkspaceProfile()
 
   const current = useMemo(
     () => [
@@ -107,6 +108,16 @@ export function IndustryProfileSection({
           )
           return
         }
+      }
+      // V53 D4: the business profile lives on the WORKSPACE. `null` = the database cannot hold it yet
+      // (migration not applied), so only the personal profile above changed and nothing more is claimed.
+      // A 403 means this person may not change the BUSINESS profile (the server decides); their own
+      // profile above is already saved.
+      try {
+        await saveWorkspaceProfile([...selected])
+      } catch (cause) {
+        const status = (cause as { response?: { status?: number } }).response?.status
+        if (status !== 403) throw cause
       }
       setSaved(true)
     } catch (cause) {

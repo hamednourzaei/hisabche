@@ -7,13 +7,21 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { VariantService } from '../services/product/variant.service'
 
 export async function variantRoutes(fastify: FastifyInstance) {
   const service = new VariantService()
   const read = [authenticate, requireWorkspaceContext, requireCapability('product.read')]
-  const productWrite = [authenticate, requireWorkspaceContext, requireCapability('product.write')]
+  // Permission AND capability: the role may write products, and the business must have
+  // variants switched on (a workspace with no declared profile is never restricted).
+  const productWrite = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('product.write'),
+    requireProfileCapability('variants'),
+  ]
 
   fastify.get(
     '/api/products/:id/variants',

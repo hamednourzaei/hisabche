@@ -51,6 +51,7 @@ import { PaymentModal } from './PaymentModal'
 import { CustomerCrmPanel } from '../crm/customer-crm-panel'
 import { CustomerProfilePanel } from './customer-profile-panel'
 import { CustomerPortalPanel } from './customer-portal-panel'
+import { CustomerDepositsPanel } from './customer-deposits-panel'
 import { CustomerAccountingPanel, CustomerInsightsPanel } from './customer-analysis-panels'
 import { translateOr } from '../../../lib/translate-or'
 
@@ -633,6 +634,9 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
 
         <TabsContent value="payments">
           <PaymentsTable {...props} money={money} />
+          {/* The money held BEFORE the invoice: advances this customer paid on an
+              order, with what is left of each and the two actions that move it. */}
+          <CustomerDepositsPanel customerId={customer.id} formatDate={props.formatDate} />
         </TabsContent>
 
         <TabsContent value="activity">

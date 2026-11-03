@@ -57,6 +57,10 @@ export const accountRoles = [
   'bank_fees',
   'deferred_revenue',
   'inventory_loss',
+  // P1 (V53): money a customer paid BEFORE the sale is a debt to that
+  // customer, not income. Receipt Dr cash|bank / Cr customer_advances;
+  // applying it to a final invoice Dr customer_advances / Cr receivable.
+  'customer_advances',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

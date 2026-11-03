@@ -68,6 +68,13 @@ export const syncEntitySchema = z.enum([
   'branch',
   'exchange_rate',
   'product_stock',
+  // Customer advances. A deposit taken at one counter must be visible at the
+  // next one, and so must every application and refund against it — otherwise
+  // device B offers a balance device A has already spent. Named after the local
+  // tables they land in.
+  'order_deposits',
+  'order_deposit_applications',
+  'order_deposit_refunds',
 ])
 export type SyncEntity = z.infer<typeof syncEntitySchema>
 

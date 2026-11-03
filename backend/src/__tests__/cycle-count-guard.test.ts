@@ -33,7 +33,17 @@ const SERVICE = readFileSync(
 )
 
 /** Comments stripped — the file discusses the forbidden write at length. */
-const code = SERVICE.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+const stripComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+const code = stripComments(SERVICE)
+
+/** The movement shape lives in the domain (`countAdjustmentMovements`), which the service calls. */
+const domain = stripComments(
+  readFileSync(
+    join(__dirname, '..', 'services', 'inventory-costing', 'stock-count.domain.ts'),
+    'utf8',
+  ),
+)
 
 describe('the count never writes the quantity directly', () => {
   it('does not update products at all', () => {
@@ -43,15 +53,45 @@ describe('the count never writes the quantity directly', () => {
   })
 
   it('writes an ADJUSTMENT movement instead', () => {
-    expect(code).toContain("type: 'adjustment'")
+    expect(domain).toContain("type: 'adjustment'")
+    expect(code).toContain('countAdjustmentMovements')
     expect(code).toContain("from('stock_movements')")
   })
 
   it('names the count on every movement, so the adjustment is explicable', () => {
     // An adjustment with no reference is stock written off with nothing to
     // show for it — H4's `reference_id` lesson, applied here from the start.
-    expect(code).toContain("reference_type: 'cycle_count'")
-    expect(code).toContain('reference_id: countId')
+    expect(domain).toContain("reference_type: 'cycle_count'")
+    expect(domain).toContain('reference_id: input.countId')
+  })
+
+  it('names the warehouse that was counted, so the stock lands where it was counted', () => {
+    expect(domain).toContain('to_warehouse_id: input.warehouseId')
+    expect(code).toContain('warehouseId: String(count.warehouse_id)')
+  })
+
+  it('does not write the same adjustment twice', () => {
+    // It first reads the movements this count already wrote, and treats a
+    // unique-violation from a simultaneous completion as «already applied».
+    expect(code).toContain('alreadyAppliedProductIds')
+    expect(code).toContain("movementError.code !== '23505'")
+  })
+
+  it('completes in ONE database transaction when the function exists', () => {
+    // movements + frozen figures + status change together, under a row lock.
+    // Splitting them back into separate requests would bring back «stock moved,
+    // count still open».
+    expect(code).toContain("supabase.rpc('cycle_count_complete'")
+    expect(code).toContain('p_lines')
+    // Only «the function is missing» may fall back; every other failure throws.
+    expect(code).toContain("error.code === '42883' || error.code === 'PGRST202'")
+    expect(code).toMatch(/atomic === 'not_open'[\s\S]{0,80}CYCLE_COUNT_NOT_OPEN/)
+  })
+
+  it('does not report a completion that did not close the count', () => {
+    // The close is a compare-and-swap; zero rows closed means somebody else
+    // got there first.
+    expect(code).toMatch(/\.select\('id'\)[\s\S]{0,260}CYCLE_COUNT_NOT_OPEN/)
   })
 
   it('refuses to complete when the movements fail', () => {

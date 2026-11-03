@@ -93,7 +93,7 @@ const journeyKeys = new Set(
 
 const capabilityStatus = new Map()
 for (const match of capabilitySource.matchAll(
-  /key:\s*'([^']+)',\s*\n\s*status:\s*'(available|planned)'/g,
+  /key:\s*'([^']+)',\s*\n\s*status:\s*'(available|partial|planned)'/g,
 )) {
   capabilityStatus.set(match[1], match[2])
 }
@@ -101,7 +101,7 @@ for (const match of capabilitySource.matchAll(
 const profiles = industryKeys.map((key) => {
   const block = overrideBlock(profileSource, key)
   const rawCapabilities = block ? quotedList(block, 'capabilities: [') : []
-  const capabilities = rawCapabilities.filter((c) => capabilityStatus.get(c) === 'available')
+  const capabilities = rawCapabilities.filter((c) => capabilityStatus.get(c) !== 'planned')
   const extraColumns = block ? quotedList(block, 'extraVisibleColumns: [') : []
   const emphasized = block ? quotedList(block, 'emphasizedFields: [') : []
   const dashboardOverride = block ? quotedList(block, 'dashboard: [') : []
@@ -133,6 +133,9 @@ const count = (predicate) => profiles.filter(predicate).length
 const availableCapabilities = [...capabilityStatus.entries()]
   .filter(([, status]) => status === 'available')
   .map(([key]) => key)
+const partialCapabilities = [...capabilityStatus.entries()]
+  .filter(([, status]) => status === 'partial')
+  .map(([key]) => key)
 
 function list(values) {
   return values.length > 0 ? values.join('، ') : '—'
@@ -154,8 +157,12 @@ const registryRows = profiles
 const capabilityRows = [...capabilityStatus.entries()]
   .map(
     ([key, status]) =>
-      `| \`${key}\` | ${status === 'available' ? 'available' : 'planned'} | ${
-        availableCapabilities.includes(key) ? 'فعال' : 'فعال نیست'
+      `| \`${key}\` | ${status} | ${
+        availableCapabilities.includes(key)
+          ? 'فعال'
+          : partialCapabilities.includes(key)
+            ? 'فعال (جزئی)'
+            : 'فعال نیست'
       } |`,
   )
   .join('\n')
@@ -177,6 +184,7 @@ Sources read by the generator: \`${PROFILE_FILE}\`, \`${CAPABILITY_FILE}\`, \`${
 | General-purpose baseline | ${count((p) => p.kind === 'پایه (عمومی)')} |
 | Exact match with \`JOURNEY_INDUSTRIES\` | ${count((p) => p.journey === 'بله')} |
 | Available capabilities | ${availableCapabilities.length} |
+| Partial capabilities | ${partialCapabilities.length} |
 
 ## Industry registry
 
@@ -194,8 +202,9 @@ ${registryRows}
 ${capabilityRows}
 <!-- /industry-capability-table -->
 
-A capability is active only when its status is \`available\`. \`planned\` capabilities are attached
-to no profile and the resolver rejects them.
+A capability is active when its status is \`available\` or \`partial\`; a \`partial\` one is real but
+incomplete and is never presented as complete. \`planned\` capabilities are attached to no profile and
+the resolver rejects them.
 `
 
 if (CHECK_ONLY) {

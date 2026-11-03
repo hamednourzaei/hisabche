@@ -82,6 +82,12 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   branch: 'branches',
   exchange_rate: 'exchange_rates',
   product_stock: 'warehouse_stock',
+  // Customer advances. The movement tables are pulled as their own entities:
+  // a device derives «what is left» from them, exactly as the server's
+  // `order_deposit_balance` does, so a deposit is not only the receipt row.
+  order_deposits: 'order_deposits',
+  order_deposit_applications: 'order_deposit_applications',
+  order_deposit_refunds: 'order_deposit_refunds',
 }
 
 /**
@@ -101,6 +107,11 @@ export const ENTITIES_WITH_VERSION: ReadonlySet<SyncEntity> = new Set([
   'branch',
   'exchange_rate',
   'product_stock',
+  // Added by docs/order-deposit-sync-pull-01-migration.sql. A deposit's version
+  // moves when its receipt is re-booked or its applied invoice is filled.
+  'order_deposits',
+  'order_deposit_applications',
+  'order_deposit_refunds',
 ])
 
 /** Canonical SQL pattern for the version-guarded UPDATE issued on versioned entities. */
@@ -179,6 +190,14 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
     // set it could re-price work that has already been quoted.
     'description',
   ],
+  // ⚠️ NOTHING A DEVICE MAY WRITE. A deposit is money received, an application
+  // settles an invoice, a refund sends money back — each is one Postgres
+  // function that locks the row, writes the payment, the allocation and the
+  // ledger entry together. A row written straight into these tables would be a
+  // balance with no entry behind it. They are refused below, by name.
+  order_deposits: [],
+  order_deposit_applications: [],
+  order_deposit_refunds: [],
 }
 
 /**
@@ -290,6 +309,62 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
     'quantity',
     'updated_at',
   ],
+  // Customer advances. `currency` and `posting_status` travel because the
+  // device must refuse to spend a deposit whose currency is unknown and must
+  // say «pending posting» rather than claim a receipt reached the ledger.
+  order_deposits: [
+    'id',
+    'workspace_id',
+    'version',
+    'order_id',
+    'customer_id',
+    'amount_minor',
+    'payment_method',
+    'applied_invoice_id',
+    'currency',
+    'posting_status',
+    'created_at',
+    // ⚠️ `journal_entry_id` IS NOT SENT. The ledger entry belongs to the books
+    // that wrote it: on the device that took the deposit it points at that
+    // device's own entry, and a server id written over it would point at an
+    // entry the device does not have. `posting_status` carries everything the
+    // next device actually needs — whether the receipt is bookable and
+    // applicable.
+  ],
+  // The movements. A device that did not receive these would show the full
+  // amount as still available and offer money that has already been spent.
+  order_deposit_applications: [
+    'id',
+    'workspace_id',
+    'version',
+    'deposit_id',
+    'invoice_id',
+    'amount_minor',
+    'currency',
+    // The logical identity of the move: two devices must see one application,
+    // and the device that made it recognises its own echo by this key.
+    'idempotency_key',
+    'created_by',
+    'created_at',
+    // ⚠️ `payment_id` / `journal_entry_id` ARE NOT SENT. They name rows in the
+    // server's books. A device that received them would find no such payment
+    // and — because it only counts a movement whose payment is posted — would
+    // treat a real application as if it had never happened, offering the money
+    // a second time.
+  ],
+  order_deposit_refunds: [
+    'id',
+    'workspace_id',
+    'version',
+    'deposit_id',
+    'amount_minor',
+    'currency',
+    'method',
+    'reason',
+    'idempotency_key',
+    'created_by',
+    'created_at',
+  ],
   transaction: null,
   time_entry: null,
 }
@@ -367,7 +442,28 @@ const SYNC_WRITE_CAPABILITY: Record<
   branch: { create: 'workspace.manage', update: 'workspace.manage' },
   exchange_rate: { create: 'account.manage', update: 'account.manage' },
   product_stock: { create: 'product.write', update: 'product.write' },
+  // Unreachable: `DOMAIN_ONLY_ENTITIES` refuses these before the capability is
+  // read. The values exist because the record is exhaustive, and `invoice.read`
+  // is the capability the domain routes themselves require.
+  order_deposits: { create: 'invoice.create', update: 'invoice.create' },
+  order_deposit_applications: { create: 'invoice.create', update: 'invoice.create' },
+  order_deposit_refunds: { create: 'payment.record', update: 'payment.record' },
 }
+
+/**
+ * Entities that exist in the pull but NEVER in the push.
+ *
+ * A deposit movement is one atomic financial transaction; `/sync/push` writes
+ * a single row into a single table. Rather than leave that road open with an
+ * empty column list (which would insert a row whose every money column is
+ * missing) it is refused here, with the domain endpoint named — the same answer
+ * the app-bridge routing already gives on the device.
+ */
+const DOMAIN_ONLY_ENTITIES: ReadonlySet<SyncEntity> = new Set([
+  'order_deposits',
+  'order_deposit_applications',
+  'order_deposit_refunds',
+])
 
 class SyncError extends Error {
   constructor(
@@ -582,6 +678,13 @@ export class SyncService {
       throw new SyncError(
         'forbidden',
         `Deletes are not accepted through /sync/push. Route deletes through the domain REST endpoint (/api/${mutation.entityType}s/:id).`,
+      )
+    }
+
+    if (DOMAIN_ONLY_ENTITIES.has(mutation.entityType)) {
+      throw new SyncError(
+        'forbidden',
+        `${mutation.entityType} cannot be written through /sync/push: a deposit movement is one atomic transaction. Route it through /api/orders/:id/deposits.`,
       )
     }
 

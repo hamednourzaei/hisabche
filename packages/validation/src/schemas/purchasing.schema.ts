@@ -28,7 +28,11 @@ export const purchaseOrderSchema = z.object({
       totalPrice: positiveNumberSchema,
     }),
   ),
-  status: z.enum(['pending', 'approved', 'shipped', 'received', 'cancelled']).default('pending'),
+  // `draft` (owner decision PO): an order a person has not yet put forward — what a reorder suggestion
+  // creates. `pending` is for a real wait/approval step. A draft is never receivable.
+  status: z
+    .enum(['draft', 'pending', 'approved', 'shipped', 'received', 'cancelled'])
+    .default('pending'),
   notes: optionalStringSchema,
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),
@@ -45,6 +49,7 @@ export type PurchaseOrder = z.infer<typeof purchaseOrderSchema>
  * receive route then refused it, so the stock could never arrive.
  */
 export const settablePurchaseOrderStatusSchema = z.enum([
+  'draft',
   'pending',
   'approved',
   'shipped',

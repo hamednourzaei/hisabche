@@ -45,6 +45,9 @@ export type LedgerSourceType =
   // once however many warehouses it sits in.
   | 'opening_capital'
   | 'opening_stock'
+  // P1 (V53): money received before the sale. Keyed by the deposit id, so a
+  // retried deposit posts one entry, and the deposit is never booked as revenue.
+  | 'order_deposit'
   | 'manual'
   | 'reversal'
 

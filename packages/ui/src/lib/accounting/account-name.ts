@@ -26,6 +26,7 @@ const STANDARD_NAMES: Record<string, string> = {
   سرمایه: 'owner_capital',
   'کارمزد بانک و صرافی': 'bank_fees',
   'درآمد انتقالی (پیش‌دریافت)': 'deferred_revenue',
+  'پیش‌دریافت مشتریان': 'customer_advances',
   'ضرر و زیان ضایعات کالا': 'inventory_loss',
 }
 

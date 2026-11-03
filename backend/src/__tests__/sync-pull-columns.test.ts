@@ -22,6 +22,11 @@ const TABLE: Record<string, string> = {
   branch: 'branches',
   exchange_rate: 'exchange_rates',
   product_stock: 'warehouse_stock',
+  // Customer advances. Three entities, three tables: the receipt, and the two
+  // movements a device needs to derive the balance the server would report.
+  order_deposits: 'order_deposits',
+  order_deposit_applications: 'order_deposit_applications',
+  order_deposit_refunds: 'order_deposit_refunds',
 }
 
 describe('sync pull columns', () => {

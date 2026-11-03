@@ -962,14 +962,78 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'order-deposit.routes.ts',
     route: 'POST /api/orders/:id/deposits',
-    mechanisms: ['check-then-write'],
+    // P1 (V53): the receipt is booked as a liability with a ledger entry keyed
+    // by the deposit id, so a retry can never book the same money twice.
+    mechanisms: ['check-then-write', 'unique-constraint'],
     evidence: [
       {
         file: `${SVC}/sales/order-deposit.service.ts`,
         text: "from('order_deposits')",
       },
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: "sourceType: 'order_deposit'",
+      },
+      {
+        file: 'docs/accounting-core-migration.sql',
+        text: 'ON journal_entries (workspace_id, source_type, source_id)',
+      },
     ],
-    gap: 'Simultaneous duplicate deposit posts can insert duplicate records',
+    gap: 'Simultaneous duplicate deposit posts can still insert two order_deposits rows; the ledger entry stays one per deposit, never two.',
+  },
+  {
+    routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/orders/:id/deposits/:depositId/post',
+    // Recovery only: the ledger entry is keyed by the deposit id, so posting
+    // twice returns the first entry and writes nothing.
+    mechanisms: ['unique-constraint', 'state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: "sourceType: 'order_deposit'",
+      },
+      {
+        file: 'docs/accounting-core-migration.sql',
+        text: 'ON journal_entries (workspace_id, source_type, source_id)',
+      },
+    ],
+  },
+  {
+    routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/orders/:id/deposits/:depositId/apply',
+    // ONE Postgres function: it locks the deposit row, reads the real remaining
+    // balance, writes the payment + allocation and the journal entry, and the
+    // idempotency key is UNIQUE per deposit.
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: "rpc('order_deposit_apply'",
+      },
+      {
+        file: 'docs/order-deposit-apply-refund-01-migration.sql',
+        text: 'FROM public.order_deposits\n   WHERE id = p_deposit_id AND workspace_id = p_workspace_id\n   FOR UPDATE',
+      },
+      {
+        file: 'docs/order-deposit-apply-refund-01-migration.sql',
+        text: 'order_deposit_applications_idem_key',
+      },
+    ],
+  },
+  {
+    routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/orders/:id/deposits/:depositId/refund',
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: "rpc('order_deposit_refund'",
+      },
+      {
+        file: 'docs/order-deposit-apply-refund-01-migration.sql',
+        text: 'order_deposit_refunds_idem_key',
+      },
+    ],
   },
   // ─── Installments ────────────────────────────────────────────────────────
   {

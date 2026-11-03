@@ -36,13 +36,15 @@ export function receiptUnitCost(item: {
 /**
  * May an order in this status be received? An order is received ONCE: the second
  * receive of a double-click, a retry or a second device is refused, and so is a
- * cancelled one.
+ * cancelled one. A DRAFT is not receivable either: nobody has put it forward, so no supplier owes
+ * anything yet.
  */
 export function receiveRefusal(
   status: string,
-): 'PURCHASE_ORDER_ALREADY_RECEIVED' | 'PURCHASE_ORDER_CANCELLED' | null {
+): 'PURCHASE_ORDER_ALREADY_RECEIVED' | 'PURCHASE_ORDER_CANCELLED' | 'PURCHASE_ORDER_DRAFT' | null {
   if (status === 'received') return 'PURCHASE_ORDER_ALREADY_RECEIVED'
   if (status === 'cancelled') return 'PURCHASE_ORDER_CANCELLED'
+  if (status === 'draft') return 'PURCHASE_ORDER_DRAFT'
   return null
 }
 

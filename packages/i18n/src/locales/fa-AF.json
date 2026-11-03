@@ -1439,7 +1439,10 @@
     "record": "ثبت پرداخت",
     "recorded": "پرداخت ثبت شد",
     "undone": "پرداخت برگشت داده شد",
-    "undoneDescription": "مبلغ پرداخت معکوس شد"
+    "undoneDescription": "مبلغ پرداخت معکوس شد",
+    "method": {
+      "order_deposit": "بیعانه سفارش"
+    }
   },
   "debt": {
     "total": "مجموع بدهی",

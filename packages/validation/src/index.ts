@@ -994,13 +994,34 @@ export { SEEDED_UNITS, type UnitRecord } from './schemas/units-seed'
 
 // ---------- Industry profiles, capabilities & measurement (one shared core) ----------
 export {
+  DRAFT_PURCHASE_LINE_INCOMPLETE,
+  planDraftPurchaseOrders,
+  type DraftPurchaseGroup,
+  type DraftPurchaseLine,
+  type DraftPurchaseLineIssue,
+  type DraftPurchasePlan,
+  type DraftPurchaseSuggestion,
+  type IncompleteDraftLine,
+} from './schemas/draft-purchase-order.domain'
+export {
   CAPABILITIES,
   CAPABILITY_KEYS,
   AVAILABLE_CAPABILITIES,
+  USABLE_CAPABILITIES,
   isAvailableCapability,
+  isUsableCapability,
+  resolveCapabilities,
+  validateCapabilityRegistry,
   type CapabilityDefinition,
+  type CapabilityDiagnostic,
+  type CapabilityDiagnosticCode,
   type CapabilityEvidence,
   type CapabilityKey,
+  type CapabilityRegistry,
+  type CapabilityRegistryIssue,
+  type CapabilityRequirement,
+  type CapabilityResolution,
+  type CapabilityStatus,
 } from './schemas/business-capabilities'
 export {
   INDUSTRY_KEYS,

@@ -66,8 +66,11 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // document with the reference function and queues it; the server applies stock, cost and ledger.)
     // 59 since 2 Nov 2026: operations.pkg_suspension - suspending ONE package GRANT is a manager's decision
     // recorded on the server as an append-only event (M5); a local feature must never be split, so it is its own feature.
-    it('has exactly 59 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(59)
+    // 61 since 3 Nov 2026: settings.business_profile (reading the workspace profile - always allowed) and
+    // settings.business_profile_edit (changing it - workspace.manage on the server). Two features because a
+    // feature that is «always allowed» must not also write (entitlement-reads-never-stop.test.ts).
+    it('has exactly 61 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(61)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

@@ -7,6 +7,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { FitmentService } from '../services/inventory/fitment.service'
 
@@ -14,6 +15,14 @@ export async function fitmentRoutes(fastify: FastifyInstance) {
   const service = new FitmentService()
   const read = [authenticate, requireWorkspaceContext, requireCapability('product.read')]
   const productWrite = [authenticate, requireWorkspaceContext, requireCapability('product.write')]
+  // Permission AND capability: only a business with fitments switched on may add them
+  // (a workspace with no declared profile is never restricted).
+  const fitmentWrite = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('product.write'),
+    requireProfileCapability('auto_fitments'),
+  ]
 
   // ─── Fitments ───────────────────────────────────────────────
   fastify.get(
@@ -29,7 +38,7 @@ export async function fitmentRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/products/:id/fitments',
-    { preHandler: productWrite },
+    { preHandler: fitmentWrite },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string }
       const body = request.body as {

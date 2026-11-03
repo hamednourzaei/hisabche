@@ -105,7 +105,7 @@ function assertDocumentMatchesRegistry(markdown: string): void {
     const status = CAPABILITIES[key].status
     expect(cells![1], `status for ${key}`).toBe(status)
     expect(cells![2], `active column for ${key}`).toBe(
-      status === 'available' ? 'فعال' : 'فعال نیست',
+      status === 'available' ? 'فعال' : status === 'partial' ? 'فعال (جزئی)' : 'فعال نیست',
     )
   }
 }

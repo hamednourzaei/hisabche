@@ -17,11 +17,14 @@
 
 import { requireCapability } from '../auth'
 import {
+  DRAFT_PURCHASE_LINE_INCOMPLETE,
   createPurchaseOrderSchema,
   flagFilter,
   orderLineTotal,
+  planDraftPurchaseOrders,
   receiptUnitCost,
   receiveRefusal,
+  type DraftPurchaseSuggestion,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
@@ -353,44 +356,32 @@ export function registerPurchasingRoutes(router: Router): void {
 
   // ─── POST /inventory/reorder-suggestions/draft-po ───────────
   router.post('/inventory/reorder-suggestions/draft-po', (c: RouteHandlerContext) => {
-    requireCapability(c.ctx, 'warehouse.manage')
+    // The SAME permission the server asks for (owner decision PO: purchase-write; warehouse.manage is
+    // not a substitute).
+    requireCapability(c.ctx, 'purchase.write')
     const { db, ctx, body } = c
-    const raw = (body ?? {}) as {
-      suggestions?: Array<{
-        supplierId?: string
-        productId: string
-        suggestedQuantity: number
-        unitPrice?: number
-      }>
+    const raw = (body ?? {}) as { suggestions?: DraftPurchaseSuggestion[] }
+    // The SAME rule the server applies: no guessed supplier, no free item.
+    const plan = planDraftPurchaseOrders(raw.suggestions ?? [])
+    if (!plan.ok) {
+      const products = plan.incomplete.map((line) => line.productId).join(', ')
+      throw new ValidationError(
+        `${DRAFT_PURCHASE_LINE_INCOMPLETE}: every line needs productId, supplierId, suggestedQuantity > 0 and unitPrice > 0${products ? ` (${products})` : ''}`,
+      )
     }
-    const items = raw.suggestions ?? []
     const now = new Date().toISOString()
     const orderDate = now.slice(0, 10)
 
-    const bySupplier = new Map<
-      string,
-      Array<{ productId: string; quantity: number; unitPrice: number }>
-    >()
-    for (const item of items) {
-      const supId = item.supplierId || 'default-supplier'
-      if (!bySupplier.has(supId)) bySupplier.set(supId, [])
-      bySupplier.get(supId)!.push({
-        productId: item.productId,
-        quantity: item.suggestedQuantity,
-        unitPrice: item.unitPrice ?? 0,
-      })
-    }
-
     return db.transaction(() => {
       const draftPOs = []
-      for (const [supplierId, supItems] of bySupplier.entries()) {
+      for (const { supplierId, lines } of plan.groups) {
         const orderId = `po-draft-${Math.random().toString(36).slice(2, 9)}`
         db.run(
           `INSERT INTO purchase_order (id, workspace_id, supplier_id, order_date, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, 'draft', ?, ?)`,
           [orderId, ctx.workspaceId, supplierId, orderDate, now, now],
         )
-        for (const si of supItems) {
+        for (const si of lines) {
           const lineId = `pol-${Math.random().toString(36).slice(2, 9)}`
           const total = si.quantity * si.unitPrice
           db.run(

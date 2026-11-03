@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { CostLayer } from '../services/inventory-costing/costing.domain'
 import {
+  countAdjustmentMovements,
   priceLine,
   summariseCount,
   valueShortage,
@@ -306,5 +307,73 @@ describe('what to reorder is judged on PROJECTED stock', () => {
       item({ productId: 'gone', onHand: 0, reorderLevel: 10 }),
     ])
     expect(suggestions.map((suggestion) => suggestion.productId)).toEqual(['gone', 'low'])
+  })
+})
+
+describe('countAdjustmentMovements', () => {
+  const base = {
+    countId: 'count-1',
+    warehouseId: 'wh-1',
+    workspaceId: 'ws-1',
+    userId: 'u-1',
+  }
+  const line = (productId: string, varianceQty: number) => ({
+    productId,
+    expectedQty: 10,
+    countedQty: 10 + varianceQty,
+    varianceQty,
+    direction:
+      varianceQty < 0
+        ? ('shortage' as const)
+        : varianceQty > 0
+          ? ('surplus' as const)
+          : ('none' as const),
+    varianceValue: Math.abs(varianceQty),
+  })
+
+  it('names the counted warehouse on every movement', () => {
+    const movements = countAdjustmentMovements({
+      ...base,
+      lines: [line('a', -3), line('b', 2)],
+      alreadyAppliedProductIds: new Set(),
+    })
+    expect(movements.map((m) => [m.product_id, m.quantity, m.to_warehouse_id])).toEqual([
+      ['a', -3, 'wh-1'],
+      ['b', 2, 'wh-1'],
+    ])
+    expect(
+      movements.every((m) => m.reference_type === 'cycle_count' && m.reference_id === 'count-1'),
+    ).toBe(true)
+  })
+
+  it('writes nothing for a line with no variance', () => {
+    expect(
+      countAdjustmentMovements({
+        ...base,
+        lines: [line('a', 0)],
+        alreadyAppliedProductIds: new Set(),
+      }),
+    ).toEqual([])
+  })
+
+  it('completing a second time adjusts nothing that was already adjusted', () => {
+    const lines = [line('a', -3), line('b', 2), line('c', 5)]
+    const first = countAdjustmentMovements({ ...base, lines, alreadyAppliedProductIds: new Set() })
+    expect(first).toHaveLength(3)
+
+    const retry = countAdjustmentMovements({
+      ...base,
+      lines,
+      alreadyAppliedProductIds: new Set(first.map((m) => m.product_id)),
+    })
+    expect(retry).toEqual([])
+
+    // A crash half way: only 'a' was written. The retry writes the rest, once.
+    const resumed = countAdjustmentMovements({
+      ...base,
+      lines,
+      alreadyAppliedProductIds: new Set(['a']),
+    })
+    expect(resumed.map((m) => m.product_id)).toEqual(['b', 'c'])
   })
 })

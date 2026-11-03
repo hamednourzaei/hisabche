@@ -34,4 +34,8 @@ export const STANDARD_ACCOUNT_FOR_ROLE: Partial<Record<AccountRole, StandardAcco
   bank_fees: { code: '6100', name: 'کارمزد بانک و صرافی', type: 'expense' },
   deferred_revenue: { code: '2200', name: 'درآمد انتقالی (پیش‌دریافت)', type: 'liability' },
   inventory_loss: { code: '5200', name: 'ضرر و زیان ضایعات کالا', type: 'expense' },
+  // P1 (V53): an order deposit is a liability to the customer until the final
+  // invoice applies it. 2150 sits below «مالیات» (2100) and above «درآمد
+  // انتقالی» (2200): both are money received before it is earned.
+  customer_advances: { code: '2150', name: 'پیش‌دریافت مشتریان', type: 'liability' },
 }

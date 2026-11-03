@@ -13,8 +13,8 @@ export const TEST_WORKSPACE_ID = '11111111-1111-4111-8111-111111111111'
 export const TEST_USER_ID = '22222222-2222-4222-8222-222222222222'
 export const TEST_WAREHOUSE_ID = '33333333-3333-4333-8333-333333333333'
 
-export function createTestDb(): LocalDb {
-  const db = new DatabaseSync(':memory:')
+export function createTestDb(filePath = ':memory:'): ClosableLocalDb {
+  const db = new DatabaseSync(filePath)
 
   // Apply all schema tables and indexes
   for (const stmt of CREATE_STATEMENTS) {
@@ -33,6 +33,26 @@ export function createTestDb(): LocalDb {
     VALUES ('${TEST_WAREHOUSE_ID}', '${TEST_WORKSPACE_ID}', 'انبار مرکزی', 'کابل', 1, datetime('now'), datetime('now'));
   `)
 
+  return wrap(db)
+}
+
+/**
+ * The same database, opened again from a file on disk — the second launch of
+ * an app that was closed while a write was still waiting to sync.
+ *
+ * The schema statements are re-applied (they are all `IF NOT EXISTS`), the
+ * seed is NOT: the rows that matter are the ones the previous process wrote.
+ */
+export function reopenTestDb(filePath: string): ClosableLocalDb {
+  const db = new DatabaseSync(filePath)
+  for (const stmt of CREATE_STATEMENTS) db.exec(stmt)
+  return wrap(db)
+}
+
+/** `close` exists so a test can end the process the way the app does. */
+export type ClosableLocalDb = LocalDb & { close(): void }
+
+function wrap(db: DatabaseSync): ClosableLocalDb {
   let inTransaction = false
 
   return {
@@ -75,6 +95,9 @@ export function createTestDb(): LocalDb {
       } finally {
         inTransaction = false
       }
+    },
+    close(): void {
+      db.close()
     },
   }
 }

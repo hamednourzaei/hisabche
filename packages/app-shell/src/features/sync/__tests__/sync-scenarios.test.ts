@@ -384,6 +384,137 @@ describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
     expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe('pay-9')
   })
 
+  it('an offline deposit APPLY reaches the domain endpoint with the invoice, the amount and the intent key', async () => {
+    queue = [
+      entry('dep-apply-1', 'order_deposits', 'create', {
+        movement: 'apply',
+        orderId: 'order-1',
+        depositId: 'dep-1',
+        invoiceId: 'inv-1',
+        amountMinor: 30_000,
+        currency: 'AFN',
+        idempotencyKey: 'intent-apply-0001',
+        date: '2026-11-03',
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === '/orders/order-1/deposits/dep-1/apply')
+    expect(sent).toBeDefined()
+    // The row's own key travels as the transport key; the INTENT key travels in
+    // the body, because the server deduplicates the MOVEMENT on it.
+    expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe('dep-apply-1')
+    expect(sent?.body).toEqual({
+      invoiceId: 'inv-1',
+      amountMinor: 30_000,
+      idempotencyKey: 'intent-apply-0001',
+      date: '2026-11-03',
+    })
+    expect(queue).toHaveLength(0)
+  })
+
+  it('an offline deposit REFUND carries the mandatory reason and the method to the refund endpoint', async () => {
+    queue = [
+      entry('dep-refund-1', 'order_deposits', 'create', {
+        movement: 'refund',
+        orderId: 'order-1',
+        depositId: 'dep-1',
+        amountMinor: 20_000,
+        currency: 'AFN',
+        reason: 'مشتری سفارش را لغو کرد',
+        method: 'bank',
+        idempotencyKey: 'intent-refund-001',
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === '/orders/order-1/deposits/dep-1/refund')
+    expect(sent?.body).toEqual({
+      amountMinor: 20_000,
+      reason: 'مشتری سفارش را لغو کرد',
+      idempotencyKey: 'intent-refund-001',
+      method: 'bank',
+    })
+    expect(queue).toHaveLength(0)
+  })
+
+  it('a move the server refuses (not enough left) stays VISIBLE as a rejection and is not re-sent by itself', async () => {
+    post.mockImplementationOnce(async () => {
+      const err = new Error('DEPOSIT_INSUFFICIENT_BALANCE') as Error & { status?: number }
+      err.status = 409
+      throw err
+    })
+    queue = [
+      entry('dep-apply-2', 'order_deposits', 'create', {
+        movement: 'apply',
+        orderId: 'order-1',
+        depositId: 'dep-1',
+        invoiceId: 'inv-1',
+        amountMinor: 99_000,
+        idempotencyKey: 'intent-apply-0002',
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    const refused = queue.find((q) => q.clientId === 'dep-apply-2')
+    expect(refused?.status).toBe('failed')
+    expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+    expect(refused?.lastError).toContain('DEPOSIT_INSUFFICIENT_BALANCE')
+
+    const sent = postCalls.length
+    await runSync(queryClient)
+    expect(postCalls.length).toBe(sent)
+  })
+
+  it('a duplicate delivery of the same deposit move sends the SAME intent key, so the server settles it once', async () => {
+    const payload = {
+      movement: 'apply',
+      orderId: 'order-1',
+      depositId: 'dep-1',
+      invoiceId: 'inv-1',
+      amountMinor: 12_000,
+      idempotencyKey: 'intent-apply-0003',
+    }
+    queue = [entry('dep-apply-3', 'order_deposits', 'create', payload)]
+
+    // The connection dies after the server received it: the device cannot know.
+    nextPostAction = 'drop'
+    await runSync(queryClient)
+    expect(queue).toHaveLength(1)
+
+    // The retry repeats the request, not a second settlement.
+    nextPostAction = 'pass'
+    await runSync(queryClient)
+
+    const attempts = postCalls.filter((c) => c.url === '/orders/order-1/deposits/dep-1/apply')
+    expect(attempts).toHaveLength(2)
+    for (const attempt of attempts) {
+      expect(attempt.body).toMatchObject({ idempotencyKey: 'intent-apply-0003' })
+    }
+    expect(queue).toHaveLength(0)
+  })
+
+  it('a deposit row with no movement is refused at once and visibly, never guessed into an apply', async () => {
+    queue = [
+      entry('dep-null-1', 'order_deposits', 'create', {
+        orderId: 'order-1',
+        depositId: 'dep-1',
+        amountMinor: 1_000,
+      }),
+    ]
+
+    await runSync(queryClient)
+
+    expect(postCalls).toHaveLength(0)
+    const refused = queue.find((q) => q.clientId === 'dep-null-1')
+    expect(refused?.status).toBe('failed')
+    expect(refused?.lastError?.startsWith(REJECTED_PREFIX)).toBe(true)
+    expect(refused?.lastError).toContain('MISSING_DEPOSIT_MOVEMENT')
+  })
+
   it('a command queued before a capability was taken away is re-judged by the server: refused, kept visible, never re-sent, and the rest still goes', async () => {
     post.mockImplementationOnce(async () => {
       const err = new Error('CAPABILITY_REQUIRED') as Error & { status?: number }

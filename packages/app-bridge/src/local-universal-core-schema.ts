@@ -151,6 +151,75 @@ export const SERVICE_CANCELLATION_REASON_ALTERS: readonly string[] = [
   `ALTER TABLE service_delivery_sessions ADD COLUMN cancellation_reason TEXT`,
 ]
 
+/**
+ * The two tables a deposit movement is recorded in on the device (v18).
+ *
+ * ⚠️ A MOVEMENT HERE IS A REQUEST, NOT A SETTLEMENT.
+ *
+ * Applying or refunding a deposit is ONE transaction on the server: it reads
+ * the remaining balance under a row lock, then writes the payment, the
+ * allocation, the ledger entry and the audit row together
+ * (docs/order-deposit-apply-refund-01-migration.sql). A device cannot hold that
+ * lock, so it does not pretend to settle anything: it records WHAT was asked
+ * for — with the same idempotency key the server deduplicates on — and queues
+ * it. `sync_status` stays 'pending' until the server answers; only then do
+ * `payment_id` and `journal_entry_id` mean anything.
+ *
+ * Declared BEFORE `UNIVERSAL_CORE_STATEMENTS`, which spreads it at module load.
+ */
+export const ORDER_DEPOSIT_MOVEMENT_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS order_deposit_applications (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    deposit_id TEXT NOT NULL,
+    invoice_id TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    payment_id TEXT,
+    journal_entry_id TEXT,
+    sync_status TEXT NOT NULL DEFAULT 'pending',
+    last_error TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  // A retry with the same key finds its own row — the request is not queued twice.
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_order_deposit_applications_key
+     ON order_deposit_applications(workspace_id, deposit_id, idempotency_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_order_deposit_applications_deposit
+     ON order_deposit_applications(workspace_id, deposit_id)`,
+
+  `CREATE TABLE IF NOT EXISTS order_deposit_refunds (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    deposit_id TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    method TEXT NOT NULL DEFAULT 'cash',
+    -- WHY the money went back: the same 3..500 rule the server's column enforces.
+    reason TEXT NOT NULL CHECK (length(trim(reason)) BETWEEN 3 AND 500),
+    idempotency_key TEXT NOT NULL,
+    payment_id TEXT,
+    journal_entry_id TEXT,
+    sync_status TEXT NOT NULL DEFAULT 'pending',
+    last_error TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_order_deposit_refunds_key
+     ON order_deposit_refunds(workspace_id, deposit_id, idempotency_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_order_deposit_refunds_deposit
+     ON order_deposit_refunds(workspace_id, deposit_id)`,
+]
+
 export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
   // ─── 1. Product Variants (v9) ─────────────────────────────────
   `CREATE TABLE IF NOT EXISTS product_variants (
@@ -288,7 +357,13 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_return_lines_return ON invoice_return_lines(workspace_id, return_id)`,
 
-  // ─── 7. Order Deposits (v9) ─────────────────────────────────
+  // ─── 7. Order Deposits (v9, money columns v18) ──────────────
+  //
+  // `currency`, `posting_status` and `journal_entry_id` arrived with v18, the
+  // same three the server added for apply/refund. A deposit whose currency is
+  // NULL is UNKNOWN (a row older than the column) and cannot be applied or
+  // refunded: guessing the books currency would turn 100 dollars into 100
+  // afghani.
   `CREATE TABLE IF NOT EXISTS order_deposits (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
@@ -296,6 +371,9 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     customer_id TEXT NOT NULL,
     amount_minor INTEGER NOT NULL,
     payment_method TEXT NOT NULL DEFAULT 'cash',
+    currency TEXT,
+    posting_status TEXT,
+    journal_entry_id TEXT,
     applied_invoice_id TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT '',
@@ -304,6 +382,10 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     sync_state TEXT NOT NULL DEFAULT 'local_only'
   )`,
   `CREATE INDEX IF NOT EXISTS idx_order_deposits_order ON order_deposits(workspace_id, order_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_order_deposits_customer ON order_deposits(workspace_id, customer_id)`,
+
+  // ─── 7b. Deposit movements (v18) ────────────────────────────
+  ...ORDER_DEPOSIT_MOVEMENT_STATEMENTS,
 
   // ─── 8. Package Credit & Entitlement Ledger (v13) ────────────
   ...PACKAGE_CREDIT_LEDGER_STATEMENTS,
@@ -326,4 +408,34 @@ export const RETURNS_CORE_ALTERS: readonly string[] = [
 
 export const UNIVERSAL_CORE_ALTERS: readonly string[] = [
   `ALTER TABLE local_workspace ADD COLUMN credit_limit_mode TEXT NOT NULL DEFAULT 'warn'`,
+]
+
+/**
+ * v18 — the money columns of a deposit, on a cache that already has the table.
+ *
+ * The same three columns the server added for apply/refund, plus the two
+ * movement tables. A deposit written before this version keeps
+ * `currency = NULL`, which every reader treats as UNKNOWN: the move is refused
+ * rather than guessed.
+ */
+export const ORDER_DEPOSIT_ALTERS: readonly string[] = [
+  // A cache that never ran the made-to-order module has no deposit table at
+  // all; without this the three ALTERs below fail with `no such table` and the
+  // upgrade stops half way. The shape here is the PRE-v18 one, so the ALTERs
+  // still have something to add; on a cache that already has the table this is
+  // a no-op.
+  `CREATE TABLE IF NOT EXISTS order_deposits (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    order_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    payment_method TEXT NOT NULL DEFAULT 'cash',
+    applied_invoice_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `ALTER TABLE order_deposits ADD COLUMN currency TEXT`,
+  `ALTER TABLE order_deposits ADD COLUMN posting_status TEXT`,
+  `ALTER TABLE order_deposits ADD COLUMN journal_entry_id TEXT`,
 ]

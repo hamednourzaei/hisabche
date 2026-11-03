@@ -63,6 +63,7 @@ const MANAGER_CAPABILITIES = new Set([
   'pricing.write',
   'report.financial.read',
   'stock.adjust',
+  'purchase.write',
   'warehouse.manage',
   'payroll.write',
   'employee.write',

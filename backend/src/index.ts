@@ -129,6 +129,7 @@ import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
 import { variantRoutes } from './routes/variant.routes'
+import { workspaceProfileRoutes } from './routes/workspace-profile.routes'
 import { metalRatesRoutes } from './routes/metal-rates.routes'
 import { fitmentRoutes } from './routes/fitment.routes'
 import { warrantyRoutes } from './routes/warranty.routes'
@@ -789,6 +790,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(purchasingRoutes)
   await server.register(workflowRoutes)
   await server.register(variantRoutes)
+  await server.register(workspaceProfileRoutes)
   await server.register(metalRatesRoutes)
   await server.register(fitmentRoutes)
   await server.register(warrantyRoutes)

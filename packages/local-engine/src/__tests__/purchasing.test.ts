@@ -164,3 +164,139 @@ describe('purchase orders on the device', () => {
     ).toBe(404)
   })
 })
+
+describe('reorder suggestions → draft purchase orders on the device', () => {
+  const SUPPLIER_A = '66666666-6666-4666-8666-666666666666'
+  let db: ReturnType<typeof createTestDb>
+  let engine: ReturnType<typeof createTestEngine>
+  let productId: string
+
+  beforeEach(async () => {
+    db = createTestDb()
+    engine = createTestEngine(db)
+    db.run(
+      `INSERT INTO supplier (id, workspace_id, name, phone, email, notes, is_active, created_at, updated_at)
+       VALUES (?, ?, 'تأمین‌کننده', '0700', '', '', 1, datetime('now'), datetime('now'))`,
+      [SUPPLIER_A, TEST_WORKSPACE_ID],
+    )
+    const res = await engine.request({
+      method: 'POST',
+      path: '/products',
+      body: {
+        name: 'آرد',
+        buyPrice: 0,
+        sellPrice: 90,
+        quantity: 0,
+        warehouseId: TEST_WAREHOUSE_ID,
+      },
+    })
+    productId = (res.data as { id: string }).id
+  })
+
+  const draft = (suggestions: Array<Record<string, unknown>>) =>
+    engine.request<{ code?: string; error?: string; count?: number }>({
+      method: 'POST',
+      path: '/inventory/reorder-suggestions/draft-po',
+      body: { suggestions },
+    })
+
+  const orderCount = () => db.all<{ n: number }>('SELECT COUNT(*) AS n FROM purchase_order')[0]!.n
+
+  it('drafts an order for a named supplier at the price the owner chose', async () => {
+    const res = await draft([
+      { productId, supplierId: SUPPLIER_A, suggestedQuantity: 10, unitPrice: 50 },
+    ])
+    expect(res.status).toBe(201)
+    expect(res.data.count).toBe(1)
+    expect(orderCount()).toBe(1)
+  })
+
+  it('does not invent a supplier: a line with none is refused and nothing is written', async () => {
+    const res = await draft([{ productId, suggestedQuantity: 10, unitPrice: 50 }])
+    expect(res.status).toBe(400)
+    expect(JSON.stringify(res.data)).toContain('DRAFT_PO_LINE_INCOMPLETE')
+    expect(orderCount()).toBe(0)
+  })
+
+  it('does not accept a free item', async () => {
+    const res = await draft([
+      { productId, supplierId: SUPPLIER_A, suggestedQuantity: 10, unitPrice: 0 },
+    ])
+    expect(res.status).toBe(400)
+    expect(orderCount()).toBe(0)
+  })
+
+  it('one bad line refuses the whole batch', async () => {
+    const res = await draft([
+      { productId, supplierId: SUPPLIER_A, suggestedQuantity: 10, unitPrice: 50 },
+      { productId, suggestedQuantity: 5, unitPrice: 50 },
+    ])
+    expect(res.status).toBe(400)
+    expect(orderCount()).toBe(0)
+  })
+})
+
+describe('a drafted purchase order is a DRAFT: canonical status, purchase-write permission, never receivable', () => {
+  const SUPPLIER_D = '77777777-7777-4777-8777-777777777777'
+  let db: ReturnType<typeof createTestDb>
+  let engine: ReturnType<typeof createTestEngine>
+  let productId: string
+
+  beforeEach(async () => {
+    db = createTestDb()
+    engine = createTestEngine(db)
+    db.run(
+      `INSERT INTO supplier (id, workspace_id, name, phone, email, notes, is_active, created_at, updated_at)
+       VALUES (?, ?, 'تأمین‌کننده', '0700', '', '', 1, datetime('now'), datetime('now'))`,
+      [SUPPLIER_D, TEST_WORKSPACE_ID],
+    )
+    const res = await engine.request({
+      method: 'POST',
+      path: '/products',
+      body: {
+        name: 'آرد',
+        buyPrice: 0,
+        sellPrice: 90,
+        quantity: 0,
+        warehouseId: TEST_WAREHOUSE_ID,
+      },
+    })
+    productId = (res.data as { id: string }).id
+  })
+
+  const draft = () =>
+    engine.request<{ draftPOs: Array<{ id: string; status: string }> }>({
+      method: 'POST',
+      path: '/inventory/reorder-suggestions/draft-po',
+      body: {
+        suggestions: [{ productId, supplierId: SUPPLIER_D, suggestedQuantity: 4, unitPrice: 50 }],
+      },
+    })
+
+  it('is written with the canonical status `draft`', async () => {
+    const res = await draft()
+    expect(res.status).toBe(201)
+    expect(res.data.draftPOs[0]!.status).toBe('draft')
+  })
+
+  it('cannot be received — nobody has put it forward, and the shelf does not move', async () => {
+    const order = (await draft()).data.draftPOs[0]!
+    const received = await engine.request<{ code?: string }>({
+      method: 'POST',
+      path: `/purchase-orders/${order.id}/receive`,
+    })
+    expect(received.status).toBe(409)
+    expect(JSON.stringify(received.data)).toContain('PURCHASE_ORDER_DRAFT')
+    const qty = db.all<{ q: number }>(
+      'SELECT COALESCE(SUM(quantity), 0) AS q FROM inventory_movement',
+    )[0]!.q
+    expect(qty).toBe(0)
+  })
+
+  it('needs the purchase-write permission: a seller is refused and nothing is written', async () => {
+    db.run(`UPDATE local_user SET role = 'seller'`)
+    const res = await draft()
+    expect(res.status).toBe(403)
+    expect(db.all<{ n: number }>('SELECT COUNT(*) AS n FROM purchase_order')[0]!.n).toBe(0)
+  })
+})

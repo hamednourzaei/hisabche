@@ -38,6 +38,8 @@ export const universalCoreKeys = {
   warranties: () => [...universalCoreKeys.all, 'warranties'] as const,
   returns: (invoiceId: string) => [...universalCoreKeys.all, 'returns', invoiceId] as const,
   deposits: (orderId: string) => [...universalCoreKeys.all, 'deposits', orderId] as const,
+  customerDeposits: (customerId: string) =>
+    [...universalCoreKeys.all, 'customer-deposits', customerId] as const,
   appointments: () => [...universalCoreKeys.all, 'appointments'] as const,
   crops: () => [...universalCoreKeys.all, 'crops'] as const,
   trips: () => [...universalCoreKeys.all, 'trips'] as const,
@@ -208,6 +210,48 @@ export interface OrderDepositRecord {
   amountMinor: number
   paymentMethod?: string | null
   createdAt: string
+}
+
+/**
+ * A deposit as the customer screen reads it: the row plus the balance the
+ * database counts (`order_deposit_balance`), so what the screen shows is the
+ * figure apply/refund will validate against.
+ *
+ * ⚠️ `currency: null` is UNKNOWN, not the books currency: the row predates the
+ * column, so an amount cannot be converted and the action is refused.
+ */
+export interface CustomerDepositRecord {
+  id: string
+  orderId: string
+  customerId: string
+  amountMinor: number
+  appliedMinor: number
+  refundedMinor: number
+  remainingMinor: number
+  currency: string | null
+  paymentMethod: string
+  postingStatus: string | null
+  journalEntryId: string | null
+  status: 'pending_posting' | 'posting_unknown' | 'available' | 'partially_used' | 'fully_used'
+  /** True while a change to this deposit is still waiting in the device's outbox. */
+  pendingSync: boolean
+  createdAt: string
+}
+
+/** What apply/refund answer: the movement and the balance after it. */
+export interface DepositMovementResult {
+  replayed: boolean
+  depositId: string
+  amountMinor: number
+  currency: string
+  paymentId: string
+  journalEntryId: string | null
+  balance: {
+    amountMinor: number
+    appliedMinor: number
+    refundedMinor: number
+    remainingMinor: number
+  }
 }
 
 export interface AppointmentRecord {
@@ -538,6 +582,139 @@ export function useCreateOrderDeposit(orderId: string) {
       queryClient.invalidateQueries({ queryKey: universalCoreKeys.deposits(orderId) })
     },
   })
+}
+
+/** Every deposit this customer paid, with what is left of each. */
+export function useCustomerDeposits(customerId: string | undefined) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.customerDeposits(customerId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: CustomerDepositRecord[] }>(
+        `/customers/${customerId}/deposits`,
+      )
+      return asList<CustomerDepositRecord>(data?.data, `/customers/${customerId}/deposits`)
+    },
+    enabled: authReady && Boolean(customerId),
+  })
+}
+
+/**
+ * Apply part of a deposit to a final invoice.
+ *
+ * The key travels in the BODY (the server's contract): the same key on a retry
+ * returns the first application instead of settling the invoice twice, and the
+ * same key with another amount is refused as a conflict.
+ */
+export function useApplyOrderDeposit() {
+  const queryClient = useQueryClient()
+  const intent = useIntentKey('dep_apply')
+  return useMutation({
+    mutationFn: async (input: {
+      orderId: string
+      depositId: string
+      customerId: string
+      invoiceId: string
+      amountMinor: number
+      date?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: DepositMovementResult }>(
+        `/orders/${input.orderId}/deposits/${input.depositId}/apply`,
+        {
+          invoiceId: input.invoiceId,
+          amountMinor: input.amountMinor,
+          idempotencyKey: intent.current(),
+          ...(input.date ? { date: input.date } : {}),
+        },
+      )
+      return data.data
+    },
+    onError: (error) => intent.settle(error),
+    onSuccess: (result, input) => {
+      intent.settle()
+      invalidateAfterDeposit(queryClient, input.orderId, input.customerId)
+      return result
+    },
+  })
+}
+
+/**
+ * Give part (or all) of an unused deposit back.
+ *
+ * Money OUT: the reason is mandatory and trimmed here as well as on the
+ * server — an empty explanation is refused before a request is wasted, and the
+ * server refuses it again if the screen ever stops doing so.
+ */
+export function useRefundOrderDeposit() {
+  const queryClient = useQueryClient()
+  const intent = useIntentKey('dep_refund')
+  return useMutation({
+    mutationFn: async (input: {
+      orderId: string
+      depositId: string
+      customerId: string
+      amountMinor: number
+      reason: string
+      method?: string | undefined
+      date?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: DepositMovementResult }>(
+        `/orders/${input.orderId}/deposits/${input.depositId}/refund`,
+        {
+          amountMinor: input.amountMinor,
+          reason: input.reason.trim(),
+          idempotencyKey: intent.current(),
+          ...(input.method ? { method: input.method } : {}),
+          ...(input.date ? { date: input.date } : {}),
+        },
+      )
+      return data.data
+    },
+    onError: (error) => intent.settle(error),
+    onSuccess: (result, input) => {
+      intent.settle()
+      invalidateAfterDeposit(queryClient, input.orderId, input.customerId)
+      return result
+    },
+  })
+}
+
+/**
+ * Re-book the receipt of a deposit recorded while the chart of accounts could
+ * not express it. Idempotent on the server: an already-booked deposit returns
+ * its entry and writes nothing.
+ */
+export function usePostOrderDepositReceipt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { orderId: string; depositId: string; customerId: string }) => {
+      const { data } = await apiClient.post<{ data: OrderDepositRecord }>(
+        `/orders/${input.orderId}/deposits/${input.depositId}/post`,
+        {},
+      )
+      return data.data
+    },
+    onSuccess: (_result, input) => {
+      invalidateAfterDeposit(queryClient, input.orderId, input.customerId)
+    },
+  })
+}
+
+// A deposit that moves changes the invoice it settled, the customer's balance,
+// the books and the dashboard — all four, or the next screen contradicts this one.
+function invalidateAfterDeposit(
+  queryClient: ReturnType<typeof useQueryClient>,
+  orderId: string,
+  customerId: string,
+) {
+  queryClient.invalidateQueries({ queryKey: universalCoreKeys.deposits(orderId) })
+  queryClient.invalidateQueries({ queryKey: universalCoreKeys.customerDeposits(customerId) })
+  queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+  queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+  queryClient.invalidateQueries({ queryKey: ['invoice-related'] })
+  queryClient.invalidateQueries({ queryKey: ['customers'] })
+  queryClient.invalidateQueries({ queryKey: ['ledger'] })
+  queryClient.invalidateQueries({ queryKey: ['dashboard'] })
 }
 
 // ─── 10. Appointments (G-17) ────────────────────────────────────

@@ -254,6 +254,9 @@ describe('M5 device: the SALE of a package', () => {
         type: 'sale',
         customerId: CUST,
         currency: 'AFN',
+        // A FIXED date: without it the sale is dated by the real clock, and the
+        // sessions below (scheduled on fixed days) fall before the grant starts.
+        date: '2026-11-01',
         items: [{ productId: PACKAGE, productName: 'course', quantity: 10, unitPrice: 1000 }],
       },
     })
