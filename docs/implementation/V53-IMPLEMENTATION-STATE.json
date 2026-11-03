@@ -2,7 +2,7 @@
   "version": 1,
   "mission": "V53 Universal Business Core",
   "scope": "Phases A-C only (baseline + P13, capability architecture, business-profile composition). Store/Teacher/onboarding deliberately not started.",
-  "currentPhase": "continuation-5 (P1 deposit receipt, apply and refund implemented; refund reason mandatory — owner Option B)",
+  "currentPhase": "continuation-7 (variant binding slice, audit hash chain, credit offline approval)",
   "lastMeasured": {
     "date": "2026-11-03",
     "m5Gate": {
@@ -99,6 +99,73 @@
         "atomicity": "payment + journal + refund row in one function/transaction",
         "journalGuard": "DEPOSIT_REFUND_NOT_POSTED when the posted entry cannot be read back"
       }
+    },
+    {
+      "id": "CC-accounts",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "CC: separate Inventory Shrinkage / Gain accounts; missing accounts hold the count in pending_accounts, nothing guessed.",
+      "files": [
+        "docs/cycle-count-03-migration.sql",
+        "docs/VERIFY-cycle-count-03.sql",
+        "backend/src/services/inventory/cycle-count.service.ts",
+        "backend/src/services/inventory-costing/stock-count.domain.ts",
+        "backend/src/routes/cycle-count.routes.ts"
+      ],
+      "pending": "cycle-count-03 migration + VERIFY need human application (after cycle-count-02 and customer-advances-01)"
+    },
+    {
+      "id": "OD3-credit-limit",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "OD-3=C: pass needs credit.override (provisional) + reason + audit.",
+      "files": [
+        "backend/src/services/credit-limit.ts",
+        "backend/src/services/invoice.service.ts",
+        "backend/src/routes/invoice.routes.ts",
+        "backend/src/__tests__/invoice-credit-limit.test.ts"
+      ],
+      "notImplemented": ["invoice builder override dialog", "offline PENDING_CREDIT_VALIDATION"]
+    },
+    {
+      "id": "P2-variant-binding-invoice-line",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "files": [
+        "packages/validation/src/schemas/universal-core/variants.domain.ts",
+        "backend/src/services/invoice.service.ts",
+        "docs/variant-binding-01-migration.sql",
+        "docs/VERIFY-variant-binding-01.sql"
+      ],
+      "notImplemented": [
+        "variant stock",
+        "purchase/return/POS lines",
+        "local engine and sync",
+        "UI selectors"
+      ]
+    },
+    {
+      "id": "4.7-audit-hash-chain",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "pglite": "16 scenarios passed",
+      "files": [
+        "docs/audit-hash-01-migration.sql",
+        "docs/VERIFY-audit-hash-01.sql",
+        "backend/src/services/audit.service.ts",
+        "backend/src/__tests__/helpers/audit-hash-01-scenarios.ts"
+      ],
+      "pending": "audit-hash-01 migration + VERIFY need human application; real-Postgres race test BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "OD3-offline-credit-approval",
+      "date": "2026-11-03",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "files": [
+        "packages/app-shell/src/features/sync/outbox-stage.ts",
+        "packages/app-shell/src/features/sync/sync-page.tsx",
+        "packages/app-shell/src/features/sync/__tests__/credit-validation.test.ts"
+      ]
     }
   ],
   "repository": {
@@ -338,5 +405,12 @@
     "ownerStep": "Restore/allow the quarantined PostgreSQL binaries (or run the *.pg.test.ts files on a throwaway PostgreSQL elsewhere). Not done here: it is an antivirus/host action.",
     "proofAvailableInstead": "PGlite scenarios (logic only): cycle-count-02 10/10"
   },
-  "ownerDecisionsDoc": "docs/implementation/V53-OWNER-DECISIONS.md"
+  "ownerDecisionsDoc": "docs/implementation/V53-OWNER-DECISIONS.md",
+  "notStarted": [
+    "OD-4 order WIP",
+    "4.6 Store/Teacher + adaptive onboarding",
+    "4.8 branch/device restrictions",
+    "D4 guards beyond variants/auto_fitments",
+    "variant stock / purchase / returns / POS / local / UI"
+  ]
 }

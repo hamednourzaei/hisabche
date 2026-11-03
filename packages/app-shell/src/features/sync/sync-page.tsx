@@ -10,6 +10,7 @@ import { RefreshCw } from 'lucide-react'
 import { Badge, Button, Card, type BadgeTone } from '@/components/ui/primitives'
 import {
   CloudRequiredNotice,
+  Textarea,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -32,7 +33,13 @@ import { useSyncQueue, useSyncStatus } from './use-sync'
 import { useSyncStore } from '@hisabche/store'
 import { MAX_ATTEMPTS, stagesSnapshot, subscribeStages } from './sync-engine'
 import { claimOwnerlessEntries, currentOutboxOwner } from './outbox-owner'
-import { reasonOf, stageOf, type OutboxStage } from './outbox-stage'
+import {
+  creditRefusalOf,
+  reasonOf,
+  stageOf,
+  withCreditOverride,
+  type OutboxStage,
+} from './outbox-stage'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
 /** Column shape for this screen's queue table. Local because it describes the
@@ -49,6 +56,7 @@ const TONE: Record<OutboxStage | 'committed', BadgeTone> = {
   sending: 'info',
   retrying: 'warning',
   rejected: 'danger',
+  credit_validation: 'warning',
   committed: 'success',
 }
 
@@ -73,6 +81,9 @@ export default function SyncPage() {
   const stages = useSyncExternalStore(subscribeStages, stagesSnapshot, stagesSnapshot)
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt)
   const [claimOpen, setClaimOpen] = useState(false)
+  // The refused sale a person is approving, and the reason they give (PENDING_CREDIT_VALIDATION).
+  const [approving, setApproving] = useState<QueueEntry | null>(null)
+  const [approvalReason, setApprovalReason] = useState('')
 
   const retry = useCallback(
     async (entry: QueueEntry) => {
@@ -89,6 +100,24 @@ export default function SyncPage() {
     },
     [queue, sync],
   )
+
+  // The SAME change is queued again under the SAME clientId (so the server still sees one sale, one
+  // Idempotency-Key) with the reason added. Whether this person may pass the limit is the server's answer.
+  const approveCredit = useCallback(async () => {
+    if (!approving) return
+    const payload = withCreditOverride(approving.payload, approvalReason)
+    if (!payload) return
+    await bridge()?.db.enqueue({
+      entity: approving.entity,
+      operation: approving.operation,
+      clientId: approving.clientId,
+      payload,
+    })
+    setApproving(null)
+    setApprovalReason('')
+    await sync()
+    await queue.refetch()
+  }, [approving, approvalReason, queue, sync])
 
   // Memoised so the two `useMemo`s below do not see a new array on every
   // render (`queue.data ?? []` builds a fresh `[]` while loading).
@@ -138,7 +167,13 @@ export default function SyncPage() {
       {
         key: 'reason',
         header: t('sync.col.reason'),
-        render: ({ entry }) => reasonOf(entry.lastError) ?? '—',
+        render: ({ entry }) => {
+          const credit = creditRefusalOf(entry.lastError)
+          if (!credit) return reasonOf(entry.lastError) ?? '—'
+          return credit.overBy
+            ? `${t('sync.credit.reason')} (${credit.overBy})`
+            : t('sync.credit.reason')
+        },
       },
       {
         key: 'time',
@@ -150,7 +185,18 @@ export default function SyncPage() {
         header: '',
         align: 'end',
         render: ({ entry, stage }) =>
-          stage === 'rejected' || stage === 'retrying' || entry.attempts >= MAX_ATTEMPTS ? (
+          stage === 'credit_validation' ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                setApprovalReason('')
+                setApproving(entry)
+              }}
+            >
+              {t('sync.credit.approve')}
+            </Button>
+          ) : stage === 'rejected' || stage === 'retrying' || entry.attempts >= MAX_ATTEMPTS ? (
             <Button size="sm" variant="ghost" onClick={() => void retry(entry)}>
               {t('common.retry')}
             </Button>
@@ -271,6 +317,42 @@ export default function SyncPage() {
             </Table>
           </>
         )}
+
+        <Dialog
+          open={approving !== null}
+          onOpenChange={(open) => {
+            if (!open) setApproving(null)
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('sync.credit.title')}</DialogTitle>
+              <DialogDescription>{t('sync.credit.body')}</DialogDescription>
+            </DialogHeader>
+            <label className="block text-xs">
+              {t('sync.credit.reasonLabel')}
+              <Textarea
+                name="creditOverrideReason"
+                value={approvalReason}
+                onChange={(event) => setApprovalReason(event.target.value)}
+                rows={3}
+                className="mt-1"
+              />
+            </label>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApproving(null)}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="primary"
+                disabled={withCreditOverride({}, approvalReason) === null}
+                onClick={() => void approveCredit()}
+              >
+                {t('sync.credit.send')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={claimOpen} onOpenChange={setClaimOpen}>
           <DialogContent>

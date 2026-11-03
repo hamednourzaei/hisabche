@@ -51,6 +51,11 @@ export const invoiceItemSchema = z.object({
   id: uuidSchema.optional(),
   // اختیاری: آیتم با نام دلخواه (بدون محصول واقعی از انبار، مثلاً خدمات) productId ندارد
   productId: uuidSchema.optional(),
+  /**
+   * The variant of `productId` this line sells or buys (V53 P2). Required when the product has active variants;
+   * absent on historical rows, which are never given one.
+   */
+  variantId: uuidSchema.optional(),
   productName: nonEmptyStringSchema,
   quantity: positiveNumberSchema,
   unit: unitSchema.default('piece'),

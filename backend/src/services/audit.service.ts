@@ -4,7 +4,6 @@
 // ============================================
 
 import { selectAllPages } from '../utils/fetch-all-pages'
-import { createHash } from 'node:crypto'
 import { supabase } from '../db'
 import { CreateAuditLog, AuditFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
@@ -476,33 +475,54 @@ export class AuditService {
     return data || []
   }
 
-  // ─── Option 48: Tamper-Evident Verification ─────────────
-  async verifyChain(
-    workspaceId: string,
-  ): Promise<{ verified: boolean; failedAtRowId?: string; count: number }> {
-    const { data: rows, error } = await supabase
-      .from('audit_logs')
-      .select('id, workspace_id, action, entity_id, created_at, hash, prev_hash')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: true })
-
-    if (error) throw new DatabaseError('Failed to read audit logs for verification', error)
-    if (!rows || rows.length === 0) return { verified: true, count: 0 }
-
-    let expectedPrevHash = '0'.repeat(64)
-    for (const row of rows as any[]) {
-      if (row.prev_hash && row.prev_hash !== expectedPrevHash) {
-        return { verified: false, failedAtRowId: row.id, count: rows.length }
+  // ─── Tamper-evident verification (V53 4.7, docs/audit-hash-01-migration.sql) ─────────────
+  //
+  // The chain is written by a BEFORE INSERT trigger and checked by `audit_chain_verify` — both in the database,
+  // so the application cannot forget to hash and cannot hash differently from the verifier. This method only asks.
+  //
+  // ⚠️ THE OLD CHECK ANSWERED «VERIFIED» FOR A TABLE NOBODY HAD EVER CHAINED (rows with no hash were skipped).
+  // Here a database without the migration answers `migrationRequired`, never `verified: true`. And
+  // `verified: true` says only that the chain is internally consistent — it does not exclude someone who
+  // rewrote the whole chain and its head; that needs the head exported somewhere the database cannot reach.
+  async verifyChain(workspaceId: string): Promise<{
+    verified: boolean
+    count: number
+    legacyUnchained: number
+    failedAtSeq?: number
+    reason?: 'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED'
+    migrationRequired?: true
+  }> {
+    const { data, error } = await supabase.rpc('audit_chain_verify', {
+      p_workspace_id: workspaceId,
+    })
+    if (error) {
+      if (error.code === '42883' || error.code === 'PGRST202') {
+        return { verified: false, count: 0, legacyUnchained: 0, migrationRequired: true }
       }
-      const dataToHash = `${expectedPrevHash}:${row.workspace_id}:${row.id}:${row.action}:${row.created_at}:${row.entity_id ?? ''}`
-      const computedHash = createHash('sha256').update(dataToHash).digest('hex')
-      if (row.hash && row.hash !== computedHash) {
-        return { verified: false, failedAtRowId: row.id, count: rows.length }
-      }
-      expectedPrevHash = row.hash || computedHash
+      throw new DatabaseError('Failed to verify the audit chain', error)
     }
-
-    return { verified: true, count: rows.length }
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | {
+          ok: boolean
+          checked: number | string
+          legacy_unchained: number | string
+          first_bad_seq: number | string | null
+          reason: string | null
+        }
+      | undefined
+    if (!row) throw new DatabaseError('Audit chain verification returned nothing', error)
+    return {
+      verified: row.ok === true,
+      count: Number(row.checked),
+      legacyUnchained: Number(row.legacy_unchained),
+      ...(row.ok === true
+        ? {}
+        : {
+            failedAtSeq: Number(row.first_bad_seq),
+            reason: row.reason as
+              'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED',
+          }),
+    }
   }
 
   // ─── Invalidate Cache ────────────────────────────────────

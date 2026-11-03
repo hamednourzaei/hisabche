@@ -11,7 +11,9 @@ import { describe, expect, it } from 'vitest'
 
 import type { CostLayer } from '../services/inventory-costing/costing.domain'
 import {
+  countAccountRoles,
   countAdjustmentMovements,
+  countJournalLines,
   priceLine,
   summariseCount,
   valueShortage,
@@ -375,5 +377,58 @@ describe('countAdjustmentMovements', () => {
       alreadyAppliedProductIds: new Set(['a']),
     })
     expect(resumed.map((m) => m.product_id)).toEqual(['b', 'c'])
+  })
+})
+
+describe('countAccountRoles / countJournalLines (owner decision CC: two separate accounts)', () => {
+  const summary = (shortageValue: number, surplusValue: number) => ({
+    lines: [],
+    shortageValue,
+    surplusValue,
+    netLoss: shortageValue - surplusValue,
+    countedProducts: 0,
+    matchedProducts: 0,
+  })
+  const accounts = { inventory: 'inv', inventory_shrinkage: 'shr', inventory_gain: 'gain' }
+
+  it('a clean count needs no account and posts nothing', () => {
+    expect(countAccountRoles(summary(0, 0))).toEqual([])
+    expect(countJournalLines(summary(0, 0), {})).toBeNull()
+  })
+
+  it('a shortage uses inventory + shrinkage only', () => {
+    expect(countAccountRoles(summary(30, 0))).toEqual(['inventory', 'inventory_shrinkage'])
+    expect(countJournalLines(summary(30, 0), accounts)).toEqual([
+      { accountId: 'shr', debit: 30, credit: 0 },
+      { accountId: 'inv', debit: 0, credit: 30 },
+    ])
+  })
+
+  it('a surplus uses inventory + gain only', () => {
+    expect(countAccountRoles(summary(0, 10))).toEqual(['inventory', 'inventory_gain'])
+    expect(countJournalLines(summary(0, 10), accounts)).toEqual([
+      { accountId: 'inv', debit: 10, credit: 0 },
+      { accountId: 'gain', debit: 0, credit: 10 },
+    ])
+  })
+
+  it('shortage and surplus are posted GROSS on their own accounts — never netted into one', () => {
+    const lines = countJournalLines(summary(30, 10), accounts)!
+    expect(lines).toHaveLength(4)
+    expect(lines.reduce((sum, l) => sum + l.debit, 0)).toBe(40)
+    expect(lines.reduce((sum, l) => sum + l.credit, 0)).toBe(40)
+    expect(lines.find((l) => l.accountId === 'shr')).toMatchObject({ debit: 30 })
+    expect(lines.find((l) => l.accountId === 'gain')).toMatchObject({ credit: 10 })
+  })
+
+  it('refuses to build an entry for an account it was not given', () => {
+    expect(() => countJournalLines(summary(30, 0), { inventory: 'inv' })).toThrow(
+      /COUNT_ACCOUNT_MISSING:inventory_shrinkage/,
+    )
+  })
+
+  it('rounds to the cent once', () => {
+    const lines = countJournalLines(summary(10.004, 0), accounts)!
+    expect(lines[0]).toMatchObject({ debit: 10 })
   })
 })

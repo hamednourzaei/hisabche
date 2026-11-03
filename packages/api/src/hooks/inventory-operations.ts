@@ -100,7 +100,13 @@ export function useSaveProductUnits(productId: string) {
 
 // ─── L2 · cycle counts ────────────────────────────────────────────────
 
-export type CycleCountStatus = 'draft' | 'counting' | 'completed' | 'cancelled'
+export type CycleCountStatus =
+  | 'draft'
+  | 'counting'
+  /** Counted, but the shrinkage / gain accounts do not exist yet: nothing is adjusted or posted. */
+  | 'pending_accounts'
+  | 'completed'
+  | 'cancelled'
 
 /**
  * One line of a count.
@@ -222,8 +228,13 @@ export function useCompleteCycleCount(countId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.post(`/cycle-counts/${countId}/complete`)
+    // `provisionAccounts`: also create the standard shrinkage / gain accounts. Opt-in; the server allows it
+    // only to someone who may manage accounts.
+    mutationFn: async (options?: { provisionAccounts?: boolean | undefined }) => {
+      const { data } = await apiClient.post(
+        `/cycle-counts/${countId}/complete`,
+        options?.provisionAccounts ? { provisionAccounts: true } : {},
+      )
       return data
     },
     onSuccess: () => {

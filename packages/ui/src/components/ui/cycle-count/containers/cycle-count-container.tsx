@@ -90,7 +90,8 @@ export function CycleCountContainer() {
       error={error}
       onOpenCount={setActiveId}
       onRecord={(productId, countedQty) => record.mutate({ productId, countedQty })}
-      onComplete={() => complete.mutate()}
+      onComplete={() => complete.mutate(undefined)}
+      onCompleteWithAccounts={() => complete.mutate({ provisionAccounts: true })}
       onCancel={(reason) => cancel.mutate(reason)}
       startSlot={<StartCountForm t={safeT} onStarted={setActiveId} />}
     />

@@ -27,17 +27,35 @@
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
+import { ledger } from '../accounting'
 import { costing } from '../inventory-costing'
 import {
+  countAccountRoles,
   countAdjustmentMovements,
+  countJournalLines,
   priceLine,
   summariseCount,
+  type CountAccountRole,
   type CountLine,
   type VarianceLine,
 } from '../inventory-costing/stock-count.domain'
 import type { TenancyContext } from '../tenancy.service'
 
-export type CycleCountStatus = 'draft' | 'counting' | 'completed' | 'cancelled'
+export type CycleCountStatus =
+  | 'draft'
+  | 'counting'
+  /** Counted by the people; the adjustment AND its journal entry wait for the two accounts (cycle-count-03). */
+  | 'pending_accounts'
+  | 'completed'
+  | 'cancelled'
+
+export interface CompleteCycleCountOptions {
+  /**
+   * Create the standard shrinkage / gain accounts when they do not exist. Explicit and opt-in: a count never
+   * invents an account by itself. The route allows it only to someone who may manage accounts.
+   */
+  provisionAccounts?: boolean | undefined
+}
 
 export interface CreateCycleCountInput {
   warehouseId: string
@@ -157,9 +175,12 @@ export class CycleCountService {
    * ⚠️ Lines that were never counted are SKIPPED, not treated as zero. A
    * product nobody reached is not a product with nothing on the shelf.
    */
-  async complete(ctx: TenancyContext, countId: string) {
+  async complete(ctx: TenancyContext, countId: string, options: CompleteCycleCountOptions = {}) {
     const count = await this.get(ctx, countId)
-    if (count.status !== 'counting') throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
+    // Open for finishing: being counted, or waiting for its accounts.
+    if (count.status !== 'counting' && count.status !== 'pending_accounts') {
+      throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
+    }
 
     const rows = (count.lines ?? []) as Record<string, unknown>[]
     const counted = rows.filter((row) => row.counted_qty !== null)
@@ -186,7 +207,41 @@ export class CycleCountService {
 
     const summary = summariseCount(priced)
 
-    // ─── ONE transaction, when the database has the function ───────────────
+    // ─── The books (owner decision CC: two separate accounts) ──────────────
+    //
+    // A count that moved value must post it: shortage Dr shrinkage / Cr inventory, surplus Dr inventory / Cr
+    // gain. The accounts are looked up by ROLE and never guessed. If one is missing the count is KEPT in
+    // `pending_accounts` — no stock moves, nothing is posted — until the accounts exist (or a person who may
+    // manage accounts finishes it with `provisionAccounts`). A clean count needs none.
+    const roles = countAccountRoles(summary)
+    let journal: ReturnType<typeof countJournalLines> = null
+    if (roles.length > 0) {
+      const resolved = options.provisionAccounts
+        ? await ledger.ensureAccountsForRoles(ctx, roles)
+        : await ledger.resolveAccountsByRole(ctx, roles)
+      if (resolved.missing.length > 0) {
+        await this.holdForAccounts(ctx, countId)
+        return { ...(await this.get(ctx, countId)), pendingAccounts: resolved.missing }
+      }
+      const accounts: Partial<Record<CountAccountRole, string>> = {}
+      for (const role of roles) {
+        const accountId = resolved.accounts[role]
+        if (accountId) accounts[role] = accountId
+      }
+      journal = countJournalLines(summary, accounts)
+    }
+
+    // Stock + figures + the entry + the status, ONE transaction (cycle-count-03).
+    const finished = await this.finishAtomically(ctx, countId, priced, summary, journal)
+    if (finished === 'completed') return this.get(ctx, countId)
+    if (finished === 'not_open') throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
+    if (finished === 'not_found') throw new NotFoundError('CycleCount')
+
+    // The function is not installed (migration not applied). Money must never move silently, so a count that
+    // has a journal entry to post is refused; a clean count has nothing to post and may use the older path.
+    if (journal !== null) throw new ConflictError('CYCLE_COUNT_MIGRATION_REQUIRED')
+
+    // ─── ONE transaction, when the database has the older function ─────────
     //
     // `cycle_count_complete` (docs/cycle-count-02-migration.sql) writes the
     // movements, freezes the figures and closes the count together, under a row
@@ -264,7 +319,7 @@ export class CycleCountService {
       .eq('workspace_id', ctx.workspaceId)
       // Re-checked in the WHERE clause: two concurrent completions would both
       // read `counting` and both write adjustments.
-      .eq('status', 'counting')
+      .in('status', ['counting', 'pending_accounts'])
       .select('id')
 
     if (closeError) throw new DatabaseError('Failed to complete the count', closeError)
@@ -272,13 +327,8 @@ export class CycleCountService {
     // and our write. Their stock effect (if any) stands; ours added nothing.
     if (!closed || closed.length === 0) throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
 
-    // ⚠️ THE JOURNAL ENTRY IS NOT POSTED HERE — see the note in
-    // .claude/HANDOFF-PHASES-G-TO-O.md. Stock adjustments have never posted to
-    // the ledger (an open gap from J0), and the accounts a write-off should
-    // hit — an inventory-shrinkage expense — do not exist in the chart of
-    // accounts or in `AccountRole`. Inventing one would put a guess into the
-    // books (G4). The variance VALUE is computed and frozen above, so the
-    // entry can be posted the moment that account is defined.
+    // This older path posts NO journal entry, and is reached only for a count with no value to post (a
+    // count that moved value goes through `cycle_count_finish`, which posts it atomically, or is refused).
     return this.get(ctx, countId)
   }
 
@@ -317,6 +367,69 @@ export class CycleCountService {
     if (data === 'completed' || data === 'not_open' || data === 'not_found') return data
     throw new DatabaseError('Failed to complete the count', {
       message: `unexpected result from cycle_count_complete: ${String(data)}`,
+    })
+  }
+
+  /** Keep a count whose accounts do not exist yet; nothing is adjusted and nothing is posted. */
+  private async holdForAccounts(ctx: TenancyContext, countId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('cycle_counts')
+      .update({ status: 'pending_accounts', updated_at: new Date().toISOString() })
+      .eq('id', countId)
+      .eq('workspace_id', ctx.workspaceId)
+      .in('status', ['counting', 'pending_accounts'])
+      .select('id')
+    if (error) {
+      // 23514: the status list does not know `pending_accounts` yet — cycle-count-03 is not applied.
+      if (error.code === '23514') throw new ConflictError('CYCLE_COUNT_MIGRATION_REQUIRED')
+      throw new DatabaseError('Failed to hold the count for its accounts', error)
+    }
+    if (!data || data.length === 0) throw new ConflictError('CYCLE_COUNT_NOT_OPEN')
+  }
+
+  /**
+   * Finish the count — movements, frozen figures, journal entry and status — in one database transaction.
+   * `'unavailable'` only when the function does not exist; any other failure (a locked period, an invalid
+   * account) is thrown and has rolled everything back.
+   */
+  private async finishAtomically(
+    ctx: TenancyContext,
+    countId: string,
+    priced: readonly VarianceLine[],
+    summary: ReturnType<typeof summariseCount>,
+    journal: ReturnType<typeof countJournalLines>,
+  ): Promise<'completed' | 'not_open' | 'not_found' | 'unavailable'> {
+    const { data, error } = await supabase.rpc('cycle_count_finish', {
+      p_workspace_id: ctx.workspaceId,
+      p_count_id: countId,
+      p_user_id: ctx.userId,
+      p_lines: priced.map((line) => ({
+        product_id: line.productId,
+        variance_qty: line.varianceQty,
+        variance_value: line.varianceValue,
+      })),
+      p_shortage_value: summary.shortageValue,
+      p_surplus_value: summary.surplusValue,
+      p_net_loss: summary.netLoss,
+      p_entry_date: new Date().toISOString().slice(0, 10),
+      p_journal_lines: (journal ?? []).map((line) => ({
+        account_id: line.accountId,
+        debit: line.debit,
+        credit: line.credit,
+      })),
+    })
+
+    if (error) {
+      if (error.code === '42883' || error.code === 'PGRST202') return 'unavailable'
+      // A locked period / invalid account surfaces as a coded domain refusal, not a 500.
+      const message = String(error.message ?? '')
+      if (message.includes('ACCOUNTING_PERIOD_LOCKED'))
+        throw new ConflictError('ACCOUNTING_PERIOD_LOCKED')
+      throw new DatabaseError('Failed to complete the count', error)
+    }
+    if (data === 'completed' || data === 'not_open' || data === 'not_found') return data
+    throw new DatabaseError('Failed to complete the count', {
+      message: `unexpected result from cycle_count_finish: ${String(data)}`,
     })
   }
 

@@ -206,7 +206,9 @@ describe('no path reads a total_price off the request', () => {
     .join(' ')
 
   const createBody = (() => {
-    const start = flat.indexOf('async create( ctx: TenancyContext, data: CreateInvoice')
+    const start = flat.indexOf(
+      'private async createUnserialized( ctx: TenancyContext, data: CreateInvoice',
+    )
     expect(start, 'create() not found').toBeGreaterThan(-1)
     const rest = flat.slice(start + 1)
     const next = rest.indexOf('async update(')

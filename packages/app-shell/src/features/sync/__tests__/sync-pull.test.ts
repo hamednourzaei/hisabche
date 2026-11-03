@@ -124,7 +124,15 @@ describe('first pull: complete snapshot through /sync/snapshot, then the log fro
       // holds none of it, which is an EMPTY page — not an error.
       if (
         url === '/sync/snapshot' &&
-        ['warehouse', 'branch', 'exchange_rate', 'product_stock'].includes(String(params.entity))
+        [
+          'warehouse',
+          'branch',
+          'exchange_rate',
+          'product_stock',
+          'order_deposits',
+          'order_deposit_applications',
+          'order_deposit_refunds',
+        ].includes(String(params.entity))
       ) {
         return asJson({ rows: [], hasMore: false, nextAfter: null })
       }

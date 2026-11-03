@@ -132,11 +132,9 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/audit/verify',
     {
-      preHandler: [
-        authenticate,
-        requireWorkspaceContext,
-        requireCapability('report.operational.read'),
-      ],
+      // The integrity verdict of the whole trail is the owner's: it says nothing about the content, but a
+      // member who can ask it repeatedly can also learn WHEN history was touched.
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {

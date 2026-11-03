@@ -93,7 +93,7 @@ const post = jest.fn(async (url: string, body?: unknown, config?: Record<string,
   }
 })
 
-const get = jest.fn(async () => ({
+const get = jest.fn(async (_url?: string, _config?: Record<string, unknown>) => ({
   data: new TextEncoder().encode(
     JSON.stringify({ cursor: 10, hasMore: false, mustRehydrate: false, changes: [] }),
   ).buffer,

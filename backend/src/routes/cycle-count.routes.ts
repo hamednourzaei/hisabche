@@ -15,6 +15,8 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { holds } from '../services/authorization'
+import { ForbiddenError } from '../errors/auth.error'
 import { CycleCountService, type CycleCountStatus } from '../services/inventory/cycle-count.service'
 
 const createSchema = z.object({
@@ -29,6 +31,14 @@ const recordSchema = z.object({
   // common result, and it is the one that produces the largest write-off.
   countedQty: z.number().nonnegative(),
 })
+
+const completeSchema = z
+  .object({
+    // Create the standard shrinkage / gain accounts when the business has none. Opt-in, and only for someone
+    // who may manage accounts: a count never invents an account on its own.
+    provisionAccounts: z.boolean().optional(),
+  })
+  .strict()
 
 const cancelSchema = z.object({
   // A cancellation with no reason is unauditable — the same rule the transfer
@@ -108,7 +118,9 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // ⚠️ The irreversible one. This writes the ADJUSTMENT stock movements.
+  // ⚠️ The irreversible one. This writes the ADJUSTMENT stock movements and, when value moved, the journal
+  // entry (shrinkage / gain on two separate accounts). Without those accounts the count waits in
+  // `pending_accounts` and nothing is adjusted.
   fastify.post(
     '/api/cycle-counts/:id/complete',
     {
@@ -117,7 +129,15 @@ export async function cycleCountRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        return reply.send(await service.complete(request.tenancy, id))
+        const body = completeSchema.parse(request.body ?? {})
+        if (body.provisionAccounts && !holds(request.tenancy, 'account.manage')) {
+          throw new ForbiddenError('account.manage is required to create the count accounts')
+        }
+        return reply.send(
+          await service.complete(request.tenancy, id, {
+            provisionAccounts: body.provisionAccounts,
+          }),
+        )
       } catch (err) {
         return fail(reply, err, 'Failed to complete the cycle count')
       }

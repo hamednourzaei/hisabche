@@ -220,6 +220,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           items:
             body.items?.map((item: any) => ({
               productId: item.productId ?? item.product_id,
+              variantId: item.variantId ?? item.variant_id,
               productName: item.productName ?? item.product_name ?? '',
               quantity: item.quantity ?? 1,
               unit: item.unit ?? 'piece',
@@ -254,8 +255,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           ? await branches.resolveActive(request.tenancy, body.branchId as string)
           : request.branchId
 
+        // V53 OD-3: a person with `credit.override` may let a sale past the customer's credit limit, with a
+        // reason. Nothing else is read from the body here — the service decides whether it is allowed.
+        const creditOverrideReason =
+          typeof body.creditOverride?.reason === 'string' ? body.creditOverride.reason : null
+
         const invoice = await invoiceService.create(request.tenancy, data, branchId, {
           clientRequestId,
+          creditOverrideReason,
         })
 
         if ((invoice as { idempotentReplay?: boolean }).idempotentReplay) {

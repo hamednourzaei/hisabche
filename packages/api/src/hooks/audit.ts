@@ -115,12 +115,23 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
   })
 }
 
+/** The verdict of the audit chain (V53 4.7). `verified` means internally consistent, not "unforgeable". */
+export interface AuditChainVerdict {
+  verified: boolean
+  count: number
+  legacyUnchained: number
+  failedAtSeq?: number | undefined
+  reason?: 'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED' | undefined
+  /** The database has not run audit-hash-01: nothing was checked, and nothing is claimed. */
+  migrationRequired?: true | undefined
+}
+
 export function useVerifyAuditLog() {
   const authReady = useAuthReady()
   return useQuery({
     queryKey: ['audit', 'verify'],
-    queryFn: async () => {
-      const response = await apiClient.get('/audit/verify')
+    queryFn: async (): Promise<AuditChainVerdict> => {
+      const response = await apiClient.get<AuditChainVerdict>('/audit/verify')
       return response.data
     },
     enabled: authReady,

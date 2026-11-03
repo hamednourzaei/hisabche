@@ -60,6 +60,8 @@ export interface CycleCountViewProps {
   onOpenCount: (countId: string) => void
   onRecord: (productId: string, countedQty: number) => void
   onComplete: () => void
+  /** Finish a count that is waiting for its accounts, creating the standard ones (needs account management). */
+  onCompleteWithAccounts?: (() => void) | undefined
   onCancel: (reason: string) => void
   /** «شروع شمارش» — the way to open a count (live audit #35). */
   startSlot?: React.ReactNode
@@ -69,6 +71,7 @@ export interface CycleCountViewProps {
 const STATUS_VARIANT: Record<string, 'secondary' | 'warning' | 'success' | 'outline'> = {
   draft: 'secondary',
   counting: 'warning',
+  pending_accounts: 'warning',
   completed: 'success',
   cancelled: 'outline',
 }
@@ -102,6 +105,7 @@ export function CycleCountView({
   onOpenCount,
   onRecord,
   onComplete,
+  onCompleteWithAccounts,
   onCancel,
   startSlot,
 }: CycleCountViewProps) {
@@ -276,6 +280,30 @@ export function CycleCountView({
 
           {activeCount.status !== 'completed' && activeCount.status !== 'cancelled' ? (
             <div className="mt-4 space-y-3">
+              {activeCount.status === 'pending_accounts' ? (
+                // The count is kept, but NOTHING was adjusted or posted: the two accounts it needs do not
+                // exist, and the system never invents one on its own.
+                <div className="rounded-xl border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.08)] p-3">
+                  <p className="flex items-start gap-1.5 text-xs text-[hsl(var(--fg-primary))]">
+                    <AlertTriangle className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+                    {t(
+                      'cycleCount.pendingAccountsHint',
+                      'شمارش ثبت شده، اما حساب‌های «کسری موجودی» و «اضافه موجودی» هنوز تعریف نشده‌اند. تا آن موقع موجودی تعدیل نمی‌شود و سندی ثبت نمی‌شود.',
+                    )}
+                  </p>
+                  {onCompleteWithAccounts ? (
+                    <Button
+                      size="sm"
+                      className="mt-3"
+                      variant="outline"
+                      onClick={onCompleteWithAccounts}
+                      disabled={Boolean(isBusy)}
+                    >
+                      {t('cycleCount.completeWithAccounts', 'ساخت حساب‌های استاندارد و بستن شمارش')}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
               {remaining > 0 ? (
                 // ⚠️ Not a blocker — a partial count is legitimate. But the
                 // person must know that uncounted lines are excluded, not

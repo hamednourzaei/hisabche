@@ -70,6 +70,10 @@ export const CAPABILITIES = [
   'invoice.create',
   'invoice.update',
   'invoice.delete',
+  // PROVISIONAL NAME (V53 OD-3 = C): passing a customer's credit limit. Needs the permission, a stated reason and
+  // leaves an audit record. The owner has not named the permission yet; rename here, in the local-engine table and
+  // in PERMISSION_MODULES together.
+  'credit.override',
   // Parties and catalogue
   'customer.read',
   'customer.write',
@@ -141,6 +145,8 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
   'invoice.create': 'seller',
   'invoice.update': 'seller',
   'invoice.delete': 'owner',
+  // A manager decides to extend credit past the limit; a seller can only be told it is exceeded.
+  'credit.override': 'manager',
 
   'customer.read': 'seller',
   'customer.write': 'seller',
@@ -458,7 +464,7 @@ export const PERMISSION_MODULES: readonly ModuleSpec[] = [
     label: 'فاکتورها',
     read: ['invoice.read'],
     write: ['invoice.create', 'invoice.update'],
-    full: ['invoice.delete'],
+    full: ['invoice.delete', 'credit.override'],
   },
   {
     key: 'payments',

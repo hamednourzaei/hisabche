@@ -89,6 +89,25 @@ const OFFLINE_POSITION: Record<string, { syncs: boolean; because: string }> = {
     syncs: true,
     because: 'read-only reference data, so another currency can be read offline',
   },
+
+  // ─── Order deposits (P1, V53) ───────────────────────────────────────────
+  //
+  // A deposit is a LIABILITY to the customer. These three travel DOWN only (their write allow-list is
+  // `[]`): a device learns that an advance exists, how much of it is left and what it was applied to, so the
+  // next counter does not offer money the shop already took. Money itself is recorded through the dedicated
+  // deposit routes (receipt, apply, refund), never by a generic sync write.
+  order_deposits: {
+    syncs: true,
+    because: 'the next counter must know the customer already paid an advance',
+  },
+  order_deposit_applications: {
+    syncs: true,
+    because: 'what is left of an advance depends on what it was applied to',
+  },
+  order_deposit_refunds: {
+    syncs: true,
+    because: 'a refunded advance must stop being offered on every device',
+  },
 }
 
 describe('the offline contract', () => {

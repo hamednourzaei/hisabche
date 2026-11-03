@@ -1,112 +1,72 @@
-import { createHash } from 'node:crypto'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuditService } from '../services/audit.service'
 import { supabase } from '../db'
 
 vi.mock('../db', () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
   },
 }))
 
-describe('Audit Chain Verification (Option 48)', () => {
+const rpc = vi.mocked(supabase.rpc)
+const answer = (data: unknown, error: unknown = null) =>
+  rpc.mockResolvedValueOnce({ data, error } as never)
+
+describe('Audit chain verification (V53 4.7: asks the database, never trusts an unchained table)', () => {
   const service = new AuditService()
   const workspaceId = '00000000-0000-0000-0000-000000000001'
 
-  it('verifies empty chain as valid', async () => {
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: [], error: null }),
-        }),
-      }),
-    } as any)
-
-    const res = await service.verifyChain(workspaceId)
-    expect(res.verified).toBe(true)
-    expect(res.count).toBe(0)
+  beforeEach(() => {
+    rpc.mockReset()
   })
 
-  it('verifies correctly chained rows', async () => {
-    const prev0 = '0'.repeat(64)
-    const hash1 = createHash('sha256')
-      .update(`${prev0}:${workspaceId}:row-1:create:2026-10-26T10:00:00Z:ent-1`)
-      .digest('hex')
-    const hash2 = createHash('sha256')
-      .update(`${hash1}:${workspaceId}:row-2:update:2026-10-26T10:05:00Z:ent-1`)
-      .digest('hex')
-
-    const rows = [
-      {
-        id: 'row-1',
-        workspace_id: workspaceId,
-        action: 'create',
-        entity_id: 'ent-1',
-        created_at: '2026-10-26T10:00:00Z',
-        prev_hash: prev0,
-        hash: hash1,
-      },
-      {
-        id: 'row-2',
-        workspace_id: workspaceId,
-        action: 'update',
-        entity_id: 'ent-1',
-        created_at: '2026-10-26T10:05:00Z',
-        prev_hash: hash1,
-        hash: hash2,
-      },
-    ]
-
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: rows, error: null }),
-        }),
-      }),
-    } as any)
-
-    const res = await service.verifyChain(workspaceId)
-    expect(res.verified).toBe(true)
-    expect(res.count).toBe(2)
+  it('asks audit_chain_verify for THIS workspace', async () => {
+    answer([{ ok: true, checked: 0, legacy_unchained: 0, first_bad_seq: null, reason: null }])
+    await service.verifyChain(workspaceId)
+    expect(rpc).toHaveBeenCalledWith('audit_chain_verify', { p_workspace_id: workspaceId })
   })
 
-  it('detects broken chain when prev_hash is tampered', async () => {
-    const prev0 = '0'.repeat(64)
-    const hash1 = createHash('sha256')
-      .update(`${prev0}:${workspaceId}:row-1:create:2026-10-26T10:00:00Z:ent-1`)
-      .digest('hex')
+  it('an intact chain is verified, with its length and the legacy rows counted apart', async () => {
+    answer([{ ok: true, checked: '5', legacy_unchained: '2', first_bad_seq: null, reason: null }])
+    expect(await service.verifyChain(workspaceId)).toEqual({
+      verified: true,
+      count: 5,
+      legacyUnchained: 2,
+    })
+  })
 
-    const rows = [
-      {
-        id: 'row-1',
-        workspace_id: workspaceId,
-        action: 'create',
-        entity_id: 'ent-1',
-        created_at: '2026-10-26T10:00:00Z',
-        prev_hash: prev0,
-        hash: hash1,
-      },
-      {
-        id: 'row-2',
-        workspace_id: workspaceId,
-        action: 'update',
-        entity_id: 'ent-1',
-        created_at: '2026-10-26T10:05:00Z',
-        prev_hash: 'tampered-hash-value',
-        hash: 'some-hash',
-      },
-    ]
+  it.each(['HASH_MISMATCH', 'BROKEN_LINK', 'MISSING_RECORD', 'TAIL_REMOVED'] as const)(
+    'a %s is reported as not verified, with where and why',
+    async (reason) => {
+      answer([{ ok: false, checked: 2, legacy_unchained: 0, first_bad_seq: 3, reason }])
+      expect(await service.verifyChain(workspaceId)).toEqual({
+        verified: false,
+        count: 2,
+        legacyUnchained: 0,
+        failedAtSeq: 3,
+        reason,
+      })
+    },
+  )
 
-    vi.mocked(supabase.from).mockReturnValueOnce({
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: rows, error: null }),
-        }),
-      }),
-    } as any)
+  it('a database without the migration is NOT verified — it says the migration is required', async () => {
+    answer(null, { code: '42883', message: 'function audit_chain_verify does not exist' })
+    expect(await service.verifyChain(workspaceId)).toEqual({
+      verified: false,
+      count: 0,
+      legacyUnchained: 0,
+      migrationRequired: true,
+    })
+  })
 
-    const res = await service.verifyChain(workspaceId)
-    expect(res.verified).toBe(false)
-    expect(res.failedAtRowId).toBe('row-2')
+  it('any other failure is an error, never a verdict', async () => {
+    answer(null, { code: '57014', message: 'timeout' })
+    await expect(service.verifyChain(workspaceId)).rejects.toThrow()
+  })
+
+  it('the old check that skipped unhashed rows is gone', () => {
+    expect(service.verifyChain.toString()).not.toContain('createHash')
+    expect(supabase.from).not.toHaveBeenCalled()
   })
 })

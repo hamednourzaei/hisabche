@@ -88,6 +88,24 @@ describe('the count never writes the quantity directly', () => {
     expect(code).toMatch(/atomic === 'not_open'[\s\S]{0,80}CYCLE_COUNT_NOT_OPEN/)
   })
 
+  it('posts the count through ONE atomic call, with the accounts looked up by role and never guessed', () => {
+    // Stock, frozen figures, the journal entry and the status are one database transaction.
+    expect(code).toContain("supabase.rpc('cycle_count_finish'")
+    expect(code).toContain('p_journal_lines')
+    // Looked up by ROLE; creating the standard accounts is an explicit, opt-in act.
+    expect(code).toContain('ledger.resolveAccountsByRole')
+    expect(code).toMatch(/options\.provisionAccounts\s*\?\s*await ledger\.ensureAccountsForRoles/)
+    // A missing account parks the count; it never invents one.
+    expect(code).toContain('holdForAccounts')
+    expect(code).toContain("status: 'pending_accounts'")
+  })
+
+  it('never completes a count that has a journal entry to post without the function that posts it', () => {
+    expect(code).toContain(
+      "if (journal !== null) throw new ConflictError('CYCLE_COUNT_MIGRATION_REQUIRED')",
+    )
+  })
+
   it('does not report a completion that did not close the count', () => {
     // The close is a compare-and-swap; zero rows closed means somebody else
     // got there first.
@@ -133,6 +151,7 @@ describe('what it refuses', () => {
   it('re-checks the status in the WHERE clause when completing', () => {
     // Two concurrent completions would both read `counting` and both write
     // adjustments — the shelf corrected twice.
-    expect(code).toMatch(/\.eq\('status', 'counting'\)/)
+    // Open for completion: being counted, or waiting for its accounts (cycle-count-03).
+    expect(code).toMatch(/\.in\('status', \['counting', 'pending_accounts'\]\)/)
   })
 })

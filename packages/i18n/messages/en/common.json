@@ -3334,7 +3334,9 @@
       "bank_fees": "Bank and exchange fees",
       "deferred_revenue": "Deferred revenue",
       "customer_advances": "Customer advances",
-      "inventory_loss": "Inventory scrap loss"
+      "inventory_loss": "Inventory scrap loss",
+      "inventory_shrinkage": "Inventory shrinkage (count)",
+      "inventory_gain": "Inventory gain (count)"
     }
   },
   "hr": {
@@ -5029,7 +5031,15 @@
       "useDashboardForm": "Record the rate with the dashboard rate form"
     },
     "creditLimitBlocked": "Sale blocked due to credit limit",
-    "creditLimitBlockedHint": "Customer receivables exceed their approved credit limit."
+    "creditLimitBlockedHint": "Customer receivables exceed their approved credit limit.",
+    "creditOverride": {
+      "title": "This sale takes the customer past their credit limit.",
+      "cashOnly": "This customer buys for cash only.",
+      "hint": "Passing the limit needs the \"Override credit limit\" permission and a reason; the reason is kept in the invoice history.",
+      "reasonLabel": "Reason for passing the limit",
+      "reasonRequired": "Write a reason to submit again.",
+      "forbidden": "You do not have permission to pass the credit limit. A manager must approve."
+    }
   },
   "admin": {
     "cms": {
@@ -8464,6 +8474,9 @@
   },
   "cycleCount": {
     "status_draft": "Draft",
+    "status_pending_accounts": "Waiting for accounts",
+    "pendingAccountsHint": "The count is recorded, but the \"Inventory shrinkage\" and \"Inventory gain\" accounts do not exist yet. Until they do, stock is not adjusted and nothing is posted. Create the accounts and press Complete again, or use the button below to create the standard accounts.",
+    "completeWithAccounts": "Create the standard accounts and finish the count",
     "status_counting": "Counting",
     "status_completed": "Completed",
     "status_cancelled": "Cancelled",

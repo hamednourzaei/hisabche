@@ -18,7 +18,9 @@ import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { assertMayUseWarehouse } from './inventory/warehouse-access'
 import { supabase } from '../db'
-import { sod } from './authorization'
+import { holds, sod } from './authorization'
+import { creditLimitModeOf, creditLimitOf } from './credit-limit'
+import { serializeBy } from '../utils/keyed-lock'
 import { scopes } from './authorization/scope.service'
 import { OUTSTANDING_OR_FILTER } from './invoices/outstanding.domain'
 import { fetchInvoiceSummaryAggregate } from './aggregates/analytics-aggregates'
@@ -50,6 +52,7 @@ import { rules } from './rules'
 import { tax } from './tax'
 import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
+import { ForbiddenError } from '../errors/auth.error'
 import {
   AWAITING_APPROVAL_STATUS,
   decideApproval,
@@ -66,7 +69,12 @@ import { latestBuyPrices } from './inventory/buy-price.domain'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 import { assertWithinLimit } from './plan-limits.service'
-import { countsTowardsInvoiceQuota, lateCostKeyFromDigest } from '@hisabche/validation'
+import {
+  checkVariantBinding,
+  countsTowardsInvoiceQuota,
+  evaluateCreditLimit,
+  lateCostKeyFromDigest,
+} from '@hisabche/validation'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -226,6 +234,17 @@ export function lateCostKey(invoiceId: string): string {
 
 /** Shelves: only the purchase auto-fill is used here. */
 const shelves = new WarehouseMapService()
+
+export interface CreateInvoiceOptions {
+  clientRequestId?: string | null
+  isImport?: boolean | undefined
+  isSystemGenerated?: boolean | undefined
+  /**
+   * Why a person with `credit.override` is letting this sale past the customer's credit limit (V53 OD-3).
+   * Without a reason — or without the permission — a sale over the limit is refused.
+   */
+  creditOverrideReason?: string | null | undefined
+}
 
 export class InvoiceService {
   private workflowService: WorkflowService
@@ -791,15 +810,33 @@ export class InvoiceService {
     return (customer as { full_name: string }).full_name
   }
 
+  /**
+   * Invoices of ONE customer are made one at a time on this instance (V53 OD-3): the credit check reads the
+   * customer's receivable and the invoice then raises it, so two concurrent sales would both read the old
+   * figure and both pass. ⚠️ This orders the requests of one backend instance only; across instances the
+   * guarantee needs a database lock (advisory lock in the invoice transaction) — NOT implemented, recorded in
+   * docs/implementation/V53-IMPLEMENTATION-PROGRESS.md.
+   */
   async create(
     ctx: TenancyContext,
     data: CreateInvoice,
     branchId: string | null = null,
-    options: {
-      clientRequestId?: string | null
-      isImport?: boolean | undefined
-      isSystemGenerated?: boolean | undefined
-    } = {},
+    options: CreateInvoiceOptions = {},
+  ) {
+    const customerId = data.customerId ?? null
+    if (!customerId || (data.type ?? 'sale') !== 'sale') {
+      return this.createUnserialized(ctx, data, branchId, options)
+    }
+    return serializeBy(`invoice-credit:${ctx.workspaceId}:${customerId}`, () =>
+      this.createUnserialized(ctx, data, branchId, options),
+    )
+  }
+
+  private async createUnserialized(
+    ctx: TenancyContext,
+    data: CreateInvoice,
+    branchId: string | null,
+    options: CreateInvoiceOptions,
   ) {
     const { workspaceId, userId } = ctx
     const clientRequestId = options.clientRequestId ?? null
@@ -976,6 +1013,29 @@ export class InvoiceService {
     if (!data.customerId && this.paidAtCreation(data) < money.total - 0.000001) {
       throw new ValidationError('INVOICE_CREDIT_NEEDS_PARTY')
     }
+
+    // ─── THE CUSTOMER'S CREDIT LIMIT (V53 OD-3 = C) ─────────────────────────
+    //
+    // The rule the invoice builder already calls, now enforced where it cannot be skipped: a sale that would
+    // take the customer past the limit is refused in `block` mode unless someone holding `credit.override`
+    // lets it through with a stated reason — which is then written to the invoice's history. Checked before a
+    // number is used up and before anything is written.
+    const creditOverride = await this.assertWithinCreditLimit(ctx, {
+      customerId: data.customerId ?? null,
+      type: data.type ?? 'sale',
+      owing: Math.max(0, money.total - this.paidAtCreation(data)) * exchangeRate,
+      skip: Boolean(
+        options.isImport ||
+        options.isSystemGenerated ||
+        options.clientRequestId?.startsWith('mig-inv-') ||
+        options.clientRequestId?.includes('late_fee') ||
+        options.clientRequestId?.includes('ingested_document'),
+      ),
+      overrideReason: options.creditOverrideReason ?? null,
+    })
+
+    // A new line names its variant when the product has them (V53 P2); a historical document is never re-checked.
+    await this.assertVariantBindings(ctx.workspaceId, lines)
 
     const invoiceNumber = await this.generateInvoiceNumber()
 
@@ -1370,6 +1430,19 @@ export class InvoiceService {
       notify: false,
     })
 
+    if (creditOverride) {
+      void logBusinessEvent({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        entityType: 'invoice',
+        entityId: invoice.id,
+        action: 'credit_limit_overridden',
+        title: `سقف اعتبار مشتری برای فاکتور ${invoiceNumber} عبور داده شد`,
+        metadata: { ...creditOverride, invoiceNumber, currency: bookCurrency },
+        notify: false,
+      })
+    }
+
     const created = await this.getById(invoice.id, ctx)
     if (taxWarning && created && typeof created === 'object') {
       ;(created as Record<string, unknown>).taxStatus = taxWarning.taxStatus
@@ -1402,6 +1475,112 @@ export class InvoiceService {
    * would put us back where we started, with an invoice whose paid amount
    * nobody can account for.
    */
+  /**
+   * Every line that names a product is bound to a valid variant, or to none when the product has none.
+   * One read for all lines. A database without the variants table has no variants to require.
+   */
+  private async assertVariantBindings(
+    workspaceId: string,
+    lines: Array<{ productId?: string | null | undefined; variantId?: string | null | undefined }>,
+  ): Promise<void> {
+    const productIds = [
+      ...new Set(lines.map((l) => l.productId).filter((id): id is string => !!id)),
+    ]
+    if (productIds.length === 0) return
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('id, workspace_id, template_product_id, is_active')
+      .eq('workspace_id', workspaceId)
+      .in('template_product_id', productIds)
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') {
+        // No variants table: nothing can be required — but a line that names a variant cannot be honoured.
+        if (lines.some((l) => l.variantId)) throw new ValidationError('VARIANT_NOT_FOUND')
+        return
+      }
+      throw new DatabaseError('Failed to read product variants', error)
+    }
+    const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: String(r.id),
+      workspaceId: String(r.workspace_id),
+      templateProductId: String(r.template_product_id),
+      isActive: r.is_active !== false,
+    }))
+    for (const line of lines) {
+      if (!line.productId) {
+        if (line.variantId) throw new ValidationError('VARIANT_ON_PRODUCT_WITHOUT_VARIANTS')
+        continue
+      }
+      const verdict = checkVariantBinding({
+        workspaceId,
+        productId: line.productId,
+        variantId: line.variantId,
+        variantsOfProduct: rows.filter((r) => r.templateProductId === line.productId),
+      })
+      if (!verdict.ok) throw new ValidationError(verdict.code)
+    }
+  }
+
+  /**
+   * The credit check. Returns `null` when nothing was passed, or the override record when a person with
+   * `credit.override` let the sale through (the caller audits it once the invoice exists).
+   *
+   * Exposure is the Payments Core's receivable (the same figure the customer profile shows) plus what this
+   * sale leaves owing, in the books currency (a foreign sale at the rate frozen on the invoice).
+   */
+  private async assertWithinCreditLimit(
+    ctx: TenancyContext,
+    input: {
+      customerId: string | null
+      type: string
+      /** What this sale leaves owing, in the books currency. */
+      owing: number
+      skip: boolean
+      overrideReason: string | null
+    },
+  ): Promise<{
+    reason: string
+    overLimit: number
+    projectedReceivable: number
+    limit: number
+  } | null> {
+    if (input.skip || input.type !== 'sale' || !input.customerId || !(input.owing > 0)) return null
+
+    const mode = await creditLimitModeOf(ctx.workspaceId)
+    if (mode === 'off') return null
+    const limit = await creditLimitOf(ctx.workspaceId, input.customerId)
+    if (limit === null) return null
+
+    const summary = await this.payments.getPartySummary(ctx, 'customer', input.customerId)
+    const cents = (value: number) => Math.round(value * 100)
+    // `warn` is what the SCREEN does (it warns). It never authorizes exceeding the limit: on the server both
+    // `warn` and `block` refuse an over-limit sale unless a person with `credit.override` passes it.
+    const verdict = evaluateCreditLimit({
+      mode: 'block',
+      currentReceivableMinor: cents(Math.max(0, summary.receivable)),
+      newInvoiceAmountMinor: cents(input.owing),
+      creditLimitMinor: cents(limit),
+    })
+
+    // `warn`: the sale goes through (the screen has already warned); nothing is refused.
+    if (verdict.allowed) return null
+
+    const detail = `${verdict.code}: over by ${verdict.overLimitMinor / 100}`
+    const reason = (input.overrideReason ?? '').trim()
+    if (reason === '') throw new ConflictError(detail)
+    // The reason alone is not enough: the PERMISSION decides who may pass the limit.
+    if (!holds(ctx, 'credit.override')) throw new ForbiddenError('CREDIT_OVERRIDE_FORBIDDEN')
+    if (reason.length < 3) throw new ValidationError('CREDIT_OVERRIDE_REASON_REQUIRED')
+
+    return {
+      reason: reason.slice(0, 500),
+      overLimit: verdict.overLimitMinor / 100,
+      projectedReceivable: verdict.totalProjectedReceivableMinor / 100,
+      limit: verdict.creditLimitMinor / 100,
+    }
+  }
+
   /** What of this invoice is being paid in CASH as it is created. */
   /** What is settled at creation, in the invoice's currency; «نسیه» is not settled. */
   private paidAtCreation(data: CreateInvoice): number {
@@ -2271,6 +2450,8 @@ export class InvoiceService {
       // FINDING-db-integrity A1) and no workspace filter could see them.
       workspace_id: workspaceId,
       product_id: item.productId,
+      // Named only when the line carries a variant, so documents without one keep working before the migration.
+      ...(item.variantId ? { variant_id: item.variantId } : {}),
       product_name: item.productName || '',
       quantity: item.quantity,
       unit: item.unit || 'piece',

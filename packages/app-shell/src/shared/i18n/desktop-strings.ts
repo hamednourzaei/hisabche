@@ -102,7 +102,12 @@ interface DesktopBundle {
     // column heading. `stage` and `entity`/`op` are read with a computed key,
     // so every value of their unions is listed — tsc then refuses a missing one.
     col: Record<'record' | 'operation' | 'stage' | 'reason' | 'time', string>
-    stage: Record<'queued' | 'sending' | 'retrying' | 'rejected' | 'committed', string>
+    stage: Record<
+      'queued' | 'sending' | 'retrying' | 'rejected' | 'credit_validation' | 'committed',
+      string
+    >
+    // A sale the server refused for the customer's credit limit (V53 OD-3), waiting for an approver.
+    credit: Record<'reason' | 'approve' | 'title' | 'body' | 'reasonLabel' | 'send', string>
     entity: Record<
       | 'product'
       | 'customer'
@@ -256,7 +261,16 @@ const faIR: DesktopBundle = {
       sending: 'در حال ارسال',
       retrying: 'تلاش دوباره',
       rejected: 'رد شد',
+      credit_validation: 'در انتظار تأیید اعتبار',
       committed: 'ثبت شد',
+    },
+    credit: {
+      reason: 'بیش از سقف اعتبار مشتری',
+      approve: 'تأیید…',
+      title: 'تأیید فروش بالاتر از سقف اعتبار',
+      body: 'این فروش رد شد چون مشتری را از سقف اعتبارش فراتر می‌برد. فقط کسی که مجوز عبور از سقف اعتبار دارد می‌تواند آن را تأیید کند و دلیل در تاریخچه‌ی فاکتور ثبت می‌شود.',
+      reasonLabel: 'دلیل',
+      send: 'تأیید و ارسال',
     },
     entity: {
       product: 'کالا',
@@ -436,7 +450,16 @@ const en: DesktopBundle = {
       sending: 'Sending',
       retrying: 'Retrying',
       rejected: 'Rejected',
+      credit_validation: 'Waiting for credit approval',
       committed: 'Saved',
+    },
+    credit: {
+      reason: "Over the customer's credit limit",
+      approve: 'Approve…',
+      title: 'Approve a sale over the credit limit',
+      body: 'This sale was refused because it takes the customer past their credit limit. Only someone with the credit-override permission can approve it, and the reason is kept in the invoice history.',
+      reasonLabel: 'Reason',
+      send: 'Approve and send',
     },
     entity: {
       product: 'Product',

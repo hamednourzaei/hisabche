@@ -238,9 +238,11 @@ export function useInvoice(id: string | undefined) {
 export async function submitInvoice({
   idempotencyKey,
   ...input
-}: CreateInvoice & { idempotencyKey?: string | undefined }): Promise<
-  Invoice & { pendingSync?: true }
-> {
+}: CreateInvoice & {
+  idempotencyKey?: string | undefined
+  /** V53 OD-3: a person holding `credit.override` lets the sale past the customer's limit, with a reason. */
+  creditOverride?: { reason: string } | undefined
+}): Promise<Invoice & { pendingSync?: true }> {
   // ⚠️ OFFLINE INVOICING WAS NEVER WIRED. The device database, its queue
   // and the sync engine all existed; nothing ever put a write into the
   // queue, so without a network the confirm button spun and the sale was

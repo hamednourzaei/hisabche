@@ -38,4 +38,7 @@ export const STANDARD_ACCOUNT_FOR_ROLE: Partial<Record<AccountRole, StandardAcco
   // invoice applies it. 2150 sits below «مالیات» (2100) and above «درآمد
   // انتقالی» (2200): both are money received before it is earned.
   customer_advances: { code: '2150', name: 'پیش‌دریافت مشتریان', type: 'liability' },
+  // V53 (owner decision CC): two accounts, never one netted account.
+  inventory_shrinkage: { code: '5210', name: 'کسری موجودی (شمارش)', type: 'expense' },
+  inventory_gain: { code: '4910', name: 'اضافه موجودی (شمارش)', type: 'revenue' },
 }

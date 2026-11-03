@@ -1315,6 +1315,7 @@
       "sending": "Sending",
       "retrying": "Will retry",
       "rejected": "Refused — needs review",
+      "credit_validation": "Waiting for credit approval",
       "committed": "Recorded"
     },
     "col": {
@@ -1337,7 +1338,15 @@
     },
     "committedTitle": "Recorded in this session",
     "committedHint": "Changes the server accepted since the app was opened. Older ones are on the server, not in this list.",
-    "rejectedHint": "The server refused these. Retrying sends the same change again — fix the cause first."
+    "rejectedHint": "The server refused these. Retrying sends the same change again — fix the cause first.",
+    "credit": {
+      "reason": "Over the customer's credit limit",
+      "approve": "Approve…",
+      "title": "Approve a sale over the credit limit",
+      "body": "This sale was refused because it takes the customer past their credit limit. Only someone with the credit-override permission can approve it, and the reason is kept in the invoice history.",
+      "reasonLabel": "Reason",
+      "send": "Approve and send"
+    }
   },
   "validation": {
     "required": "This field is required",

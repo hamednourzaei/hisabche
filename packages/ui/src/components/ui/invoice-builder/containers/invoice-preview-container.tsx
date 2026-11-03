@@ -39,6 +39,13 @@ import { InvoiceSidebar } from '../../invoice-detail/invoice-sidebar'
 import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { PreviewItemsTable } from '../preview-items-table'
 import { OversoldWarning } from '../oversold-warning'
+import {
+  CREDIT_OVERRIDE_MIN_REASON,
+  CreditOverridePanel,
+  creditStopFrom,
+  isCreditOverrideForbidden,
+  type CreditStop,
+} from '../credit-override-panel'
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
 import { exchangeRateOf, needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
 import { invoiceInStoredMetal } from '../../../../lib/invoices/metal-amounts'
@@ -84,6 +91,10 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_DISPLAY)
   const [error, setError] = useState<string | null>(null)
+  // The server refused the sale for the customer's credit limit; a person who may pass it says why.
+  const [creditStop, setCreditStop] = useState<CreditStop | null>(null)
+  const [creditReason, setCreditReason] = useState('')
+  const [creditForbidden, setCreditForbidden] = useState(false)
 
   /**
    * Set the moment the invoice is created, and never unset.
@@ -268,7 +279,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       setError(t('invoiceBuilder.recurrence.invalid', 'تعداد روز باید عددی بین ۱ تا ۳۶۶ باشد.'))
       return
     }
+    // A sale the server refused for the credit limit is sent again only WITH a reason.
+    if (creditStop && creditReason.trim().length < CREDIT_OVERRIDE_MIN_REASON) {
+      setError(
+        t('invoiceBuilder.creditOverride.reasonRequired', 'برای ثبت دوباره، دلیل را بنویسید.'),
+      )
+      return
+    }
     setError(null)
+    setCreditForbidden(false)
     setSaveStatus('saving')
 
     try {
@@ -311,6 +330,9 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
           ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
           ...(tillSessionId ? { tillSessionId } : {}),
           ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+          ...(creditStop && creditReason.trim()
+            ? { creditOverride: { reason: creditReason.trim() } }
+            : {}),
           // The companions are kept on the invoice's own notes — the only place
           // the current schema can hold them without inventing a relationship.
           ...(invoiceNotes ? { notes: invoiceNotes } : {}),
@@ -438,6 +460,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       const limit = planLimitMessage(cause, (key, values) => t(key, values as never))
       const code = (cause as { code?: unknown } | null)?.code
       const text = typeof reason === 'string' ? reason : ''
+      const stop = creditStopFrom(text)
+      if (stop) {
+        setCreditStop(stop)
+        setError(null)
+        return
+      }
+      if (isCreditOverrideForbidden(text)) {
+        setCreditForbidden(true)
+        setError(null)
+        return
+      }
       // ⚠️ No answer is not «failed»: on the live site the server finished
       // INV-000081 after the 15 s client timeout, and the screen said it had
       // failed — an invitation to submit it twice.
@@ -476,6 +509,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     paymentBlocked,
     tillSessionId,
     createInvoice,
+    creditStop,
+    creditReason,
     createRecurring,
     recurringAvailability.requiresOnline,
     recurrence,
@@ -640,6 +675,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               disabled={createInvoice.isPending}
             />
           )}
+
+          {creditStop ? (
+            <CreditOverridePanel
+              t={t}
+              stop={creditStop}
+              reason={creditReason}
+              onReasonChange={setCreditReason}
+              forbidden={creditForbidden}
+              disabled={createInvoice.isPending}
+            />
+          ) : null}
 
           {error ? (
             <p

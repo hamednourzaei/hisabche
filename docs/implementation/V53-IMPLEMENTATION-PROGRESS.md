@@ -336,3 +336,123 @@ posting with no settlement. Both operations are therefore a single Postgres func
   `docs/customer-advances-01-migration.sql` first, then
   `docs/order-deposit-apply-refund-01-migration.sql`, and `docs/VERIFY-…` afterwards. Deploy the
   backend before the web app, since the service inserts the new columns.
+
+---
+
+## Continuation 6 — CC accounts (4.3) and credit-limit enforcement (4.4, OD-3 = C)
+
+**4.3 Cycle count: separate shrinkage / gain accounts — `IMPLEMENTED_NOT_LIVE_VERIFIED`**
+
+- Roles `inventory_shrinkage` (5210, expense) and `inventory_gain` (4910, revenue) added with names in
+  three languages. The count journal is gross: shortage Dr shrinkage / Cr inventory, surplus Dr inventory /
+  Cr gain (`countJournalLines`).
+- Accounts are resolved, never guessed. Missing accounts => the count moves to `pending_accounts`, nothing is
+  adjusted or posted. `provisionAccounts: true` creates the standard accounts and needs `account.manage`.
+- Atomic finish is the new Postgres function `cycle_count_finish` (`docs/cycle-count-03-migration.sql` +
+  `docs/VERIFY-cycle-count-03.sql`). PGlite scenarios: ALL 10 PASSED. Real PostgreSQL: BLOCKED_EXTERNAL.
+- Without the function and with a journal to post the service answers `CYCLE_COUNT_MIGRATION_REQUIRED`
+  instead of falling back to an unbalanced path.
+- **Migration PENDING HUMAN CONFIRMATION.** Run after `cycle-count-02` and `customer-advances-01`, then
+  `VERIFY-cycle-count-03.sql`. Deploy the backend first only if it is acceptable that a count with a journal
+  answers `CYCLE_COUNT_MIGRATION_REQUIRED` until then.
+- Fixed in passing: `offline-contract.test.ts` now documents `order_deposits`,
+  `order_deposit_applications`, `order_deposit_refunds` (pull-only).
+
+**4.4 Credit limit — `IMPLEMENTED_NOT_LIVE_VERIFIED` (server); UI override dialog NOT_IMPLEMENTED**
+
+- `InvoiceService.create` now enforces the limit before a number is used up. Rule = the existing
+  `evaluateCreditLimit`; exposure = Payments Core receivable + what this sale leaves owing, converted at the
+  frozen invoice rate. Mode `block` refuses (409 `OVER_LIMIT` / `CASH_ONLY_CUSTOMER`).
+- Passing the limit needs BOTH the permission `credit.override` (provisional name, manager minimum) AND a
+  reason of at least 3 characters; permission alone or reason alone is refused; the pass is written to the
+  invoice history as `credit_limit_overridden`. Off / warn modes, customers without a limit, non-sales,
+  fully paid sales and import/system invoices are never refused.
+- Missing columns (`credit_limit_mode`, `credit_limit`) fall back to `warn` / no limit; any other read
+  failure throws (never "no limit").
+- Files: `backend/src/services/credit-limit.ts`, `invoice.service.ts`, `routes/invoice.routes.ts`,
+  `authorization.domain.ts`, `packages/local-engine/src/auth.ts`, `__tests__/invoice-credit-limit.test.ts`
+  (18 tests).
+- Not done: invoice-builder dialog that asks for the reason, offline `PENDING_CREDIT_VALIDATION`.
+
+### Continuation 6b — credit limit: warn semantics and invoice override UI
+
+- Server: `warn` and `block` both refuse an over-limit sale unless the caller holds `credit.override` and
+  gives a reason (`warn` is what the SCREEN does; it never authorizes exceeding). `off` still skips.
+  Behaviour change to announce: a workspace on the default `warn` with customer limits set now needs the
+  override for over-limit sales (tests: `invoice-credit-limit.test.ts`, 18).
+- UI: `credit-override-panel.tsx` + `invoice-preview-container.tsx`: the server's refusal opens a panel with
+  a mandatory reason; the request is re-sent with `creditOverride.reason`; a permission refusal is shown as
+  such. 3 locales (`invoiceBuilder.creditOverride.*`). Tests: `credit-override-panel.test.ts`.
+- Still NOT implemented: offline `PENDING_CREDIT_VALIDATION` (local engine posts the invoice locally today),
+  concurrent-invoice test on real PostgreSQL, 4.1 closure items (delta pull for `order_deposits`, backup
+  tables, restart test, mobile, real-Postgres concurrency), 4.2 variants, 4.5–4.8.
+
+### Continuation 6c — offline credit approval (PENDING_CREDIT_VALIDATION) and 4.1 verification
+
+**What an offline over-limit sale does now** (design: the device NEVER decides the credit question — it holds
+no per-customer limit and no authoritative receivable; the server decides on sync):
+
+1. The device writes the sale and its outbox row as before (provisional local projection, temporary number).
+2. On sync the server refuses it (409 `CREDIT_LIMIT_EXCEEDED` / `CASH_ONLY_CUSTOMER`). The engine stores a
+   REFUSAL; nothing retries it alone; nothing is made on the server; the device keeps the sale whole.
+3. `outbox-stage.ts` classifies that refusal as stage `credit_validation` ("waiting for credit approval"), the
+   sync centre offers "Approve…" with a mandatory reason (min 3 chars).
+4. The SAME clientId (= same Idempotency-Key) is queued again with `creditOverride.reason`; the server checks
+   `credit.override` itself. Without it: `CREDIT_OVERRIDE_FORBIDDEN` → stage `rejected`, sale still kept.
+5. A duplicate delivery of an approved sale returns the existing invoice (idempotent replay).
+   Files: `packages/app-shell/src/features/sync/{outbox-stage,sync-page}.ts(x)`, `app/providers.tsx`,
+   `shared/i18n/desktop-strings.ts`, `packages/i18n/src/locales/{en,fa-IR,fa-AF}.json`.
+   Tests (real sync engine, stubbed network + outbox): `credit-validation.test.ts` (9).
+
+**Known limits, not hidden**
+
+- The device's provisional projection of a credit-refused sale (local journal, local stock) stays on the device
+  until approval or manual removal; device-side reports include it. Not changed in this round.
+- Same-instance serialization only: `backend/src/utils/keyed-lock.ts` orders sales of one customer inside one
+  backend process (`InvoiceService.create` → `createUnserialized`). Across instances the stale-read race needs a
+  database advisory lock in the invoice transaction — NOT implemented. Real two-connection concurrency tests:
+  `BLOCKED_EXTERNAL` (no PostgreSQL binary on this machine; embedded-postgres `.exe` files missing).
+- Not implemented: credit-note / payment-allocation interleaving tests on real PostgreSQL.
+
+**4.1 re-verified (not rebuilt)**: delta pull of `order_deposits` + both movement tables exists in
+`sync-engine.ts` (with own-echo suppression); tests `deposit-pull.test.ts`, `order-deposit-sync-pull-device`,
+`order-deposit-backup-restore`, `order-deposit-restart` (real on-disk database, closed and reopened),
+mobile `order-deposit-parity` (expo-sqlite adapter vs node:sqlite). New: `order-deposit-cancellation.test.ts`
+(order status is not an input; no delete; no cancellation fee path). Fixed two stale tests found red:
+`sync-pull.test.ts` (unknown snapshot entity `order_deposits`), `migrations.test.ts` (hard-coded schema version 9).
+NEEDS_OWNER_DECISION: retaining a cancellation fee from a deposit (no code path exists; refund is full).
+
+### Continuation 7 — variant binding (P2 slice) and tamper-evident audit chain (4.7)
+
+**P2 variants — `IMPLEMENTED_NOT_LIVE_VERIFIED`, PARTIAL (invoice line only)**
+
+- `checkVariantBinding` (`variants.domain.ts`): product with active variants must name one; variant must exist, belong to
+  the product and workspace, be active; a product without variants is sold as itself; historical rows are never re-checked.
+- `invoiceItemSchema.variantId`, route mapping (`invoice.routes.ts`), `InvoiceService.assertVariantBindings` (one read for all
+  lines, before a number is used), `variant_id` written to the line only when present.
+- Migration `docs/variant-binding-01-migration.sql` (+ `VERIFY-variant-binding-01.sql`): nullable `invoice_items.variant_id`,
+  NOT VALID foreign key, partial index; nothing backfilled. **PENDING HUMAN CONFIRMATION.**
+- NOT IMPLEMENTED: stock per variant (stock is per product/warehouse — a variant sale moves the PARENT's stock, so no double
+  counting, but there is no variant-level stock), purchase lines, returns, supplier returns, adjustments, POS, local engine,
+  sync payload, UI selectors, valuation per variant. These need a stock-key design decision before code.
+
+**4.7 Audit chain — `IMPLEMENTED_NOT_LIVE_VERIFIED`**
+
+- `docs/audit-hash-01-migration.sql` + `VERIFY-audit-hash-01.sql`: BEFORE INSERT trigger numbers each workspace's rows,
+  stores `prev_hash` and `hash` (sha256 over a canonical jsonb array of explicit fields), serialised per workspace by a
+  locked head row; `audit_chain_verify(ws)` names `HASH_MISMATCH | BROKEN_LINK | MISSING_RECORD | TAIL_REMOVED`;
+  `audit_chain_head(ws)` is the value to export as a trust anchor. Legacy rows are counted, never rewritten.
+- PGlite: 16 scenarios PASSED (`PGLITE_VERIFIED`). Real two-connection race: `audit-hash-01.pg.test.ts` — `BLOCKED_EXTERNAL`.
+- `AuditService.verifyChain` now asks the database. The old check treated rows with no hash as fine and answered "verified"
+  for a table nobody had ever chained; a database without the migration now answers `migrationRequired`, never verified.
+- `GET /api/audit/verify` now needs `workspace.manage` (was `report.operational.read`).
+- Threat model: detects edits, forged hashes, broken links, removed middle rows and removed newest rows. Does NOT stop an
+  operator who recomputes the whole chain and rewrites the head. OWNER DECISION: where the exported head lives.
+- No UI shows the verdict yet (`useVerifyAuditLog` is typed but has no screen).
+
+**Not started in this continuation:** 4.6 Store/Teacher/adaptive onboarding, 4.8 branch/device restrictions, OD-4 order WIP,
+consolidated invariant suite. 4.5 D4 was reviewed, not extended: workspace profile service/routes/hook exist and four screens
+read it; only `variants` and `auto_fitments` routes carry a profile guard.
+
+**Build/verify results:** see the final report of this turn (web build OK; desktop build blocked by an esbuild temp-file
+"Access is denied" on this machine).

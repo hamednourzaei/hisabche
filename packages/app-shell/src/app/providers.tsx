@@ -142,6 +142,15 @@ if (typeof window !== 'undefined') {
         .map((entry) => {
           const id = queuedEntityId(entry.payload, entry.clientId)
           const stage = stageOf(entry, stagesSnapshot().inFlight, MAX_ATTEMPTS)
+          // A sale refused for the credit limit is waiting for an approver: it needs attention, it is not dead.
+          if (stage === 'credit_validation') {
+            return {
+              entityType,
+              entityId: id,
+              state: 'attention',
+              code: reasonOf(entry.lastError),
+            } as const
+          }
           if (stage === 'rejected') {
             const code = reasonOf(entry.lastError)
             return {

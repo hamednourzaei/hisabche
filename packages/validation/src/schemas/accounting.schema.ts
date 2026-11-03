@@ -61,6 +61,11 @@ export const accountRoles = [
   // customer, not income. Receipt Dr cash|bank / Cr customer_advances;
   // applying it to a final invoice Dr customer_advances / Cr receivable.
   'customer_advances',
+  // V53 (owner decision CC): a stock count's shortage and surplus use TWO separate accounts. A shortage
+  // debits `inventory_shrinkage` (expense), a surplus credits `inventory_gain`. `inventory_loss` stays what
+  // it was: scrap/waste from returns, never a count.
+  'inventory_shrinkage',
+  'inventory_gain',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

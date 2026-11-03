@@ -249,3 +249,69 @@ export function countAdjustmentMovements(input: {
       notes: `count variance ${line.varianceQty}`,
     }))
 }
+
+/* ─── The journal entry a count posts (owner decision CC: two separate accounts) ─ */
+
+export type CountAccountRole = 'inventory' | 'inventory_shrinkage' | 'inventory_gain'
+
+export interface CountJournalLine {
+  accountId: string
+  debit: number
+  credit: number
+}
+
+const toCents = (value: number): number => Math.round(value * 100)
+
+/**
+ * The accounts a count needs, and nothing it does not need.
+ *
+ * A count with only shortages never touches the gain account (and the other way round); a count with no
+ * valued variance needs none, so a clean count can always be closed. Shortage and surplus are looked at
+ * GROSS, not netted: a surplus must credit `inventory_gain` and a shortage must debit
+ * `inventory_shrinkage` — netting one against the other would hide both.
+ */
+export function countAccountRoles(summary: CountSummary): CountAccountRole[] {
+  const roles: CountAccountRole[] = []
+  const shortage = toCents(summary.shortageValue) > 0
+  const surplus = toCents(summary.surplusValue) > 0
+  if (shortage || surplus) roles.push('inventory')
+  if (shortage) roles.push('inventory_shrinkage')
+  if (surplus) roles.push('inventory_gain')
+  return roles
+}
+
+/**
+ * The balanced lines of the count's journal entry, or `null` when no value moved.
+ *
+ *   shortage  Dr inventory_shrinkage   Cr inventory
+ *   surplus   Dr inventory             Cr inventory_gain
+ *
+ * Amounts are the frozen figures of the priced count (the existing valuation: oldest cost layers first for a
+ * shortage, current average for a surplus), rounded to the cent once.
+ */
+export function countJournalLines(
+  summary: CountSummary,
+  accounts: Partial<Record<CountAccountRole, string>>,
+): CountJournalLine[] | null {
+  const shortage = toCents(summary.shortageValue)
+  const surplus = toCents(summary.surplusValue)
+  if (shortage <= 0 && surplus <= 0) return null
+
+  const lines: CountJournalLine[] = []
+  const inventory = accounts.inventory
+  if (!inventory) throw new Error('COUNT_ACCOUNT_MISSING:inventory')
+
+  if (shortage > 0) {
+    const shrinkage = accounts.inventory_shrinkage
+    if (!shrinkage) throw new Error('COUNT_ACCOUNT_MISSING:inventory_shrinkage')
+    lines.push({ accountId: shrinkage, debit: shortage / 100, credit: 0 })
+    lines.push({ accountId: inventory, debit: 0, credit: shortage / 100 })
+  }
+  if (surplus > 0) {
+    const gain = accounts.inventory_gain
+    if (!gain) throw new Error('COUNT_ACCOUNT_MISSING:inventory_gain')
+    lines.push({ accountId: inventory, debit: surplus / 100, credit: 0 })
+    lines.push({ accountId: gain, debit: 0, credit: surplus / 100 })
+  }
+  return lines
+}
