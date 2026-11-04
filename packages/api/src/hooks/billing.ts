@@ -8,7 +8,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
-import type { Plan, Subscription } from '@hisabche/validation'
+import type {
+  Plan,
+  Subscription,
+  CreateSubscriptionOrder,
+  SubscriptionOrder,
+  ClaimSubscriptionOrder,
+  ProvisionFromOrder,
+  ProvisionResponse,
+} from '@hisabche/validation'
 import { asList } from '../lib/as-list'
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -88,6 +96,7 @@ export const billingKeys = {
   usage: () => [...billingKeys.all, 'usage'] as const,
   trialStatus: () => [...billingKeys.all, 'trial-status'] as const,
   upgradeRequests: () => [...billingKeys.all, 'upgrade-requests'] as const,
+  orders: () => [...billingKeys.all, 'orders'] as const,
 }
 
 export type PaymentMethod = 'card_to_card' | 'gateway' | 'manual'
@@ -260,6 +269,61 @@ export function useCancelSubscription() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: billingKeys.subscription() })
+    },
+  })
+}
+
+// ═══════════════════════════════════════════════════════════
+// V54.0 PHASE 5.1 — SUBSCRIPTION ORDERS & PROVISIONING HOOKS
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Creates a subscription order (Path A: anonymous, or Path B: user-bound).
+ */
+export function useCreateSubscriptionOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: CreateSubscriptionOrder) => {
+      const { data } = await apiClient.post<{ order: SubscriptionOrder; rawClaimToken?: string }>(
+        '/billing/orders',
+        payload,
+      )
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.orders() })
+    },
+  })
+}
+
+/**
+ * Claims a subscription order and provisions a workspace (Path A: Buy First).
+ */
+export function useClaimSubscriptionOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: ClaimSubscriptionOrder) => {
+      const { data } = await apiClient.post<ProvisionResponse>('/billing/orders/claim', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.all })
+    },
+  })
+}
+
+/**
+ * Provisions a workspace directly from an authenticated, paid order (Path B: Register First).
+ */
+export function useProvisionFromOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: ProvisionFromOrder) => {
+      const { data } = await apiClient.post<ProvisionResponse>('/billing/orders/provision', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.all })
     },
   })
 }

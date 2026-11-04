@@ -1450,3 +1450,5 @@ export {
   type AllocatedLandedCostLine,
 } from './schemas/costing.domain'
 export * from './schemas/sync-identity'
+export * from './schemas/subscription-order.schema'
+export * from './schemas/operational-dna'

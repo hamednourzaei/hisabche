@@ -2,7 +2,7 @@
 'use client'
 
 import { useToast } from '../../toast-provider'
-import { apiErrorMessage, useSetBaseCurrency } from '@hisabche/api'
+import { apiErrorMessage, useSetBaseCurrency, useSaveWorkspaceProfile } from '@hisabche/api'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   useOnboardingStore,
@@ -15,6 +15,7 @@ import {
 import { OnboardingPage } from '../onboarding-page'
 import { useCallback, useMemo, memo, useState } from 'react'
 import { useAuthStore } from '@hisabche/store'
+import { inferOperationalDna } from '@hisabche/validation'
 import { BUSINESS_MODELS, BUSINESS_TYPES, BUSINESS_TYPE_OTHER } from '@hisabche/ui-contract'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -77,6 +78,8 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const [businessNote, setBusinessNote] = useState('')
 
   const updateProfile = useAuthStore((s) => s.updateProfile)
+  const saveWorkspaceProfile = useSaveWorkspaceProfile()
+  const setOperationalDna = useOnboardingStore((s) => s.setOperationalDna)
   const toast = useToast()
 
   /**
@@ -95,6 +98,14 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
           .map((id) => id.trim())
           .filter(Boolean)
       : []
+
+    // Infer DNA deterministically from the user's choices
+    const inferredDna = inferOperationalDna({
+      tradeKey: selected[0],
+      holdsStock: storeSize ? 'yes' : 'unknown',
+    })
+    setOperationalDna(inferredDna)
+
     try {
       await updateProfile({
         onboardingCompleted: true,
@@ -102,6 +113,12 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
         ...(storeSize ? { storeSize } : {}),
         ...(businessNote.trim() ? { businessNote: businessNote.trim() } : {}),
       })
+      // Also persist to workspace profile if user holds workspace.manage
+      try {
+        await saveWorkspaceProfile(selected)
+      } catch {
+        // Safe fallback if permission is restricted or offline
+      }
     } catch {
       toast.error(tOriginal('onboarding.saveFailed'))
       return
@@ -113,6 +130,8 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     businessType,
     completeOnboarding,
     push,
+    saveWorkspaceProfile,
+    setOperationalDna,
     storeSize,
     tOriginal,
     toast,

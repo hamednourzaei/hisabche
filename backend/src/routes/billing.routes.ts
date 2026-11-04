@@ -33,6 +33,12 @@ import {
   LicenseRevokedError,
 } from '../services/offline-license.service'
 import { supabase } from '../db'
+import {
+  createSubscriptionOrderSchema,
+  claimSubscriptionOrderSchema,
+  provisionFromOrderSchema,
+} from '@hisabche/validation'
+import { subscriptionOrderService } from '../services/subscription-order.service'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -893,6 +899,144 @@ export async function billingRoutes(fastify: FastifyInstance) {
         creditAmount,
         newPlanPrice,
         totalDue,
+      }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // V54.0 PHASE 5.1 — CANONICAL SUBSCRIPTION ORDERS & PROVISIONING
+  // ═══════════════════════════════════════════════════════════
+
+  // ─── POST /api/billing/orders (Path A or Path B) ───────────
+  fastify.post(
+    '/api/billing/orders',
+    {
+      schema: {
+        body: toJsonSchema(createSubscriptionOrderSchema),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      // Optional auth: if token provided, check with Supabase auth
+      let userId: string | undefined
+      const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+      if (token) {
+        try {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser(token)
+          if (user?.id) userId = user.id
+        } catch {
+          // Token invalid or absent — proceed as anonymous Path A
+        }
+      }
+
+      try {
+        const body = request.body as any
+        const result = await subscriptionOrderService.createOrder(body, userId)
+        return reply.code(201).send(result)
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(err.statusCode || 500).send({
+          error: err.code || 'FAILED_TO_CREATE_ORDER',
+          message: err.message,
+        })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/orders/:id/verify-payment (Platform Admin / Webhook) ─
+  fastify.post(
+    '/api/billing/orders/:id/verify-payment',
+    {
+      preHandler: [authenticate, platformAdminGuard],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        body: toJsonSchema(
+          z.object({
+            paymentReference: z.string().trim().max(120),
+            paymentMethod: z
+              .enum(['card_to_card', 'gateway', 'manual', 'cash'])
+              .default('card_to_card'),
+          }),
+        ),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = request.params as { id: string }
+      const body = request.body as { paymentReference: string; paymentMethod?: any }
+      try {
+        const updated = await subscriptionOrderService.markPaymentVerified(
+          params.id,
+          body.paymentReference,
+          body.paymentMethod,
+        )
+        return reply.send(updated)
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(err.statusCode || 500).send({
+          error: err.code || 'PAYMENT_VERIFICATION_FAILED',
+          message: err.message,
+        })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/orders/claim (Path A: Buy First -> Claim) ───
+  fastify.post(
+    '/api/billing/orders/claim',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(claimSubscriptionOrderSchema),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as any
+      try {
+        const provisionResult = await subscriptionOrderService.claimOrderAndProvision(
+          request.userId,
+          body.claimToken,
+          body.workspaceName,
+          body.baseCurrency,
+          body.timeZone,
+        )
+        return reply.code(200).send(provisionResult)
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(err.statusCode || 500).send({
+          error: err.code || 'CLAIM_PROVISION_FAILED',
+          message: err.message,
+        })
+      }
+    },
+  )
+
+  // ─── POST /api/billing/orders/provision (Path B: Register First -> Provision) ─
+  fastify.post(
+    '/api/billing/orders/provision',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(provisionFromOrderSchema),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = request.body as any
+      try {
+        const provisionResult = await subscriptionOrderService.provisionFromOrder(
+          request.userId,
+          body.orderId,
+          body.workspaceName,
+          body.baseCurrency,
+          body.timeZone,
+        )
+        return reply.code(200).send(provisionResult)
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(err.statusCode || 500).send({
+          error: err.code || 'ORDER_PROVISION_FAILED',
+          message: err.message,
+        })
       }
     },
   )

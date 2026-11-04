@@ -8,8 +8,17 @@ import { DashboardView } from '../dashboard-view'
 import { WorkQueueContainer } from '../../work-queue/containers/work-queue-container'
 import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-picker'
 import { isNavLocked } from '@hisabche/ui-contract'
-import { apiErrorMessage, useDeleteCustomUnit, useMyCapabilities } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useDeleteCustomUnit,
+  useMyCapabilities,
+  useProducts,
+  useCustomers,
+  useInvoices,
+  useServiceDeliverySessions,
+} from '@hisabche/api'
 import { X } from 'lucide-react'
+import { FirstValueChecklist } from '../first-value-checklist'
 import { usePageLook } from '../../../../lib/page-look'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { useActionAvailability } from '../../../../lib/capability'
@@ -189,8 +198,30 @@ export function DashboardContainer() {
     [display, t],
   )
 
+  const prods = useProducts()
+  const custs = useCustomers()
+  const invs = useInvoices()
+  const sess = useServiceDeliverySessions()
+
+  const hasProducts = Boolean(
+    prods.data && (prods.data.products?.length > 0 || prods.data.total > 0),
+  )
+  const hasCustomers = Boolean(
+    custs.data && (custs.data.customers?.length > 0 || custs.data.total > 0),
+  )
+  const hasInvoices = Boolean(invs.data && (invs.data.invoices?.length > 0 || invs.data.total > 0))
+  const hasSessions = Boolean(sess.data && sess.data.length > 0)
+
   return (
     <>
+      <FirstValueChecklist
+        hasProducts={hasProducts}
+        hasCustomers={hasCustomers}
+        hasInvoices={hasInvoices}
+        hasSessions={hasSessions}
+        className="mb-6"
+      />
+
       {/* §12 — what needs doing, above what happened.
           `capabilities` is empty deliberately: no endpoint reports the
           capabilities the SERVER granted this actor, and inventing a list

@@ -1,7 +1,7 @@
 // packages/store/src/slices/onboarding.slice.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { CURRENCY_CODES } from '@hisabche/validation'
+import { CURRENCY_CODES, type OperationalDna, ARCHETYPE_PRESETS } from '@hisabche/validation'
 
 export type BusinessType = 'retail' | 'wholesale' | 'service' | 'restaurant' | 'other'
 export type StoreSize = 'small' | 'medium' | 'large'
@@ -17,6 +17,7 @@ export interface OnboardingState {
   step: number
   businessType: BusinessType | null
   storeSize: StoreSize | null
+  operationalDna: OperationalDna | null
   defaultCurrency: Currency
   language: Language
   hasAddedProduct: boolean
@@ -26,6 +27,8 @@ export interface OnboardingState {
   setStep: (step: number) => void
   setBusinessType: (type: BusinessType) => void
   setStoreSize: (size: StoreSize) => void
+  setOperationalDna: (dna: OperationalDna) => void
+  setArchetypePreset: (presetKey: keyof typeof ARCHETYPE_PRESETS) => void
   setDefaultCurrency: (currency: Currency) => void
   setLanguage: (lang: Language) => void
   completeOnboarding: () => void
@@ -41,6 +44,8 @@ const initialState: Omit<
     setStep: any
     setBusinessType: any
     setStoreSize: any
+    setOperationalDna: any
+    setArchetypePreset: any
     setDefaultCurrency: any
     setLanguage: any
     completeOnboarding: any
@@ -54,6 +59,7 @@ const initialState: Omit<
   step: 0,
   businessType: null,
   storeSize: null,
+  operationalDna: null,
   // Nothing is chosen for the person: the wizard's button stays disabled
   // until they pick, and what they pick becomes the books currency.
   defaultCurrency: '' as Currency,
@@ -71,6 +77,13 @@ export const useOnboardingStore = create<OnboardingState>()(
       setStep: (step) => set({ step }),
       setBusinessType: (businessType) => set({ businessType, step: 2 }),
       setStoreSize: (storeSize) => set({ storeSize, step: 3 }),
+      setOperationalDna: (operationalDna) => set({ operationalDna }),
+      setArchetypePreset: (presetKey) => {
+        const preset = ARCHETYPE_PRESETS[presetKey]
+        if (preset) {
+          set({ operationalDna: preset })
+        }
+      },
       setDefaultCurrency: (defaultCurrency) => set({ defaultCurrency }),
       setLanguage: (language) => set({ language }),
       completeOnboarding: () => set({ isCompleted: true, step: 0 }),

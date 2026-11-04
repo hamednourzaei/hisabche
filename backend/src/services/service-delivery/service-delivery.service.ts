@@ -1,3 +1,4 @@
+import { costing } from '../inventory-costing'
 // ============================================
 // backend/src/services/service-delivery/service-delivery.service.ts
 //
@@ -48,6 +49,13 @@ export interface DeliverSessionInput {
   consumptionEntryId?: string | undefined
   /** Optional: refuse when the session changed since the caller read it. */
   expectedUpdatedAt?: string | undefined
+  consumables?:
+    | Array<{
+        productId: string
+        quantity: number
+        warehouseId?: string | null | undefined
+      }>
+    | undefined
 }
 
 interface ServiceDeliveryDbRow {
@@ -297,6 +305,39 @@ export class ServiceDeliveryService {
     if (error) throw this.failureOf(error, 'Failed to deliver service session')
 
     const result = (data ?? {}) as { package_credit_id?: string | null }
+    // Deduct consumables if provided using CostingService and record stock_movements
+    if (input.consumables && input.consumables.length > 0) {
+      for (const item of input.consumables) {
+        if (!item.productId || Number(item.quantity) <= 0) continue
+        const qty = Number(item.quantity)
+        await costing.recordIssue(ctx, {
+          productId: item.productId,
+          warehouseId: item.warehouseId ?? null,
+          quantity: qty,
+          entryDate: session.sessionDate,
+          consumerType: 'adjustment',
+          consumerId: id,
+          consumerLine: item.productId,
+        })
+
+        const movementRow = {
+          product_id: item.productId,
+          type: 'adjustment',
+          quantity: -qty,
+          reference_type: 'service_session',
+          reference_id: id,
+          workspace_id: ctx.workspaceId,
+          user_id: ctx.userId,
+          notes: 'Material consumed during service session ' + id,
+          ...(item.warehouseId ? { from_warehouse_id: item.warehouseId } : {}),
+        }
+        const { error: smErr } = await this.db.from('stock_movements').insert(movementRow)
+        if (smErr) {
+          throw new DatabaseError('Failed to record stock movement for consumable', smErr)
+        }
+      }
+    }
+
     const delivered = await this.getById(ctx, id)
     return {
       session: delivered,

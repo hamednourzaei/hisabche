@@ -581,3 +581,8 @@ export { ProductFitmentsSection } from './components/ui/warehouse/product-fitmen
 export { WarrantiesSection } from './components/ui/invoices/warranties-section'
 export { InvoiceReturnsDialog } from './components/ui/invoices/invoice-returns-dialog'
 export { InvoiceReturnRefundDialog } from './components/ui/invoices/invoice-return-refund-dialog'
+export {
+  FirstValueChecklist,
+  type FirstValueChecklistProps,
+} from './components/ui/dashboard/first-value-checklist'
+export { useOperationalDna, type OperationalDnaState } from './hooks/use-operational-dna'

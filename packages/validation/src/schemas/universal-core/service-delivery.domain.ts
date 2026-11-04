@@ -223,6 +223,12 @@ export function deliveryReversalKey(sessionId: string): string {
   return `delivery_cancel_${sessionId}`
 }
 
+export interface ConsumableMaterialItem {
+  readonly productId: string
+  readonly quantity: number
+  readonly warehouseId?: string | null | undefined
+}
+
 export interface PlanServiceDeliveryParams {
   readonly session: ServiceDeliverySession
   readonly creditEntries?: readonly PackageCreditEntry[] | undefined
@@ -236,6 +242,8 @@ export interface PlanServiceDeliveryParams {
   readonly reason?: string | null | undefined
   /** Accepted for callers that still pass it; the identity of a delivery is the session (`deliveryConsumeKey`). */
   readonly idempotencyKey?: string | null | undefined
+  /** Materials/consumables used during service delivery (deducted via CostingService FIFO/AVCO). */
+  readonly consumables?: readonly ConsumableMaterialItem[] | undefined
 }
 
 export interface PlanServiceDeliveryResult {
