@@ -124,6 +124,8 @@ export interface AuditChainVerdict {
   reason?: 'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED' | undefined
   /** The database has not run audit-hash-01: nothing was checked, and nothing is claimed. */
   migrationRequired?: true | undefined
+  /** The head worth exporting outside the database; null before the first chained row. */
+  head?: { seq: number; hash: string } | null | undefined
 }
 
 export function useVerifyAuditLog() {

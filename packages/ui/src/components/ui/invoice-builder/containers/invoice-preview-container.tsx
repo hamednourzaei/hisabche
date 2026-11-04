@@ -460,7 +460,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       const limit = planLimitMessage(cause, (key, values) => t(key, values as never))
       const code = (cause as { code?: unknown } | null)?.code
       const text = typeof reason === 'string' ? reason : ''
-      const stop = creditStopFrom(text)
+      const stop = creditStopFrom(cause)
       if (stop) {
         setCreditStop(stop)
         setError(null)
@@ -684,6 +684,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               onReasonChange={setCreditReason}
               forbidden={creditForbidden}
               disabled={createInvoice.isPending}
+              locale={locale}
             />
           ) : null}
 

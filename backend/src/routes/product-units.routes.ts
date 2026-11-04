@@ -11,6 +11,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ProductUnitsService } from '../services/inventory/product-units.service'
 
@@ -82,7 +83,15 @@ export async function productUnitsRoutes(fastify: FastifyInstance) {
       // a product name must not thereby be able to redefine what «a carton»
       // means — the same reasoning that puts costing configuration behind this
       // capability rather than behind product editing.
-      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
+      // ⚠️ A PRODUCT THAT CARRIES MULTIPLE UNITS IS THE `multi_unit` CAPABILITY (D4 = B): a declared
+      // workspace whose profile does not include it may not redefine units. An undeclared workspace is
+      // never restricted, and the permission above is still required on its own.
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('inventory.configure'),
+        requireProfileCapability('multi_unit'),
+      ],
       schema: { body: toJsonSchema(replaceSchema) },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {

@@ -491,13 +491,21 @@ export class AuditService {
     failedAtSeq?: number
     reason?: 'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED'
     migrationRequired?: true
+    /** The head worth exporting outside the database (V53 A1); null before the first chained row. */
+    head: { seq: number; hash: string } | null
   }> {
     const { data, error } = await supabase.rpc('audit_chain_verify', {
       p_workspace_id: workspaceId,
     })
     if (error) {
       if (error.code === '42883' || error.code === 'PGRST202') {
-        return { verified: false, count: 0, legacyUnchained: 0, migrationRequired: true }
+        return {
+          verified: false,
+          count: 0,
+          legacyUnchained: 0,
+          migrationRequired: true,
+          head: null,
+        }
       }
       throw new DatabaseError('Failed to verify the audit chain', error)
     }
@@ -522,7 +530,25 @@ export class AuditService {
             reason: row.reason as
               'HASH_MISMATCH' | 'BROKEN_LINK' | 'MISSING_RECORD' | 'TAIL_REMOVED',
           }),
+      head: await this.readChainHead(workspaceId),
     }
+  }
+
+  // The head is what the owner copies out of the product so a later rewrite of the whole chain can be
+  // detected (V53 A1). It is read by the DATABASE function, never computed here — the trigger and the
+  // verifier must agree on the exact bytes. A database without the migration simply has no head.
+  private async readChainHead(workspaceId: string): Promise<{ seq: number; hash: string } | null> {
+    const { data, error } = await supabase.rpc('audit_chain_head', {
+      p_workspace_id: workspaceId,
+    })
+    if (error) {
+      if (error.code === '42883' || error.code === 'PGRST202') return null
+      throw new DatabaseError('Failed to read the audit chain head', error)
+    }
+    const row = (Array.isArray(data) ? data[0] : data) as
+      { last_seq: number | string; last_hash: string } | undefined
+    if (!row) return null
+    return { seq: Number(row.last_seq), hash: row.last_hash }
   }
 
   // ─── Invalidate Cache ────────────────────────────────────

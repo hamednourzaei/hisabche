@@ -56,6 +56,12 @@ export interface InvoiceRow {
   currency: string
   exchange_rate: number
   status: string
+  /**
+   * V53 OD-3: the server's answer to «may this customer take more credit?» for this sale. NULL on every
+   * row that never asked the question (including rows pulled from the server); `pending_validation` and
+   * `rejected` mean the sale is NOT final and is left out of revenue.
+   */
+  credit_status: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -222,6 +228,8 @@ export function mapInvoice(
     exchangeRate: row.exchange_rate,
     exchange_rate: row.exchange_rate,
     status: row.status,
+    creditStatus: row.credit_status,
+    credit_status: row.credit_status,
     notes: row.notes,
     createdAt: row.created_at,
     created_at: row.created_at,
@@ -1278,6 +1286,48 @@ export function registerInvoiceRoutes(router: Router): void {
   router.delete('/invoices/:id', (c: RouteHandlerContext) => {
     cancelHandler(c)
     return { __status: 204, __data: null }
+  })
+
+  // ─── POST /invoices/:id/credit-status ──────────────────────
+  //
+  // V53 OD-3: the DEVICE never decides the credit question — it does not know the customer's limit or what
+  // they already owe. This route only records the SERVER's answer on the local row, so a sale waiting for
+  // approval can never look like a final one:
+  //
+  //   pending_validation  the server refused it for credit; the whole sale waits in the outbox for an
+  //                       approver who holds `credit.override`
+  //   rejected            refused again after the approver's attempt — edit or cancel it
+  //   validated           the server accepted it (the pulled row then replaces the projection)
+  //
+  // Nothing here posts, reverses or moves stock: the marker is a statement ABOUT a sale, never a second
+  // accounting. «Cancel this sale» is the existing POST /invoices/:id/cancel, which reverses the local
+  // projection in one transaction.
+  const CREDIT_STATES = ['pending_validation', 'validated', 'rejected'] as const
+
+  router.post('/invoices/:id/credit-status', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    const { workspaceId } = ctx
+    const body = (c.body ?? {}) as Record<string, unknown>
+    const next = typeof body.status === 'string' ? body.status.trim() : ''
+    if (!(CREDIT_STATES as readonly string[]).includes(next)) {
+      throw new ValidationError(`CREDIT_STATUS_INVALID: ${next || '(empty)'}`)
+    }
+    const now = new Date().toISOString()
+    return db.transaction(() => {
+      const inv = db.get<{ id: string; status: string }>(
+        'SELECT id, status FROM invoice WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+        [params.id, workspaceId],
+      )
+      if (!inv) throw new NotFoundError(`Invoice not found: ${params.id}`)
+      if (inv.status === 'cancelled') {
+        throw new ConflictError('INVOICE_CANCELLED: a cancelled sale has no credit verdict')
+      }
+      db.run(
+        'UPDATE invoice SET credit_status = ?, updated_at = ? WHERE id = ? AND workspace_id = ?',
+        [next, now, params.id, workspaceId],
+      )
+      return { id: params.id, creditStatus: next, status: inv.status }
+    })
   })
 
   // ─── DELETE /invoices/:id/projection ────────────────────────

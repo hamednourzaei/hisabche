@@ -22,8 +22,8 @@ export class NotFoundError extends BaseError {
 }
 
 export class ConflictError extends BaseError {
-  constructor(message: string) {
-    super(message, 409)
+  constructor(message: string, context?: Record<string, unknown>) {
+    super(message, 409, true, context)
     this.name = 'ConflictError'
   }
 }

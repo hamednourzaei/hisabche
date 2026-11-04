@@ -18,7 +18,7 @@
 // data migration.
 // ============================================
 
-import { REJECTED_PREFIX, type CommittedEntry } from './outbox-stage'
+import { creditRefusalOf, REJECTED_PREFIX, type CommittedEntry } from './outbox-stage'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   invoiceKeys,
@@ -440,6 +440,24 @@ async function discardInvoiceProjection(invoiceId: string): Promise<void> {
     await localRequest('DELETE', `/invoices/${invoiceId}/projection`)
   } catch {
     // Reconciled by the pull; never fatal to the push.
+  }
+}
+
+/**
+ * Write the SERVER's answer about credit onto the local invoice row (V53 OD-3).
+ *
+ * The device never decides this: `pending_validation` and `rejected` are set only from a refusal the server
+ * actually sent, and the row stays out of revenue until it says `validated`. Failure to write is not fatal —
+ * the outbox stage still tells the truth about the sale — and it must not stop the next queue entry.
+ */
+async function markCreditStatus(
+  invoiceId: string,
+  status: 'pending_validation' | 'rejected',
+): Promise<void> {
+  try {
+    await localRequest('POST', `/invoices/${invoiceId}/credit-status`, { status })
+  } catch {
+    // The pull may already have replaced the projection with the server's row.
   }
 }
 
@@ -1116,6 +1134,15 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
           (error as { permanent?: boolean })?.permanent ||
           message.startsWith('NO_ENDPOINT'),
         )
+        // V53 OD-3: a CREDIT refusal is not a dead sale. The whole invoice stays in the outbox and the local
+        // row says so, so nobody reads it as a final sale or as «revenue» before the server approves it.
+        // A refusal AFTER an approver's attempt (the payload carries `creditOverride`) is the server's final
+        // «no»: the sale must be edited or cancelled, never re-sent on a guess.
+        const creditRefusal = creditRefusalOf(`${REJECTED_PREFIX}${message}`)
+        if (creditRefusal && entry.entity === 'invoice' && entry.operation === 'create') {
+          const attempted = Boolean((entry.payload as Record<string, unknown>)?.creditOverride)
+          await markCreditStatus(entry.clientId, attempted ? 'rejected' : 'pending_validation')
+        }
         await desktop.db.resolveQueue(
           entry.clientId,
           'failed',

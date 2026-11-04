@@ -2,9 +2,9 @@
   "version": 1,
   "mission": "V53 Universal Business Core",
   "scope": "Phases A-C only (baseline + P13, capability architecture, business-profile composition). Store/Teacher/onboarding deliberately not started.",
-  "currentPhase": "continuation-7 (variant binding slice, audit hash chain, credit offline approval)",
+  "currentPhase": "continuation-8 (Phase H consolidated invariants + audit verdict UI, Phase D guarded-route proof, Phase C structured credit refusal)",
   "lastMeasured": {
-    "date": "2026-11-03",
+    "date": "2026-11-04",
     "m5Gate": {
       "G1": "GREEN - 3 files / 18 tests / exit 0",
       "G2": "RED - no human VERIFY output in the tree",
@@ -18,9 +18,38 @@
       "orderDepositApplyRefund01": "setup OK, VERIFY all true (all result sets checked: 12-arg has_refund, refunds_12_columns, reason_mandatory, reason check VALIDATED), ALL 39 PASSED (migration applied twice; real accounting_post_journal_entry + payments_record + invoices_project_settlement extracted from docs/), exit 0"
     },
     "v53Tests": {
-      "backend": "workspace-profile + draft-po-route + cycle-count-guard + stock-count: 4 files / 65 tests / exit 0",
-      "validation": "draft-purchase-order + capability-composition: 2 files / 36 tests / exit 0"
-    }
+      "backend": "audit + workspace-profile + v53-financial-invariants + invoice-credit-limit: 4 files / 64 tests / exit 0",
+      "ui": "audit-integrity-card + unwired-capability-hooks + credit-override-panel + i18n-keys-exist: 4 files / 24 tests / exit 0"
+    },
+    "baseline": {
+      "backend": "372 files / 5176 tests / exit 0 (npx vitest run --project unit --maxWorkers=4, 142.79s)",
+      "validation": "55 files / 841 tests / exit 0 (after regenerating the three generated artifacts)",
+      "localEngine": "69 files / 499 tests / exit 0",
+      "ui": "199 files / 2576 tests, 1 failed (seo-public-pages sitemap, not ours), 2 skipped",
+      "desktopJest": "34 suites / 320 tests, 2 failed (built-html-loads-under-file-protocol, built-css-contains-utilities — no renderer build)",
+      "mobileJest": "18 suites / 212 tests / exit 0",
+      "backendDefaultParallelism": "4 runs with default workers: 1, 3, 5 and 2 tests timed out at 5000ms; every failing file passes alone. Not a code failure — see finalVerification.backendTimeouts."
+    },
+    "finalVerification": {
+      "backendUnit": "npx vitest run --project unit --maxWorkers=4 → 372 files / 5176 tests / exit 0 / 142.79s",
+      "backendTimeouts": "With default (15) workers the suite produced 1–5 \"Test timed out in 5000ms\" failures per run across four runs (read-error-not-404, referral-programme ×2, supabase-fetch-metrics, http-failure-diagnostics, ledger-batch-idempotency). No assertion failed; each file passes alone; with --maxWorkers=4 the whole suite is green and FASTER (142.79s vs 184.26s).",
+      "backendV53Files": "audit + workspace-profile + v53-financial-invariants + invoice-credit-limit → 4 files / 65 tests / exit 0",
+      "validation": "npx tsc --noEmit clean; npx vitest run → 55 files / 841 tests / exit 0 (after regenerating the coverage table, which had gone stale when three test files were added in continuation 8)",
+      "ui": "npx tsc --noEmit clean; 6 relevant files (3 industry, audit-integrity-card, unwired-capability-hooks, credit-override-panel) → 30/30; i18n-keys-exist 5/5",
+      "api": "npx tsc --noEmit clean",
+      "webBuild": "npx next build → exit 0, \"Compiled successfully in 33.8s\", 131/131 static pages",
+      "generators": {
+        "coverageTable": "node scripts/industry/generate-coverage-table.mjs --check → OK: 118 rows match the repository",
+        "industryDiff": "node scripts/industry/generate-industry-diff.mjs --check → OK",
+        "capabilityMatrix": "node scripts/generate-capability-matrix-csv.mjs --check → OK, rows=513"
+      },
+      "audits": {
+        "specReferences": "node scripts/audit/verify-spec-references.mjs → 47 documents · 849 path references · 333 distinct symbols · unbacked paths 0 · unbacked symbols 0 · exit 0",
+        "unwiredRoutes": "node scripts/audit-unwired-routes.mjs → routes 840 · client path strings 650 · with no caller 118 · exit 0"
+      },
+      "lintFormat": "eslint 0 errors on every changed source file; prettier --check clean on every changed source file. The generated INDUSTRY-COVERAGE-TABLE.md is prettier-unclean at HEAD too (generator-owned; formatting it would make the generator --check fail)."
+    },
+    "testCommands": {}
   },
   "completedSlices": [
     {
@@ -166,6 +195,87 @@
         "packages/app-shell/src/features/sync/sync-page.tsx",
         "packages/app-shell/src/features/sync/__tests__/credit-validation.test.ts"
       ]
+    },
+    {
+      "id": "H-audit-verdict-ui",
+      "date": "2026-11-04",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "A1 — `audit_chain_head(ws)` is exportable; storing it outside the database stays NEEDS_OWNER_DECISION, so the product offers a manual copy, never an automatic upload.",
+      "what": "`AuditService.verifyChain` now also reads `audit_chain_head` through the same database function that writes the chain (never recomputed in TypeScript) and returns `head: { seq, hash } | null`. A database without the migration answers `head: null` (42883/PGRST202); any other read failure throws, because a failed read must never look like «no head». The new `AuditIntegrityCard` (owner-only, hidden on 401/403) renders verified / broken-at-seq-with-reason / migration-required, prints the copied head (`copyText`, the fallback that works when the clipboard API is refused), and states the limitation in plain language.",
+      "files": [
+        "backend/src/services/audit.service.ts",
+        "backend/src/__tests__/audit.test.ts",
+        "packages/api/src/hooks/audit.ts",
+        "packages/api/src/index.ts",
+        "packages/ui/src/components/ui/audit/audit-integrity-card.tsx",
+        "packages/ui/src/components/ui/audit/containers/audit-container.tsx",
+        "packages/ui/src/__tests__/audit-integrity-card.test.tsx",
+        "packages/i18n/messages/fa/common.json",
+        "packages/i18n/messages/af/common.json",
+        "packages/i18n/messages/en/common.json"
+      ],
+      "tests": {
+        "backend": "audit.test.ts 11/11, exit 0",
+        "ui": "audit-integrity-card.test.tsx 4/4, exit 0"
+      },
+      "notDone": "The exported head is not stored anywhere automatically (owner decision A1). No real-Postgres run of audit-hash-01: BLOCKED_EXTERNAL.",
+      "migrationStatus": "PENDING HUMAN CONFIRMATION — docs/audit-hash-01-migration.sql has not been run on the owner database."
+    },
+    {
+      "id": "H-financial-invariants",
+      "date": "2026-11-04",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "The financial invariants of the universal core live in ONE suite that calls the same functions the server and the local engine call.",
+      "what": "`backend/src/__tests__/v53-financial-invariants.test.ts` states and proves: a draw never exceeds what remains (apply and refund share one balance); an overspent deposit is a fault, never a zero balance; a fractional or over-sized request is refused before SQL; a refund reason is trimmed 3..500; currency decimals come from the currency (AFN 0, USD 2, IQD 3, unknown null) and a third decimal on a numeric(18,2) path is refused rather than rounded; every deposit journal shape balances and its reversal nets to zero; a credit limit blocks over the limit, warns with the exact excess and allows the boundary, distinguishes cash-only from unlimited, and `off` evaluates nothing; a product with active variants cannot be sold as its parent, a variant from another workspace/product or an inactive one is named and refused.",
+      "files": ["backend/src/__tests__/v53-financial-invariants.test.ts"],
+      "tests": {
+        "backend": "v53-financial-invariants.test.ts 11/11, exit 0"
+      },
+      "notDone": "The DB-level half of these invariants (two concurrent refunds, rollback on posting failure) needs real PostgreSQL and stays covered by the skipped *.pg.test.ts + the PGlite scenario files."
+    },
+    {
+      "id": "D-profile-guards-and-proof",
+      "date": "2026-11-04",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "decision": "D4 = B: capability is the second half of an authorization; an undeclared workspace is never restricted, and the profile never grants a permission.",
+      "what": "`requireProfileCapability` now also guards `PUT /api/products/:id/units` (`multi_unit`) and `POST /api/warranties` (`serialized_items`) — only where the route belongs to exactly one capability. The test is table-driven over every guarded route and proves four cases (undeclared passes, declared-without 403 CAPABILITY_NOT_ENABLED and the service is not called, declared-with passes, missing permission 403 regardless). A new test proves a profile change reaches only `workspaces` — no role, grant or invoice is touched. A new guard test lists every universal-core hook with no consumer and asserts that a documented unwired capability is never advertised as `available`.",
+      "files": [
+        "backend/src/routes/product-units.routes.ts",
+        "backend/src/routes/warranty.routes.ts",
+        "backend/src/__tests__/workspace-profile.test.ts",
+        "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
+      ],
+      "tests": {
+        "backend": "workspace-profile + workspace-guard-order 27/27, exit 0",
+        "ui": "unwired-capability-hooks 4/4, exit 0"
+      },
+      "notDone": "No single terminology helper yet (nav, page title, breadcrumb still read their own keys), so the vocabulary in the profile is not applied to navigation; the offline cache of the profile is the local workspace row pulled with the session, not a dedicated sync entity."
+    },
+    {
+      "id": "C-credit-refusal-context",
+      "date": "2026-11-04",
+      "status": "IMPLEMENTED_NOT_LIVE_VERIFIED",
+      "decision": "A refusal carries its facts as data, not only as a sentence: `BaseError.context` is sent beside the message and never instead of it.",
+      "what": "A credit-limit refusal now sends `context: { code, limit, exposure, excess, projected, currency }`. The invoice builder reads those numbers from the rejected request (falling back to the old sentence for an older backend) and the override panel prints the limit, what the customer already owes and the projected total in the books currency, with locale digits. Nothing is invented when the context is absent.",
+      "files": [
+        "backend/src/errors/base.error.ts",
+        "backend/src/errors/database.error.ts",
+        "backend/src/index.ts",
+        "backend/src/services/invoice.service.ts",
+        "backend/src/__tests__/invoice-credit-limit.test.ts",
+        "packages/api/src/index.ts",
+        "packages/ui/src/components/ui/invoice-builder/credit-override-panel.tsx",
+        "packages/ui/src/components/ui/invoice-builder/containers/invoice-preview-container.tsx",
+        "packages/ui/src/__tests__/credit-override-panel.test.ts",
+        "packages/i18n/messages/fa/common.json",
+        "packages/i18n/messages/af/common.json",
+        "packages/i18n/messages/en/common.json"
+      ],
+      "tests": {
+        "backend": "invoice-credit-limit 17/17, exit 0",
+        "ui": "credit-override-panel 6/6, exit 0"
+      },
+      "notDone": "The device still has no `credit_pending` marker on the local invoice row, no exclusion of such a sale from device «final» reports and no «cancel this sale» reversal: the outbox stage and the approval flow exist, the local projection marker does not. Cross-instance advisory lock (Phase C first half) is NOT_IMPLEMENTED."
     }
   ],
   "repository": {
@@ -389,10 +499,11 @@
     "validation": "cd packages/validation && npx tsc --noEmit && npx vitest run",
     "ui": "cd packages/ui && npx tsc --noEmit && npx vitest run <file>",
     "docGenerator": "node scripts/industry/generate-industry-diff.mjs --check",
-    "backend": "cd backend && NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit && npx vitest run",
+    "backend": "cd backend && npx vitest run --project unit --maxWorkers=4",
     "localEngine": "cd packages/local-engine && npx vitest run",
     "pgliteScenarios": "CYCLE02_DOCS=$(pwd)/docs PGLITE_DIR=$TEMP/pglite SCENARIOS=backend/src/__tests__/helpers/cycle-count-02-scenarios.ts SETUP=setupCycleCount02 VERIFY=\"docs/VERIFY-cycle-count-02.sql\" node scripts/pg/run-scenarios.mjs",
-    "backendNoPg": "cd backend && npx vitest run --exclude \"**/*.pg.test.ts\""
+    "backendNoPg": "cd backend && npx vitest run --exclude \"**/*.pg.test.ts\"",
+    "backendNote": "On this machine the default worker count makes 1–5 slow-importing tests exceed the 5000ms per-test timeout. --maxWorkers=4 is both deterministic and faster. No test was edited to widen a timeout."
   },
   "postgresqlBlocker": {
     "status": "BLOCKED_EXTERNAL",
@@ -407,10 +518,21 @@
   },
   "ownerDecisionsDoc": "docs/implementation/V53-OWNER-DECISIONS.md",
   "notStarted": [
-    "OD-4 order WIP",
-    "4.6 Store/Teacher + adaptive onboarding",
-    "4.8 branch/device restrictions",
-    "D4 guards beyond variants/auto_fitments",
-    "variant stock / purchase / returns / POS / local / UI"
+    "Phase B — variant stock/purchase/returns/POS/local/sync/UI (only the invoice-line slice exists)",
+    "Phase C — cross-instance advisory lock; offline credit_pending marker and «cancel this sale»",
+    "Phase E — branch/device restrictions (device-scope-01)",
+    "Phase F — OD-4 order WIP (wip-01)",
+    "Phase G — Store/Teacher journeys and adaptive onboarding"
+  ],
+  "migrationsPendingHuman": [
+    "customer-advances-01",
+    "order-deposit-apply-refund-01",
+    "cycle-count-02 (already applied by the owner)",
+    "cycle-count-03",
+    "variant-binding-01",
+    "variant-stock-02 (not written yet)",
+    "audit-hash-01",
+    "device-scope-01 (not written yet)",
+    "wip-01 (not written yet)"
   ]
 }

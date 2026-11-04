@@ -1024,6 +1024,7 @@ export class InvoiceService {
       customerId: data.customerId ?? null,
       type: data.type ?? 'sale',
       owing: Math.max(0, money.total - this.paidAtCreation(data)) * exchangeRate,
+      currency: bookCurrency,
       skip: Boolean(
         options.isImport ||
         options.isSystemGenerated ||
@@ -1536,6 +1537,8 @@ export class InvoiceService {
       type: string
       /** What this sale leaves owing, in the books currency. */
       owing: number
+      /** The books currency the numbers above are in — the screen prints it beside the limit. */
+      currency: string
       skip: boolean
       overrideReason: string | null
     },
@@ -1547,28 +1550,84 @@ export class InvoiceService {
   } | null> {
     if (input.skip || input.type !== 'sale' || !input.customerId || !(input.owing > 0)) return null
 
-    const mode = await creditLimitModeOf(ctx.workspaceId)
-    if (mode === 'off') return null
-    const limit = await creditLimitOf(ctx.workspaceId, input.customerId)
-    if (limit === null) return null
+    // V53 4.4 P0: atomic credit check under a Postgres advisory lock, so two
+    // concurrent sales for the same customer cannot both read the old receivable
+    // and both pass. supabase-js has no transactions, so the check lives inside
+    // `assert_customer_credit`, which takes pg_advisory_xact_lock and releases
+    // it at transaction end (a failed posting releases it too). Falls back to
+    // the per-process TypeScript path until the function is deployed.
+    const amountMinor = Math.round(input.owing * 100)
+    let verdict: {
+      allowed: boolean
+      code: string
+      overLimitMinor: number
+      projectedReceivableMinor: number
+      creditLimitMinor: number
+    } | null = null
+    let useLegacyPath = true
+    try {
+      const { data, error } = await supabase.rpc('assert_customer_credit', {
+        p_workspace_id: ctx.workspaceId,
+        p_customer_id: input.customerId,
+        p_amount_minor: amountMinor,
+      })
+      if (error) {
+        // Missing function (not yet deployed / old server): per-process lock only (see serializeBy in
+        // create()). Any OTHER database error is a failed read, never «no limit».
+        if (
+          !String(error.code ?? error.message ?? '').match(/42P01|42883|PGRST202|does not exist/)
+        ) {
+          throw new DatabaseError('Credit check failed', error)
+        }
+      } else {
+        // supabase-js returns an ARRAY of rows for a RETURNS TABLE function. No usable row means we
+        // cannot claim an answer — the legacy path below decides, never a silent pass.
+        const row = (Array.isArray(data) ? data[0] : data) as
+          | {
+              allowed: unknown
+              code: unknown
+              over_limit_minor: unknown
+              projected_receivable_minor: unknown
+              credit_limit_minor: unknown
+            }
+          | undefined
+        if (row) {
+          useLegacyPath = false
+          verdict = {
+            allowed: row.allowed === true,
+            code: String(row.code ?? ''),
+            overLimitMinor: Number(row.over_limit_minor ?? 0),
+            projectedReceivableMinor: Number(row.projected_receivable_minor ?? 0),
+            creditLimitMinor: Number(row.credit_limit_minor ?? 0),
+          }
+        }
+      }
+    } catch (error) {
+      // Error ≠ «no limit»: a database that answered with an error must throw (unknown is not zero,
+      // error and empty are two branches). Only a transport-level rpc failure — no answer at all —
+      // falls back to the per-process TypeScript path, which does its own reads and throws on them.
+      if (error instanceof DatabaseError) throw error
+    }
+    if (useLegacyPath) {
+      verdict = await this.assertWithinCreditLimitLegacy(ctx, input, amountMinor)
+    }
 
-    const summary = await this.payments.getPartySummary(ctx, 'customer', input.customerId)
-    const cents = (value: number) => Math.round(value * 100)
-    // `warn` is what the SCREEN does (it warns). It never authorizes exceeding the limit: on the server both
-    // `warn` and `block` refuse an over-limit sale unless a person with `credit.override` passes it.
-    const verdict = evaluateCreditLimit({
-      mode: 'block',
-      currentReceivableMinor: cents(Math.max(0, summary.receivable)),
-      newInvoiceAmountMinor: cents(input.owing),
-      creditLimitMinor: cents(limit),
-    })
-
-    // `warn`: the sale goes through (the screen has already warned); nothing is refused.
-    if (verdict.allowed) return null
+    if (!verdict || verdict.allowed) return null
 
     const detail = `${verdict.code}: over by ${verdict.overLimitMinor / 100}`
+    // The SAME facts as structured data: a screen that only has the sentence cannot say «your limit is
+    // 1,000, you already owe 600 and this sale adds 500» in the person's language.
+    const refusal = {
+      code: verdict.code,
+      limit: verdict.creditLimitMinor / 100,
+      // What the customer ALREADY owes (before this sale), not the projected total.
+      exposure: Math.max(0, (verdict.projectedReceivableMinor - amountMinor) / 100),
+      excess: verdict.overLimitMinor / 100,
+      projected: verdict.projectedReceivableMinor / 100,
+      currency: input.currency,
+    }
     const reason = (input.overrideReason ?? '').trim()
-    if (reason === '') throw new ConflictError(detail)
+    if (reason === '') throw new ConflictError(detail, refusal)
     // The reason alone is not enough: the PERMISSION decides who may pass the limit.
     if (!holds(ctx, 'credit.override')) throw new ForbiddenError('CREDIT_OVERRIDE_FORBIDDEN')
     if (reason.length < 3) throw new ValidationError('CREDIT_OVERRIDE_REASON_REQUIRED')
@@ -1576,8 +1635,74 @@ export class InvoiceService {
     return {
       reason: reason.slice(0, 500),
       overLimit: verdict.overLimitMinor / 100,
-      projectedReceivable: verdict.totalProjectedReceivableMinor / 100,
+      projectedReceivable: verdict.projectedReceivableMinor / 100,
       limit: verdict.creditLimitMinor / 100,
+    }
+  }
+
+  /** Fallback used while `assert_customer_credit` is not yet deployed. Same rule, process-level lock only. */
+  private async assertWithinCreditLimitLegacy(
+    ctx: TenancyContext,
+    input: {
+      customerId: string | null
+      type: string
+      owing: number
+      currency: string
+      skip: boolean
+      overrideReason: string | null
+    },
+    amountMinor: number,
+  ): Promise<{
+    allowed: boolean
+    code: string
+    overLimitMinor: number
+    projectedReceivableMinor: number
+    creditLimitMinor: number
+  } | null> {
+    // The public caller only reaches here with a customer (its guard returns null otherwise).
+    const customerId = input.customerId as string
+    const mode = await creditLimitModeOf(ctx.workspaceId)
+    if (mode === 'off')
+      return {
+        allowed: true,
+        code: '',
+        overLimitMinor: 0,
+        projectedReceivableMinor: 0,
+        creditLimitMinor: 0,
+      }
+    const limit = await creditLimitOf(ctx.workspaceId, customerId)
+    if (limit === null)
+      return {
+        allowed: true,
+        code: '',
+        overLimitMinor: 0,
+        projectedReceivableMinor: 0,
+        creditLimitMinor: 0,
+      }
+
+    const summary = await this.payments.getPartySummary(ctx, 'customer', customerId)
+    const cents = (value: number) => Math.round(value * 100)
+    const verdict = evaluateCreditLimit({
+      mode: 'block',
+      currentReceivableMinor: cents(Math.max(0, summary.receivable)),
+      newInvoiceAmountMinor: amountMinor,
+      creditLimitMinor: cents(limit),
+    })
+    if (verdict.allowed) {
+      return {
+        allowed: true,
+        code: '',
+        overLimitMinor: 0,
+        projectedReceivableMinor: 0,
+        creditLimitMinor: 0,
+      }
+    }
+    return {
+      allowed: false,
+      code: verdict.code,
+      overLimitMinor: verdict.overLimitMinor,
+      projectedReceivableMinor: verdict.totalProjectedReceivableMinor,
+      creditLimitMinor: verdict.creditLimitMinor,
     }
   }
 

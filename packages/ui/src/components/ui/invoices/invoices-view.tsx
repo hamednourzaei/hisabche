@@ -8,6 +8,7 @@ import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { InvoicesSkeleton } from './invoices-skeleton'
+import { CreditStatusBadge } from './credit-status-badge'
 import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
 import { csvFilename } from '@hisabche/formatting'
@@ -376,13 +377,17 @@ function useInvoiceColumns(
         labelFallback: 'وضعیت',
         sortValue: (inv) => inv.status,
         render: (inv) => (
-          <span
-            className={cn(
-              'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold',
-              statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary,
-            )}
-          >
-            {t(`invoices.${inv.status}`, inv.status)}
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <span
+              className={cn(
+                'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold',
+                statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary,
+              )}
+            >
+              {t(`invoices.${inv.status}`, inv.status)}
+            </span>
+            {/* V53 OD-3: an unapproved credit sale is not final — say so beside the status. */}
+            <CreditStatusBadge status={inv.creditStatus} t={t} />
           </span>
         ),
       },

@@ -645,6 +645,29 @@ const V18_ORDER_DEPOSIT_MOVEMENTS: LocalMigration = {
   statements: [...ORDER_DEPOSIT_ALTERS, ...ORDER_DEPOSIT_MOVEMENT_STATEMENTS],
 }
 
+/**
+ * v18 -> v19: a sale the server refused for the customer's CREDIT LIMIT stays visible on its own row.
+ *
+ * V53 OD-3: the device cannot decide the credit question — it does not know the limit or what the customer
+ * already owes. The server answers, and this column records that answer on the local invoice:
+ *
+ *   NULL                nothing to say: an ordinary sale (including one the server accepted)
+ *   pending_validation  the server refused it for credit; the sale waits for an approver with a reason
+ *   rejected            refused again after the approver's attempt — it must be edited or cancelled
+ *   validated           the server accepted it (kept when the pulled row cannot carry the state)
+ *
+ * `NULL` is not «ok» and not «refused»: it is «no credit question was asked», which is the truth for every
+ * row written before this migration. A pending or rejected row is NOT a final sale: the local dashboard
+ * leaves it out of revenue (see the reports queries).
+ */
+const V19_CREDIT_STATUS: LocalMigration = {
+  to: 19,
+  statements: [
+    `ALTER TABLE invoice ADD COLUMN credit_status TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_invoice_credit_status ON invoice(credit_status)`,
+  ],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -663,6 +686,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V16_SERVICE_CANCELLATION_REASON,
   V17_PACKAGE_DEFERRED_REVENUE,
   V18_ORDER_DEPOSIT_MOVEMENTS,
+  V19_CREDIT_STATUS,
 ]
 
 /**

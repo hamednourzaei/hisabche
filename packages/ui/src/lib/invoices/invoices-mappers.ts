@@ -48,6 +48,8 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined, lang: string)
         return settled ? fmtDate(settled, lang) : ''
       })(),
       itemsSent: inv.itemsSent ?? 0,
+      // V53 OD-3: carried to the screen so an offline sale waiting for a credit verdict cannot look final.
+      creditStatus: inv.creditStatus ?? inv.credit_status ?? null,
       ...(publicToken !== undefined && { publicToken }),
     }
   })

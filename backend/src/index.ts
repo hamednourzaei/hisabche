@@ -541,6 +541,9 @@ server.setErrorHandler((error, request, reply) => {
     message,
     path: request.url,
     method: request.method,
+    // Structured facts a screen needs beside the sentence (e.g. a credit-limit refusal carries the
+    // limit, the exposure and the excess). Never a replacement for the message, and never a secret.
+    ...(err.context && typeof err.context === 'object' ? { context: err.context } : {}),
   })
 })
 

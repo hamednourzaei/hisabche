@@ -352,7 +352,14 @@ export {
 } from './hooks/permissions'
 
 // ─── Audit ────────────────────────────────────────────────
-export { useAuditLogs, auditKeys, type AuditLog, type AuditResponse } from './hooks/audit'
+export {
+  useAuditLogs,
+  useVerifyAuditLog,
+  auditKeys,
+  type AuditLog,
+  type AuditResponse,
+  type AuditChainVerdict,
+} from './hooks/audit'
 
 // ─── Accounting ───────────────────────────────────────────
 export {

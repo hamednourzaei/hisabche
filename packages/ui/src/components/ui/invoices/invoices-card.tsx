@@ -7,6 +7,7 @@ import { FOCUS_RING } from '../focus-ring'
 import { Eye, Trash2, FileText } from 'lucide-react'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 import { isTemporaryInvoiceNumber } from '@hisabche/validation'
+import { CreditStatusBadge } from './credit-status-badge'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InvoiceCard v2.2 — Mobile-First · Memoized for Performance
@@ -108,16 +109,19 @@ export const InvoiceCard = memo(function InvoiceCard({
             </div>
           </div>
 
-          {/* Status badge */}
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-0.5',
-              'text-[11px] sm:text-xs font-semibold border shrink-0',
-              'leading-tight',
-              badgeStyle,
-            )}
-          >
-            {t(`invoices.${inv.status}`, inv.status)}
+          {/* Status badge — and, beside it, the server's credit verdict when there is one (V53 OD-3) */}
+          <span className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-0.5',
+                'text-[11px] sm:text-xs font-semibold border shrink-0',
+                'leading-tight',
+                badgeStyle,
+              )}
+            >
+              {t(`invoices.${inv.status}`, inv.status)}
+            </span>
+            <CreditStatusBadge status={inv.creditStatus} t={t} />
           </span>
         </div>
 

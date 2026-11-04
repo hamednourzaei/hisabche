@@ -30,11 +30,18 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 
-import { asList, useAuditTrail, useBranches, useWorkspaceMembers } from '@hisabche/api'
+import {
+  asList,
+  useAuditTrail,
+  useBranches,
+  useVerifyAuditLog,
+  useWorkspaceMembers,
+} from '@hisabche/api'
 import { useWorkspaceStore } from '@hisabche/store'
 import { resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
 
 import { AuditTrailTab, type AuditRow } from '../../activity/audit-trail-tab'
+import { AuditIntegrityCard } from '../audit-integrity-card'
 import { routeForEntity } from '../../../../lib/entity-route'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -71,6 +78,19 @@ export const AuditContainer = memo(function AuditContainer() {
     ...(actorId ? { userId: actorId } : {}),
     limit: 50,
   })
+
+  // The chain verdict is owner-only on the server (`workspace.manage`). A member who gets 403 sees the
+  // trail exactly as before, without a card that says nothing; any other failure IS shown — a failed read
+  // must never look like «nothing to report» (V53 rule: error and empty are two branches).
+  const {
+    data: verdict,
+    isLoading: verdictLoading,
+    error: verdictError,
+    refetch: refetchVerdict,
+  } = useVerifyAuditLog()
+  const verdictStatus = (verdictError as { response?: { status?: number } } | null)?.response
+    ?.status
+  const showIntegrity = verdictStatus !== 401 && verdictStatus !== 403
 
   // Branches and MEMBERS name the ids the audit rows carry.
   //
@@ -160,27 +180,42 @@ export const AuditContainer = memo(function AuditContainer() {
   )
 
   return (
-    <AuditTrailTab
-      t={t}
-      rows={(data?.data ?? []) as AuditRow[]}
-      total={data?.total ?? 0}
-      isLoading={isLoading}
-      error={error ? ((error as Error).message ?? null) : null}
-      entityType={entityType}
-      branchId={branchId}
-      actorId={actorId}
-      onEntityTypeChange={setEntityType}
-      onBranchChange={setBranchId}
-      onActorChange={setActorId}
-      entityTypes={entityTypeOptions}
-      branches={branchOptions}
-      actors={actorOptions}
-      onOpenRecord={handleOpenRecord}
-      formatDate={formatDate}
-      labelForActor={actorName}
-      labelForBranch={branchName}
-      labelForRole={actorRole}
-    />
+    <div className="space-y-4">
+      {showIntegrity && (
+        <AuditIntegrityCard
+          t={t}
+          verdict={verdict}
+          isLoading={verdictLoading}
+          error={
+            verdictError
+              ? ((verdictError as Error).message ?? t('audit.integrityUnreadable', '—'))
+              : null
+          }
+          onRetry={() => void refetchVerdict()}
+        />
+      )}
+      <AuditTrailTab
+        t={t}
+        rows={(data?.data ?? []) as AuditRow[]}
+        total={data?.total ?? 0}
+        isLoading={isLoading}
+        error={error ? ((error as Error).message ?? null) : null}
+        entityType={entityType}
+        branchId={branchId}
+        actorId={actorId}
+        onEntityTypeChange={setEntityType}
+        onBranchChange={setBranchId}
+        onActorChange={setActorId}
+        entityTypes={entityTypeOptions}
+        branches={branchOptions}
+        actors={actorOptions}
+        onOpenRecord={handleOpenRecord}
+        formatDate={formatDate}
+        labelForActor={actorName}
+        labelForBranch={branchName}
+        labelForRole={actorRole}
+      />
+    </div>
   )
 })
 

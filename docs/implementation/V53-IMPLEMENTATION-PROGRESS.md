@@ -456,3 +456,90 @@ read it; only `variants` and `auto_fitments` routes carry a profile guard.
 
 **Build/verify results:** see the final report of this turn (web build OK; desktop build blocked by an esbuild temp-file
 "Access is denied" on this machine).
+
+### Continuation 8 — Phase H (invariants + audit verdict UI), Phase D guards, Phase C structured credit refusal
+
+**Baseline re-measured (Phase A), real numbers:** backend `371 files / 5152 tests / exit 0`; validation
+`55 files / 841 tests` (the one red, `industry-coverage-table`, was stale generated docs — regenerated, now green);
+local-engine `69 / 499 / exit 0`; ui `199 files / 2576 tests, 1 failed` (`seo-public-pages` sitemap, not ours),
+2 skipped; desktop jest `34 suites / 320 tests, 2 failed` (the two build-dependent suites), 10 failed tests;
+mobile jest `18 suites / 212 tests / exit 0`.
+
+**Phase H — audit verdict UI — `IMPLEMENTED_NOT_LIVE_VERIFIED`**
+
+- `AuditService.verifyChain` also reads `audit_chain_head(ws)` (never recomputes a hash in TypeScript) and returns
+  `head: { seq, hash } | null`. Missing migration → `head: null`; any other read failure throws.
+- `AuditIntegrityCard` (owner only; hidden on 401/403) shows verified with the checked count, broken with
+  `failedAtSeq` + reason, and `migrationRequired` as its own state — never «verified»; it prints the head with
+  `copyText` and states the limitation. `useVerifyAuditLog` is now exported and consumed.
+- 17 keys × fa/af/en. Tests: `audit.test.ts` 11/11, `audit-integrity-card.test.tsx` 4/4.
+
+**Phase H — consolidated invariants — `IMPLEMENTED_NOT_LIVE_VERIFIED`**
+
+- `backend/src/__tests__/v53-financial-invariants.test.ts` 11/11: over-apply/over-refund/one balance, overspent ≠
+  zero, fractional/oversized refusal, refund reason 3..500, currency precision (AFN 0, USD 2, IQD 3, unknown null),
+  `numeric(18,2)` third decimal refused, balanced/reversed deposit journals, credit block/warn/boundary/cash-only/
+  unlimited/off, variant required/identity/wrong workspace/wrong product/inactive.
+- The DB half (two concurrent refunds, rollback on posting failure) remains in the skipped `*.pg.test.ts` +
+  PGlite scenario files: `BLOCKED_EXTERNAL`.
+
+**Phase D — guarded routes + proof — `PARTIALLY_IMPLEMENTED`**
+
+- New guards: `PUT /api/products/:id/units` → `multi_unit`, `POST /api/warranties` → `serialized_items`.
+- `workspace-profile.test.ts` is table-driven over every guarded route (undeclared passes; declared-without → 403
+  `CAPABILITY_NOT_ENABLED` and the service is not called; declared-with passes; missing permission → 403 anyway),
+  plus a new test proving a profile change reaches `workspaces` and no other table. 27/27 with
+  `workspace-guard-order`.
+- `unwired-capability-hooks.test.ts` 4/4: every universal-core hook is either consumed by a screen or listed with a
+  reason, and a listed capability must not be `available`.
+- NOT DONE: one terminology helper for nav/title/breadcrumb; the offline profile is the local workspace row pulled
+  with the session, not its own sync entity.
+
+**Phase C — structured credit refusal — `IMPLEMENTED_NOT_LIVE_VERIFIED`**
+
+- `BaseError.context` travels in the error body (`context`), the message unchanged. The credit refusal sends
+  `{ code, limit, exposure, excess, projected, currency }`; the override panel prints limit / current debt /
+  projected total in the books currency with locale digits, and invents nothing when an older server omits them.
+- Tests: `invoice-credit-limit` 17/17, `credit-override-panel` 6/6.
+- NOT IMPLEMENTED: cross-instance advisory lock; local `credit_pending` marker, exclusion from device «final»
+  reports and «cancel this sale».
+
+**Phases B, E, F, G: `NOT_IMPLEMENTED`** — variant stock end-to-end, device/branch scope, order WIP and the
+Store/Teacher journeys each need a migration plus a cross-cutting change (local schema bump, new tables, new
+accounts). None was started rather than half-built.
+
+**Migration run order for the owner (each followed by its `VERIFY-*.sql`):** `customer-advances-01` →
+`order-deposit-apply-refund-01` → `cycle-count-02` (applied) → `cycle-count-03` → `variant-binding-01` →
+`audit-hash-01`. `variant-stock-02`, `device-scope-01` and `wip-01` are not written yet.
+
+### Continuation 8 — final verification (measured on this machine)
+
+Measured, not inferred. Commands and their real output:
+
+| Area                | Command                                                                                                                                                                                       | Result                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| backend unit        | `cd backend && npx vitest run --project unit --maxWorkers=4`                                                                                                                                  | **372 files / 5176 tests / exit 0**, 142.79s                                                                       |
+| backend (V53 files) | `npx vitest run --project unit src/__tests__/audit.test.ts src/__tests__/workspace-profile.test.ts src/__tests__/v53-financial-invariants.test.ts src/__tests__/invoice-credit-limit.test.ts` | 4 files / 65 tests / exit 0                                                                                        |
+| validation          | `npx tsc --noEmit && npx vitest run`                                                                                                                                                          | tsc clean; **55 files / 841 tests / exit 0**                                                                       |
+| ui                  | `npx tsc --noEmit`; 6 relevant test files                                                                                                                                                     | tsc clean; 30/30                                                                                                   |
+| api                 | `npx tsc --noEmit`                                                                                                                                                                            | clean                                                                                                              |
+| web                 | `cd apps/web && npx next build`                                                                                                                                                               | exit 0 · compiled 33.8s · 131/131 static pages                                                                     |
+| generators          | three `--check` runs                                                                                                                                                                          | coverage-table OK (118 rows) · industry-diff OK · capability-matrix OK (513 rows)                                  |
+| audits              | `verify-spec-references.mjs`, `audit-unwired-routes.mjs`                                                                                                                                      | 47 docs / 849 refs / 333 symbols / 0 unbacked · 840 routes / 650 client strings / 118 with no caller · both exit 0 |
+| lint/format         | `eslint`, `prettier --check`, `git diff --check`                                                                                                                                              | 0 errors · clean · clean                                                                                           |
+
+**The one honest wrinkle — the 5000ms budget.** With the default worker count the backend suite failed 1–5 tests per
+run in four consecutive runs (read-error-not-404, referral-programme ×2, supabase-fetch-metrics,
+http-failure-diagnostics, ledger-batch-idempotency). Every failure was literally `Error: Test timed out in 5000ms.`
+— no assertion failed, and each file is green when run alone. With `--maxWorkers=4` the **whole** suite is green and
+_fast_ (142.79s against 184.26s), so the machine, not the code, was saturated. No timeout was widened and no test was
+skipped to get there. Recommended command for this machine is in `testCommands.backend`.
+
+**Two guard tests repaired (assertions untouched).** `industry-coverage-table` had gone stale because three test files
+were added after the table was regenerated — regenerated, 6/6. `unwired-capability-hooks` re-read four source trees
+once per hook and crossed 5s on a cold cache; it now reads each file once and matches in memory (8.3s → 0.29s), same
+assertions, 4/4.
+
+**Not run, and why.** Every `*.pg.test.ts` (`BLOCKED_EXTERNAL`: `embedded-postgres` windows-x64 ships 29 DLLs and
+0 `.exe`, so `postgres.exe` never spawns). Desktop renderer build (`vite:esbuild-transpile` → `Access is denied` on a
+temp file; two build-dependent desktop jest suites stay red). Mobile shell build: mobile was not touched.

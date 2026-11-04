@@ -17,10 +17,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 let mode: 'off' | 'warn' | 'block' = 'block'
 let limit: number | null = 1000
 let receivable = 600
+/** `null` = the rpc is not answered with a usable row → the per-process path decides (pre-migration DB). */
+let rpcResponse: {
+  data: unknown
+  error: { code?: string; message?: string } | null
+} | null = null
 
 vi.mock('../db', () => {
   const q: any = new Proxy({}, { get: () => () => q })
-  const supabase = { from: () => q, rpc: async () => ({ data: null, error: null }) }
+  const supabase = { from: () => q, rpc: async () => rpcResponse ?? { data: null, error: null } }
   return { supabase, default: supabase }
 })
 vi.mock('../services/credit-limit', () => ({
@@ -49,6 +54,7 @@ const check = (
     customerId: 'c-1',
     type: 'sale',
     owing: 500,
+    currency: 'AFN',
     skip: false,
     overrideReason: null,
     ...over,
@@ -59,6 +65,7 @@ beforeEach(() => {
   mode = 'block'
   limit = 1000
   receivable = 600
+  rpcResponse = null
 })
 
 describe('assertWithinCreditLimit', () => {
@@ -99,6 +106,104 @@ describe('assertWithinCreditLimit', () => {
       projectedReceivable: 1100,
       limit: 1000,
     })
+  })
+
+  it('the refusal carries the numbers a screen must show, not only the sentence', async () => {
+    // V53 Phase C: a screen that only has «over by 100» cannot say what the limit is, what the customer
+    // already owes, or in which currency — so the same facts travel as structured `context`.
+    try {
+      await check(seller)
+      throw new Error('expected the sale to be refused')
+    } catch (error) {
+      expect((error as { context?: unknown }).context).toEqual({
+        code: 'CREDIT_LIMIT_EXCEEDED',
+        limit: 1000,
+        exposure: 600,
+        excess: 100,
+        projected: 1100,
+        currency: 'AFN',
+      })
+    }
+  })
+
+  it('a cash-only refusal says so in its context too', async () => {
+    limit = 0
+    receivable = 0
+    try {
+      await check(seller, { owing: 1 })
+      throw new Error('expected the sale to be refused')
+    } catch (error) {
+      expect((error as { context?: { code?: string } }).context?.code).toBe('CASH_ONLY_CUSTOMER')
+    }
+  })
+
+  it('a deployed assert_customer_credit refusal drives the SAME refusal with the SAME numbers', async () => {
+    rpcResponse = {
+      data: [
+        {
+          allowed: false,
+          code: 'CREDIT_LIMIT_EXCEEDED',
+          over_limit_minor: 10000,
+          projected_receivable_minor: 110000,
+          credit_limit_minor: 100000,
+        },
+      ],
+      error: null,
+    }
+    await expect(check(seller)).rejects.toThrow(/over by 100/)
+    try {
+      await check(seller)
+      throw new Error('expected the sale to be refused')
+    } catch (error) {
+      expect((error as { context?: unknown }).context).toEqual({
+        code: 'CREDIT_LIMIT_EXCEEDED',
+        limit: 1000,
+        exposure: 600,
+        excess: 100,
+        projected: 1100,
+        currency: 'AFN',
+      })
+    }
+  })
+
+  it('bigint minors come back as strings from Postgres and are read as numbers', async () => {
+    rpcResponse = {
+      data: [
+        {
+          allowed: false,
+          code: 'CASH_ONLY_CUSTOMER',
+          over_limit_minor: '1',
+          projected_receivable_minor: '1',
+          credit_limit_minor: '0',
+        },
+      ],
+      error: null,
+    }
+    await expect(check(seller, { owing: 1 })).rejects.toThrow(/CASH_ONLY_CUSTOMER/)
+  })
+
+  it('a deployed function that allows the sale passes without consulting the legacy path', async () => {
+    rpcResponse = {
+      data: [
+        {
+          allowed: true,
+          code: null,
+          over_limit_minor: 0,
+          projected_receivable_minor: 900,
+          credit_limit_minor: 1000,
+        },
+      ],
+      error: null,
+    }
+    expect(await check(seller, { owing: 300 })).toBeNull()
+  })
+
+  it('an rpc that cannot find the function (old server) falls back to the same rule', async () => {
+    rpcResponse = {
+      data: null,
+      error: { code: 'PGRST202', message: 'Could not find the function assert_customer_credit' },
+    }
+    await expect(check(seller)).rejects.toThrow(/over by 100/)
   })
 
   it('a cash-only customer (limit 0) is refused any credit', async () => {

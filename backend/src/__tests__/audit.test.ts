@@ -23,16 +23,31 @@ describe('Audit chain verification (V53 4.7: asks the database, never trusts an 
 
   it('asks audit_chain_verify for THIS workspace', async () => {
     answer([{ ok: true, checked: 0, legacy_unchained: 0, first_bad_seq: null, reason: null }])
+    answer([{ last_seq: 1, last_hash: 'aa' }])
     await service.verifyChain(workspaceId)
     expect(rpc).toHaveBeenCalledWith('audit_chain_verify', { p_workspace_id: workspaceId })
+    expect(rpc).toHaveBeenCalledWith('audit_chain_head', { p_workspace_id: workspaceId })
   })
 
   it('an intact chain is verified, with its length and the legacy rows counted apart', async () => {
     answer([{ ok: true, checked: '5', legacy_unchained: '2', first_bad_seq: null, reason: null }])
+    answer([{ last_seq: 5, last_hash: 'deadbeef' }])
     expect(await service.verifyChain(workspaceId)).toEqual({
       verified: true,
       count: 5,
       legacyUnchained: 2,
+      head: { seq: 5, hash: 'deadbeef' },
+    })
+  })
+
+  it('a chain with no head yet answers null, never a made-up value', async () => {
+    answer([{ ok: true, checked: 0, legacy_unchained: 0, first_bad_seq: null, reason: null }])
+    answer([])
+    expect(await service.verifyChain(workspaceId)).toEqual({
+      verified: true,
+      count: 0,
+      legacyUnchained: 0,
+      head: null,
     })
   })
 
@@ -40,12 +55,14 @@ describe('Audit chain verification (V53 4.7: asks the database, never trusts an 
     'a %s is reported as not verified, with where and why',
     async (reason) => {
       answer([{ ok: false, checked: 2, legacy_unchained: 0, first_bad_seq: 3, reason }])
+      answer(null)
       expect(await service.verifyChain(workspaceId)).toEqual({
         verified: false,
         count: 2,
         legacyUnchained: 0,
         failedAtSeq: 3,
         reason,
+        head: null,
       })
     },
   )
@@ -57,7 +74,14 @@ describe('Audit chain verification (V53 4.7: asks the database, never trusts an 
       count: 0,
       legacyUnchained: 0,
       migrationRequired: true,
+      head: null,
     })
+  })
+
+  it('a head read that fails for any other reason is an error, not a null head', async () => {
+    answer([{ ok: true, checked: 1, legacy_unchained: 0, first_bad_seq: null, reason: null }])
+    answer(null, { code: '57014', message: 'timeout' })
+    await expect(service.verifyChain(workspaceId)).rejects.toThrow()
   })
 
   it('any other failure is an error, never a verdict', async () => {

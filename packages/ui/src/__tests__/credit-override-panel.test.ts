@@ -18,6 +18,43 @@ describe('credit override panel', () => {
     })
   })
 
+  it('prefers the structured numbers the server sends beside the sentence', () => {
+    // V53 Phase C: the sentence says only «over by 100»; the context carries what a screen must print.
+    const stop = creditStopFrom({
+      message: 'CREDIT_LIMIT_EXCEEDED: over by 100',
+      response: {
+        status: 409,
+        data: {
+          message: 'CREDIT_LIMIT_EXCEEDED: over by 100',
+          context: {
+            code: 'CREDIT_LIMIT_EXCEEDED',
+            limit: 1000,
+            exposure: 600,
+            excess: 100,
+            projected: 1100,
+            currency: 'AFN',
+          },
+        },
+      },
+    })
+    expect(stop).toEqual({
+      code: 'CREDIT_LIMIT_EXCEEDED',
+      overBy: '100',
+      currency: 'AFN',
+      limit: 1000,
+      exposure: 600,
+      projected: 1100,
+    })
+  })
+
+  it('an older server without context still gives the sentence, and invents no numbers', () => {
+    const stop = creditStopFrom({
+      message: 'CREDIT_LIMIT_EXCEEDED: over by 100',
+      response: { status: 409, data: { message: 'CREDIT_LIMIT_EXCEEDED: over by 100' } },
+    })
+    expect(stop).toEqual({ code: 'CREDIT_LIMIT_EXCEEDED', overBy: '100' })
+  })
+
   it('does not take any other failure for a credit refusal', () => {
     expect(creditStopFrom('INVOICE_EXCHANGE_RATE_REQUIRED')).toBeNull()
     expect(creditStopFrom('')).toBeNull()

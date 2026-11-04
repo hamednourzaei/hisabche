@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@hisabche/store'
 import { BUSINESS_TYPES, BUSINESS_MODELS } from '@hisabche/ui-contract'
 import { apiErrorMessage, useSaveWorkspaceProfile } from '@hisabche/api'
+import { CAPABILITIES, resolveBusinessProfile } from '@hisabche/validation'
 import { industryEditable } from '../../../lib/industry-edit-access'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 
@@ -71,6 +72,9 @@ export function IndustryProfileSection({
 
   const noteKey = industrySupportNoteKey(selected)
   const editable = canEdit ?? industryEditable(storeRole)
+  // The SAME resolver the server uses (`workspaceProfileOf`), so the screen cannot promise a capability the
+  // backend would refuse (V53 D4: the profile is the second half of an authorization).
+  const profile = useMemo(() => resolveBusinessProfile(selected), [selected])
   const options = useMemo(
     () => [...BUSINESS_MODELS, ...BUSINESS_TYPES].filter((option) => option.id !== 'other'),
     [],
@@ -117,7 +121,22 @@ export function IndustryProfileSection({
         await saveWorkspaceProfile([...selected])
       } catch (cause) {
         const status = (cause as { response?: { status?: number } }).response?.status
-        if (status !== 403) throw cause
+        const code = (cause as { code?: string }).code
+        if (status === 403) {
+          // Their own profile above is already saved; the BUSINESS profile is the owner's to change.
+        } else if (status === 409 || code === 'WORKSPACE_PROFILE_NOT_CONFIGURED') {
+          // V53 D4: the database cannot hold a workspace profile yet (the migration has not run). Said as
+          // such — not as the generic «saving failed», which would invite the same click again.
+          setError(
+            t(
+              'settings.industryNotConfigured',
+              'پایگاه‌داده هنوز آمادهٔ ذخیرهٔ پروفایل کسب‌وکار نیست (مهاجرت اجرا نشده است). صنف شخصی شما ذخیره شد.',
+            ),
+          )
+          return
+        } else {
+          throw cause
+        }
       }
       setSaved(true)
     } catch (cause) {
@@ -181,6 +200,39 @@ export function IndustryProfileSection({
             {t(noteKey)}
           </p>
         ) : null}
+
+        {profile.capabilities.length > 0 ? (
+          <div data-industry-capabilities="" className="space-y-1">
+            <p className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+              {t('settings.industryCapabilities', 'این صنف این قابلیت‌ها را روشن می‌کند:')}
+            </p>
+            <ul className="flex flex-wrap gap-1.5">
+              {profile.capabilities.map((key) => {
+                const partial = profile.partialCapabilities.includes(key)
+                return (
+                  <li
+                    key={key}
+                    className="rounded-full border border-[hsl(var(--border-default))] px-2 py-0.5 text-[11px] text-[hsl(var(--fg-secondary))]"
+                  >
+                    {t(CAPABILITIES[key].labelKey, key)}
+                    {partial ? (
+                      <span className="ms-1 text-[hsl(var(--fg-tertiary))]">
+                        {t('settings.industryPartial', '(بخشی)')}
+                      </span>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ) : null}
+
+        <p data-industry-history="" className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+          {t(
+            'settings.industryHistoryVisible',
+            'داده‌های قبلی همیشه نمایان می‌مانند؛ تغییر صنف چیزی را پنهان یا حذف نمی‌کند.',
+          )}
+        </p>
 
         {error ? (
           <p

@@ -24,30 +24,44 @@ const state: {
   writeError: DbError
   updated: Array<Record<string, unknown>>
   updateRows: Array<{ id: string }>
-} = { row: null, readError: null, writeError: null, updated: [], updateRows: [{ id: 'ws-1' }] }
+  /** Every table the route reached for, so a test can prove it touched nothing else. */
+  tables: string[]
+} = {
+  row: null,
+  readError: null,
+  writeError: null,
+  updated: [],
+  updateRows: [{ id: 'ws-1' }],
+  tables: [],
+}
 
 vi.mock('../db', () => ({
   supabase: {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => ({ data: state.row, error: state.readError }),
+    from: (table: string) => {
+      state.tables.push(table)
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: state.row, error: state.readError }),
+          }),
         }),
-      }),
-      update: (values: Record<string, unknown>) => ({
-        eq: () => ({
-          select: async () => {
-            if (!state.writeError) state.updated.push(values)
-            return { data: state.writeError ? null : state.updateRows, error: state.writeError }
-          },
+        update: (values: Record<string, unknown>) => ({
+          eq: () => ({
+            select: async () => {
+              if (!state.writeError) state.updated.push(values)
+              return { data: state.writeError ? null : state.updateRows, error: state.writeError }
+            },
+          }),
         }),
-      }),
-    }),
+      }
+    },
   },
 }))
 
 const holdsCapability = { value: true }
 const productService = { createVariant: vi.fn(async () => ({ id: 'v-1' })) }
+const unitsService = { replace: vi.fn(async () => ({ units: [] })) }
+const warrantyService = { registerWarranty: vi.fn(async () => ({ id: 'w-1' })) }
 const loggedEvents: Array<Record<string, unknown>> = []
 
 vi.mock('../middleware/auth.middleware', () => ({
@@ -77,13 +91,27 @@ vi.mock('../services/product/variant.service', () => ({
     getVariants = async () => []
   },
 }))
+vi.mock('../services/inventory/product-units.service', () => ({
+  ProductUnitsService: class {
+    replace = unitsService.replace
+    list = async () => []
+  },
+}))
+vi.mock('../services/sales/warranty.service', () => ({
+  WarrantyService: class {
+    registerWarranty = warrantyService.registerWarranty
+    getWarranties = async () => []
+  },
+}))
 vi.mock('../services/event-log.service', () => ({
   logBusinessEvent: async (input: Record<string, unknown>) => {
     loggedEvents.push(input)
   },
 }))
 
+import { productUnitsRoutes } from '../routes/product-units.routes'
 import { variantRoutes } from '../routes/variant.routes'
+import { warrantyRoutes } from '../routes/warranty.routes'
 import { workspaceProfileRoutes } from '../routes/workspace-profile.routes'
 import { workspaceProfileOf } from '../services/workspace-profile'
 
@@ -93,14 +121,19 @@ beforeEach(() => {
   state.writeError = null
   state.updated = []
   state.updateRows = [{ id: 'ws-1' }]
+  state.tables = []
   holdsCapability.value = true
   productService.createVariant.mockClear()
+  unitsService.replace.mockClear()
+  warrantyService.registerWarranty.mockClear()
   loggedEvents.length = 0
 })
 
 async function app() {
   const server = Fastify()
   await server.register(variantRoutes)
+  await server.register(productUnitsRoutes)
+  await server.register(warrantyRoutes)
   await server.register(workspaceProfileRoutes)
   return server
 }
@@ -179,6 +212,88 @@ describe('requireProfileCapability on POST /api/products/:id/variants', () => {
   })
 })
 
+// ─── The other profile-guarded writes, table-driven (Phase D: every guarded route, four cases) ──────
+
+const PRODUCT_ID = '11111111-1111-1111-1111-111111111111'
+
+const putUnits = async () =>
+  (await app()).inject({
+    method: 'PUT',
+    url: `/api/products/${PRODUCT_ID}/units`,
+    payload: { units: [] },
+  })
+
+const createWarranty = async () =>
+  (await app()).inject({
+    method: 'POST',
+    url: '/api/warranties',
+    payload: {
+      invoiceId: '22222222-2222-2222-2222-222222222222',
+      productId: PRODUCT_ID,
+      startDate: '2026-01-01',
+      warrantyMonths: 12,
+    },
+  })
+
+const GUARDED_ROUTES = [
+  {
+    label: 'PUT /api/products/:id/units',
+    capability: 'multi_unit',
+    // grocery carries multi_unit; clothing does not.
+    allowed: 'grocery',
+    denied: 'clothing',
+    run: putUnits,
+    okStatus: 200,
+    calls: () => unitsService.replace.mock.calls.length,
+  },
+  {
+    label: 'POST /api/warranties',
+    capability: 'serialized_items',
+    // electronics carries serialized_items; grocery does not.
+    allowed: 'electronics',
+    denied: 'grocery',
+    run: createWarranty,
+    okStatus: 201,
+    calls: () => warrantyService.registerWarranty.mock.calls.length,
+  },
+] as const
+
+describe.each(GUARDED_ROUTES)('requireProfileCapability on $label', (route) => {
+  it('an undeclared workspace is never restricted', async () => {
+    state.row = { business_types: null }
+    const res = await route.run()
+    expect(res.statusCode).toBe(route.okStatus)
+    expect(route.calls()).toBe(1)
+  })
+
+  it('a declared profile without the capability gets 403 and the write does not happen', async () => {
+    state.row = { business_types: [route.denied] }
+    const res = await route.run()
+    expect(res.statusCode).toBe(403)
+    expect(res.json()).toMatchObject({
+      code: 'CAPABILITY_NOT_ENABLED',
+      capability: route.capability,
+    })
+    expect(route.calls()).toBe(0)
+  })
+
+  it('a declared profile WITH the capability passes', async () => {
+    state.row = { business_types: [route.allowed] }
+    const res = await route.run()
+    expect(res.statusCode).toBe(route.okStatus)
+    expect(route.calls()).toBe(1)
+  })
+
+  it('the profile never replaces the permission: no permission, no write', async () => {
+    state.row = { business_types: [route.allowed] }
+    holdsCapability.value = false
+    const res = await route.run()
+    expect(res.statusCode).toBe(403)
+    expect(res.json().error).toBe('FORBIDDEN_PERMISSION')
+    expect(route.calls()).toBe(0)
+  })
+})
+
 describe('PUT /api/workspace/profile', () => {
   const put = async (payload: Record<string, unknown>) =>
     (await app()).inject({ method: 'PUT', url: '/api/workspace/profile', payload })
@@ -198,6 +313,16 @@ describe('PUT /api/workspace/profile', () => {
       action: 'profile_changed',
       workspaceId: 'ws-1',
     })
+  })
+
+  it('touches the profile columns and NOTHING else — no roles, grants or history', async () => {
+    // D4 = B: the profile is a workspace setting. If changing it also rewrote a role, a permission grant or
+    // an invoice, a shop would change the meaning of its own past. The mock records every table the route
+    // reached for, so this is a statement about the real code path, not about the intent.
+    state.row = { business_types: ['grocery'] }
+    const res = await put({ businessTypes: ['clothing'] })
+    expect(res.statusCode).toBe(200)
+    expect([...new Set(state.tables)]).toEqual(['workspaces'])
   })
 
   it('needs the workspace-management permission', async () => {

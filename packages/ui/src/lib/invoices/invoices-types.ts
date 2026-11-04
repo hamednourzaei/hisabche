@@ -22,6 +22,9 @@ export interface RawInvoice {
   customer_id?: string | null
   customer?: { id?: string; full_name?: string; company?: string | null } | null
   paid_amount?: number
+  /** V53 OD-3: the server's answer about this sale's credit. `null` = no question was asked. */
+  credit_status?: string | null
+  creditStatus?: string | null
   itemsSent?: number
   publicToken?: string
   public_token?: string
@@ -46,6 +49,12 @@ export interface Invoice {
   paymentDate: string
   itemsSent: number
   publicToken?: string
+  /**
+   * V53 OD-3 — the server's credit verdict on a sale made offline. `null`/absent = nothing was asked.
+   * `pending_validation` and `rejected` mean the sale is NOT final: it is kept out of revenue and shows a
+   * marker; `validated` needs no marker (that is an ordinary accepted sale).
+   */
+  creditStatus?: string | null
 }
 
 // این تایپ باید دقیقاً با useInvoices از @hisabche/api مطابقت داشته باشد

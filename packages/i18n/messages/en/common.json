@@ -1828,6 +1828,10 @@
     "showLess": "Less"
   },
   "invoices": {
+    "creditPending": "Awaiting credit approval",
+    "creditPendingHint": "This sale is not final yet: the server must approve the customer credit. Until then it is not counted as revenue.",
+    "creditRejected": "Credit refused",
+    "creditRejectedHint": "The server refused this sale on the credit rule. Edit it or cancel it.",
     "returnInvoice": "Register Return",
     "returnNumber": "Return Number",
     "returnQuantity": "Return Quantity",
@@ -2756,6 +2760,10 @@
     "industryHint": "The industry sets the default unit, invoice columns and dashboard order.",
     "industryOwnerOnly": "Only the workspace owner can change the industry.",
     "industrySaved": "Industry saved.",
+    "industryCapabilities": "This trade turns on these capabilities:",
+    "industryPartial": "(partial)",
+    "industryHistoryVisible": "Earlier data stays visible; changing the trade hides and deletes nothing.",
+    "industryNotConfigured": "The database cannot store a business profile yet (the migration has not run). Your own trade was saved.",
     "industrySaveFailed": "The industry could not be saved",
     "industryNotPersisted": "The server did not keep the industry. Try again; if it repeats, contact support.",
     "creditLimitMode": {
@@ -3691,6 +3699,23 @@
     "total": "Total",
     "view": "View",
     "viewChanges": "View",
+    "integrityChecking": "Checking the history chain…",
+    "integrityUnreadable": "The chain verdict could not be read.",
+    "integrityMigrationTitle": "The history chain is not enabled on this database",
+    "integrityMigrationHint": "Nothing has been checked. Until the audit-hash-01 migration runs, the history is not claimed to be intact.",
+    "integrityVerified": "The history chain is intact",
+    "integrityVerifiedHint": "{count} chained rows were checked.",
+    "integrityBroken": "The history chain is broken",
+    "integrityBrokenAt": "First inconsistent row: {seq}",
+    "integrityLegacy": "{count} older rows (before the chain) were counted separately.",
+    "integrityHead": "Chain head (keep it outside the database):",
+    "integrityCopy": "Copy",
+    "integrityCopied": "Copied",
+    "integrityLimitation": "This check shows internal inconsistency only; if someone rewrote the whole chain and its head, it cannot be detected here.",
+    "integrityReasonHash": "a row's hash does not match its content",
+    "integrityReasonLink": "a row does not link to the row before it",
+    "integrityReasonMissing": "a chained row is missing",
+    "integrityReasonTail": "rows were removed from the end",
     "actions": {
       "create": "Created",
       "created": "Created",
@@ -5038,7 +5063,10 @@
       "hint": "Passing the limit needs the \"Override credit limit\" permission and a reason; the reason is kept in the invoice history.",
       "reasonLabel": "Reason for passing the limit",
       "reasonRequired": "Write a reason to submit again.",
-      "forbidden": "You do not have permission to pass the credit limit. A manager must approve."
+      "forbidden": "You do not have permission to pass the credit limit. A manager must approve.",
+      "limit": "Credit limit",
+      "exposure": "Currently owed",
+      "projected": "After this sale"
     }
   },
   "admin": {

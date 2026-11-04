@@ -7,13 +7,21 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { WarrantyService } from '../services/sales/warranty.service'
 
 export async function warrantyRoutes(fastify: FastifyInstance) {
   const service = new WarrantyService()
   const read = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
-  const write = [authenticate, requireWorkspaceContext, requireCapability('invoice.create')]
+  // A warranty is recorded PER SERIAL NUMBER, which only a workspace with `serialized_items` can use.
+  // The permission below is still required on its own; the profile grants nothing (D4 = B).
+  const write = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.create'),
+    requireProfileCapability('serialized_items'),
+  ]
 
   fastify.get(
     '/api/warranties',

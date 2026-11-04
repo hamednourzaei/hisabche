@@ -78,7 +78,12 @@ export function registerDashboardRoutes(router: Router): void {
     const activeCustomers = custCount?.count ?? 0
 
     const invoices = db.all<InvoiceKpiRow>(
-      'SELECT total, paid_amount, status, date, type, currency FROM invoice WHERE workspace_id = ? AND deleted_at IS NULL',
+      // V53 OD-3: a sale the server refused for credit (or refused again after an approver's attempt) is not a
+      // final sale. It stays visible on the invoice list, but it is not revenue, not a receivable and not
+      // «today's sales» until the server accepts it.
+      `SELECT total, paid_amount, status, date, type, currency FROM invoice
+       WHERE workspace_id = ? AND deleted_at IS NULL
+         AND (credit_status IS NULL OR credit_status = 'validated')`,
       [ws],
     )
 
@@ -175,7 +180,11 @@ export function registerDashboardRoutes(router: Router): void {
     const booksCurrency = ctx.baseCurrency
 
     const invoices = db.all<InvoiceKpiRow>(
-      "SELECT total, paid_amount, status, date, type, currency FROM invoice WHERE workspace_id = ? AND deleted_at IS NULL AND type = 'sale' ORDER BY date ASC",
+      // Same rule as the dashboard: an unapproved credit sale is not revenue yet (V53 OD-3).
+      `SELECT total, paid_amount, status, date, type, currency FROM invoice
+       WHERE workspace_id = ? AND deleted_at IS NULL AND type = 'sale'
+         AND (credit_status IS NULL OR credit_status = 'validated')
+       ORDER BY date ASC`,
       [ws],
     )
 

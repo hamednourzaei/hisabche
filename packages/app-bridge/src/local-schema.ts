@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 18
+export const SCHEMA_VERSION = 19
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -112,6 +112,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     currency TEXT NOT NULL,
     exchange_rate REAL,
     status TEXT NOT NULL DEFAULT 'pending',
+    credit_status TEXT,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL,
