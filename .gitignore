@@ -20,6 +20,7 @@ build
 .next
 out
 .tmp
+.temp_build/
 
 # React Native
 android/app/build
