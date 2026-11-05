@@ -32,6 +32,7 @@ import {
   SubscriptionLockDialog,
   SandboxNotice,
   BookCurrencySync,
+  InteractiveGuide,
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
   useHeaderPeople,
@@ -172,6 +173,8 @@ function useRedirectGuard(currentLang: string) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted)
+  const hasNoWorkspace = useWorkspaceStore((s) => s.hasNoWorkspace)
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
   const redirected = useRef(false)
 
   useEffect(() => {
@@ -186,16 +189,29 @@ function useRedirectGuard(currentLang: string) {
       return
     }
 
-    if (isAuthenticated && !isOnboardingComplete && !redirected.current) {
+    // Redirect to onboarding if onboarding is not completed OR if user has no workspace
+    if (
+      isAuthenticated &&
+      (!isOnboardingComplete || hasNoWorkspace === true) &&
+      !redirected.current
+    ) {
       redirected.current = true
       router.replace(to('/onboarding'))
       return
     }
 
-    if (isAuthenticated && isOnboardingComplete) {
+    if (isAuthenticated && isOnboardingComplete && (workspaceId || hasNoWorkspace === false)) {
       redirected.current = false
     }
-  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router, currentLang])
+  }, [
+    hasHydrated,
+    isAuthenticated,
+    isOnboardingComplete,
+    hasNoWorkspace,
+    workspaceId,
+    router,
+    currentLang,
+  ])
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
@@ -244,6 +260,8 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   // anyone who never opened it `workspaceId` was null and realtime subscribed
   // to nothing — another employee's work appeared only after a reload.
   const fetchWorkspace = useWorkspaceStore((s) => s.fetchWorkspace)
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+  const hasNoWorkspace = useWorkspaceStore((s) => s.hasNoWorkspace)
   const userId = user?.id ?? null
   useEffect(() => {
     if (userId) void fetchWorkspace(userId)
@@ -556,6 +574,10 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
+          <InteractiveGuide
+            currentRoute={pathname || '/dashboard'}
+            t={t as (key: string, fallback?: string) => string}
+          />
           {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
           <div className="mb-2 flex justify-end md:hidden">
             <GlobalPageCustomizer />
@@ -566,6 +588,11 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           ) : routeDenied ? (
             // The page is NOT mounted: none of its queries run.
             <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} />
+          ) : !workspaceId && hasNoWorkspace ? (
+            // If user has no workspace, do not mount the page and queries
+            <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
+              <p className="text-sm text-neutral-400">در حال آماده‌سازی فضای کاری شما...</p>
+            </div>
           ) : (
             // Keyed by the metal unit: a figure already on screen was formatted
             // in the old unit, and only a fresh render shows it in the new one.

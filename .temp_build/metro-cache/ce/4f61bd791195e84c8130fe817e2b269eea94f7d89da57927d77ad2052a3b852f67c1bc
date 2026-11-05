@@ -1,0 +1,1 @@
+{"dependencies":[],"output":[{"data":{"code":"__d(function(g,r,i,a,m,e,d){Object.defineProperty(e,\"__esModule\",{value:!0}),e.default=function(n,t){}});","lineCount":1,"map":[[1,87,13,15],[1,96,14,2,"props"],[1,98,15,2,"validAttributes"],[1,101,32,0],[1,102,32,1]],"functionMap":{"names":["<global>","warnForStyleProps"],"mappings":"AAA;eCY;CDmB"}},"type":"js/module"}]}

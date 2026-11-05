@@ -8,6 +8,7 @@ import './styles/lite-mode.css'
 export { cn, formatCurrency, formatDate } from './lib/utils'
 
 // ---------- Primitives ----------
+export { InteractiveGuide, type InteractiveGuideProps } from './components/ui/guide'
 export { Button } from './components/ui/button'
 export type { ButtonVariant, ButtonSize } from './components/ui/button'
 export { Input } from './components/ui/input'

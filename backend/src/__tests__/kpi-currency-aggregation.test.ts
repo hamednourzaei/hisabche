@@ -21,7 +21,7 @@ const todayStart = TODAY.toISOString()
 const firstOfThisMonth = new Date('2026-08-01T00:00:00.000Z')
 
 const bucket = (rows: readonly KpiInvoiceRow[]) =>
-  bucketKpisByCurrency(rows, todayStart, firstOfThisMonth)
+  bucketKpisByCurrency(rows, todayStart, firstOfThisMonth, 'AFN')
 
 describe('money in different currencies is never added together', () => {
   it('keeps 100 USD and 100 AFN apart instead of reporting 200', () => {

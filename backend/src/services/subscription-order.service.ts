@@ -182,7 +182,7 @@ export class SubscriptionOrderService {
     userId: string,
     rawClaimToken: string,
     workspaceName: string,
-    baseCurrency = 'AFN',
+    baseCurrency: string,
     timeZone = 'Asia/Kabul',
   ): Promise<ProvisionResponse> {
     const tokenHash = this.hashToken(rawClaimToken)
@@ -227,7 +227,7 @@ export class SubscriptionOrderService {
     userId: string,
     orderId: string,
     workspaceName: string,
-    baseCurrency = 'AFN',
+    baseCurrency: string,
     timeZone = 'Asia/Kabul',
   ): Promise<ProvisionResponse> {
     const { data: order, error } = await this.db

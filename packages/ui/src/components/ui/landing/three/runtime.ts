@@ -114,9 +114,7 @@ export function createSceneRuntime(canvas: HTMLCanvasElement): SceneRuntime {
 
   if (qualityConfig.shadows) {
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = qualityConfig.softShadows
-      ? THREE.PCFSoftShadowMap
-      : THREE.BasicShadowMap
+    renderer.shadowMap.type = qualityConfig.softShadows ? THREE.PCFShadowMap : THREE.BasicShadowMap
   } else {
     renderer.shadowMap.enabled = false
   }
@@ -142,7 +140,7 @@ export function createSceneRuntime(canvas: HTMLCanvasElement): SceneRuntime {
     if (qualityConfig.shadows) {
       renderer.shadowMap.enabled = true
       renderer.shadowMap.type = qualityConfig.softShadows
-        ? THREE.PCFSoftShadowMap
+        ? THREE.PCFShadowMap
         : THREE.BasicShadowMap
     } else {
       renderer.shadowMap.enabled = false

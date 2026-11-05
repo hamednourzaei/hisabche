@@ -11440,5 +11440,11 @@
   },
   "firstValue": {
     "title": "Quick Setup Guide"
+  },
+  "guide": {
+    "badge": "User Guide",
+    "next": "Next Step",
+    "finish": "Got it",
+    "persistentTip": "Your progress is automatically saved"
   }
 }

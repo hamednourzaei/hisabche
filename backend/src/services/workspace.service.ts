@@ -133,16 +133,24 @@ export class WorkspaceService {
   async createWorkspace(userId: string, data: CreateWorkspace) {
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
 
+    const insertPayload: Record<string, unknown> = {
+      name: data.name,
+      slug,
+      description: data.description || null,
+      logo_url: data.logoUrl || null,
+      stamp_url: data.stampUrl || null,
+      owner_id: userId,
+    }
+    if (data.baseCurrency) {
+      insertPayload.base_currency = data.baseCurrency
+    }
+    if (data.timeZone) {
+      insertPayload.time_zone = data.timeZone
+    }
+
     const { data: workspace, error } = await supabase
       .from('workspaces')
-      .insert({
-        name: data.name,
-        slug,
-        description: data.description || null,
-        logo_url: data.logoUrl || null,
-        stamp_url: data.stampUrl || null,
-        owner_id: userId,
-      })
+      .insert(insertPayload)
       .select(WORKSPACE_COLUMNS)
       .single()
 

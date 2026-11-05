@@ -2,7 +2,12 @@
 'use client'
 
 import { useToast } from '../../toast-provider'
-import { apiErrorMessage, useSetBaseCurrency, useSaveWorkspaceProfile } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useSetBaseCurrency,
+  useSaveWorkspaceProfile,
+  apiClient,
+} from '@hisabche/api'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   useOnboardingStore,
@@ -14,7 +19,7 @@ import {
 } from '@hisabche/store'
 import { OnboardingPage } from '../onboarding-page'
 import { useCallback, useMemo, memo, useState } from 'react'
-import { useAuthStore } from '@hisabche/store'
+import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 import { inferOperationalDna } from '@hisabche/validation'
 import { BUSINESS_MODELS, BUSINESS_TYPES, BUSINESS_TYPE_OTHER } from '@hisabche/ui-contract'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
@@ -107,6 +112,24 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     setOperationalDna(inferredDna)
 
     try {
+      const user = useAuthStore.getState().user
+      const currentWorkspaceId = useWorkspaceStore.getState().workspaceId
+
+      // Ensure user has at least one active workspace before proceeding
+      if (!currentWorkspaceId && user?.id) {
+        try {
+          const wsName = (user.businessName || user.fullName || 'کسب‌وکار من').trim().slice(0, 100)
+          await apiClient.post('/workspaces', {
+            name: wsName,
+            ...(defaultCurrency ? { baseCurrency: defaultCurrency } : {}),
+            businessTypes: selected,
+          })
+          await useWorkspaceStore.getState().fetchWorkspace(user.id)
+        } catch (wsErr) {
+          console.warn('[Onboarding] workspace auto-creation fallback error:', wsErr)
+        }
+      }
+
       await updateProfile({
         onboardingCompleted: true,
         businessTypes: selected,
@@ -129,6 +152,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     businessNote,
     businessType,
     completeOnboarding,
+    defaultCurrency,
     push,
     saveWorkspaceProfile,
     setOperationalDna,

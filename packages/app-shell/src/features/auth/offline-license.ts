@@ -176,3 +176,8 @@ export async function activateLicence(code: string): Promise<LicenceCheck> {
   if (result.ok) await write(CODE_KEY, code.replace(/\s+/g, ''))
   return result
 }
+
+/** Clear stored offline license on user deactivation/explicit sign-out from license. */
+export async function clearStoredLicence(): Promise<void> {
+  await bridge()?.secure.delete(CODE_KEY)
+}

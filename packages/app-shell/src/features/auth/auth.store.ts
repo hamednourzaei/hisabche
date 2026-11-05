@@ -34,7 +34,7 @@ import { apiClient } from '@/shared/lib/api'
 import { bridge } from '@/shared/lib/bridge'
 import { sessionStore } from '@/shared/lib/storage'
 import { buildOfflineSession, type OfflineWorkspace } from './offline-session'
-import { checkStoredLicence } from './offline-license'
+import { checkStoredLicence, clearStoredLicence } from './offline-license'
 
 export interface AuthState {
   session: Session | null
@@ -540,6 +540,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       await sessionStore.clear()
+    }
+
+    const isOffline =
+      (typeof window !== 'undefined' &&
+        (window as { __hisabcheEdition?: string }).__hisabcheEdition === 'offline') ||
+      readStorage(STORAGE_KEYS.edition) === 'offline'
+
+    if (isOffline) {
+      // In offline mode, explicit logout also clears the license so another license or mode can be entered
+      await clearStoredLicence().catch(() => {})
+      writeStorage(STORAGE_KEYS.edition, 'cloud')
+      setAppEdition('cloud')
     }
 
     set({

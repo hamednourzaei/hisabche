@@ -167,6 +167,9 @@ export function InvoicePDFDocument({
   lang?: UiLanguage
 }) {
   const inv = invoice as any
+  // The invoice's own stored currency. `invoices.currency` is NOT NULL — a
+  // missing value prints nothing rather than assuming a currency.
+  const currency: string = inv.currency ?? ''
   const items = inv.invoice_items ?? inv.items ?? []
   const status: string = inv.status || 'pending'
   const st = STATUS_STYLE[status] ?? DEFAULT_STATUS
@@ -242,11 +245,11 @@ export function InvoicePDFDocument({
               <Text style={s.tdQty}>{item.quantity ?? 1}</Text>
               <Text style={s.tdUnit}>{item.unit ?? '—'}</Text>
               <Text style={s.tdUnitPrice}>
-                {fmt(item.unit_price ?? item.unitPrice ?? 0, lang)} {inv.currency ?? 'AFN'}
+                {fmt(item.unit_price ?? item.unitPrice ?? 0, lang)} {currency}
               </Text>
               <Text style={s.tdDiscount}>{item.discount ? `${item.discount}%` : '—'}</Text>
               <Text style={s.tdTotal}>
-                {fmt(item.total_price ?? item.totalPrice ?? 0, lang)} {inv.currency ?? 'AFN'}
+                {fmt(item.total_price ?? item.totalPrice ?? 0, lang)} {currency}
               </Text>
             </View>
           ))}
@@ -256,14 +259,14 @@ export function InvoicePDFDocument({
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>جمع</Text>
             <Text style={s.totalValue}>
-              {fmt(subtotal, lang)} {inv.currency ?? 'AFN'}
+              {fmt(subtotal, lang)} {currency}
             </Text>
           </View>
           {discountTotal > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>تخفیف</Text>
               <Text style={{ ...s.totalValue, color: '#dc2626' }}>
-                -{fmt(discountTotal, lang)} {inv.currency ?? 'AFN'}
+                -{fmt(discountTotal, lang)} {currency}
               </Text>
             </View>
           )}
@@ -271,21 +274,21 @@ export function InvoicePDFDocument({
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>مالیات</Text>
               <Text style={s.totalValue}>
-                {fmt(taxTotal, lang)} {inv.currency ?? 'AFN'}
+                {fmt(taxTotal, lang)} {currency}
               </Text>
             </View>
           )}
           <View style={s.grandRow}>
             <Text style={s.grandLabel}>مجموع</Text>
             <Text style={s.grandValue}>
-              {fmt(total, lang)} {inv.currency ?? 'AFN'}
+              {fmt(total, lang)} {currency}
             </Text>
           </View>
           {paidAmount > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>پرداخت شده</Text>
               <Text style={{ ...s.totalValue, color: '#16a34a' }}>
-                -{fmt(paidAmount, lang)} {inv.currency ?? 'AFN'}
+                -{fmt(paidAmount, lang)} {currency}
               </Text>
             </View>
           )}
@@ -293,7 +296,7 @@ export function InvoicePDFDocument({
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>باقی‌مانده</Text>
               <Text style={{ ...s.totalValue, color: '#dc2626' }}>
-                {fmt(remaining, lang)} {inv.currency ?? 'AFN'}
+                {fmt(remaining, lang)} {currency}
               </Text>
             </View>
           )}

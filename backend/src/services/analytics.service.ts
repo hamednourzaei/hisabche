@@ -87,13 +87,15 @@ export function bucketKpisByCurrency(
   rows: readonly KpiInvoiceRow[],
   todayStart: string,
   firstOfThisMonth: Date,
+  /** The books currency a row with no stored currency falls back to. */
+  booksCurrency: string,
 ): Record<string, CurrencyBucket> {
   const byCurrency: Record<string, CurrencyBucket> = {}
 
   for (const inv of rows) {
-    // A row with no currency means the column default, exactly as a row with
+    // A row with no currency means the books currency, exactly as a row with
     // no `type` means 'sale'. It is not a separate currency.
-    const code = inv.currency || 'AFN'
+    const code = inv.currency || booksCurrency
     let bucket = byCurrency[code]
     if (!bucket) {
       bucket = emptyBucket()
@@ -305,7 +307,12 @@ export class AnalyticsService {
       // stub marked "TODO: Replace with actual exchange rate API". Converting
       // at invented rates would turn a visibly odd total into a confidently
       // wrong one.
-      const byCurrency = bucketKpisByCurrency(allInvoices, todayStart, firstOfThisMonth)
+      const byCurrency = bucketKpisByCurrency(
+        allInvoices,
+        todayStart,
+        firstOfThisMonth,
+        booksCurrency,
+      )
       const currencies = Object.keys(byCurrency)
       // True when the flat totals below add amounts in different currencies —
       // the signal the UI needs to show the breakdown instead of one figure.
@@ -442,6 +449,7 @@ export class AnalyticsService {
         return this.emptySalesSummaryWithDiagnostic(workspaceId, startDate, endDate)
       }
 
+      const booksCurrency = await baseCurrencyOf(workspaceId)
       let totalRevenue = 0
       let totalPaid = 0
       const byCurrency: Record<string, number> = {}
@@ -453,7 +461,7 @@ export class AnalyticsService {
 
       for (const inv of invoices) {
         const total = Number(inv.total) || 0
-        const currency = inv.currency || 'AFN'
+        const currency = inv.currency || booksCurrency
         const month = inv.date?.slice(0, 7) || ''
 
         totalRevenue += total

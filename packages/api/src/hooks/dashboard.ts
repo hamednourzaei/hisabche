@@ -22,7 +22,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient, localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
-import { useRealtime } from './useRealtime'
+import { useRealtime, useActiveWorkspaceId } from './useRealtime'
 import { asList } from '../lib/as-list'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -330,7 +330,8 @@ export interface DashboardReadOptions {
 
 export function useDashboardKPIs(options: DashboardReadOptions = {}) {
   const authReady = useAuthReady()
-  const enabled = options.enabled !== false
+  const workspaceId = useActiveWorkspaceId()
+  const enabled = options.enabled !== false && !!workspaceId
 
   // ✅ FIX: useRealtime فقط string[] قبول می‌کند، ولی
   // dashboardKeys.kpis() شامل مقادیر ثابت رشته‌ای است — همان‌طور
@@ -341,7 +342,7 @@ export function useDashboardKPIs(options: DashboardReadOptions = {}) {
   useRealtime({ table: 'products', queryKey: kpisKey, enabled })
 
   return useQuery({
-    queryKey: dashboardKeys.kpis(),
+    queryKey: [...dashboardKeys.kpis(), workspaceId],
     queryFn: async (): Promise<DashboardKPIs> => {
       // ⚠️ OFFLINE, THE DEVICE ANSWERS — with the same shape, from the books it
       // already holds. A device that cannot answer falls through to the
@@ -363,12 +364,13 @@ export function useDashboardKPIs(options: DashboardReadOptions = {}) {
   })
 }
 
-// ✅ گیت شده با authReady
+// ✅ گیت شده با authReady و activeWorkspaceId
 // ✅ FIX: AI insights از ترکیب چند منبع ساخته می‌شود (فاکتورها،
 // مشتریان، موجودی)، پس همان سه جدول را subscribe می‌کنیم.
 export function useAIInsights(options: DashboardReadOptions = {}) {
   const authReady = useAuthReady()
-  const enabled = options.enabled !== false
+  const workspaceId = useActiveWorkspaceId()
+  const enabled = options.enabled !== false && !!workspaceId
 
   const insightsKey = dashboardKeys.insights() as unknown as string[]
   useRealtime({ table: 'invoices', queryKey: insightsKey, enabled })
@@ -376,7 +378,7 @@ export function useAIInsights(options: DashboardReadOptions = {}) {
   useRealtime({ table: 'products', queryKey: insightsKey, enabled })
 
   return useQuery({
-    queryKey: dashboardKeys.insights(),
+    queryKey: [...dashboardKeys.insights(), workspaceId],
     queryFn: async (): Promise<AIInsight[]> => {
       const { data } = await apiClient.get('/ai/insights')
       return asList<AIInsight>(data)
@@ -386,14 +388,15 @@ export function useAIInsights(options: DashboardReadOptions = {}) {
   })
 }
 
-// ✅ گیت شده با authReady
+// ✅ گیت شده با authReady و activeWorkspaceId
 // ✅ FIX: چارت فروش فقط به invoices وابسته است.
 export function useDashboardSales(
   params?: DashboardSalesParams,
   options: DashboardReadOptions = {},
 ) {
   const authReady = useAuthReady()
-  const enabled = options.enabled !== false
+  const workspaceId = useActiveWorkspaceId()
+  const enabled = options.enabled !== false && !!workspaceId
 
   // ✅ اصلاح: استفاده از تاریخ محلی
   const today = getTodayDate()
@@ -420,7 +423,7 @@ export function useDashboardSales(
   })
 
   return useQuery({
-    queryKey: dashboardKeys.sales(queryParams),
+    queryKey: [...dashboardKeys.sales(queryParams), workspaceId],
     queryFn: async (): Promise<SalesChartData> => {
       // ⚠️ OFFLINE: THE DEVICE'S OWN SALES — the only place the number of
       // sales still waiting to be confirmed is known (D10).

@@ -383,7 +383,7 @@ const setup: SceneSetup = (runtime) => {
     room.dispose()
     prefilter.dispose()
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.shadowMap.type = THREE.PCFShadowMap
     key.castShadow = true
     key.shadow.mapSize.set(1024, 1024)
     key.shadow.bias = -0.0006

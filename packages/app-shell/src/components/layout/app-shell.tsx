@@ -14,6 +14,7 @@ import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied } from '@hisabche/ui/menu'
 import {
   GlobalPageCustomizer,
+  InteractiveGuide,
   LanguageSwitchProvider,
   NoAccessNotice,
   OfflinePageGate,
@@ -117,6 +118,10 @@ export function AppShell() {
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
+          <InteractiveGuide
+            currentRoute={location.pathname}
+            t={(key, fallback) => t(key as never) || fallback || key}
+          />
           {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
           <div className="mb-2 flex justify-end md:hidden">
             <GlobalPageCustomizer />

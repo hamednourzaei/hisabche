@@ -10,6 +10,7 @@ import type { TenancyContext } from './tenancy.service'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { isMissingSchema } from './blog/blog.domain'
+import { baseCurrencyOf } from './base-currency'
 
 export class ActivityReadsNotConfiguredError extends Error {
   readonly code = 'ACTIVITY_READS_NOT_CONFIGURED'
@@ -621,6 +622,9 @@ export class ActivityService {
     pairs: Array<[string, string]>,
   ): Promise<Map<string, Partial<EntitySummaryDto> | null>> {
     const out = new Map<string, Partial<EntitySummaryDto> | null>()
+    // A row with no stored currency is denominated in the books currency,
+    // never in a hard-coded code.
+    const booksCurrency = await baseCurrencyOf(workspaceId)
     const idsOf = (type: string) => [
       ...new Set(pairs.filter(([t, id]) => t === type && id).map(([, id]) => id)),
     ]
@@ -681,7 +685,7 @@ export class ActivityService {
         label: data.full_name || '',
         subtitle: data.phone || data.email || undefined,
         amount: data.opening_balance || undefined,
-        currency: 'AFN',
+        currency: booksCurrency,
       })),
       read<{
         name: string
@@ -693,7 +697,7 @@ export class ActivityService {
         label: data.name,
         subtitle: data.sku || `موجودی: ${data.quantity ?? 0}`,
         amount: data.sell_price ?? undefined,
-        currency: data.currency || 'AFN',
+        currency: data.currency || booksCurrency,
       })),
       read<{
         amount: number | null
@@ -704,7 +708,7 @@ export class ActivityService {
         label: data.reference || 'پرداخت',
         subtitle: data.notes || undefined,
         amount: data.amount ?? undefined,
-        currency: data.currency || 'AFN',
+        currency: data.currency || booksCurrency,
       })),
     ])
 

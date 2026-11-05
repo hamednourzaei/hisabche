@@ -34,6 +34,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useActiveWorkspaceId } from './useRealtime'
 import { useMyCapabilities } from './governance'
 
 export interface RateQuote {
@@ -250,13 +251,14 @@ export const baseCurrencyKeys = { all: ['base-currency'] as const }
  */
 export function useBaseCurrency() {
   const ready = useAuthReady()
+  const workspaceId = useActiveWorkspaceId()
   return useQuery({
-    queryKey: baseCurrencyKeys.all,
+    queryKey: [...baseCurrencyKeys.all, workspaceId],
     queryFn: async (): Promise<BaseCurrency> => {
       const { data } = await apiClient.get<BaseCurrency>('/finance/currency/base')
       return data
     },
-    enabled: ready,
+    enabled: ready && !!workspaceId,
     staleTime: 5 * 60_000,
   })
 }

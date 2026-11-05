@@ -18,6 +18,7 @@ import { createAuthClient, supabase } from '../db'
 import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { writeProfile } from '../services/profile-write'
+import { WorkspaceService } from '../services/workspace.service'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import {
   clearRefreshCookie,
@@ -368,6 +369,22 @@ export async function authRoutes(fastify: FastifyInstance) {
           },
           { onConflict: 'id' },
         )
+
+        // ۲.۵. ایجاد تضمین‌شده‌ی ورک‌اسپیس اولیه برای کاربر ثبت‌نامی جدید
+        try {
+          const workspaceService = new WorkspaceService()
+          const initialWorkspaceName = (
+            body.businessName?.trim() ||
+            body.fullName?.trim() ||
+            'کسب‌وکار من'
+          ).slice(0, 100)
+          await workspaceService.createWorkspace(newUser.user.id, {
+            name: initialWorkspaceName,
+            isActive: true,
+          })
+        } catch (wsErr) {
+          fastify.log.error(wsErr, 'Initial workspace provisioning on signup encountered an issue')
+        }
 
         // ۳. لاگین خودکار — دریافت توکن
         const { data: session, error: loginError } =
@@ -762,15 +779,17 @@ export async function authRoutes(fastify: FastifyInstance) {
         // The industry decides the defaults every screen starts from, so it is
         // a workspace decision, not a personal preference. A member's own
         // profile row must not be able to move the shop to another trade.
+        // If a user has no workspace yet (or is undergoing initial onboarding setup),
+        // we permit setting their initial profile trades.
         if (body.businessTypes !== undefined) {
-          const { data: owned, error: ownerError } = await supabase
+          const { data: memberships, error: memberError } = await supabase
             .from('workspace_members')
-            .select('id')
+            .select('role')
             .eq('user_id', userId)
-            .eq('role', 'owner')
-            .limit(1)
-          if (ownerError) throw ownerError
-          if (!owned || owned.length === 0) {
+          if (memberError) throw memberError
+          const hasMemberships = memberships && memberships.length > 0
+          const isOwner = memberships?.some((m: any) => m.role === 'owner')
+          if (hasMemberships && !isOwner) {
             return reply.code(403).send({ error: 'INDUSTRY_OWNER_ONLY' })
           }
         }

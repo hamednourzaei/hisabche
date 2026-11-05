@@ -189,9 +189,9 @@ describe('SubscriptionOrderService — Unit Tests', () => {
       }),
     })
 
-    await expect(service.claimOrderAndProvision('user-1', token, 'My Salon')).rejects.toThrow(
-      'Subscription order payment has not been verified',
-    )
+    await expect(
+      service.claimOrderAndProvision('user-1', token, 'My Salon', 'AFN'),
+    ).rejects.toThrow('Subscription order payment has not been verified')
   })
 
   it('claimOrderAndProvision rejects expired claim tokens', async () => {
@@ -213,8 +213,8 @@ describe('SubscriptionOrderService — Unit Tests', () => {
       }),
     })
 
-    await expect(service.claimOrderAndProvision('user-1', token, 'My Salon')).rejects.toThrow(
-      'Claim token has expired',
-    )
+    await expect(
+      service.claimOrderAndProvision('user-1', token, 'My Salon', 'AFN'),
+    ).rejects.toThrow('Claim token has expired')
   })
 })

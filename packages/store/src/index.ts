@@ -49,6 +49,12 @@ export {
   type DeletedItem,
 } from './slices/backup.slice'
 export {
+  useGuideStore,
+  GUIDE_VERSION,
+  type GuideStepState,
+  type GuideStoreState,
+} from './slices/guide.slice'
+export {
   useWorkspaceStore,
   type WorkspaceRole,
   type WorkspaceMember,

@@ -33,6 +33,7 @@ import { fetchBudgetConsumptionAggregate } from '../aggregates/ledger-aggregates
 import { AuditService } from '../audit.service'
 import { sod } from '../authorization'
 import { CurrencyService } from '../currency/currency.service'
+import { baseCurrencyOf } from '../base-currency'
 import { z } from 'zod'
 
 import {
@@ -75,8 +76,6 @@ const PLANNING_COLUMNS = `${LEGACY_COLUMNS}, name, budget_type, status, version,
 /** docs/budget-currency-migration.sql. */
 const COLUMNS = `${PLANNING_COLUMNS}, currency, amount_currency_minor, fx_rate`
 
-/** The ledger's currency. Every actual a budget is compared with is in it. */
-export const BASE_CURRENCY = 'AFN'
 export { BUDGET_CURRENCIES, convertParts, planFor }
 export type { BudgetReport, BudgetReportRow, BudgetStatusCode, PlannedBudget }
 export type BudgetCurrency = (typeof BUDGET_CURRENCIES)[number]
@@ -154,8 +153,9 @@ export class BudgetService {
 
     if (error) throw new DatabaseError('Failed to fetch budgets', error)
 
+    const books = await baseCurrencyOf(ctx.workspaceId)
     const budgets = ((data ?? []) as unknown as Record<string, any>[]).map((raw) =>
-      mapBudget(raw, BASE_CURRENCY),
+      mapBudget(raw, books),
     )
     await memoryCache.set(cacheKey, budgets, 300)
     return budgets
@@ -186,11 +186,13 @@ export class BudgetService {
   ): Promise<PlannedBudget> {
     this.assertCan(ctx, 'budget.manage')
 
-    const currency: BudgetCurrency = (input.currency ?? BASE_CURRENCY) as BudgetCurrency
+    // The ledger's currency — every actual a budget is compared with is in it.
+    const books = await baseCurrencyOf(ctx.workspaceId)
+    const currency: BudgetCurrency = (input.currency ?? books) as BudgetCurrency
 
     // The amount and the period are checked first, by the SHARED rule
     // (planBudgetSave); only the FX quote is missing at this point.
-    const early = planBudgetSave(input, { baseCurrency: BASE_CURRENCY, fxRate: null })
+    const early = planBudgetSave(input, { baseCurrency: books, fxRate: null })
     if (!early.ok && !early.problem.startsWith('BUDGET_FX_RATE_MISSING')) {
       throw new ValidationError(early.problem)
     }
@@ -228,12 +230,12 @@ export class BudgetService {
     // the most recent ON OR BEFORE it, never a later one — and the rate is
     // stored so the conversion can be re-done by hand.
     let quoteRate: number | null = null
-    if (currency !== BASE_CURRENCY) {
+    if (currency !== books) {
       const quote = await this.currencies.getRateFor(ctx, currency, input.startsOn)
       if ('error' in quote) throw new ValidationError(`BUDGET_FX_RATE_MISSING: ${currency}`)
       quoteRate = quote.rate
     }
-    const planned = planBudgetSave(input, { baseCurrency: BASE_CURRENCY, fxRate: quoteRate })
+    const planned = planBudgetSave(input, { baseCurrency: books, fxRate: quoteRate })
     if (!planned.ok) throw new ValidationError(planned.problem)
     const { amountMinor, enteredMinor, fxRate, distribution: amounts } = planned.plan
 
@@ -269,7 +271,7 @@ export class BudgetService {
     // Before the currency migration an AFN budget still saves; a foreign one
     // cannot, because dropping its currency would store a dollar figure as
     // afghanis.
-    if (error && isMissingSchema(error) && currency === BASE_CURRENCY) {
+    if (error && isMissingSchema(error) && currency === books) {
       const { currency: _c, amount_currency_minor: _a, fx_rate: _f, ...planningRow } = row
       ;({ data, error } = await supabase
         .from('budgets')
@@ -282,7 +284,7 @@ export class BudgetService {
     if (error) throw new DatabaseError('Failed to save the budget', error)
 
     await this.invalidate(ctx.workspaceId)
-    const saved = mapBudget(data as Record<string, any>, BASE_CURRENCY)
+    const saved = mapBudget(data as Record<string, any>, books)
     // SoD: index who drafted/edited this budget, so approval can be separated.
     await sod.recordAction(ctx, 'budget.manage', 'budget', saved.id)
     await this.writeAudit(
@@ -367,7 +369,7 @@ export class BudgetService {
     if (!data) throw new ConflictError('BUDGET_INVALID_TRANSITION')
 
     await this.invalidate(ctx.workspaceId)
-    const after = mapBudget(data as Record<string, any>, BASE_CURRENCY)
+    const after = mapBudget(data as Record<string, any>, await baseCurrencyOf(ctx.workspaceId))
     await this.writeAudit(ctx, `budget.${to}`, id, { status: from }, { status: to })
     return after
   }

@@ -1393,24 +1393,30 @@ export class MigrationService {
     // in the catalogue now and are found by name like any other.
     resolveBoms(plans, await this.catalogue(ctx))
     const manufacturing = new ManufacturingService()
+    // A definition with no currency named is denominated in the books currency.
+    const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
 
     for (const plan of plans) {
       if (Date.now() >= deadline) return false
       // Two products share the name, or it was not created: nothing to attach to.
       if (!plan.productId) continue
       if (await manufacturing.getDefinition(ctx, plan.productId)) continue
-      await manufacturing.saveDefinition(ctx, this.toDefinition(plan, plan.productId))
+      await manufacturing.saveDefinition(
+        ctx,
+        this.toDefinition(plan, plan.productId, booksCurrency),
+      )
     }
     return true
   }
 
-  private toDefinition(plan: BomPlan, productId: string) {
-    // The same default an invoice gets when nothing names a currency.
-    const currency = 'AFN' as const
+  private toDefinition(plan: BomPlan, productId: string, booksCurrency: string) {
+    const validCurrency = (
+      CURRENCY_CODES.includes(booksCurrency as any) ? booksCurrency : 'AFN'
+    ) as (typeof CURRENCY_CODES)[number]
     return saveProductionDefinitionSchema.parse({
       productId,
-      currency,
-      columns: productionColumns(currency),
+      currency: validCurrency,
+      columns: productionColumns(validCurrency),
       rows: toProductionRows(plan),
     })
   }

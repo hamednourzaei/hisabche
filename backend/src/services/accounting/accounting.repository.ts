@@ -762,10 +762,10 @@ export class AccountingRepository {
     }
   }
 
-  private mapProfitInvoice(row: Record<string, any>) {
+  private mapProfitInvoice(row: Record<string, any>, booksCurrency: string) {
     return {
       id: String(row.id),
-      currency: String(row.currency || 'AFN'),
+      currency: String(row.currency || booksCurrency),
       subtotal: Number(row.subtotal) || 0,
       discountTotal: Number(row.discount_total) || 0,
     }
@@ -844,9 +844,10 @@ export class AccountingRepository {
       workspaceId,
       invoiceRows.map((row) => String(row.id)),
     )
+    const booksCurrency = await baseCurrencyOf(workspaceId)
     const read = invoiceRows
       .filter((row) => booked.has(String(row.id)))
-      .map((row) => this.mapProfitInvoice(row))
+      .map((row) => this.mapProfitInvoice(row, booksCurrency))
     const details = await this.profitDetails(
       workspaceId,
       read.map((invoice) => invoice.id),
@@ -859,12 +860,12 @@ export class AccountingRepository {
       ...details,
       lines,
       deferredRevenueChange,
-      ...(ledgerTotals ? { ledgerTotals } : {}),
-      booksCurrency: await baseCurrencyOf(workspaceId),
+      ...(ledgerTotals ? { ledgerTotals: ledgerTotals } : {}),
+      booksCurrency,
       payrolls: payrollRows
         .filter((row) => !['cancelled', 'rejected'].includes(String(row.status ?? '')))
         .map((row) => ({
-          currency: String(row.currency || 'AFN'),
+          currency: String(row.currency || booksCurrency),
           baseSalary: Number(row.base_salary) || 0,
           bonuses: Number(row.bonuses) || 0,
           overtimeAmount: Number(row.overtime_amount) || 0,
@@ -962,7 +963,8 @@ export class AccountingRepository {
       if (error) throw new DatabaseError('Failed to read invoices', error)
       invoiceRows.push(...(data ?? []))
     }
-    const read = invoiceRows.map((row) => this.mapProfitInvoice(row))
+    const booksCurrency = await baseCurrencyOf(workspaceId)
+    const read = invoiceRows.map((row) => this.mapProfitInvoice(row, booksCurrency))
     const details = await this.profitDetails(
       workspaceId,
       read.map((invoice) => invoice.id),
@@ -1075,6 +1077,8 @@ export class AccountingRepository {
 
   /** A product's cost layers (all — what remains is on the shelf) and its consumptions in [from, to]. */
   async productJourneySources(workspaceId: string, productId: string, from: string, to: string) {
+    // A cost layer with no stored currency is denominated in the books currency.
+    const booksCurrency = await baseCurrencyOf(workspaceId)
     const [layers, consumptions] = await Promise.all([
       this.pages<Record<string, any>>('cost layers', (a, b) =>
         supabase
@@ -1103,7 +1107,7 @@ export class AccountingRepository {
         receivedQty: Number(row.received_qty) || 0,
         remainingQty: Number(row.remaining_qty) || 0,
         unitCost: Number(row.unit_cost) || 0,
-        currency: String(row.currency || 'AFN'),
+        currency: String(row.currency || booksCurrency),
         entryDate: String(row.entry_date),
       })),
       consumptions: consumptions.map((row) => ({
