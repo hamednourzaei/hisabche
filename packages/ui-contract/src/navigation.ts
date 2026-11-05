@@ -519,6 +519,17 @@ export function isRouteDenied(pathname: string, deniedModules: readonly string[]
 }
 
 /**
+ * Whether this path is an onboarding route (e.g. `/onboarding`, `/fa/onboarding`).
+ * The onboarding route is used to bootstrap/create the initial workspace and
+ * must be allowed to render when no workspace has been provisioned yet.
+ */
+export function isOnboardingRoute(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  const bare = pathname.split(/[?#]/)[0]?.replace(/^\/(fa|af|en)(?=\/|$)/, '') ?? ''
+  return bare === '/onboarding' || bare.startsWith('/onboarding/')
+}
+
+/**
  * Pages switched OFF for everyone, for now (owner's order): the app marketplace
  * and the market seller shop.
  *

@@ -190,6 +190,7 @@ export {
   NAV_MODULE,
   isNavLocked,
   isRouteDenied,
+  isOnboardingRoute,
   DISABLED_PAGES,
   isPageDisabled,
   DISABLED_PANELS,

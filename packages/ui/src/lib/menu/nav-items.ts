@@ -128,4 +128,9 @@ export const MORE_ICON = EllipsisVertical
 export const COMMAND_ITEMS: CommandItem[] = COMMAND_CONTRACT.filter((c) => !isPageDisabled(c.path))
 
 /** Whether a destination is locked for someone with these blocked modules (see ui-contract NAV_MODULE). */
-export { isNavLocked, isRouteDenied, isPageDisabled } from '@hisabche/ui-contract'
+export {
+  isNavLocked,
+  isRouteDenied,
+  isOnboardingRoute,
+  isPageDisabled,
+} from '@hisabche/ui-contract'

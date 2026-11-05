@@ -11,7 +11,7 @@ import {
   useWorkspaceStore,
 } from '@hisabche/store'
 import { useMyCapabilities } from '@hisabche/api'
-import { isRouteDenied } from '@hisabche/ui-contract'
+import { isRouteDenied, isOnboardingRoute } from '@hisabche/ui-contract'
 import {
   APP_LANGUAGES,
   GlobalPageCustomizer,
@@ -588,8 +588,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           ) : routeDenied ? (
             // The page is NOT mounted: none of its queries run.
             <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} />
-          ) : !workspaceId && hasNoWorkspace ? (
-            // If user has no workspace, do not mount the page and queries
+          ) : !workspaceId && hasNoWorkspace && !isOnboardingRoute(pathname) ? (
+            // If user has no workspace, do not mount protected dashboard pages and queries.
+            // Onboarding route is explicitly allowed so user can bootstrap their first workspace.
             <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
               <p className="text-sm text-neutral-400">در حال آماده‌سازی فضای کاری شما...</p>
             </div>
