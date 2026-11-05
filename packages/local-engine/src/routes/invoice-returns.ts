@@ -16,6 +16,7 @@
 import {
   buildReturnDocument,
   planReturnDisposition,
+  type BuiltReturnDocument,
   type ReturnDispositionPlan,
   type ReturnCondition,
   type ReturnDeductionRequest,
@@ -224,7 +225,7 @@ export function registerInvoiceReturnsRoutes(router: Router) {
       [invoiceId, ctx.workspaceId],
     )[0]!.n
 
-    let document
+    let document: BuiltReturnDocument
     try {
       document = buildReturnDocument({
         returnType: payload.returnType,

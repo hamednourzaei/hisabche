@@ -144,8 +144,11 @@ export class SubscriptionOrderService {
       .eq('id', orderId)
       .single()
 
-    if (fetchErr || !order) {
-      throw new NotFoundError('Subscription order not found')
+    if (fetchErr && fetchErr.code !== 'PGRST116') {
+      throw new DatabaseError('Failed to read subscription order', fetchErr)
+    }
+    if (!order) {
+      throw new NotFoundError('Subscription order')
     }
 
     if (order.status === 'paid' || order.status === 'claimed') {
@@ -233,8 +236,11 @@ export class SubscriptionOrderService {
       .eq('id', orderId)
       .single()
 
-    if (error || !order) {
-      throw new NotFoundError('Subscription order not found')
+    if (error && error.code !== 'PGRST116') {
+      throw new DatabaseError('Failed to read subscription order', error)
+    }
+    if (!order) {
+      throw new NotFoundError('Subscription order')
     }
 
     if (order.created_by_user_id && order.created_by_user_id !== userId) {

@@ -562,6 +562,50 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/orders',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/subscription-order.service.ts`,
+        text: 'input.idempotencyKey',
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/orders/:id/verify-payment',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/subscription-order.service.ts`,
+        text: "order.status === 'paid'",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/orders/claim',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/subscription-order.service.ts`,
+        text: "'canonical_provision_workspace'",
+      },
+    ],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/orders/provision',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/subscription-order.service.ts`,
+        text: "'canonical_provision_workspace'",
+      },
+    ],
+  },
 
   // ─── Warehouses ──────────────────────────────────────────────────────────
   {

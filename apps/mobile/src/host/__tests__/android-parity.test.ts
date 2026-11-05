@@ -156,6 +156,7 @@ function signedIn(engine: LocalEngine): LocalEngine {
   return {
     request: (req) =>
       engine.request({ ...req, headers: { 'x-user-id': TEST_USER_ID, ...req.headers } }),
+    routeTable: () => engine.routeTable(),
   }
 }
 

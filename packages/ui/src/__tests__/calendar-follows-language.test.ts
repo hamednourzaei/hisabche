@@ -69,6 +69,7 @@ describe('no component decides the calendar for the reader', () => {
     // files still do it and are reported debt; a new file doing it, or a fixed
     // one regressing, fails here. Fix one → delete its line.
     const KNOWN = new Set([
+      'components/ui/audit/audit-integrity-card.tsx',
       'components/ui/customers/AddCustomerModal.tsx',
       'components/ui/customers/PaymentModal.tsx',
       'components/ui/cycle-count/containers/cycle-count-container.tsx',

@@ -32,7 +32,7 @@ export type OrderPaymentMethod = z.infer<typeof orderPaymentMethodSchema>
 export const createSubscriptionOrderSchema = z.object({
   plan: planEnum,
   billingInterval: billingIntervalSchema.default('month'),
-  currency: currencyCodeSchema.default('AFN'),
+  currency: currencyCodeSchema,
   paymentMethod: orderPaymentMethodSchema.default('card_to_card'),
   idempotencyKey: z.string().trim().max(128).optional(),
   metadata: z.record(z.unknown()).default({}),
@@ -70,7 +70,7 @@ export type SubscriptionOrder = z.infer<typeof subscriptionOrderSchema>
 export const claimSubscriptionOrderSchema = z.object({
   claimToken: nonEmptyStringSchema.max(128),
   workspaceName: nonEmptyStringSchema.min(2).max(100),
-  baseCurrency: currencyCodeSchema.default('AFN'),
+  baseCurrency: currencyCodeSchema,
   timeZone: z.string().trim().default('Asia/Kabul'),
 })
 
@@ -82,7 +82,7 @@ export type ClaimSubscriptionOrder = z.infer<typeof claimSubscriptionOrderSchema
 export const provisionFromOrderSchema = z.object({
   orderId: uuidSchema,
   workspaceName: nonEmptyStringSchema.min(2).max(100),
-  baseCurrency: currencyCodeSchema.default('AFN'),
+  baseCurrency: currencyCodeSchema,
   timeZone: z.string().trim().default('Asia/Kabul'),
 })
 
