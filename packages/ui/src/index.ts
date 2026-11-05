@@ -26,6 +26,10 @@ export { Badge } from './components/ui/badge'
 export type { BadgeVariant, BadgeSize } from './components/ui/badge'
 export { Skeleton } from './components/ui/skeleton'
 export { PageSkeleton, type PageSkeletonProps } from './components/ui/page-skeleton'
+export { CustomerDetailSkeleton } from './components/ui/customers/customer-detail-skeleton'
+export { TeamAndPayrollSkeleton } from './components/ui/team-and-payroll/team-payroll-skeleton'
+export { TillSkeleton } from './components/ui/till/till-skeleton'
+export { DevelopersSkeleton } from './components/ui/developers/developers-skeleton'
 export { RouteProgress, type RouteProgressProps } from './components/ui/route-progress'
 export {
   Dialog,
