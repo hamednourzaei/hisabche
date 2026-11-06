@@ -112,7 +112,7 @@ function CustomersHub() {
   const [section, selectSection] = useHubSection(sections)
 
   return (
-    <div className="relative space-y-4">
+    <div className="relative space-y-4" data-guide="customers-page">
       <RegisterCustomizer
         groups={[
           {

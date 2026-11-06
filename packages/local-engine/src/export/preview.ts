@@ -9,6 +9,7 @@
 import { round2 } from '@hisabche/validation'
 
 import type { LocalDb } from '../db'
+import { DEFAULT_BASE_CURRENCY } from '../context'
 import type {
   CostStatus,
   CurrencyTotal,
@@ -23,7 +24,7 @@ export function generatePreview(db: LocalDb, workspaceId: string): MigrationPrev
     'SELECT base_currency FROM local_workspace WHERE id = ?',
     [workspaceId],
   )
-  const baseCurrency = ws?.base_currency || 'AFN'
+  const baseCurrency = ws?.base_currency || DEFAULT_BASE_CURRENCY
 
   // 2. Exact Counts
   const getCount = (table: string, extraWhere = ''): number => {

@@ -85,16 +85,20 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const updateProfile = useAuthStore((s) => s.updateProfile)
   const saveWorkspaceProfile = useSaveWorkspaceProfile()
   const setOperationalDna = useOnboardingStore((s) => s.setOperationalDna)
+  const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
+  const saveBookCurrency = useSetBaseCurrency()
   const toast = useToast()
 
   /**
    * Persist what the wizard collected, then finish.
    *
-   * The selection used to live only in this device's store: `updateProfile`
-   * was read and never called, so the server's `profiles.business_types` stayed
-   * empty and every screen resolved the generic profile. A failure is shown
-   * and the wizard stays put — finishing locally would look like success while
-   * the account kept an empty industry.
+   * ⚠️ THE WORKSPACE USUALLY EXISTS ALREADY. `POST /auth/signup` provisions one
+   * so a new account is never workspace-less — with NO name from the trade, no
+   * base currency and no industry (the wizard has not run yet). This function
+   * therefore has to APPLY the answers to that workspace, not only create one
+   * when it is missing. The old `if (!currentWorkspaceId)` branch skipped
+   * everything on every real signup, which is why a gold business kept AFN
+   * books and a generic environment.
    */
   const handleComplete = useCallback(async () => {
     const selected = businessType
@@ -103,6 +107,11 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
           .map((id) => id.trim())
           .filter(Boolean)
       : []
+
+    if (!defaultCurrency) {
+      toast.error(tOriginal('onboarding.currencyRequired'))
+      return
+    }
 
     // Infer DNA deterministically from the user's choices
     const inferredDna = inferOperationalDna({
@@ -113,22 +122,28 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
 
     try {
       const user = useAuthStore.getState().user
-      const currentWorkspaceId = useWorkspaceStore.getState().workspaceId
+      let workspaceId = useWorkspaceStore.getState().workspaceId
 
-      // Ensure user has at least one active workspace before proceeding
-      if (!currentWorkspaceId && user?.id) {
-        try {
-          const wsName = (user.businessName || user.fullName || 'کسب‌وکار من').trim().slice(0, 100)
-          await apiClient.post('/workspaces', {
-            name: wsName,
-            ...(defaultCurrency ? { baseCurrency: defaultCurrency } : {}),
-            businessTypes: selected,
-          })
-          await useWorkspaceStore.getState().fetchWorkspace(user.id)
-        } catch (wsErr) {
-          console.warn('[Onboarding] workspace auto-creation fallback error:', wsErr)
-        }
+      // 1. No workspace at all: create it with the answers in one request.
+      if (!workspaceId && user?.id) {
+        const wsName = (user.businessName || user.fullName || 'کسب‌وکار من').trim().slice(0, 100)
+        const created = await apiClient.post<{ id?: string }>('/workspaces', {
+          name: wsName,
+          baseCurrency: defaultCurrency,
+          businessTypes: selected,
+        })
+        await useWorkspaceStore.getState().fetchWorkspace(user.id)
+        workspaceId = useWorkspaceStore.getState().workspaceId ?? created.data?.id ?? null
+      } else if (workspaceId) {
+        // 2. The signup workspace: its currency is the default. The person's
+        // answer replaces it — while the books are empty, which is now.
+        await saveBookCurrency.mutateAsync(defaultCurrency)
       }
+
+      if (!workspaceId) throw new Error('WORKSPACE_NOT_AVAILABLE')
+
+      // 3. The store every amount on every screen is formatted from.
+      setPrimaryCurrency(defaultCurrency)
 
       await updateProfile({
         onboardingCompleted: true,
@@ -136,14 +151,23 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
         ...(storeSize ? { storeSize } : {}),
         ...(businessNote.trim() ? { businessNote: businessNote.trim() } : {}),
       })
-      // Also persist to workspace profile if user holds workspace.manage
-      try {
-        await saveWorkspaceProfile(selected)
-      } catch {
-        // Safe fallback if permission is restricted or offline
-      }
-    } catch {
-      toast.error(tOriginal('onboarding.saveFailed'))
+      // Also persist to workspace profile if user holds workspace.manage. The
+      // account-level industry above is what screens read; this is the
+      // workspace's own declaration, and a database that cannot store it yet
+      // answers `null` rather than failing.
+      await saveWorkspaceProfile(selected)
+    } catch (error) {
+      // The chosen currency is the whole point of the wizard, so a refusal is
+      // said and the wizard stays — finishing locally would look like success
+      // while the books kept another currency.
+      const message = apiErrorMessage(error, '')
+      toast.error(
+        message.includes('BASE_CURRENCY_LOCKED')
+          ? tOriginal('onboarding.bookCurrencyLocked')
+          : message.includes('BASE_CURRENCY')
+            ? tOriginal('onboarding.bookCurrencyFailed')
+            : tOriginal('onboarding.saveFailed'),
+      )
       return
     }
     completeOnboarding()
@@ -154,8 +178,10 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     completeOnboarding,
     defaultCurrency,
     push,
+    saveBookCurrency,
     saveWorkspaceProfile,
     setOperationalDna,
+    setPrimaryCurrency,
     storeSize,
     tOriginal,
     toast,
@@ -177,15 +203,10 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     [setStoreSize],
   )
 
-  const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
-  const saveBookCurrency = useSetBaseCurrency()
-
   // The wizard's answer used to stop here: `defaultCurrency` was written to the
   // onboarding store and NOTHING read it back. Every amount in the product is
-  // formatted from `useCurrencyStore.primaryCurrency`, which stayed on its
-  // 'AFN' default — so the currency step was decorative and a USD shop was
-  // shown افغانی on every screen. Propagating the answer to the store the UI
-  // actually reads is what makes the choice real.
+  // formatted from `useCurrencyStore.primaryCurrency` — so the currency step was
+  // decorative and a USD shop was shown افغانی on every screen.
   const handleSetCurrency = useCallback(
     (currency: string) => {
       if (!isSupportedCurrency(currency)) {

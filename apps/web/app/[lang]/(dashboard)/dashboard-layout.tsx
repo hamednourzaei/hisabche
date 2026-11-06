@@ -172,10 +172,37 @@ function useRedirectGuard(currentLang: string) {
   const router = useRouter()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
-  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted)
+  // ⚠️ THE SERVER IS THE RECORD OF WHETHER THE WIZARD RAN.
+  //
+  // This read only `useOnboardingStore.isCompleted` — a localStorage flag —
+  // while `sanitizeUser` sent `onboardingCompleted` on every auth answer (and
+  // the response schemas dropped it). A new account created in a browser that
+  // had already finished onboarding therefore inherited «completed», went
+  // straight to the dashboard, declared no industry, and its workspace kept
+  // the default currency: exactly the reported «new account never onboarded».
+  const userId = useAuthStore((s) => s.user?.id ?? null)
+  const serverCompleted = useAuthStore((s) => s.user?.onboardingCompleted)
+  const localCompleted = useOnboardingStore((s) => s.isCompleted)
+  const claimForUser = useOnboardingStore((s) => s.claimForUser)
   const hasNoWorkspace = useWorkspaceStore((s) => s.hasNoWorkspace)
   const workspaceId = useWorkspaceStore((s) => s.workspaceId)
   const redirected = useRef(false)
+
+  // The answers belong to one account; someone else's are discarded. And when
+  // the server says the wizard never finished, a local «completed» is a
+  // leftover (an older account, or a completion that never reached the
+  // server) — it must not be allowed to skip the wizard.
+  useEffect(() => {
+    if (!userId) return
+    claimForUser(userId)
+    if (serverCompleted === false && useOnboardingStore.getState().isCompleted) {
+      useOnboardingStore.getState().reset()
+    }
+  }, [userId, serverCompleted, claimForUser])
+
+  // Unknown (a cached user from before the field existed) falls back to the
+  // local flag; `/auth/me` lands with the truth and corrects it.
+  const isOnboardingComplete = serverCompleted === true || localCompleted
 
   useEffect(() => {
     if (!hasHydrated) return
@@ -574,10 +601,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
-          <InteractiveGuide
-            currentRoute={pathname || '/dashboard'}
-            t={t as (key: string, fallback?: string) => string}
-          />
+          <InteractiveGuide currentRoute={pathname || '/dashboard'} t={t} />
           {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
           <div className="mb-2 flex justify-end md:hidden">
             <GlobalPageCustomizer />

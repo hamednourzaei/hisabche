@@ -201,7 +201,10 @@ function AccountingHub() {
 
   return (
     <BranchScopeProvider>
-      <div className="mx-auto flex h-full w-full max-w-3xl flex-col gap-3 px-3 md:max-w-4xl md:gap-4 md:px-4 lg:max-w-6xl lg:px-6">
+      <div
+        className="mx-auto flex h-full w-full max-w-3xl flex-col gap-3 px-3 md:max-w-4xl md:gap-4 md:px-4 lg:max-w-6xl lg:px-6"
+        data-guide="accounting-page"
+      >
         <div>
           <h1 className="text-lg font-bold text-[hsl(var(--fg-primary))] md:text-xl lg:text-2xl">
             {t('nav.money')}

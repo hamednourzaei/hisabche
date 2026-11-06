@@ -48,7 +48,12 @@ export {
   type IntelligenceRefusal,
 } from './intelligence'
 
-export { GUIDE_CATALOG, type GuideStepDefinition } from './guide-catalog'
+export {
+  GUIDE_CATALOG,
+  GUIDE_SECTION_ATTRIBUTE,
+  guidePageAnchor,
+  type GuideStepDefinition,
+} from './guide-catalog'
 
 export { breadcrumbsFor, localizePath, type Crumb } from './shell'
 

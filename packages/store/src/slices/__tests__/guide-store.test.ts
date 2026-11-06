@@ -43,4 +43,18 @@ describe('useGuideStore', () => {
     expect(state.isStepSeen('step-1')).toBe(true)
     expect(state.isStepSeen('step-2')).toBe(true)
   })
+
+  it('re-reads one page without forgetting the others', () => {
+    const store = useGuideStore.getState()
+    store.markStepSeen('dashboard-1', 'dashboard')
+    store.markStepSeen('dashboard-2', 'dashboard')
+    store.markStepSeen('invoices-1', 'invoices')
+
+    useGuideStore.getState().resetRouteProgress('dashboard')
+
+    const state = useGuideStore.getState()
+    expect(state.isStepSeen('dashboard-1')).toBe(false)
+    expect(state.isStepSeen('dashboard-2')).toBe(false)
+    expect(state.isStepSeen('invoices-1')).toBe(true)
+  })
 })

@@ -14,6 +14,16 @@ export type Language = 'fa-AF' | 'en'
 
 export interface OnboardingState {
   isCompleted: boolean
+  /**
+   * The account this wizard's answers belong to.
+   *
+   * ⚠️ THE STATE IS PERSISTED, THE ACCOUNT IS NOT PART OF IT UNLESS IT IS
+   * RECORDED. On a shared browser a second signup inherited the first one's
+   * «completed» flag and never saw the wizard at all — the cookie-clearing on
+   * logout never touched this store. `claimForUser` makes the answer belong to
+   * one person: anything left over from someone else is discarded.
+   */
+  ownerId: string | null
   step: number
   businessType: BusinessType | null
   storeSize: StoreSize | null
@@ -35,6 +45,8 @@ export interface OnboardingState {
   markProductAdded: () => void
   markCustomerAdded: () => void
   markInvoiceCreated: () => void
+  /** Bind the persisted answers to one account; another account's are discarded. */
+  claimForUser: (userId: string) => void
   reset: () => void
 }
 
@@ -52,10 +64,12 @@ const initialState: Omit<
     markProductAdded: any
     markCustomerAdded: any
     markInvoiceCreated: any
+    claimForUser: any
     reset: any
   }
 > = {
   isCompleted: false,
+  ownerId: null,
   step: 0,
   businessType: null,
   storeSize: null,
@@ -71,7 +85,7 @@ const initialState: Omit<
 
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
 
       setStep: (step) => set({ step }),
@@ -90,7 +104,15 @@ export const useOnboardingStore = create<OnboardingState>()(
       markProductAdded: () => set({ hasAddedProduct: true }),
       markCustomerAdded: () => set({ hasAddedCustomer: true }),
       markInvoiceCreated: () => set({ hasCreatedInvoice: true }),
-      reset: () => set(initialState),
+      claimForUser: (userId) => {
+        // Same person: keep what they chose. Someone else: the wizard is not
+        // theirs to inherit — reset, but bind the fresh state to them.
+        if (get().ownerId === userId) return
+        set({ ...initialState, ownerId: userId })
+      },
+      // The owner survives a reset: `reset` clears the ANSWERS, not the fact
+      // that this store now belongs to the signed-in account.
+      reset: () => set((state) => ({ ...initialState, ownerId: state.ownerId })),
     }),
     {
       name: 'hisabche-onboarding',

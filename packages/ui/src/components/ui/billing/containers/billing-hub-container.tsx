@@ -58,38 +58,40 @@ export function BillingHubContainer() {
 function BillingHub() {
   const t = useTranslations()
   return (
-    <PageHub
-      lookId="billing"
-      label={t('nav.billing')}
-      sectionsLabel={t('billingHub.sectionsLabel')}
-      loadingLabel={t('billingHub.loading')}
-      tabs={[
-        {
-          id: 'plan',
-          label: t('billingHub.tabs.plan'),
-          icon: CreditCard,
-          sections: [{ id: 'plan', label: t('nav.billing'), render: () => <BillingContainer /> }],
-        },
-        {
-          id: 'money',
-          label: t('billingHub.tabs.money'),
-          icon: Wallet,
-          sections: [
-            {
-              id: 'wallet',
-              label: t('nav.wallet'),
-              source: BILLING_HUB_SOURCES.wallet,
-              render: () => <WalletContainer />,
-            },
-            {
-              id: 'referrals',
-              label: t('nav.referrals'),
-              source: BILLING_HUB_SOURCES.referrals,
-              render: () => <ReferralsContainer />,
-            },
-          ],
-        },
-      ]}
-    />
+    <div data-guide="billing-page">
+      <PageHub
+        lookId="billing"
+        label={t('nav.billing')}
+        sectionsLabel={t('billingHub.sectionsLabel')}
+        loadingLabel={t('billingHub.loading')}
+        tabs={[
+          {
+            id: 'plan',
+            label: t('billingHub.tabs.plan'),
+            icon: CreditCard,
+            sections: [{ id: 'plan', label: t('nav.billing'), render: () => <BillingContainer /> }],
+          },
+          {
+            id: 'money',
+            label: t('billingHub.tabs.money'),
+            icon: Wallet,
+            sections: [
+              {
+                id: 'wallet',
+                label: t('nav.wallet'),
+                source: BILLING_HUB_SOURCES.wallet,
+                render: () => <WalletContainer />,
+              },
+              {
+                id: 'referrals',
+                label: t('nav.referrals'),
+                source: BILLING_HUB_SOURCES.referrals,
+                render: () => <ReferralsContainer />,
+              },
+            ],
+          },
+        ]}
+      />
+    </div>
   )
 }

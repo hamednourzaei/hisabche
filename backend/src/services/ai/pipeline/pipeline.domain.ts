@@ -70,8 +70,6 @@ export const PIPELINE_STAGES = [
 ] as const
 export type PipelineStage = (typeof PIPELINE_STAGES)[number]
 
-/** The currency every money route of this product falls back to. Shown in the diff. */
-export const DEFAULT_CURRENCY = 'AFN'
 /** No answer set, however large the business, offers more choices than this. */
 export const MAX_OPTIONS = 6
 
@@ -584,12 +582,14 @@ export function plan(
   operation: PipelineOperation,
   draft: PipelineDraft,
   facts: PipelineFacts,
+  /** The workspace's books currency — the fallback when nobody named one. */
+  booksCurrency: string,
 ): PipelinePlan {
   switch (operation) {
     case 'create_invoice':
-      return planInvoice(draft, facts)
+      return planInvoice(draft, facts, booksCurrency)
     case 'register_payment':
-      return planPayment(draft, facts)
+      return planPayment(draft, facts, booksCurrency)
     case 'create_customer':
       return planNewCustomer(draft, facts)
     case 'update_customer':
@@ -597,7 +597,11 @@ export function plan(
   }
 }
 
-function planInvoice(draft: PipelineDraft, facts: PipelineFacts): PipelinePlan {
+function planInvoice(
+  draft: PipelineDraft,
+  facts: PipelineFacts,
+  booksCurrency: string,
+): PipelinePlan {
   const lines = draft.items ?? []
   if (lines.length === 0) {
     return {
@@ -667,7 +671,7 @@ function planInvoice(draft: PipelineDraft, facts: PipelineFacts): PipelinePlan {
   if (questions.length > 0) return { kind: 'questions', questions }
 
   const customer = facts.customer.state === 'one' ? facts.customer.value : null
-  const currency = draft.currency ?? DEFAULT_CURRENCY
+  const currency = draft.currency ?? booksCurrency
   const warnings: ProposalWarning[] = []
   const changes: ProposalChange[] = [
     { entity: 'invoice', field: 'customer', from: null, to: customer?.fullName ?? null },
@@ -740,7 +744,11 @@ function planInvoice(draft: PipelineDraft, facts: PipelineFacts): PipelinePlan {
   }
 }
 
-function planPayment(draft: PipelineDraft, facts: PipelineFacts): PipelinePlan {
+function planPayment(
+  draft: PipelineDraft,
+  facts: PipelineFacts,
+  booksCurrency: string,
+): PipelinePlan {
   const questions: PipelineQuestion[] = []
   const customerAsk = customerQuestion(facts.customer)
   if (customerAsk) questions.push(customerAsk)
@@ -781,7 +789,7 @@ function planPayment(draft: PipelineDraft, facts: PipelineFacts): PipelinePlan {
   const lookup = facts.customer as { state: 'one'; value: PartyFact; exact: boolean }
   const customer = lookup.value
   const amount = draft.amount as number
-  const currency = draft.currency ?? DEFAULT_CURRENCY
+  const currency = draft.currency ?? booksCurrency
   const method = draft.method ?? 'cash'
   const warnings: ProposalWarning[] = []
   const owed = round2(open.reduce((sum, invoice) => sum + invoice.outstanding, 0))

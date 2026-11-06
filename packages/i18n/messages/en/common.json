@@ -2194,7 +2194,7 @@
     "name": "Product",
     "totalBuyValue": "Total purchase value",
     "totalSellValue": "Total sale value",
-    "totalValue": "Total value (AFN)",
+    "totalValue": "Total value",
     "actions": "Actions",
     "editWarehouse": "Edit warehouse",
     "currencyAFN": "Afghani",
@@ -4084,6 +4084,7 @@
     "aboutBusinessPlaceholder": "Tell us more about your business, if you like",
     "bookCurrencyLocked": "This business has financial documents; its books currency can no longer be changed.",
     "bookCurrencyFailed": "The chosen currency was not saved on the server. Try again from Settings.",
+    "currencyRequired": "Choose a currency.",
     "saveFailed": "Your business details were not saved. Check the connection and try again."
   },
   "status": {
@@ -6419,6 +6420,7 @@
     "new_hint": "The budget is saved as a draft and controls spending once approved.",
     "name": "Title",
     "pick_account": "Choose an account",
+    "pick_currency": "Choose a currency",
     "branch_all": "All branches",
     "starts_on": "Period start",
     "amount_total": "Total for the period",
@@ -6470,7 +6472,7 @@
     "currency_USD": "US dollar (USD)",
     "currency_PKR": "Pakistani rupee (PKR)",
     "currency_IRR": "Iranian rial (IRR)",
-    "currency_hint": "The amount is converted to afghani at this business's recorded rate on the period start and controlled in afghani; the entered amount and rate are kept.",
+    "currency_hint": "The amount is converted to {book} at this business's recorded rate on the period start and controlled in {book}; the entered amount and rate are kept.",
     "error_BUDGET_FX_RATE_MISSING": "No exchange rate is recorded for this currency on the period start. Record the rate first.",
     "no_access": "Your role does not have access to view budgets.",
     "total_row": "Total (approved)"
@@ -10657,6 +10659,7 @@
       "title": "Sessions",
       "scheduled": "Scheduled",
       "delivered": "Delivered",
+      "today": "Today",
       "awaiting": "Queued on this device",
       "cancelled": "Cancelled",
       "rejected": "Refused by the server"
@@ -10666,6 +10669,7 @@
       "allStatuses": "All statuses",
       "date": "Date",
       "allDates": "All dates",
+      "clear": "Clear filters",
       "today": "Today",
       "upcoming": "Upcoming",
       "past": "Past"
@@ -10728,7 +10732,9 @@
       "reason": "Reason it is free",
       "clientNotes": "Note for the customer",
       "search": "Search…",
-      "noResults": "Nothing found"
+      "noResults": "Nothing found",
+      "pickCustomer": "Choose a customer",
+      "pickService": "Choose a service"
     },
     "create": {
       "title": "New session",
@@ -10738,19 +10744,24 @@
       "dateRequired": "Enter the session date",
       "timeRequired": "Enter the start and end time",
       "endBeforeStart": "The end time must be after the start time",
-      "endDerived": "The end was worked out from the service duration; you can change it.",
+      "endDerived": "Worked out from the duration",
       "endUnknown": "This service has no readable duration; enter the end time yourself.",
       "invalidDuration": "That duration is not a valid session",
       "statusNote": "The session is saved as Scheduled.",
       "settlementDefaultHint": "This is only a default; the real settlement is chosen at delivery.",
       "noCustomers": "No customer has been added yet",
+      "howToCustomer": "No customer has been added yet — add one from the Customers page first.",
       "customersUnread": "The customer list could not be read",
       "noServices": "No service has been defined yet",
+      "howToService": "No service has been defined yet — in Inventory → Products, add a product with the «Service» type.",
       "servicesUnread": "The product and service list could not be read",
       "offeringTypeOffline": "Offering types are not stored on this device, so the service list looks empty. Go online to choose a service.",
       "noEmployees": "No employee has been added yet",
       "employeesUnread": "The employee list could not be read",
-      "noEmployeeAccess": "You cannot see the employee list; leave the practitioner empty."
+      "noEmployeeAccess": "You cannot see the employee list; leave the practitioner empty.",
+      "stepCustomerService": "Customer and service",
+      "stepWhen": "Time",
+      "moreSummary": "More — practitioner, branch, default settlement, note"
     },
     "deliver": {
       "title": "Deliver service",
@@ -11445,6 +11456,72 @@
     "badge": "User Guide",
     "next": "Next Step",
     "finish": "Got it",
-    "persistentTip": "Your progress is automatically saved"
+    "persistentTip": "Your progress is automatically saved",
+    "regionLabel": "Guide for this section",
+    "short": "Guide",
+    "dashboard": {
+      "overview": {
+        "title": "Your dashboard",
+        "desc": "The whole business at a glance: sales, customer debt and stock value. Every card opens the rows it was calculated from."
+      },
+      "kpis": {
+        "title": "Key figures",
+        "desc": "The four numbers that matter: total sales, sales in the selected range, customer debt and stock value. A green figure is growth on the previous period; a figure that could not be read stays blank instead of showing zero."
+      },
+      "chart": {
+        "title": "Sales chart",
+        "desc": "Sales over any range. Change the dates on this card, or switch to the funnel view to see how the same range converted, step by step."
+      }
+    },
+    "invoices": {
+      "list": {
+        "title": "All invoices",
+        "desc": "Sales and purchases in one table. Use the filter above the table to see only one kind, and open a row for its details and payments."
+      },
+      "new": {
+        "title": "New invoice",
+        "desc": "Create an invoice from here: customer, lines and amount. The server calculates the total and the profit, and an invoice made offline is saved and synced later."
+      },
+      "filters": {
+        "title": "Filters and status",
+        "desc": "Narrow the table by payment status, branch and warehouse, then export it as CSV. These filters change the view, never the data."
+      }
+    },
+    "customers": {
+      "overview": {
+        "title": "Customers",
+        "desc": "Everyone you trade with, with their phone number and balance. Search, or open a name to see the whole customer file."
+      },
+      "ledger": {
+        "title": "Balance and account history",
+        "desc": "A customer's debt comes from their unpaid invoices. Their file keeps invoices and payments apart, and that is where you record a payment."
+      }
+    },
+    "warehouse": {
+      "stock": {
+        "title": "Stock on hand",
+        "desc": "How much of each product sits in each warehouse. The products tab manages buying and selling prices; stock follows invoices and stock counts."
+      },
+      "costing": {
+        "title": "Value and cost of goods",
+        "desc": "The warehouse value is shown here. The cost of goods sold comes from your cost layers (FIFO or average), never from a product's current buy price."
+      }
+    },
+    "accounting": {
+      "trial": {
+        "title": "Trial balance",
+        "desc": "Debits and credits per account. If the two sides differ, one entry is out of balance — find it in the entries tab."
+      },
+      "journal": {
+        "title": "Entries and ledger",
+        "desc": "Post a manual entry, or read the ones sales and purchases created. Every posted entry can be reversed, and its history stays."
+      }
+    },
+    "billing": {
+      "plans": {
+        "title": "Subscription and wallet",
+        "desc": "Your current plan, renewal date and wallet balance. Referrals top up the wallet, and the wallet pays this bill."
+      }
+    }
   }
 }

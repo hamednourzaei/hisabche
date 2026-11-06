@@ -35,6 +35,7 @@
 // ============================================
 
 import { ForbiddenError } from '../../../errors/auth.error'
+import { baseCurrencyOf } from '../../base-currency'
 import { BaseError } from '../../../errors/base.error'
 import { ConflictError, NotFoundError } from '../../../errors/database.error'
 import { ValidationError } from '../../../errors/validation.error'
@@ -347,7 +348,7 @@ export class PipelineService {
       duplicates: facts.duplicates.length,
     })
 
-    const planned = plan(operation, draft, facts)
+    const planned = plan(operation, draft, facts, await baseCurrencyOf(ctx.workspaceId))
 
     if (planned.kind === 'questions') {
       await this.repo.addStep(run, 'ask', 'stopped', ctx.userId, {

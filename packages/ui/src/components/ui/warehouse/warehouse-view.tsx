@@ -19,7 +19,7 @@ import {
   LayoutGrid,
 } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
-import { BASE_CODE } from '../../../lib/warehouse/rate-from-pair'
+import { nameOfCurrency } from '../../../lib/currency-name'
 import { SelectField } from '../select-field'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -263,12 +263,15 @@ const CurrencyChips = memo(function CurrencyChips({
   fmt,
   currencies,
   totalValue,
+  bookCurrency,
   onOpenRate,
 }: {
   t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
   currencies: Currency[]
   totalValue: number | null
+  /** The books currency the total is already in — the chip's name, never «AFN». */
+  bookCurrency?: string | undefined
   /** `null` = «+», a new one. */
   onOpenRate: (code: string | null) => void
 }) {
@@ -281,9 +284,14 @@ const CurrencyChips = memo(function CurrencyChips({
       className="flex flex-wrap items-center gap-2 text-xs text-[hsl(var(--fg-secondary))]"
       data-currency-chips=""
     >
-      <span className={chip}>
-        {t('warehouse.currencyAFN', 'افغانی')}: {fmt(totalValue)}
-      </span>
+      {/* ⚠️ THIS SAID «افغانی» IN EVERY WORKSPACE. A gold business read its own
+          stock value under another currency's name — the same defect as the
+          «(AFN)» in the card, one line lower. */}
+      {bookCurrency ? (
+        <span className={chip}>
+          {nameOfCurrency(t, bookCurrency, bookCurrency)}: {fmt(totalValue)}
+        </span>
+      ) : null}
       {currencies.slice(0, MAX_CHIPS).map((c) => (
         <button
           key={c.code}
@@ -390,15 +398,24 @@ export const WarehouseView = memo(function WarehouseView({
   // ⚠️ عمداً از `text` استفاده شده (نه `amount`) چون BentoStats مقدار متنی
   // را هرگز compact نمی‌کند — عدد کامل در موبایل/تبلت/دسکتاپ ثابت می‌ماند
   // (مثلاً 27,820,000 AFN) و فقط اندازه‌ی فونت تغییر می‌کند.
-  // The unit «ارزش کل» is shown in — afghani, or any currency with a rate
-  // (owner's request: the «(AFN)» of the card should be selectable).
-  const [displayCode, setDisplayCode] = useState(BASE_CODE)
+  // The unit «ارزش کل» is shown in — the books currency, or any currency with a
+  // rate the person picked from the switcher.
+  //
+  // ⚠️ THE DEFAULT WAS THE LITERAL `BASE_CODE` ('AFN'). The card therefore
+  // offered an option whose value was 'AFN' and whose label was the books
+  // currency: a gold business saw one currency's name beside a number computed
+  // in another. «Not chosen yet» is now `null` and resolves to the books
+  // currency on every render, so it cannot survive a late `useBookCurrency()`
+  // either.
+  const [displayOverride, setDisplayOverride] = useState<string | null>(null)
+  const bookCode = bookCurrency ?? null
+  const displayCode = displayOverride ?? bookCode
   // ⚠️ The total is in the BOOKS' currency, so that is its name — a business
   // keeping its books in gold saw «AFN» on its own stock value (owner report).
-  const baseLabel = bookCurrency ?? '—'
-  const displayed = currencies.find((c) => c.code === displayCode)
+  const baseLabel = bookCurrency ? nameOfCurrency(t, bookCurrency, bookCurrency) : '—'
+  const displayed = displayCode ? currencies.find((c) => c.code === displayCode) : undefined
   const valueText =
-    displayCode === BASE_CODE || !displayed
+    displayCode === null || displayCode === bookCode || !displayed
       ? figure(summary?.totalValue)
       : isLoading || summary?.totalValue === undefined
         ? figure(summary?.totalValue)
@@ -413,14 +430,14 @@ export const WarehouseView = memo(function WarehouseView({
         icon: DollarSign,
         label: t('warehouse.totalValueShort', 'ارزش کل'),
         labelAddon:
-          currencies.length > 0 ? (
+          currencies.length > 0 || bookCode ? (
             <SelectField
               aria-label={t('warehouse.showIn', 'نمایش به')}
-              value={displayCode}
-              onChange={setDisplayCode}
+              value={displayCode ?? ''}
+              onChange={setDisplayOverride}
               options={[
-                { value: BASE_CODE, label: baseLabel },
-                ...currencies.map((c) => ({ value: c.code, label: c.code })),
+                ...(bookCode ? [{ value: bookCode, label: baseLabel }] : []),
+                ...currencies.map((c) => ({ value: c.code, label: c.label })),
               ]}
               // Currency-code sized (owner's request, 27 Sep 2026): SelectField is
               // full-width by default and pushed the label «ارزش کل» to «ارز…».
@@ -450,7 +467,7 @@ export const WarehouseView = memo(function WarehouseView({
         text: figure(summary?.outOfStockCount),
       },
     ],
-    [t, fmt, summary, isLoading, currencies, displayCode, valueText],
+    [t, fmt, summary, isLoading, currencies, displayCode, valueText, bookCode, baseLabel],
   )
 
   const showEmptyState = !isLoading && products.length === 0
@@ -483,6 +500,7 @@ export const WarehouseView = memo(function WarehouseView({
         fmt={fmt}
         currencies={currencies}
         totalValue={summary?.totalValue ?? null}
+        bookCurrency={bookCurrency}
         onOpenRate={onOpenRate}
       />
 

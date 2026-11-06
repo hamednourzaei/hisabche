@@ -25,7 +25,7 @@ import {
   parseDraft,
   parseIntent,
   pickOne,
-  plan,
+  plan as planWithBooks,
   readBackCall,
   sameName,
   toHttpCall,
@@ -36,6 +36,12 @@ import {
   type PipelinePlan,
   type ProductFact,
 } from '../services/ai/pipeline/pipeline.domain'
+
+// The workspace under test keeps its books in AFN — passed explicitly, the
+// way the service reads it from `workspaces.base_currency`.
+type PlanArgs = Parameters<typeof planWithBooks>
+const plan = (operation: PlanArgs[0], draft: PlanArgs[1], facts: PlanArgs[2]) =>
+  planWithBooks(operation, draft, facts, 'AFN')
 
 const AHMAD: PartyFact = {
   id: '11111111-1111-4111-8111-111111111111',

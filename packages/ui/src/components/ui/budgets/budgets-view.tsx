@@ -44,6 +44,8 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatSelectedMoney } from '../../../lib/money-display'
 import { formatMoney } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
+import { nameOfCurrency } from '../../../lib/currency-name'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { SegmentedControl } from '../segmented-control'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../sheet'
@@ -1228,7 +1230,22 @@ function CreateBudget({
   const [amountMinor, setAmountMinor] = useState(0)
   // The currency the amount is TYPED in. The server converts to the ledger's
   // base currency at the workspace's own rate for the period start.
-  const [currency, setCurrency] = useState<'AFN' | 'USD' | 'PKR' | 'IRR'>('AFN')
+  //
+  // ⚠️ THERE IS NO DEFAULT. The entry used to initialise to AFN whenever the
+  // books currency had not landed, so a gold-shop budget typed in AFN with
+  // nobody choosing it. The stored contract (`docs/budget-currency-migration.sql`
+  // CHECK constraint + `SaveBudgetInput`) is exactly these four entering
+  // currencies — offering any other code would send a row the database
+  // refuses. The books currency is what the field starts on when it is one of
+  // them; a gold business keeps nothing chosen until someone picks.
+  const bookCurrency = useBookCurrency()
+  const enteringCodes = ['AFN', 'USD', 'PKR', 'IRR'] as const
+  type EnteringCode = (typeof enteringCodes)[number]
+  const isEnteringCode = (code: string | undefined): code is EnteringCode =>
+    code !== undefined && (enteringCodes as readonly string[]).includes(code)
+  const [chosenCurrency, setChosenCurrency] = useState<EnteringCode | null>(null)
+  const currency: EnteringCode | undefined =
+    chosenCurrency ?? (isEnteringCode(bookCurrency) ? bookCurrency : undefined)
   const intlLocale = useIntlLocale()
   const [action, setAction] = useState<BudgetAction>('warn')
   const [warnAtPercent, setWarnAtPercent] = useState(80)
@@ -1249,6 +1266,9 @@ function CreateBudget({
   const valid =
     accountId !== '' &&
     amountMinor >= 0 &&
+    // A budget with no currency cannot be stored. Better to keep the button
+    // disabled than create one nobody chose.
+    currency !== undefined &&
     /^\d{4}-\d{2}-\d{2}$/.test(startsOn) &&
     (!custom || bpTotal === 10_000)
 
@@ -1316,24 +1336,27 @@ function CreateBudget({
       </div>
       <SelectField
         label={t('budgets.currency', 'ارز بودجه')}
-        value={currency}
-        onChange={(v) => setCurrency(v as typeof currency)}
-        options={(['AFN', 'USD', 'PKR', 'IRR'] as const).map((code) => ({
+        value={currency ?? ''}
+        onChange={(value) => setChosenCurrency(value as EnteringCode)}
+        placeholder={t('budgets.pick_currency', 'یک واحد پول انتخاب کنید')}
+        options={enteringCodes.map((code) => ({
           value: code,
-          label: t(`budgets.currency_${code}`, code),
+          label: nameOfCurrency(t, code, code),
         }))}
         disabled={isBusy}
       />
-      {currency !== 'AFN' ? (
+      {bookCurrency !== undefined && currency !== undefined && currency !== bookCurrency ? (
         <p className="-mt-2 text-xs text-[hsl(var(--fg-tertiary))]">
           {t(
             'budgets.currency_hint',
-            'مبلغ با نرخ ثبت‌شده‌ی همین کسب‌وکار در تاریخ شروع دوره به افغانی تبدیل و کنترل می‌شود؛ مبلغ و نرخ اصلی نگهداری می‌شوند.',
-          )}
+            'مبلغ با نرخ ثبت‌شده‌ی همین کسب‌وکار در تاریخ شروع دوره به {book} تبدیل و کنترل می‌شود؛ مبلغ و نرخ اصلی نگهداری می‌شوند.',
+          ).replace('{book}', nameOfCurrency(t, bookCurrency, bookCurrency))}
         </p>
       ) : null}
       <MinorInput
-        label={`${t('budgets.amount_total', 'مبلغ کل دوره')} (${currency})`}
+        label={`${t('budgets.amount_total', 'مبلغ کل دوره')}${
+          currency ? ` (${nameOfCurrency(t, currency, currency)})` : ''
+        }`}
         value={amountMinor}
         onChange={setAmountMinor}
         disabled={isBusy}
@@ -1411,7 +1434,7 @@ function CreateBudget({
         <p className="mt-1">
           {t('budgets.amount_total', 'مبلغ کل دوره')}:{' '}
           <span dir="ltr" className="tabular-nums font-medium">
-            {formatMoney(amountMinor / 100, currency, intlLocale)}
+            {currency ? formatMoney(amountMinor / 100, currency, intlLocale) : '—'}
           </span>{' '}
           · {t(`budgets.action_${action}`, action)} · {t('budgets.status_draft', 'پیش‌نویس')}
         </p>
@@ -1439,7 +1462,8 @@ function CreateBudget({
             isActive: true,
             name: name.trim() || null,
             type,
-            currency,
+            // Must be present or the button does nothing: `valid` gates on it.
+            ...(currency ? { currency } : {}),
             distributionWeightsBp: custom && months > 1 ? bp : null,
           })
         }

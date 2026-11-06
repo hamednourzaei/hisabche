@@ -270,7 +270,7 @@ const InvoicesHeader = memo(function InvoicesHeader({
   return (
     // Title and action stay on one row at every width — on mobile the button
     // sits opposite the title rather than pushing the table down.
-    <div className="flex flex-row items-start justify-between gap-3">
+    <div className="flex flex-row items-start justify-between gap-3" data-guide="invoices-create">
       <div className="min-w-0 space-y-1">
         <h1 className="truncate text-xl font-bold sm:text-2xl lg:text-3xl text-[hsl(var(--fg-primary))]">
           {t('nav.getPaid', 'دریافت پول')}
@@ -604,10 +604,13 @@ export const InvoicesView = memo(function InvoicesView({
   }
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6" data-guide="invoices-page">
       <InvoicesHeader t={t} onNewInvoice={onNewInvoice} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div
+        className="flex flex-wrap items-center justify-between gap-3"
+        data-guide="invoices-filters"
+      >
         {/* Drawn under the hub's tabs (`branch`), not in this row. */}
         <TypeFilter t={t} value={typeFilter} onChange={onTypeFilterChange} />
         <div className="ms-auto flex flex-wrap items-center gap-2">

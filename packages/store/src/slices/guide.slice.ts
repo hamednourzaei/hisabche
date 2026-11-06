@@ -29,6 +29,8 @@ export interface GuideStoreState {
   setActiveStep: (stepId: string | null) => void
   dismissSession: () => void
   mergeRemoteProgress: (remoteSteps: Record<string, GuideStepState>) => void
+  /** Forget one page's steps, so its guide can be read again. Other pages keep theirs. */
+  resetRouteProgress: (routeId: string) => void
   resetProgress: () => void
 }
 
@@ -83,6 +85,13 @@ export const useGuideStore = create<GuideStoreState>()(
         set({ completedSteps: merged })
       },
 
+      resetRouteProgress: (routeId: string) => {
+        const remaining = Object.fromEntries(
+          Object.entries(get().completedSteps).filter(([, value]) => value.routeId !== routeId),
+        )
+        set({ completedSteps: remaining })
+      },
+
       resetProgress: () => {
         set({ completedSteps: {}, activeStepId: null, dismissedForSession: false })
       },
@@ -99,6 +108,26 @@ export const useGuideStore = create<GuideStoreState>()(
           removeItem: () => {},
         }
       }),
+      // ⚠️ ONLY THE PROGRESS IS PERSISTED. `dismissedForSession` says «not now»
+      // for THIS visit; storing it would hide the guide for good after the first
+      // close, and the next login would never be taught anything.
+      partialize: (state) => ({
+        version: state.version,
+        completedSteps: state.completedSteps,
+      }),
+      // Read the same two fields back, and ignore anything else an older
+      // stored copy may carry (such as a forgotten `dismissedForSession: true`).
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as {
+          version?: string
+          completedSteps?: Record<string, GuideStepState>
+        }
+        return {
+          ...current,
+          version: saved.version ?? current.version,
+          completedSteps: saved.completedSteps ?? {},
+        }
+      },
     },
   ),
 )

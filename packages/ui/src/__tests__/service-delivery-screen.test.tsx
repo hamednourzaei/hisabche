@@ -91,6 +91,7 @@ function renderView(overrides: Partial<Parameters<typeof ServiceDeliveryView>[0]
       t={t}
       rows={rows}
       summary={summarizeSessions(rows)}
+      today={0}
       isLoading={false}
       error={null}
       onRetry={vi.fn()}
@@ -171,12 +172,15 @@ describe('the list shows what the row carries', () => {
       row({ id: 'b', status: 'delivered', sync: 'pending' }),
       row({ id: 'c', status: 'cancelled', sync: 'rejected' }),
     ]
-    // The screen is showing ONE filtered row, the summary still counts three.
+    // The screen is showing ONE filtered row, the summary still counts three —
+    // and «today» is a fourth card, backed by the caller's count.
     await act(async () => {
-      renderView({ rows: [all[0]!], summary: summarizeSessions(all) })
+      renderView({ rows: [all[0]!], summary: summarizeSessions(all), today: 1 })
     })
     const counts = [...document.querySelectorAll('dl dd')].map((node) => node.textContent)
-    expect(counts.slice(0, 5)).toEqual(['1', '1', '1', '1', '1'])
+    // Scheduled · today · delivered · cancelled — the two device-queue counts
+    // (awaiting / rejected) are NOT cards any more; they are one line each.
+    expect(counts).toEqual(['1', '1', '1', '1'])
   })
 })
 

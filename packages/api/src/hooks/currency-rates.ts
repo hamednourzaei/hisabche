@@ -270,8 +270,12 @@ export function useSetBaseCurrency() {
       const { data } = await apiClient.put<BaseCurrency>('/finance/currency/base', { currency })
       return data
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(baseCurrencyKeys.all, data)
+    onSuccess: () => {
+      // ⚠️ THE KEY CARRIES THE WORKSPACE. Writing `['base-currency']` here set a
+      // cache entry nothing reads — the query is keyed `[...all, workspaceId]`,
+      // so every screen kept the old currency until a full reload. Invalidating
+      // the prefix refreshes the real entry (and any workspace) instead.
+      void queryClient.invalidateQueries({ queryKey: baseCurrencyKeys.all })
     },
   })
 }

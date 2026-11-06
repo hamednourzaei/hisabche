@@ -563,87 +563,91 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     : `${t('dashboard.vsPrevious', 'نسبت به')} ${rangeDays} ${t('dashboard.daysBefore', 'روز قبل')}`
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6" data-guide="dashboard-page">
       {/* Level 1: Context — always first; it names the page, not a section. */}
-      <Greeting t={t} />
+      <div data-guide="dashboard-overview">
+        <Greeting t={t} />
+      </div>
 
       {/* Level 2: KPI cards — `KpiGrid`, the same row `/invoices`,
           `/warehouse` and `/customers` draw. A local grid here is what made
           the dashboard look like a different page. */}
       <div style={{ order: orderOf('kpis') }}>
         {show?.kpis === false ? null : (
-          <KpiGrid>
-            {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
+          <div data-guide="dashboard-kpis">
+            <KpiGrid>
+              {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
-            {/* H1 — every figure opens the rows it was computed from.
+              {/* H1 — every figure opens the rows it was computed from.
             `invoiceListHref` and the list's own parser come from one table
             (invoice-filter-link.ts), so a card cannot link to a filter the
             list ignores. */}
-            {hiddenFigures.includes('sales') ? null : (
-              <KpiCard
-                icon={TrendingUp}
-                label={t('dashboard.totalSales', 'فروش کل')}
-                value={fmt(totalSales)}
-                delta={monthlyGrowth ?? null}
-                deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
-                showEmptyDelta
-                isLoading={kpiLoading}
-                onOpen={() => onNavigate(invoiceListHref('totalSales'))}
-                openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
-              />
-            )}
-            {hiddenFigures.includes('sales') ? null : (
-              <KpiCard
-                icon={Wallet}
-                label={rangeLabel}
-                value={fmt(rangeSalesTotal ?? 0)}
-                delta={rangeChange}
-                {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
-                showEmptyDelta
-                isLoading={rangeLoading || rangeSalesTotal === null}
-                onOpen={() =>
-                  onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))
-                }
-                openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
-              />
-            )}
-            {hiddenFigures.includes('customers') ? null : (
-              <KpiCard
-                icon={CreditCard}
-                label={t('dashboard.customerDebt', 'بدهی مشتریان')}
-                value={fmt(customerDebt)}
-                delta={null}
-                // ⚠️ Debt is the one card here where rising is BAD. It carries no
-                // comparison today, so nothing is coloured — but the flag is set so
-                // a future delta cannot inherit «up is green».
-                invertDelta
-                showEmptyDelta
-                isLoading={kpiLoading}
-                onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
-                openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
-              />
-            )}
-            {hiddenFigures.includes('stockValue') ? null : (
-              <KpiCard
-                icon={Boxes}
-                label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
-                value={fmt(warehouseValue)}
-                delta={null}
-                showEmptyDelta
-                isLoading={kpiLoading}
-                onOpen={() => onNavigate('/warehouse')}
-                openLabel={t('dashboard.openWarehouse', 'انبار')}
-              />
-            )}
-          </KpiGrid>
+              {hiddenFigures.includes('sales') ? null : (
+                <KpiCard
+                  icon={TrendingUp}
+                  label={t('dashboard.totalSales', 'فروش کل')}
+                  value={fmt(totalSales)}
+                  delta={monthlyGrowth ?? null}
+                  deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
+                  showEmptyDelta
+                  isLoading={kpiLoading}
+                  onOpen={() => onNavigate(invoiceListHref('totalSales'))}
+                  openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
+                />
+              )}
+              {hiddenFigures.includes('sales') ? null : (
+                <KpiCard
+                  icon={Wallet}
+                  label={rangeLabel}
+                  value={fmt(rangeSalesTotal ?? 0)}
+                  delta={rangeChange}
+                  {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
+                  showEmptyDelta
+                  isLoading={rangeLoading || rangeSalesTotal === null}
+                  onOpen={() =>
+                    onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))
+                  }
+                  openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
+                />
+              )}
+              {hiddenFigures.includes('customers') ? null : (
+                <KpiCard
+                  icon={CreditCard}
+                  label={t('dashboard.customerDebt', 'بدهی مشتریان')}
+                  value={fmt(customerDebt)}
+                  delta={null}
+                  // ⚠️ Debt is the one card here where rising is BAD. It carries no
+                  // comparison today, so nothing is coloured — but the flag is set so
+                  // a future delta cannot inherit «up is green».
+                  invertDelta
+                  showEmptyDelta
+                  isLoading={kpiLoading}
+                  onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
+                  openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
+                />
+              )}
+              {hiddenFigures.includes('stockValue') ? null : (
+                <KpiCard
+                  icon={Boxes}
+                  label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
+                  value={fmt(warehouseValue)}
+                  delta={null}
+                  showEmptyDelta
+                  isLoading={kpiLoading}
+                  onOpen={() => onNavigate('/warehouse')}
+                  openLabel={t('dashboard.openWarehouse', 'انبار')}
+                />
+              )}
+            </KpiGrid>
+          </div>
         )}
       </div>
 
       {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
       <div className="flex flex-col gap-4 sm:gap-6">
         {show?.chart === false ? null : (
-          <div style={{ order: orderOf('chart') }}>
+          <div style={{ order: orderOf('chart') }} data-guide="dashboard-chart">
             <div
               className={cn(
                 'rounded-2xl border border-[hsl(var(--border-default))]',

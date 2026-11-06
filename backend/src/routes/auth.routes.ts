@@ -319,6 +319,18 @@ export async function authRoutes(fastify: FastifyInstance) {
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
+                // ⚠️ THE SERVER'S ONBOARDING ANSWER MUST SURVIVE SERIALIZATION.
+                //
+                // These four were computed by `sanitizeUser` (and are the only
+                // authoritative record of whether the wizard ran) but were
+                // never named here — so fast-json-stringify dropped them, the
+                // client fell back to its localStorage flag, and a second
+                // account on the same browser inherited «completed» and never
+                // saw the wizard. Undeclared is dropped; declared is the fix.
+                onboardingCompleted: z.boolean(),
+                businessTypes: z.array(z.string()),
+                storeSize: z.string().nullable(),
+                businessNote: z.string().nullable(),
               }),
               token: z.string(),
               // ⚠️ DECLARED, OR DROPPED: without these two the login answer
@@ -504,6 +516,13 @@ export async function authRoutes(fastify: FastifyInstance) {
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
+                // ⚠️ THE SERVER'S ONBOARDING ANSWER MUST SURVIVE SERIALIZATION.
+                // Undeclared is dropped — the client then guessed from its own
+                // localStorage whether the wizard had run.
+                onboardingCompleted: z.boolean(),
+                businessTypes: z.array(z.string()),
+                storeSize: z.string().nullable(),
+                businessNote: z.string().nullable(),
               }),
               token: z.string(),
               // ⚠️ DECLARED, OR DROPPED: the login answer never carried a
@@ -648,6 +667,13 @@ export async function authRoutes(fastify: FastifyInstance) {
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
+                // ⚠️ THE SERVER'S ONBOARDING ANSWER MUST SURVIVE SERIALIZATION.
+                // `/auth/me` is what refreshes the cached user after a reload,
+                // so a dropped field here means the client never learns.
+                onboardingCompleted: z.boolean(),
+                businessTypes: z.array(z.string()),
+                storeSize: z.string().nullable(),
+                businessNote: z.string().nullable(),
               }),
             }),
           ),
@@ -761,6 +787,12 @@ export async function authRoutes(fastify: FastifyInstance) {
                 avatarUrl: z.string().nullable(),
                 createdAt: z.string().datetime(),
                 businessTypes: z.array(z.string()),
+                // ⚠️ THE SERVER'S ONBOARDING ANSWER MUST SURVIVE SERIALIZATION.
+                // The client merges this answer over its cached user; a dropped
+                // flag left it trusting the localStorage one.
+                onboardingCompleted: z.boolean(),
+                storeSize: z.string().nullable(),
+                businessNote: z.string().nullable(),
               }),
             }),
           ),

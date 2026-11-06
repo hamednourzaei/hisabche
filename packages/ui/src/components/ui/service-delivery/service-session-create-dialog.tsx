@@ -24,7 +24,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { CalendarPlus } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { apiErrorFields, useCreateServiceDeliverySession } from '@hisabche/api'
 import { calculateSessionDurationMinutes } from '@hisabche/validation'
 import { toIsoDay } from '@hisabche/formatting'
@@ -225,127 +225,158 @@ function CreateBody({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-3">
-        <SelectInput
-          label={tr('serviceDelivery.fields.customer', 'مشتری')}
-          name="customerId"
-          value={customerId}
-          onChange={setCustomerId}
-          options={customerOptions}
-          error={invalid('customerId')}
-          searchable
-          searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
-          noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
-          {...(customerHint ? { hint: customerHint } : {})}
-        />
-
-        <SelectInput
-          label={tr('serviceDelivery.fields.service', 'خدمت')}
-          name="serviceOfferingId"
-          value={serviceOfferingId}
-          onChange={setServiceOfferingId}
-          options={serviceOptions}
-          error={invalid('serviceOfferingId')}
-          searchable
-          searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
-          noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
-          {...(serviceHint ? { hint: serviceHint } : {})}
-        />
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Labeled
-            label={tr('serviceDelivery.fields.date', 'تاریخ')}
-            error={invalid('sessionDate')}
-          >
-            <JalaliDatePicker
-              value={sessionDate}
-              onChange={setSessionDate}
-              className="w-full"
-              data-field="sessionDate"
-            />
-          </Labeled>
-          <TimeInput
-            label={tr('serviceDelivery.fields.startTime', 'ساعت شروع')}
-            name="startTime"
-            value={startTime}
-            onChange={setStartTime}
-            error={invalid('startTime')}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <NumberField
-              label={tr('serviceDelivery.fields.duration', 'مدت (دقیقه)')}
-              value={durationMinutes}
-              onChange={setDurationMinutes}
-              min={5}
-              max={1440}
-            />
-            {invalid('durationMinutes') ? (
-              <span role="alert" className="block text-xs text-[hsl(var(--color-destructive))]">
-                {invalid('durationMinutes')}
-              </span>
-            ) : null}
-          </div>
-          <Labeled
-            label={tr('serviceDelivery.fields.endTime', 'ساعت پایان')}
-            hint={tr('serviceDelivery.create.endDerived', 'از مدت محاسبه می‌شود')}
-          >
-            <p
-              dir="ltr"
-              data-session-end-time={endTime ?? 'invalid'}
-              className="h-10 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-3 pt-2.5 text-sm tabular-nums"
-            >
-              {endTime ?? tr('serviceDelivery.create.endUnknown', '—')}
-            </p>
-          </Labeled>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-5">
+        {/* THE THREE GROUPS SAY WHAT IS A FIELD AND WHAT IS AN OPTION. A form
+            that mixes «who is this for», the clock and what happens at
+            settlement into one scroll is what made the dialog feel like it had
+            nowhere to choose from. */}
+        <fieldset className="space-y-2.5">
+          <legend className="text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
+            {tr('serviceDelivery.create.stepCustomerService', 'مشتری و خدمت')}
+          </legend>
           <SelectInput
-            label={tr('serviceDelivery.fields.practitioner', 'مجری')}
-            name="practitionerId"
-            value={practitionerId}
-            onChange={setPractitionerId}
-            options={practitionerOptions}
-            placeholder={tr('serviceDelivery.fields.none', 'بدون مجری')}
+            label={tr('serviceDelivery.fields.customer', 'مشتری')}
+            name="customerId"
+            value={customerId}
+            onChange={setCustomerId}
+            options={customerOptions}
+            error={invalid('customerId')}
             searchable
-            {...(practitionerHint ? { hint: practitionerHint } : {})}
+            searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
+            noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
+            placeholder={tr('serviceDelivery.fields.pickCustomer', 'یک مشتری انتخاب کنید')}
+            {...(customerHint ? { hint: customerHint } : {})}
           />
-          {hasBranches ? (
-            <SelectInput
-              label={tr('serviceDelivery.fields.branch', 'شعبه')}
-              name="branchId"
-              value={branchId}
-              onChange={setBranchId}
-              options={branchOptions}
-              placeholder={tr('serviceDelivery.fields.noBranch', 'بدون شعبه')}
+
+          <SelectInput
+            label={tr('serviceDelivery.fields.service', 'خدمت')}
+            name="serviceOfferingId"
+            value={serviceOfferingId}
+            onChange={setServiceOfferingId}
+            options={serviceOptions}
+            error={invalid('serviceOfferingId')}
+            searchable
+            searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
+            noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
+            placeholder={tr('serviceDelivery.fields.pickService', 'یک خدمت انتخاب کنید')}
+            {...(serviceHint ? { hint: serviceHint } : {})}
+          />
+        </fieldset>
+
+        <fieldset className="space-y-2.5">
+          <legend className="text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
+            {tr('serviceDelivery.create.stepWhen', 'زمان')}
+          </legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Labeled
+              label={tr('serviceDelivery.fields.date', 'تاریخ')}
+              error={invalid('sessionDate')}
+            >
+              <JalaliDatePicker
+                value={sessionDate}
+                onChange={setSessionDate}
+                className="w-full"
+                data-field="sessionDate"
+              />
+            </Labeled>
+            <TimeInput
+              label={tr('serviceDelivery.fields.startTime', 'ساعت شروع')}
+              name="startTime"
+              value={startTime}
+              onChange={setStartTime}
+              error={invalid('startTime')}
             />
-          ) : null}
-        </div>
+          </div>
 
-        <SelectInput
-          label={tr('serviceDelivery.fields.defaultSettlement', 'تسویه‌ی پیش‌فرض')}
-          name="settlementMethod"
-          value={settlementMethod}
-          onChange={(value) => setSettlementMethod(value as SettlementMethod)}
-          options={settlementOptions}
-          hint={tr(
-            'serviceDelivery.create.settlementDefaultHint',
-            'هنگام تحویل می‌توانید تسویه را عوض کنید؛ مبلغ یا اعتباری الان ثبت نمی‌شود.',
-          )}
-        />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <NumberField
+                label={tr('serviceDelivery.fields.duration', 'مدت (دقیقه)')}
+                value={durationMinutes}
+                onChange={setDurationMinutes}
+                min={5}
+                max={1440}
+              />
+              {invalid('durationMinutes') ? (
+                <span role="alert" className="block text-xs text-[hsl(var(--color-destructive))]">
+                  {invalid('durationMinutes')}
+                </span>
+              ) : null}
+            </div>
+            <Labeled
+              label={tr('serviceDelivery.fields.endTime', 'ساعت پایان')}
+              hint={tr('serviceDelivery.create.endDerived', 'از مدت حساب می‌شود')}
+            >
+              <p
+                dir="ltr"
+                data-session-end-time={endTime ?? 'invalid'}
+                className="h-10 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-3 pt-2.5 text-sm tabular-nums"
+              >
+                {endTime ?? tr('serviceDelivery.create.endUnknown', '—')}
+              </p>
+            </Labeled>
+          </div>
+        </fieldset>
 
-        <Labeled label={tr('serviceDelivery.fields.clientNotes', 'یادداشت برای مشتری')}>
-          <textarea
-            name="clientNotes"
-            value={clientNotes}
-            onChange={(event) => setClientNotes(event.target.value)}
-            rows={2}
-            className="w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-sm"
-          />
-        </Labeled>
+        {/* Everything that can be left alone. On a phone these are a tall
+            scroll away; hiding them behind «بیشتر» makes the two decisions
+            that actually have to be made the ones on screen. */}
+        <details className="group rounded-xl border border-[hsl(var(--border-default))]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))]">
+            <span>
+              {tr(
+                'serviceDelivery.create.moreSummary',
+                'بیشتر — مجری، شعبه، تسویه‌ی پیش‌فرض، یادداشت',
+              )}
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+            />
+          </summary>
+          <div className="space-y-3 border-t border-[hsl(var(--border-default))] px-3 pb-3 pt-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SelectInput
+                label={tr('serviceDelivery.fields.practitioner', 'مجری')}
+                name="practitionerId"
+                value={practitionerId}
+                onChange={setPractitionerId}
+                options={practitionerOptions}
+                placeholder={tr('serviceDelivery.fields.none', 'بدون مجری')}
+                searchable
+                {...(practitionerHint ? { hint: practitionerHint } : {})}
+              />
+              {hasBranches ? (
+                <SelectInput
+                  label={tr('serviceDelivery.fields.branch', 'شعبه')}
+                  name="branchId"
+                  value={branchId}
+                  onChange={setBranchId}
+                  options={branchOptions}
+                  placeholder={tr('serviceDelivery.fields.noBranch', 'بدون شعبه')}
+                />
+              ) : null}
+            </div>
+
+            <SelectInput
+              label={tr('serviceDelivery.fields.defaultSettlement', 'تسویه‌ی پیش‌فرض')}
+              name="settlementMethod"
+              value={settlementMethod}
+              onChange={(value) => setSettlementMethod(value as SettlementMethod)}
+              options={settlementOptions}
+            />
+
+            <Labeled label={tr('serviceDelivery.fields.clientNotes', 'یادداشت برای مشتری')}>
+              <textarea
+                name="clientNotes"
+                value={clientNotes}
+                onChange={(event) => setClientNotes(event.target.value)}
+                rows={2}
+                className="w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-sm"
+              />
+            </Labeled>
+          </div>
+        </details>
 
         {refusalKey && !refusalField ? (
           <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
@@ -360,11 +391,7 @@ function CreateBody({
         ) : null}
       </div>
 
-      <DialogFooter className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-          <CalendarPlus aria-hidden="true" className="me-1 inline size-3" />
-          {tr('serviceDelivery.create.statusNote', 'وضعیت پس از ساخت: زمان‌بندی‌شده')}
-        </p>
+      <DialogFooter className="flex items-center justify-end gap-2">
         <div className="flex gap-2">
           <Button variant="outline" onClick={onClose} disabled={create.isPending}>
             {tr('serviceDelivery.actions.close', 'بستن')}

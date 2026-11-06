@@ -187,7 +187,7 @@ function WarehouseHub() {
   }, [oldMapAddress, mapWarehouse, localeReplace])
 
   return (
-    <div className="relative space-y-4">
+    <div className="relative space-y-4" data-guide="warehouse-page">
       <RegisterCustomizer
         groups={[
           {

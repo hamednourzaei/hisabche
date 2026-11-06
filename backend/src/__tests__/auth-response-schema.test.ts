@@ -189,6 +189,42 @@ describe('the generated schema, for the shape that actually broke', () => {
   })
 })
 
+describe('the onboarding answer reaches the client', () => {
+  // ---------------------------------------------------------------------------
+  // ⚠️ WHAT THIS GUARDS.
+  //
+  // `sanitizeUser` computed all four of these, and none of the four response
+  // schemas named them — so fast-json-stringify dropped them and the dashboard
+  // gate fell back to `useOnboardingStore.isCompleted`, a localStorage flag.
+  // A second account on the same browser therefore inherited «completed» from
+  // the first, never saw the wizard, and its workspace kept the default
+  // currency and no industry.
+  //
+  // Four user objects are serialized: signup, login, /auth/me and
+  // PATCH /auth/profile. Every one of them must name every field, or the
+  // browser silently goes back to guessing.
+  // ---------------------------------------------------------------------------
+  it('⚠️ every user response names onboardingCompleted', () => {
+    expect(source.match(/onboardingCompleted: z\.boolean\(\)/g)?.length).toBe(4)
+  })
+
+  it('⚠️ every user response names businessTypes', () => {
+    expect(source.match(/businessTypes: z\.array\(z\.string\(\)\)/g)?.length).toBe(4)
+  })
+
+  it('⚠️ storeSize and businessNote keep their null', () => {
+    expect(source.match(/storeSize: z\.string\(\)\.nullable\(\)/g)?.length).toBe(4)
+    expect(source.match(/businessNote: z\.string\(\)\.nullable\(\)/g)?.length).toBe(4)
+  })
+
+  it('the values are the profile row, not a default', () => {
+    // `Boolean(...)` is the honest conversion of the timestamp; a `?? false`
+    // beside it would read the same and mean «unknown» as «not done».
+    expect(source).toMatch(/onboardingCompleted: Boolean\(profile\?\.onboarding_completed_at\)/)
+    expect(source).toMatch(/businessTypes: profile\?\.business_types \?\? \[\]/)
+  })
+})
+
 // ─────────────────────────────────────────────────────────────────────────────
 // The role the header renders.
 // ─────────────────────────────────────────────────────────────────────────────

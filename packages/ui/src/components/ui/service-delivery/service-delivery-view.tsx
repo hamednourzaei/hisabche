@@ -20,7 +20,15 @@
 // ============================================
 
 import { memo } from 'react'
-import { CalendarClock, CircleSlash, CloudOff, Plus, RefreshCw, TriangleAlert } from 'lucide-react'
+import {
+  CalendarClock,
+  CircleSlash,
+  CloudOff,
+  Plus,
+  RefreshCw,
+  TriangleAlert,
+  X,
+} from 'lucide-react'
 
 import {
   ActionButton,
@@ -123,6 +131,8 @@ export interface ServiceDeliveryViewProps {
   rows: readonly ServiceSessionRow[]
   /** Counted over the unfiltered rows, so a count is never «the page that is showing». */
   summary: ServiceSessionSummary
+  /** How many of the UNFILTERED rows fall on today — the one card that can be acted on. */
+  today: number
   isLoading: boolean
   error: string | null
   onRetry: () => void
@@ -147,6 +157,7 @@ export function ServiceDeliveryView({
   t,
   rows,
   summary,
+  today,
   isLoading,
   error,
   onRetry,
@@ -329,11 +340,12 @@ export function ServiceDeliveryView({
       />
 
       <section aria-label={t('serviceDelivery.summary.title', 'خلاصه')}>
-        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <SummaryCell
             label={t('serviceDelivery.summary.scheduled', 'زمان‌بندی‌شده')}
             value={summary.scheduled}
           />
+          <SummaryCell label={t('serviceDelivery.summary.today', 'امروز')} value={today} />
           <SummaryCell
             label={t('serviceDelivery.summary.delivered', 'تحویل‌شده')}
             value={summary.delivered}
@@ -342,15 +354,17 @@ export function ServiceDeliveryView({
             label={t('serviceDelivery.summary.cancelled', 'لغوشده')}
             value={summary.cancelled}
           />
-          <SummaryCell
-            label={t('serviceDelivery.summary.awaiting', 'در صف ارسال (این دستگاه)')}
-            value={summary.awaitingSync}
-          />
-          <SummaryCell
-            label={t('serviceDelivery.summary.rejected', 'ردشده توسط سرور')}
-            value={summary.rejected}
-          />
         </dl>
+        {/* The two DEVICE counts do not deserve cards — they are not work. They
+            stay on one line that says so, in small type. */}
+        {summary.awaitingSync > 0 ? (
+          <p className="mt-2 text-xs text-[hsl(var(--fg-secondary))]">
+            {t('serviceDelivery.summary.awaiting', 'در صف ارسال (این دستگاه)')}:{' '}
+            <span dir="ltr" className="tabular-nums">
+              {summary.awaitingSync}
+            </span>
+          </p>
+        ) : null}
         {summary.rejected > 0 && onOpenSyncCentre ? (
           <p className="mt-2 flex flex-wrap items-center gap-1 text-xs text-[hsl(var(--color-destructive))]">
             <TriangleAlert aria-hidden="true" className="inline size-3" />
@@ -378,54 +392,75 @@ export function ServiceDeliveryView({
       ) : isLoading ? (
         <Loading label={t('serviceDelivery.loading', 'در حال بارگذاری…')} />
       ) : (
-        <DataTable<ServiceSessionRow>
-          tableId="service-delivery-sessions"
-          t={t}
-          rows={rows}
-          columns={columns}
-          rowKey={(row) => row.id}
-          onRowClick={onOpen}
-          searchValue={search}
-          onSearchChange={onSearchChange}
-          cardTone={(row) =>
-            row.sync === 'rejected' || row.sync === 'attention'
-              ? 'destructive'
-              : row.status === 'no_show'
-                ? 'warning'
-                : undefined
-          }
-          cardOrder={['customer', 'when', 'status', 'sync']}
-          actions={
-            <>
-              <TableFilterSelect
-                label={t('serviceDelivery.filters.status', 'وضعیت')}
-                value={statusFilter}
-                options={statusOptions}
-                onChange={onStatusFilterChange}
-              />
-              <TableFilterSelect
-                label={t('serviceDelivery.filters.date', 'تاریخ')}
-                value={dateFilter}
-                options={dateOptions}
-                onChange={onDateFilterChange}
-              />
-            </>
-          }
-          emptyState={
-            <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-              <CalendarClock aria-hidden="true" className="size-8 text-[hsl(var(--fg-tertiary))]" />
-              <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-                {t('serviceDelivery.empty', 'هنوز جلسه‌ای ثبت نشده است')}
-              </p>
-              <p className="max-w-md text-xs text-[hsl(var(--fg-secondary))]">
-                {t(
-                  'serviceDelivery.emptyHint',
-                  '«جلسه‌ی جدید» را بزنید تا اولین خدمت زمان‌بندی شود.',
-                )}
-              </p>
-            </div>
-          }
-        />
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The table's own toolbar keeps «search» and «column settings», the
+              same place every other table in the product keeps them. The time
+              range and the status are filter controls, so they sit on one row
+              of their own instead of inside the icon strip. */}
+            <TableFilterSelect
+              label={t('serviceDelivery.filters.status', 'وضعیت')}
+              value={statusFilter}
+              options={statusOptions}
+              onChange={onStatusFilterChange}
+            />
+            <TableFilterSelect
+              label={t('serviceDelivery.filters.date', 'تاریخ')}
+              value={dateFilter}
+              options={dateOptions}
+              onChange={onDateFilterChange}
+            />
+            {statusFilter !== 'all' || dateFilter !== 'all' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onStatusFilterChange('all')
+                  onDateFilterChange('all')
+                }}
+                className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-md)] border border-dashed border-[hsl(var(--border-default))] px-2.5 text-xs text-[hsl(var(--fg-secondary))] hover:border-[hsl(var(--color-primary))] hover:text-[hsl(var(--fg-primary))]"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+                {t('serviceDelivery.filters.clear', 'پاک کردن فیلترها')}
+              </button>
+            ) : null}
+          </div>
+
+          <DataTable<ServiceSessionRow>
+            tableId="service-delivery-sessions"
+            t={t}
+            rows={rows}
+            columns={columns}
+            rowKey={(row) => row.id}
+            onRowClick={onOpen}
+            searchValue={search}
+            onSearchChange={onSearchChange}
+            cardTone={(row) =>
+              row.sync === 'rejected' || row.sync === 'attention'
+                ? 'destructive'
+                : row.status === 'no_show'
+                  ? 'warning'
+                  : undefined
+            }
+            cardOrder={['customer', 'when', 'status', 'sync']}
+            emptyState={
+              <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+                <CalendarClock
+                  aria-hidden="true"
+                  className="size-8 text-[hsl(var(--fg-tertiary))]"
+                />
+                <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                  {t('serviceDelivery.empty', 'هنوز جلسه‌ای ثبت نشده است')}
+                </p>
+                <p className="max-w-md text-xs text-[hsl(var(--fg-secondary))]">
+                  {t(
+                    'serviceDelivery.emptyHint',
+                    '«جلسه‌ی جدید» را بزنید تا اولین خدمت زمان‌بندی شود.',
+                  )}
+                </p>
+              </div>
+            }
+          />
+        </>
       )}
     </CapabilityPage>
   )

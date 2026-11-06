@@ -207,6 +207,12 @@ function ServiceDeliveryContent() {
   const [dateFilter, setDateFilter] = useState('all')
 
   const today = toIsoDay(new Date())
+  // One card that can actually be acted on — «what is today», not a device
+  // queue. The table itself answers the rest.
+  const todayCount = useMemo(
+    () => rows.filter((row) => row.sessionDate === today).length,
+    [rows, today],
+  )
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase()
     return rows.filter((row) => {
@@ -262,7 +268,10 @@ function ServiceDeliveryContent() {
   const customerHint = customers.isError
     ? t('serviceDelivery.create.customersUnread', 'فهرست مشتریان خوانده نشد')
     : customerOptions.length === 0
-      ? t('serviceDelivery.create.noCustomers', 'هنوز مشتری‌ای ثبت نشده است')
+      ? t(
+          'serviceDelivery.create.howToCustomer',
+          'هنوز مشتری‌ای ثبت نشده است؛ از صفحه‌ی «مشتریان» یک مشتری بسازید.',
+        )
       : undefined
 
   const serviceHint = products.isError
@@ -273,7 +282,10 @@ function ServiceDeliveryContent() {
           'نوع خدمت/کالا روی این دستگاه ذخیره نشده است؛ برای انتخاب خدمت آنلاین شوید.',
         )
       : serviceOptions.length === 0
-        ? t('serviceDelivery.create.noServices', 'هنوز خدمتی تعریف نشده است')
+        ? t(
+            'serviceDelivery.create.howToService',
+            'هنوز خدمتی تعریف نشده است؛ از «موجودی ← کالاها» یک کالا با نوع «خدمت» بسازید.',
+          )
         : undefined
 
   const practitionerHint = mayReadEmployees
@@ -301,6 +313,7 @@ function ServiceDeliveryContent() {
         t={t}
         rows={filtered}
         summary={summary}
+        today={todayCount}
         isLoading={sessions.isLoading}
         error={
           sessions.isError
