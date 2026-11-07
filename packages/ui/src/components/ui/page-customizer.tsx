@@ -42,12 +42,21 @@ export function PageCustomizer({
   t,
   groups,
   className,
+  triggerLabel,
+  initiallyOpen = false,
 }: {
   t: (key: string, fallback?: string) => string
   groups: readonly CustomizerGroup[]
   className?: string | undefined
+  /**
+   * A worded button instead of the wrench — the settings page («صفحه‌ها و
+   * تب‌ها») opens the same dialog from a row that says what it does.
+   */
+  triggerLabel?: string | undefined
+  /** Open as soon as it appears: a `?customize=1` link from settings. */
+  initiallyOpen?: boolean | undefined
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initiallyOpen)
   const offered = groups.filter((group) => group.items.length > 0)
   const hiddenCount = offered.reduce(
     (count, group) => count + group.items.filter((item) => !group.look.shows(item.id)).length,
@@ -58,25 +67,45 @@ export function PageCustomizer({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        data-page-customizer=""
-        aria-label={t('pageLook.open', 'شخصی‌سازی این صفحه')}
-        title={t('pageLook.open', 'شخصی‌سازی این صفحه')}
-        className={cn(
-          'relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-          className,
-        )}
-      >
-        <Wrench className="size-4" aria-hidden="true" />
-        {/* The absence of a mark is not a mark: say that something is hidden. */}
-        {hiddenCount > 0 ? (
-          <span className="absolute -end-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[hsl(var(--color-primary))] px-1 text-[10px] font-bold leading-4 text-[hsl(var(--color-primary-fg))]">
-            {hiddenCount}
-          </span>
-        ) : null}
-      </button>
+      {triggerLabel ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          data-page-customizer=""
+          className={cn(
+            'inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium text-[hsl(var(--fg-primary))] transition-colors hover:bg-[hsl(var(--surface-muted))]',
+            className,
+          )}
+        >
+          <Wrench className="size-4" aria-hidden="true" />
+          {triggerLabel}
+          {hiddenCount > 0 ? (
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[hsl(var(--color-primary))] px-1.5 text-[11px] font-bold leading-5 text-[hsl(var(--color-primary-fg))]">
+              {hiddenCount}
+            </span>
+          ) : null}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          data-page-customizer=""
+          aria-label={t('pageLook.open', 'شخصی‌سازی این صفحه')}
+          title={t('pageLook.open', 'شخصی‌سازی این صفحه')}
+          className={cn(
+            'relative inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+            className,
+          )}
+        >
+          <Wrench className="size-4" aria-hidden="true" />
+          {/* The absence of a mark is not a mark: say that something is hidden. */}
+          {hiddenCount > 0 ? (
+            <span className="absolute -end-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[hsl(var(--color-primary))] px-1 text-[10px] font-bold leading-4 text-[hsl(var(--color-primary-fg))]">
+              {hiddenCount}
+            </span>
+          ) : null}
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md" data-page-customizer-dialog="">

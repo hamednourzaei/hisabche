@@ -4085,7 +4085,8 @@
     "bookCurrencyLocked": "This business has financial documents; its books currency can no longer be changed.",
     "bookCurrencyFailed": "The chosen currency was not saved on the server. Try again from Settings.",
     "currencyRequired": "Choose a currency.",
-    "saveFailed": "Your business details were not saved. Check the connection and try again."
+    "saveFailed": "Your business details were not saved. Check the connection and try again.",
+    "preparingWorkspace": "Preparing your workspace…"
   },
   "status": {
     "excellent": "Excellent",
@@ -10653,7 +10654,9 @@
       "refresh": "Refresh",
       "retry": "Try again",
       "close": "Close",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "checkIn": "Checked in",
+      "noShow": "No-show"
     },
     "summary": {
       "title": "Sessions",
@@ -10843,7 +10846,8 @@
       "PACKAGE_INVOICE_NOT_BOOKED": "The invoice that sold this package is not in the books yet; book it first.",
       "DEFERRED_REVENUE_ACCOUNT_MISSING": "Your books have no «deferred revenue» account.",
       "ACCOUNTING_PERIOD_LOCKED": "The session date is in a closed accounting period."
-    }
+    },
+    "moveFailed": "The session status was not changed"
   },
   "teamHub": {
     "label": "Team & payroll",
@@ -10911,6 +10915,14 @@
       "insights": "Smart suggestions",
       "activities": "Recent activity",
       "manufacturing": "Production summary"
+    },
+    "hubSections": "Sections of this page",
+    "settings": {
+      "title": "Pages and tabs",
+      "description": "Hisabche arranged the menu for your business. Add or remove any page or tab for yourself; nobody’s access changes.",
+      "menu": "Choose menu pages",
+      "tabsTitle": "Tabs of each page",
+      "chooseTabs": "Choose tabs"
     }
   },
   "access": {

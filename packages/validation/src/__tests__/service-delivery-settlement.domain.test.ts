@@ -136,6 +136,9 @@ describe('the transition table', () => {
     ['scheduled', 'in_progress'],
     ['scheduled', 'delivered'],
     ['scheduled', 'cancelled'],
+    // V54 5.5 (7 Nov 2026): a booked customer who never came is a no-show, not
+    // a cancellation — the person did not arrive, nobody called it off.
+    ['scheduled', 'no_show'],
     ['in_progress', 'delivered'],
     ['in_progress', 'no_show'],
     ['in_progress', 'cancelled'],

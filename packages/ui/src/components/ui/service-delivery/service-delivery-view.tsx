@@ -149,6 +149,13 @@ export interface ServiceDeliveryViewProps {
   onDeliver: (row: ServiceSessionRow) => void
   onCancel: (row: ServiceSessionRow) => void
   onOpen: (row: ServiceSessionRow) => void
+  /**
+   * «حاضر شد» / «نیامد» on a booked session. Optional: a host that cannot
+   * move a status offers no button rather than one that fails.
+   */
+  onMoveStatus?: ((row: ServiceSessionRow, to: 'in_progress' | 'no_show') => void) | undefined
+  /** The row whose move is on its way — its buttons wait. */
+  movingId?: string | null | undefined
   /** Only from a host with an outbox: the link to the page that can re-queue. */
   onOpenSyncCentre?: (() => void) | undefined
 }
@@ -174,6 +181,8 @@ export function ServiceDeliveryView({
   onDeliver,
   onCancel,
   onOpen,
+  onMoveStatus,
+  movingId,
   onOpenSyncCentre,
 }: ServiceDeliveryViewProps) {
   const statusOptions = [
@@ -299,6 +308,23 @@ export function ServiceDeliveryView({
             <ActionButton variant="quiet" onClick={() => onOpen(row)}>
               {t('serviceDelivery.actions.details', 'جزئیات')}
             </ActionButton>
+            {mayWrite && onMoveStatus && row.status === 'scheduled' ? (
+              <>
+                <ActionButton
+                  disabled={movingId === row.id}
+                  onClick={() => onMoveStatus(row, 'in_progress')}
+                >
+                  {t('serviceDelivery.actions.checkIn', 'حاضر شد')}
+                </ActionButton>
+                <ActionButton
+                  variant="quiet"
+                  disabled={movingId === row.id}
+                  onClick={() => onMoveStatus(row, 'no_show')}
+                >
+                  {t('serviceDelivery.actions.noShow', 'نیامد')}
+                </ActionButton>
+              </>
+            ) : null}
             {mayWrite && deliverable ? (
               <ActionButton onClick={() => onDeliver(row)}>
                 {t('serviceDelivery.actions.deliver', 'تحویل خدمت')}

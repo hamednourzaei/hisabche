@@ -615,8 +615,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           ) : !workspaceId && hasNoWorkspace && !isOnboardingRoute(pathname) ? (
             // If user has no workspace, do not mount protected dashboard pages and queries.
             // Onboarding route is explicitly allowed so user can bootstrap their first workspace.
+            // Translated and token-coloured: this text was hard-coded Persian in
+            // `text-neutral-400`, so an English or Dari reader saw Persian here.
             <div className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center">
-              <p className="text-sm text-neutral-400">در حال آماده‌سازی فضای کاری شما...</p>
+              <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+                {t('onboarding.preparingWorkspace')}
+              </p>
             </div>
           ) : (
             // Keyed by the metal unit: a figure already on screen was formatted

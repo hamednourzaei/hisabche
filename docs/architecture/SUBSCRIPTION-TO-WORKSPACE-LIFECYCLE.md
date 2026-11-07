@@ -63,3 +63,14 @@ sequenceDiagram
 - **Cryptographic Claim Tokens:** Claim tokens for Path A are high-entropy (256-bit), single-use, time-bounded (24 hours), and stored as SHA-256 hashes.
 - **Idempotent Workspace Provisioning:** Retrying workspace creation with the same order/claim token returns the existing workspace without duplication.
 - **Preservation on Expiry:** When a subscription lapses or expires, business data is **never deleted**. The workspace enters read-only grace period; historical invoices, ledgers, and offline mutations are preserved.
+
+---
+
+## بازبینی با کد — ۷ نوامبر ۲۰۲۶
+
+- **دو موتور خرید** در کد هست: `subscription-upgrade.service.ts` (صفحه‌ی `/billing` و پنل ادمین از آن استفاده می‌کنند) و `subscription-order.service.ts` (مسیرهای A/B و توکن ادعا) که **هیچ UI ای صدایش نمی‌زند** (`useCreateSubscriptionOrder`/`useClaimSubscriptionOrder` صفر مصرف‌کننده).
+- توکن ادعا: ۳۲ بایت تصادفی، SHA-256، ۲۴ ساعت (`subscription-order.service.ts:58-101`) — مطابق الزام امنیتی.
+- تأیید پرداخت: فقط `platformAdminGuard` (`billing.routes.ts:951`)؛ هیچ درگاه یا callback.
+- تأیید ایمیل/OTP وجود ندارد (`auth.routes.ts:360`)؛ گام «اتصال اشتراک به حساب تأییدشده» ممکن نیست.
+- Trial: ۷ روز ثابت، تنبل در اولین خواندن (`billing.service.ts:126,300`).
+- ساخت workspace اتمیک شد در همین شاخه (`docs/workspace-create-01-migration.sql`، منتظر اجرا).

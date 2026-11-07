@@ -10,6 +10,7 @@ import {
   createServiceDeliverySessionSchema,
   planServiceDelivery,
   planServiceDeliveryCancellation,
+  planSessionStatusMove,
   type AttendanceDay,
   type PackageCreditEntry,
   type PackageCreditEntryType,
@@ -369,6 +370,59 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       }
 
       return { __status: 200, __data: { session: plan.session, consumptionEntry: entry } }
+    })
+  })
+
+  // ─── 3b. POST /service-delivery/sessions/:id/status ─────────────
+  // «حاضر شد» / «نیامد» on the device: the same planner the server uses, the
+  // same optimistic WHERE (status + updated_at), the same answer shape. The
+  // outbox carries the move; the server re-checks it and a session delivered
+  // elsewhere meanwhile is refused there, not overwritten.
+  router.post('/service-delivery/sessions/:id/status', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+
+    const sessionId = c.params.id
+    if (!sessionId) throw new ValidationError('SESSION_ID_REQUIRED')
+    const body = (c.body || {}) as { to?: unknown }
+    const to = typeof body.to === 'string' ? body.to : ''
+
+    return c.db.transaction(() => {
+      const sessionRow = c.db.get<ServiceDeliverySessionRow>(
+        `SELECT * FROM service_delivery_sessions WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+        [sessionId, c.ctx.workspaceId],
+      )
+      if (!sessionRow) throw new NotFoundError('Service delivery session', sessionId)
+
+      let plan: ReturnType<typeof planSessionStatusMove>
+      try {
+        plan = planSessionStatusMove({ session: rowToSession(sessionRow), to })
+      } catch (err) {
+        throw domainFailure(err)
+      }
+      if (plan.replayed) return { __status: 200, __data: plan }
+
+      const changed = c.db.run(
+        `UPDATE service_delivery_sessions SET status = ?, updated_at = ?
+          WHERE id = ? AND workspace_id = ? AND status = ? AND updated_at = ?`,
+        [
+          plan.session.status,
+          plan.session.updatedAt,
+          sessionId,
+          c.ctx.workspaceId,
+          sessionRow.status,
+          sessionRow.updated_at,
+        ],
+      )
+      if (changed.changes !== 1) throw new ConflictError('SESSION_CHANGED')
+
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        enqueueSessionCommand(c, `${sessionId}-${plan.session.status}`, 'update', {
+          ...plan.session,
+          to: plan.session.status,
+        })
+      }
+      // The server answers 200 for a move (it creates nothing); the device says the same.
+      return { __status: 200, __data: plan }
     })
   })
 

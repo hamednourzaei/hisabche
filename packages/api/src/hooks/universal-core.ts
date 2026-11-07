@@ -1208,6 +1208,26 @@ export function useDeliverServiceDeliverySession() {
     },
   })
 }
+/**
+ * «حاضر شد» (in_progress) / «نیامد» (no_show) — the moves that carry no money.
+ * Same path on the server and on the device's engine.
+ */
+export function useMoveServiceSessionStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, to }: { id: string; to: 'in_progress' | 'no_show' }) => {
+      const { data } = await apiClient.post<{
+        session: ServiceDeliverySessionItem
+        replayed: boolean
+      }>(`/service-delivery/sessions/${id}/status`, { to })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
 export function useCancelServiceDeliverySession() {
   const queryClient = useQueryClient()
   return useMutation({

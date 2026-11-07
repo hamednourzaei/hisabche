@@ -17,7 +17,7 @@ import { LOCAL_MIGRATIONS, isAlreadyApplied } from '../../../app-bridge/src/loca
 const CREATED: string[] = []
 
 function applyFrom(db: DatabaseSync, from: number): void {
-  for (const migration of LOCAL_MIGRATIONS.filter((m) => m.to > from)) {
+  for (const migration of LOCAL_MIGRATIONS.filter((m) => m.to > from && m.to <= from + 1)) {
     for (const statement of migration.statements) {
       try {
         db.exec(statement)

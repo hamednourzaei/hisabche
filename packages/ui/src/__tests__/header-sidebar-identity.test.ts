@@ -297,7 +297,9 @@ describe('the redirect guard keeps the locale', () => {
     // EXPIRED token takes — valid at page load, invalid later, which is what
     // «every request 401s while the dashboard keeps rendering» looked like.
     expect(layout).toMatch(/isAuthenticated/)
-    expect(layout).toMatch(/currentLang\]\)/)
+    // `currentLang` closes the effect's dependency list — on one line or, as the
+    // formatter now prints it, on its own line with a trailing comma.
+    expect(layout).toMatch(/currentLang,?\s*\]\)/)
   })
 })
 

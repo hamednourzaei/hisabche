@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react'
 import { useOnboardingStore, useAuthStore } from '@hisabche/store'
-import { useWorkspaceProfile } from '@hisabche/api'
+import { useOperationalProfile, useWorkspaceProfile } from '@hisabche/api'
 import {
   type OperationalDna,
   type ResolvedBusinessConfiguration,
@@ -18,7 +18,12 @@ export interface OperationalDnaState {
 }
 
 export function useOperationalDna(): OperationalDnaState {
-  const localDna = useOnboardingStore((state) => state.operationalDna)
+  // V54 5.2: the WORKSPACE's copy wins — it is the same on every device and
+  // for every member. The device copy is the fallback before the migration
+  // runs, offline, or while the read is on its way.
+  const serverDna = useOperationalProfile().data?.dna ?? null
+  const deviceDna = useOnboardingStore((state) => state.operationalDna)
+  const localDna = serverDna ?? deviceDna
   const user = useAuthStore((state) => state.user)
   const workspace = useWorkspaceProfile().data
 

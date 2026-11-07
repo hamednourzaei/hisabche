@@ -1,6 +1,6 @@
 'use client'
 
-import { Skeleton } from '@hisabche/ui'
+import { Skeleton } from '../skeleton'
 
 export function DevelopersSkeleton() {
   return (

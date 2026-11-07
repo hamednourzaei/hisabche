@@ -28,6 +28,11 @@ vi.mock('../db', () => ({
     },
   },
 }))
+// The books currency is read ONCE per call (a row with no currency is in it),
+// not once per group, so it is not what this file counts. Stubbed so the
+// assertions stay about the per-type batching — the double above has no
+// `.maybeSingle()` and the read used to crash every test here.
+vi.mock('../services/base-currency', () => ({ baseCurrencyOf: async () => 'AFN' }))
 vi.mock('../utils/pagination', () => ({
   memoryCache: { get: vi.fn(), set: vi.fn(), invalidate: vi.fn() },
 }))

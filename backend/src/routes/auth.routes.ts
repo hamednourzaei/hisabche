@@ -373,7 +373,12 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
 
         // ۲. اطمینان از وجود رکورد در profiles
-        await supabase.from('profiles').upsert(
+        // ⚠️ THE RESULT IS READ (audit GAP-02). supabase-js never throws; the
+        // bare `await` discarded a failed profile write. The account already
+        // exists in Supabase Auth and a compensating delete is forbidden, so a
+        // failure is not a refusal — the name still lives in `user_metadata`,
+        // which `sanitizeUser` falls back to — but it is said, with the user.
+        const { error: profileError } = await supabase.from('profiles').upsert(
           {
             id: newUser.user.id,
             full_name: body.fullName,
@@ -381,8 +386,24 @@ export async function authRoutes(fastify: FastifyInstance) {
           },
           { onConflict: 'id' },
         )
+        if (profileError) {
+          fastify.log.error(
+            { err: profileError, userId: newUser.user.id },
+            'SIGNUP_PROFILE_NOT_WRITTEN',
+          )
+        }
 
-        // ۲.۵. ایجاد تضمین‌شده‌ی ورک‌اسپیس اولیه برای کاربر ثبت‌نامی جدید
+        // ۲.۵. ورک‌اسپیس اولیه برای کاربر ثبت‌نامی جدید
+        //
+        // ⚠️ WHY A FAILURE HERE STILL ANSWERS 201 (audit GAP-01).
+        // The account exists in Supabase Auth and cannot be taken back (no
+        // compensating delete). `createWorkspace` is now one transaction
+        // (workspace-create-01), so a failure leaves NOTHING behind — no
+        // workspace without its owner. The person signs in, `GET /workspaces`
+        // answers empty, and onboarding creates the workspace with their
+        // answers (`OnboardingContainer.handleComplete`, `POST /workspaces`).
+        // What must not happen is a quiet log line nobody connects to a user:
+        // the failure is logged with the user id under a searchable code.
         try {
           const workspaceService = new WorkspaceService()
           const initialWorkspaceName = (
@@ -395,7 +416,10 @@ export async function authRoutes(fastify: FastifyInstance) {
             isActive: true,
           })
         } catch (wsErr) {
-          fastify.log.error(wsErr, 'Initial workspace provisioning on signup encountered an issue')
+          fastify.log.error(
+            { err: wsErr, userId: newUser.user.id },
+            'SIGNUP_WORKSPACE_NOT_PROVISIONED — onboarding will create it',
+          )
         }
 
         // ۳. لاگین خودکار — دریافت توکن

@@ -68,6 +68,21 @@ function isMissingStampColumn(error: { code?: string; message?: string } | null)
   if (!/stamp_url/.test(message)) return false
   return error.code === '42703' || /does not exist|schema cache|could not find/i.test(message)
 }
+/**
+ * Is this the database saying `workspace_create_with_owner` itself does not
+ * exist (workspace-create-01 not run yet)?
+ *
+ * PGRST202 is PostgREST's «no such function in the schema cache»; 42883 is
+ * undefined_function. The function's NAME must be in the message: a 42883
+ * raised from inside the function body (another function missing) is a real
+ * failure, not a reason to fall back.
+ */
+function isMissingCreateFunction(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code !== 'PGRST202' && error.code !== '42883') return false
+  return /workspace_create_with_owner/.test(error.message ?? '')
+}
+
 const SIGNATURE_MIGRATION = 'docs/workspace-signature-01-migration.sql'
 
 /** Is this Postgres saying `signature_url` does not exist (the migration has not run)? */
@@ -130,9 +145,65 @@ export class WorkspaceService {
   }
 
   // ─── Workspace CRUD ──────────────────────────────────────────
+  /**
+   * A workspace and its owner's membership — both or neither.
+   *
+   * ⚠️ ONE POSTGRES FUNCTION, NOT TWO WRITES (workspace-create-01, audit GAP-01/02).
+   * The two supabase-js inserts below used to be the only path: a failed
+   * membership left a workspace its owner could not open, and signup still
+   * answered 201. `workspace_create_with_owner` writes both rows in one
+   * transaction.
+   *
+   * Until the owner runs docs/workspace-create-01-migration.sql the function is
+   * not there; only THAT answer (the function itself missing) falls back to the
+   * old two-step write, loudly. Refusing instead would stop every signup and
+   * onboarding the moment this backend deploys before the script runs. Every
+   * other database failure is a failure.
+   */
   async createWorkspace(userId: string, data: CreateWorkspace) {
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
 
+    const { data: createdId, error: rpcError } = await supabase.rpc('workspace_create_with_owner', {
+      p_owner: userId,
+      p_name: data.name,
+      p_slug: slug,
+      p_description: data.description || null,
+      p_logo_url: data.logoUrl || null,
+      p_stamp_url: data.stampUrl || null,
+      p_base_currency: data.baseCurrency ?? null,
+      p_time_zone: data.timeZone ?? null,
+    })
+
+    if (rpcError && isMissingCreateFunction(rpcError)) {
+      console.error(
+        '[WorkspaceService] WORKSPACE_ATOMIC_RPC_MISSING: run docs/workspace-create-01-migration.sql — ' +
+          'this workspace is written in two non-atomic steps.',
+      )
+      return this.createWorkspaceInTwoSteps(userId, data, slug)
+    }
+    if (rpcError) throw new DatabaseError('Failed to create workspace', rpcError)
+    if (typeof createdId !== 'string' || createdId.length === 0) {
+      throw new DatabaseError('Workspace creation returned no id')
+    }
+
+    const read = (columns: string) =>
+      supabase.from('workspaces').select(columns).eq('id', createdId).single()
+    let { data: workspace, error } = await read(WORKSPACE_COLUMNS)
+    if (isMissingStampColumn(error))
+      ({ data: workspace, error } = await read(WORKSPACE_COLUMNS_NO_STAMP))
+    if (error || !workspace)
+      throw new DatabaseError('Workspace was created but could not be read', error)
+
+    await this.invalidateUserCache(userId)
+    return workspace
+  }
+
+  /**
+   * The pre-workspace-create-01 path. Reached ONLY when the atomic function is
+   * missing from the database (see createWorkspace). Delete it once
+   * VERIFY-workspace-create-01 has come back all true on the live database.
+   */
+  private async createWorkspaceInTwoSteps(userId: string, data: CreateWorkspace, slug: string) {
     const insertPayload: Record<string, unknown> = {
       name: data.name,
       slug,

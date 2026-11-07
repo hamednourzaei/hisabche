@@ -93,3 +93,14 @@ User interface skinning, contextual vocabulary, and dashboard layout.
 - Derives localized vocabulary labels (e.g. "Appointment" vs "Job Ticket" vs "Order").
 - Dictates active dashboard cards and quick action bars.
 - Preserves identical underlying accounting and entity schemas.
+
+---
+
+## بازبینی با کد — ۷ نوامبر ۲۰۲۶
+
+- محورهای ۱ تا ۷ در `packages/validation/src/schemas/operational-dna.ts:18-94` به‌صورت **آرایه** (ترکیب‌پذیر) پیاده شده‌اند؛ محور ۸ فقط `terminology` است (`:97`) و پروفایل ناوبری/داشبورد ندارد.
+- پیش‌تنظیم‌ها: `ARCHETYPE_PRESETS` (`:122`) — داده‌ی کد، نه داده‌ی نسخه‌دار در دیتابیس.
+- `resolveDnaCapabilities` (`:204`) تنها از `useOperationalDna` صدا زده می‌شود و تنها مصرف‌کننده‌ی آن `first-value-checklist.tsx` است.
+- DNA **روی سرور ذخیره نمی‌شود**؛ پروفایل سروری فقط `workspaces.business_types` است (`backend/src/services/workspace-profile.ts:60-106`) — بدون نسخه، تاریخچه یا ممیزی.
+- هیچ شرط نام صنف در `backend/src/services` پیدا نشد (`grep`)؛ نگاشت صنف → محور فقط در `inferOperationalDna` (onboarding) است، که مجاز است.
+- گزارش کامل: [UNIVERSAL-BUSINESS-ARCHITECTURE.md § ممیزی Phase 5.0](UNIVERSAL-BUSINESS-ARCHITECTURE.md).

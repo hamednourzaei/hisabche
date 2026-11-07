@@ -11,8 +11,11 @@ import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   calculateSessionDurationMinutes,
+  planSessionStatusMove,
+  sessionStatusMoveSources,
   verifyPractitionerAttendance,
   type AttendanceDay,
+  type SessionStatusMove,
   type ServiceDeliverySession,
   type ServiceDeliverySettlementMethod,
   type ServiceDeliveryStatus,
@@ -380,6 +383,49 @@ export class ServiceDeliveryService {
         ? await this.ledgerRow(ctx, result.reversal_entry_id)
         : null,
     }
+  }
+
+  /**
+   * «حاضر شد» (in_progress) or «نیامد» (no_show) — moves that carry no money.
+   *
+   * ⚠️ ONE ROW, ONE STATEMENT: the statuses the move may start from are in the
+   * WHERE, so two devices tapping at once cannot both win, and a session that
+   * was delivered in the meantime is not dragged back. When nothing matched,
+   * the row is read again: already in `to` is a replay (a retried outbox entry);
+   * anything else is the domain's refusal.
+   */
+  async moveStatus(
+    ctx: TenancyContext,
+    id: string,
+    to: string,
+  ): Promise<{ session: ServiceDeliverySession; replayed: boolean }> {
+    const current = await this.getById(ctx, id)
+    let planned: ReturnType<typeof planSessionStatusMove>
+    try {
+      planned = planSessionStatusMove({ session: current, to })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.startsWith('INVALID_STATUS_TRANSITION')) throw new ConflictError(message)
+      throw new ValidationError(message)
+    }
+    if (planned.replayed) return planned
+
+    const target = planned.session.status as SessionStatusMove
+    const { data, error } = await this.db
+      .from('service_delivery_sessions')
+      .update({ status: target, updated_at: planned.session.updatedAt })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', id)
+      .is('deleted_at', null)
+      .in('status', [...sessionStatusMoveSources(target)])
+      .select('*')
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to change service session status', error)
+    if (data) return { session: mapDbRowToSession(data), replayed: false }
+
+    const now = await this.getById(ctx, id)
+    if (now.status === target) return { session: now, replayed: true }
+    throw new ConflictError(`INVALID_STATUS_TRANSITION:${now.status}->${target}`)
   }
 
   private async ledgerRow(ctx: TenancyContext, entryId: string): Promise<unknown | null> {

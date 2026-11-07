@@ -773,6 +773,13 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
       await apiClient.post(`/service-delivery/sessions/${sessionId}/cancel`, entry.payload, {
         headers,
       })
+    } else if (payload.status === 'in_progress' || payload.status === 'no_show') {
+      // «حاضر شد» / «نیامد» made offline. Without this branch the row fell to
+      // the create call below and the server answered with a second session
+      // or a conflict instead of moving the one that exists.
+      await apiClient.post(`/service-delivery/sessions/${sessionId}/status`, entry.payload, {
+        headers,
+      })
     } else {
       await apiClient.post('/service-delivery/sessions', entry.payload, { headers })
     }

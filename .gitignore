@@ -79,3 +79,6 @@ graphify-out/
 
 # AI Codebase Intelligence Index (generated; rebuild with node scripts/build-ai-index.mjs)
 .ai/codebase/
+
+# Build temp folder: esbuild cannot delete its >1MB temp files under AppData\Local\Temp on this machine (7 Nov 2026).
+.esbuild-tmp/

@@ -15,12 +15,16 @@ import {
 } from './email-outbox'
 
 // ─── Initialize Resend ──────────────────────────────────────────
-console.log('[EMAIL] Initializing Resend...')
-console.log('[EMAIL] API_KEY exists:', !!process.env.RESEND_API_KEY)
-console.log('[EMAIL] API_KEY prefix:', (process.env.RESEND_API_KEY || 'NONE').substring(0, 5))
-console.log('[EMAIL] API_KEY length:', (process.env.RESEND_API_KEY || '').length)
-
+//
+// ⚠️ NOTHING ABOUT THE KEY ITSELF IS LOGGED (audit GAP-05). This used to print
+// the first five characters and the length of RESEND_API_KEY on every boot —
+// part of a secret in the host's logs, readable by anyone who can read them.
+// Whether email is configured is the only thing an operator needs to know.
 const RESEND_API_KEY = process.env.RESEND_API_KEY
+console.log(
+  `[EMAIL] Resend ${RESEND_API_KEY ? 'configured' : 'NOT configured — emails will not be sent'}`,
+)
+
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@hisabche.com'
 const FROM_NAME = process.env.FROM_NAME || 'Hisabche'
 

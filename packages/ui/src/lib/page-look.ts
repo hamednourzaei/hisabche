@@ -32,6 +32,8 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 
 const PREFIX = 'hisabche.look.'
+/** Beside a page's look: which suggestion was already offered for it. */
+const SUGGESTED = 'suggested:'
 const NOTHING: readonly string[] = Object.freeze([])
 const EMPTY_LOOKS: Looks = Object.freeze({})
 
@@ -132,6 +134,17 @@ export interface PageLook {
   toggle: (id: string) => void
   /** Show everything on this page again. */
   reset: () => void
+  /**
+   * Hide these ids as a STARTING POINT — only when the person has no saved look
+   * for the page. Once they have one (even «nothing hidden»), it is theirs and
+   * this does nothing. Used by the DNA menu suggestion (V54 5.6).
+   *
+   * ⚠️ ONCE PER TOKEN (the profile version). The token is remembered beside the
+   * look, so «show everything» (reset) is not undone on the next render, and a
+   * NEW profile version offers its suggestion again only to someone who still
+   * has no menu of their own.
+   */
+  suggest: (ids: readonly string[], token: string) => void
 }
 
 /** One page's look for the signed-in person in the active business. */
@@ -169,6 +182,19 @@ export function usePageLook(pageId: string): PageLook {
     save(owner, looks)
   }, [owner, pageId])
 
+  const suggest = useCallback(
+    (ids: readonly string[], token: string) => {
+      if (!owner) return
+      const looks = load(owner)
+      const marker = SUGGESTED + pageId
+      if (looks[marker]?.[0] === token) return
+      const next: Looks = { ...looks, [marker]: Object.freeze([token]) }
+      if (!isCustomizedLook(looks, pageId)) next[pageId] = Object.freeze([...ids])
+      save(owner, next)
+    },
+    [owner, pageId],
+  )
+
   return useMemo(
     () => ({
       ready,
@@ -178,8 +204,9 @@ export function usePageLook(pageId: string): PageLook {
       active: (id: string) => ready && !hiddenIds.includes(id),
       toggle,
       reset,
+      suggest,
     }),
-    [customized, hiddenIds, ready, reset, toggle],
+    [customized, hiddenIds, ready, reset, suggest, toggle],
   )
 }
 

@@ -183,7 +183,11 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ممیزی زنده ۱۴ اکتبر: ۸۲ باگ، درس‌ها، آنچه منتظر انسان است**                 | `.claude/LIVE-AUDIT-2026-10-14.md` · `.claude/SESSION-CACHE-2026-10-14-LIVE-AUDIT.md` — **custom-units-01 منتظر اجرا و VERIFY** |
 | **۱۰۰ ویدیوی تازه: لایه‌بندی، قالب، ۴۹ صنف (۲۳ اکتبر)**               | `hisabche-promo-reel/docs/100-VIDEO-PLAN.md` · `.claude/SESSION-CACHE-2026-10-23-100-VIDEOS.md` — **PLANNED** |
 | **پاس واقع‌گرایی لندینگ ۳D: ۶ بخش از ۱۲ (۲۳ اکتبر)**                    | `docs/SCENE-REALISM-AUDIT.md` · `docs/DECISIONS.md` — **`?debug=`, LOD و اسکرین‌شات en باقی است** |
-| **همه‌ی درس‌ها با شماره (۱–۲۳۳)**                                     | `.claude/lessons-learned.md`                                                |
+| **سفر کامل کاربر از لندینگ تا دفتر، با شاهد کد؛ ۳۱ شکاف (۷ نوامبر)**   | `docs/product/HISABCHE_MASTER_USER_JOURNEY.md` · `HISABCHE_WORKFLOW_GAPS_AND_BLOCKERS.md` — **workspace-create-01 منتظر اجرا و VERIFY** |
+| **مطابقت ۱۶۰ باگ گزارش Antigravity با کد؛ ۹ تصمیم مالک (۷ نوامبر)**   | `docs/audit/AUDIT-80-VERIFICATION.md`                                       |
+| **V54 ممیزی Phase 5.0 با کد (DNA فقط روی دستگاه؛ نوبت/بیعانه/اشتراک بی‌UI) (۷ نوامبر)** | `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی · `V54-IMPLEMENTATION-PROGRESS.md` — **5.1+ منتظر تأیید** |
+| **V54 اجرا: «حاضر شد/نیامد» جلسه، DNA نسخه‌دار، ادامه‌ی onboarding، منوی پیشنهادی (۷ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور دوم — **operational-profile-01 منتظر اجرا و VERIFY** |
+| **همه‌ی درس‌ها با شماره (۱–۲۴۹)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -300,6 +304,7 @@ cd apps/admin     && npx tsc --noEmit
 
 - رندرر بسته‌بندی‌شده از `file://` بالا می‌آید؛ مسیر مطلق `/x.png` یعنی **ریشه‌ی درایو**. مسیر را با **پروتکل** انتخاب کن نه با پلتفرم.
 - `${env.X}` در `electron-builder.yml` زودهنگام expand می‌شود و بیلد را می‌شکند.
+- ⚠️ **بیلد روی این دستگاه با `TMP`/`TEMP` = `C:\Users\hamed\Desktop\hisabche\.esbuild-tmp`** — زیر `AppData\Local\Temp` باینری esbuild فایل موقت بالای ۱ مگابایت را نمی‌تواند حذف کند (`Access is denied`) و بیلد ویندوز/اندروید/وب می‌افتد (درس ۲۴۹).
 - `nsis.packElevateHelper: false` — Defender وسط بسته‌بندی `elevate.exe` را قرنطینه می‌کند. ⚠️ راه‌حل، اضافه‌کردن exclusion به آنتی‌ویروس **نیست**.
 
 **وب، سئو و API (از باگ‌های واقعی سپتامبر)**
@@ -434,6 +439,9 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **دو پاسخ سرور درباره‌ی یک چیز، یک قاعده:** `GET /workspaces` همان `has_access = true AND suspended_at IS NULL` مسیر مجوز را می‌سنجد؛ وگرنه کلاینت workspace ای را نگه می‌دارد که سرور رد می‌کند. خطای خواندن throw می‌شود، «هیچ نداری» نیست.
 - ⚠️ **کش `scope: 'user'` روی routeِ `requireWorkspaceContext` ممنوع** — داده‌ی یک workspace را در دیگریِ همان آدم نشان می‌دهد. `scope: 'member'` یا `'workspace'`.
 - ⚠️ **عضویت را با `has_access` صریح بساز** (کد و تابع SQL)؛ به default ستون تکیه نکن (`docs/FIX-403.sql`).
+- **تنظیمات ← «صفحه‌ها و تب‌ها»** (`settings/pages-and-tabs-settings.tsx`) همان `PageCustomizer` و همان `useMenuCustomizerGroup` آچار هدر است؛ تب‌ها با لینک `?customize=1` (`lib/customize-flag.ts`) از خودِ هاب. فهرست تب‌ها را در تنظیمات کپی نکن؛ هاب تازه = یک ردیف در `PAGES_WITH_TABS` + گارد `pages-and-tabs-settings.test.ts`.
+- ⚠️ **workspace و عضویت مالک فقط با `workspace_create_with_owner`** (یک تراکنش، `workspace-create-01`). مسیر دو مرحله‌ای فقط وقتی خودِ تابع نیست و با لاگ `WORKSPACE_ATOMIC_RPC_MISSING`؛ بعد از VERIFY حذفش کن. هیچ چیزِ مشتق از secret (پیشوند، طول) لاگ نشود.
+- ⚠️ **نوبت = جلسه‌ی خدمت** (UI، آفلاین، sync)؛ جدول `appointments` موتور موازیِ بی‌UI است — وصلش نکن. حرکت بی‌پول جلسه فقط `POST /service-delivery/sessions/:id/status` (`SESSION_STATUS_MOVES`) و هر وضعیت تازه‌ی صف دستگاه شاخه‌ی خودش را در `sync-engine.ts` می‌خواهد. DNA روی workspace فقط با `workspace_set_operational_dna` (نسخه + تاریخچه)؛ منوی پیشنهادی از DNA یک بار به‌ازای نسخه (`usePageLook.suggest`).
 - ⚠️ **اول FINDING، بعد migration.** حدس درباره‌ی دیتابیس زنده را با یک کوئری خواندنی بسنج؛ کدِ ۴۰۳ را از **بدنه‌ی پاسخ** بخوان (`code`)، نه از عدد.
 - ⚠️ **راه خروج را پشت همان درخواستی نگذار که ممکن است رد شود** (`SandboxNotice`).
 - ⚠️ **`authenticate` یعنی «حساب دارد»، نه «اجازه دارد».** route ای که نه `requireWorkspaceContext` دارد نه `platformAdminGuard`، فقط حق دارد داده‌ی خودِ همان کاربر را بخواند/بنویسد. ده route نقش سراسری و لاگ رویداد همین‌طور باز بودند (BUG-101).

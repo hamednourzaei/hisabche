@@ -28,11 +28,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  apiErrorMessage,
   asList,
   useBranches,
   useCustomers,
   useEmployees,
   useEntitySyncStates,
+  useMoveServiceSessionStatus,
   useMyCapabilities,
   useProducts,
   useServiceDeliverySessions,
@@ -44,6 +46,7 @@ import { NoAccessNotice } from '../../no-access-notice'
 import { OfflineGate } from '../../offline-gate'
 import type { SelectFieldOption } from '../../select-field'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useToast } from '../../toast-provider'
 import { ServiceDeliveryView } from '../service-delivery-view'
 import { summarizeSessions, syncStateOf, type ServiceSessionRow } from '../service-delivery-model'
 import { ServiceSessionCreateDialog } from '../service-session-create-dialog'
@@ -119,6 +122,23 @@ function ServiceDeliveryContent() {
   const employees = useEmployees({ page: 1, limit: 100 })
   const branches = useBranches()
   const sync = useEntitySyncStates('service_delivery_sessions')
+  const moveStatus = useMoveServiceSessionStatus()
+  const toast = useToast()
+  const [movingId, setMovingId] = useState<string | null>(null)
+  const onMoveStatus = (row: ServiceSessionRow, to: 'in_progress' | 'no_show') => {
+    setMovingId(row.id)
+    moveStatus.mutate(
+      { id: row.id, to },
+      {
+        onError: (error) =>
+          toast.error(
+            t('serviceDelivery.moveFailed', 'وضعیت جلسه عوض نشد'),
+            apiErrorMessage(error, t('serviceDelivery.moveFailed', 'وضعیت جلسه عوض نشد')),
+          ),
+        onSettled: () => setMovingId(null),
+      },
+    )
+  }
 
   const mayWrite = capabilities.can('invoice.create') === true
   const mayCancel = capabilities.can('invoice.delete') === true
@@ -334,6 +354,8 @@ function ServiceDeliveryContent() {
         onDeliver={(row) => setDeliverRow(row)}
         onCancel={(row) => setCancelRow(row)}
         onOpen={(row) => setDetailRow(row)}
+        onMoveStatus={onMoveStatus}
+        movingId={movingId}
         {...(sync.available
           ? { onOpenSyncCentre: () => push('/data-and-sync?tab=details&view=sync') }
           : {})}

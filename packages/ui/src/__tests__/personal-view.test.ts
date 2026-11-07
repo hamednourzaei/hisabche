@@ -205,8 +205,14 @@ describe('a page the role does not include is not mounted', () => {
   })
 
   it('both shells draw the notice INSTEAD of the page', () => {
+    // Between the notice and the page sits one more branch: with no workspace,
+    // nothing protected is mounted either (only /onboarding is), and the
+    // waiting line is translated, not hard-coded Persian.
     expect(web).toContain(
-      ") : routeDenied ? ( <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} /> ) : ( <LanguageSwitchProvider value={languageSwitch}> <Fragment key={metalUnit}>{children}</Fragment> </LanguageSwitchProvider> )}",
+      ") : routeDenied ? ( <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} /> ) : !workspaceId && hasNoWorkspace && !isOnboardingRoute(pathname) ? (",
+    )
+    expect(web).toContain(
+      "{t('onboarding.preparingWorkspace')} </p> </div> ) : ( <LanguageSwitchProvider value={languageSwitch}> <Fragment key={metalUnit}>{children}</Fragment> </LanguageSwitchProvider> )}",
     )
     // The device shell also gates an entry the device cannot run (OfflinePageGate),
     // INSIDE the same branch: a denied page is still never mounted.

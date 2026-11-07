@@ -1373,6 +1373,24 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  {
+    // V54 5.5 «حاضر شد» / «نیامد»: one UPDATE whose WHERE names the statuses the
+    // move may start from — two taps cannot both win; the same move again is a
+    // replay read back, not a second write. No money moves on this route.
+    routeFile: 'service-delivery.routes.ts',
+    route: 'POST /api/service-delivery/sessions/:id/status',
+    mechanisms: ['conditional-update', 'state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: ".in('status', [...sessionStatusMoveSources(target)])",
+      },
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: 'if (now.status === target) return { session: now, replayed: true }',
+      },
+    ],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

@@ -26,6 +26,8 @@ describe('Onboarding bootstrap render guard', () => {
 
   it('protected routes still mount the no-workspace blocking screen', () => {
     const layout = code('apps/web/app/[lang]/(dashboard)/dashboard-layout.tsx')
-    expect(layout).toContain('در حال آماده‌سازی فضای کاری شما...')
+    // Translated since 7 Nov 2026 — the sentence was hard-coded Persian, so an
+    // English or Dari reader saw Persian on this screen.
+    expect(layout).toContain("{t('onboarding.preparingWorkspace')}")
   })
 })

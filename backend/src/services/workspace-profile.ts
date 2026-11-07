@@ -28,9 +28,13 @@
 
 import {
   canonicalIndustryTypes,
+  onboardingProgressSchema,
+  operationalDnaSchema,
   resolveBusinessProfile,
   type BusinessProfile,
   type IndustryKey,
+  type OnboardingProgress,
+  type OperationalDna,
 } from '@hisabche/validation'
 
 import { supabase } from '../db'
@@ -122,4 +126,108 @@ export async function setWorkspaceProfile(
     profile: resolveBusinessProfile(canonical.known),
     configurable: true,
   }
+}
+
+// ─── Operational DNA and onboarding progress (V54 5.2 / 5.3) ──────────────
+//
+// docs/operational-profile-01-migration.sql. The DNA is written ONLY through
+// `workspace_set_operational_dna` (lock, version check, history row — one
+// transaction). Like the trades above, it suggests; it grants or removes no
+// permission and touches no historical row.
+
+export interface WorkspaceOperationalProfile {
+  /** False until docs/operational-profile-01-migration.sql has run. */
+  readonly configurable: boolean
+  readonly dna: OperationalDna | null
+  /** 0 = never declared. The next save must name this number. */
+  readonly version: number
+  readonly onboarding: OnboardingProgress | null
+}
+
+const NOT_CONFIGURED: WorkspaceOperationalProfile = {
+  configurable: false,
+  dna: null,
+  version: 0,
+  onboarding: null,
+}
+
+const isMissingFunction = (error: { code?: string; message?: string }) =>
+  (error.code === 'PGRST202' || error.code === '42883') &&
+  (error.message ?? '').includes('workspace_set_operational_dna')
+
+export async function operationalProfileOf(
+  workspaceId: string,
+): Promise<WorkspaceOperationalProfile> {
+  const { data, error } = await supabase
+    .from('workspaces')
+    .select('operational_dna, operational_dna_version, onboarding_progress')
+    .eq('id', workspaceId)
+    .maybeSingle()
+
+  if (error) {
+    if (isMissingColumn(error.code)) return NOT_CONFIGURED
+    throw new DatabaseError('Failed to read the operational profile', error)
+  }
+  const row = (data ?? {}) as {
+    operational_dna?: unknown
+    operational_dna_version?: number | null
+    onboarding_progress?: unknown
+  }
+  // A stored value that no longer parses is reported as absent, not repaired.
+  const dna = operationalDnaSchema.safeParse(row.operational_dna)
+  const onboarding = onboardingProgressSchema.safeParse(row.onboarding_progress)
+  return {
+    configurable: true,
+    dna: row.operational_dna == null || !dna.success ? null : dna.data,
+    version: row.operational_dna_version ?? 0,
+    onboarding: row.onboarding_progress == null || !onboarding.success ? null : onboarding.data,
+  }
+}
+
+export async function setOperationalDna(
+  workspaceId: string,
+  userId: string,
+  input: unknown,
+  expectedVersion: number,
+): Promise<{ version: number; replayed: boolean }> {
+  const parsed = operationalDnaSchema.safeParse(input)
+  if (!parsed.success) throw new ValidationError('OPERATIONAL_DNA_INVALID')
+
+  const { data, error } = await supabase.rpc('workspace_set_operational_dna', {
+    p_workspace_id: workspaceId,
+    p_actor: userId,
+    p_dna: parsed.data,
+    p_expected_version: expectedVersion,
+  })
+  if (error) {
+    if (isMissingFunction(error)) throw new ConflictError('OPERATIONAL_PROFILE_NOT_CONFIGURED')
+    const message = error.message ?? ''
+    if (message.includes('OPERATIONAL_PROFILE_CHANGED')) {
+      throw new ConflictError('OPERATIONAL_PROFILE_CHANGED')
+    }
+    if (message.includes('WORKSPACE_NOT_FOUND')) throw new ConflictError('WORKSPACE_NOT_FOUND')
+    throw new DatabaseError('Failed to store the operational profile', error)
+  }
+  const result = (data ?? {}) as { version?: number; replayed?: boolean }
+  return { version: result.version ?? expectedVersion, replayed: result.replayed === true }
+}
+
+export async function setOnboardingProgress(
+  workspaceId: string,
+  input: unknown,
+): Promise<OnboardingProgress> {
+  const parsed = onboardingProgressSchema.safeParse(input)
+  if (!parsed.success) throw new ValidationError('ONBOARDING_PROGRESS_INVALID')
+
+  const { data, error } = await supabase
+    .from('workspaces')
+    .update({ onboarding_progress: parsed.data })
+    .eq('id', workspaceId)
+    .select('id')
+  if (error) {
+    if (isMissingColumn(error.code)) throw new ConflictError('OPERATIONAL_PROFILE_NOT_CONFIGURED')
+    throw new DatabaseError('Failed to store the onboarding progress', error)
+  }
+  if (!data || data.length === 0) throw new ConflictError('WORKSPACE_NOT_FOUND')
+  return parsed.data
 }

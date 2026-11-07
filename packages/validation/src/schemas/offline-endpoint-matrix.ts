@@ -311,6 +311,9 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   // profile the device already holds, and no capability is enforced on the device.
   'GET /workspace/profile': ['settings.business_profile', 'online_required'],
   'PUT /workspace/profile': ['settings.business_profile_edit', 'online_required'],
+  'GET /workspace/operational-profile': ['settings.business_profile', 'online_required'],
+  'PUT /workspace/operational-profile': ['settings.business_profile_edit', 'online_required'],
+  'PUT /workspace/onboarding-progress': ['settings.business_profile_edit', 'online_required'],
   'GET /workspaces/:x/invites': ['team.members', 'online_required'],
   'GET /workspaces/:x/members': ['settings.workspace_profile', 'available'],
   'GET /workspaces/backup': ['data.backup', 'available'],
@@ -510,6 +513,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /service-delivery/sessions': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/deliver': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/cancel': ['operations.service_delivery', 'available'],
+  'POST /service-delivery/sessions/:x/status': ['operations.service_delivery', 'available'],
   'POST /shift-assignments': ['hr.shifts', 'available'],
   'POST /shift-assignments/:x/cancel': ['hr.shifts', 'available'],
   'POST /shifts': ['hr.shifts', 'available'],

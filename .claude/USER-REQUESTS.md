@@ -332,3 +332,31 @@
   «فعال نشده» می‌گویند
 - تصمیم درباره‌ی چارچوب اتصال‌ها: کدام سرویس اول، و ثبت برنامه نزد همان سرویس
   (Google / Meta / Telegram / Dropbox / Microsoft)
+
+### ممیزی سفر کاربر و P0 ها (۷ نوامبر ۲۰۲۶)
+
+- اسناد: `docs/product/HISABCHE_MASTER_USER_JOURNEY.md` و سه سند همراه (ردیابی، سه پلتفرم، شکاف‌ها).
+- ✅ کد: ثبت workspace + عضویت مالک در یک تراکنش (`workspace_create_with_owner`)، خواندن نتیجه‌ی نوشتن
+  پروفایل در ثبت‌نام، حذف لاگ پیشوند کلید Resend.
+- ⬜ کار شما: `docs/workspace-create-01-migration.sql` و بعد `docs/VERIFY-workspace-create-01.sql` —
+  PENDING HUMAN CONFIRMATION. ردیف آخر VERIFY اگر false بود: `docs/_repair-owner-memberships.sql` و VERIFY دوباره.
+- ⬜ بعد از VERIFY سبز: حذف `createWorkspaceInTwoSteps` در `workspace.service.ts` (مسیر موقت).
+- ⬜ کلید Resend در لاگ‌های قدیمی Render پیشوندش دیده می‌شد — چرخاندن کلید تصمیم شماست.
+- ⬜ باز (اصلاح‌نشده): GAP-03 ساخت فاکتور یک تراکنش نیست (طراحی بزرگ‌تر)، GAP-04 migration های منتظر.
+
+### مطابقت ۱۶۰ باگ Antigravity (۷ نوامبر ۲۰۲۶)
+
+- گزارش: `docs/audit/AUDIT-80-VERIFICATION.md` — ۴ رفع، ۹۲ قبلاً رفع، ۲۳ نادرست، ۱۱ شکاف، ۹ تصمیم شما، ۲۱ مبهم.
+- ⬜ تصمیم‌های شما (#): ۸ مجوز پروژه · ۱۳ `requireStepUpMfa` وصل یا حذف · ۴۰ مالیات خط در دفتر · ۶۸ پول محلی حقوق
+  (`REAL`) · ۶۹ دروازه‌ی نقش بی‌شبکه · ۸۴ قیمت خرید در فهرست انبار · ۹۸ PDF انگلیسی · ۱۱۸ خروج نقد بیش از صندوق ·
+  ۱۵۶ حذف `webhook.service.ts` مرده.
+- ⬜ تست‌های E2E وب (`apps/web/playwright.config.ts`) روی `https://hisabche.com` (production) تنظیم شده‌اند.
+
+### V54 و دکمه‌ی تنظیمات (۷ نوامبر ۲۰۲۶)
+
+- ✅ ممیزی Phase 5.0 (فقط خواندن): `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی، و پنج سند همراه؛
+  `V54-IMPLEMENTATION-PROGRESS.md` بازنویسی شد (ادعاهای ۴ نوامبر اصلاح شد).
+- ⬜ **Phase 5.1 به بعد منتظر تأیید شما** — ۸ تصمیم در بخش N ممیزی.
+- ✅ تنظیمات ← «صفحه‌ها و تب‌ها» (وب، ویندوز، اندروید — یک صفحه‌ی مشترک).
+- ⬜ بیلد ویندوز/اندروید روی این دستگاه مسدود (قفل فایل موقت esbuild) — تصمیم شما.
+- ⬜ E2E دسکتاپ به بیلد وابسته است؛ E2E وب روی production تنظیم شده.

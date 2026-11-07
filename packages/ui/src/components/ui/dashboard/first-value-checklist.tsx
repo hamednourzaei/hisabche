@@ -158,7 +158,7 @@ export const FirstValueChecklist = memo(function FirstValueChecklist({
 
   const safeT = (key: string, fallback: string): string => {
     try {
-      const v = t(key as any)
+      const v = t(key as Parameters<typeof t>[0])
       return v && v !== key ? v : fallback
     } catch {
       return fallback

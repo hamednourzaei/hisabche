@@ -1306,6 +1306,10 @@ export function registerInvoiceRoutes(router: Router): void {
 
   router.post('/invoices/:id/credit-status', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
+    // The verdict belongs to the person's own sale: the same capability that
+    // records the sale. Checked BEFORE the body, so a viewer gets 403, not a
+    // validation answer that confirms the route exists.
+    requireCapability(ctx, 'invoice.create')
     const { workspaceId } = ctx
     const body = (c.body ?? {}) as Record<string, unknown>
     const next = typeof body.status === 'string' ? body.status.trim() : ''

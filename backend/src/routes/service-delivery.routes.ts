@@ -84,6 +84,27 @@ export async function serviceDeliveryRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── 4b. POST /api/service-delivery/sessions/:id/status ────────
+  // «حاضر شد» / «نیامد». Only the moves that carry no money; delivery and
+  // cancellation keep their own routes and transactions.
+  fastify.post(
+    '/api/service-delivery/sessions/:id/status',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = (request.body || {}) as { to?: unknown; status?: unknown }
+        // The device's outbox replays the whole session row, whose field is
+        // `status`; a person's tap sends `to`. Both name the same move.
+        const to = typeof body.to === 'string' ? body.to : String(body.status ?? '')
+        const result = await service.moveStatus(request.tenancy, id, to)
+        return reply.send(result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to change service session status')
+      }
+    },
+  )
+
   // ─── 5. POST /api/service-delivery/sessions/:id/cancel ─────────
   fastify.post(
     '/api/service-delivery/sessions/:id/cancel',

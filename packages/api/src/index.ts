@@ -1085,6 +1085,11 @@ export {
   useSaveWorkspaceProfile,
   workspaceProfileKeys,
   type WorkspaceProfileView,
+  useOperationalProfile,
+  useSaveOperationalDna,
+  useSaveOnboardingProgress,
+  operationalProfileKeys,
+  type OperationalProfileView,
 } from './hooks/workspace-profile'
 
 // ─── AI assistant (T13) ───

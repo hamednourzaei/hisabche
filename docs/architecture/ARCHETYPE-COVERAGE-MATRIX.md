@@ -14,3 +14,17 @@
 | **Wholesale Trading Business**                    | `PHYSICAL_GOODS`                         | `JOB_TICKET` or `COUNTER_POS`     | `RETAIL_STOCK`                         | `CUSTOMER_CREDIT` + `INSTALLMENT_RECEIVABLES` | `SALARIED_STAFF`                         | `BUSINESS_ACCOUNT`      | `WAREHOUSE_NETWORK`                   | `multi_warehouse`, `in_transit_transfer`, `price_lists`, `credit_limits` |
 | **Artisanal Bakery / Small Workshop**             | `PHYSICAL_GOODS`                         | `COUNTER_POS` + `WALK_IN`         | `RAW_MATERIALS` + `FINISHED_GOODS`     | `IMMEDIATE_SETTLEMENT`                        | `SHIFT_BASED_STAFF`                      | `STANDARD_PARTY`        | `SINGLE_LOCATION`                     | `recipe_bom`, `batch_expiry`, `unit_conversion`, `production_costing`    |
 | **Freelancer / Professional Services**            | `DELIVERABLE_SERVICE` + `TIME_SERVICE`   | `PROJECT_DELIVERY`                | `NONE`                                 | `DEPOSIT_PREPAYMENT` + `CUSTOMER_CREDIT`      | `SOLO_OWNER`                             | `BUSINESS_ACCOUNT`      | `SINGLE_LOCATION` or `MOBILE_SERVICE` | `invoices`, `time_tracking`, `milestones`, `retainers`                   |
+
+---
+
+## بازبینی با کد — ۷ نوامبر ۲۰۲۶
+
+| Archetype              | کار می‌کند                                        | گم                                                                                | وضعیت                                  |
+| ---------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------- |
+| GOODS_RETAIL           | فاکتور فروش/خرید، انبار، بها، مرجوعی، صندوق، دفتر | UI سفارش خرید                                                                     | `IMPLEMENTED_NOT_LIVE_VERIFIED` (هسته) |
+| NAIL_TECH_BEAUTY       | جلسه‌ی خدمت، فاکتور، پرداخت                       | صنف در `business-types.ts`، UI نوبت، بیعانه‌ی نوبت، مواد با سند، کمیسیون، یادآوری | `PARTIALLY_IMPLEMENTED`                |
+| LANGUAGE_TEACHER       | بسته‌ی اعتباری، جلسه                              | حضور و پروفایل شاگرد                                                              | `PARTIALLY_IMPLEMENTED`                |
+| GENERAL_SERVICE_REPAIR | جلسه‌ی خدمت، گارانتی                              | تیکت با وضعیت، دارایی مشتری                                                       | `PARTIALLY_IMPLEMENTED`                |
+| MIXED_BUSINESS         | هسته‌های مشترک                                    | DNA چندمحوری سروری                                                                | `PARTIALLY_IMPLEMENTED`                |
+
+«پشتیبانی همگانی» ادعا نمی‌شود. جزئیات: بخش G و H ممیزی در `UNIVERSAL-BUSINESS-ARCHITECTURE.md`.

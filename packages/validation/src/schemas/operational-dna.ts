@@ -454,3 +454,33 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
             : 'GENERIC_BUSINESS',
   }
 }
+
+// ─── Onboarding progress (V54 5.3) ───────────────────────────────────
+// Where the wizard stands, kept on the WORKSPACE so another device or a
+// cleared browser resumes instead of starting over. The answers are the
+// wizard's own fields only — a closed list, each a short string — so the
+// column can never become an unvalidated blob of business truth.
+export const ONBOARDING_STATES = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'REQUIRES_CONFIGURATION',
+  'READY_TO_ACTIVATE',
+  'ACTIVE',
+  'PAUSED',
+] as const
+export type OnboardingProgressState = (typeof ONBOARDING_STATES)[number]
+
+export const onboardingProgressSchema = z
+  .object({
+    state: z.enum(ONBOARDING_STATES),
+    step: z.number().int().min(0).max(20),
+    answers: z
+      .object({
+        businessType: z.string().max(400).nullable().optional(),
+        storeSize: z.string().max(32).nullable().optional(),
+        defaultCurrency: z.string().max(8).nullable().optional(),
+      })
+      .strict(),
+  })
+  .strict()
+export type OnboardingProgress = z.infer<typeof onboardingProgressSchema>

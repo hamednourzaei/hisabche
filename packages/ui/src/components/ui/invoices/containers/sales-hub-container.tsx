@@ -70,12 +70,12 @@ function SalesHub() {
       <RegisterCustomizer
         groups={[
           {
-            title: tGlobal('pageLook.hubSections' as any),
+            title: tGlobal('pageLook.hubSections' as Parameters<typeof tGlobal>[0]),
             look,
             keepOne: true,
             items: SALES_HUB_TABS.map((tab) => ({
               id: hubLookId(tab, tab),
-              label: t(`tabs.${tab}` as any),
+              label: t(`tabs.${tab}` as Parameters<typeof t>[0]),
             })),
           },
         ]}

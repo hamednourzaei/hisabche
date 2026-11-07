@@ -101,7 +101,10 @@ describe('sitemap output', () => {
     }
     expect(new Set(urls).size).toBe(urls.length)
     expect(urls.some((url: string) => url.includes('/market'))).toBe(false)
-  }, 30_000)
+    // 120 s: the import compiles the whole web sitemap graph from cold. Alone it
+    // takes seconds; inside the full suite (200+ files in parallel) it went past
+    // 30 s and failed on time, not on any assertion. The assertions are unchanged.
+  }, 120_000)
 })
 
 describe('public → private links', () => {

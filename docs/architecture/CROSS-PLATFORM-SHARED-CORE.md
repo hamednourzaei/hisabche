@@ -53,3 +53,13 @@
 - **Runtime:** Next.js App Router.
 - **Data Access:** Direct REST communication via `@hisabche/api` to Backend.
 - **Storage:** Browser localStorage / IndexedDB for React Query client cache.
+
+---
+
+## بازبینی با کد — ۷ نوامبر ۲۰۲۶
+
+- وب موتور محلی ندارد؛ ویندوز و اندروید `packages/local-engine` را بار می‌کنند (`apps/desktop/electron/main/services/local-api.ts`، `apps/mobile/src/host/local-api.ts`).
+- ماتریس آفلاین: ۱۹۱ `available` / ۳۱۰ `online_required` / ۱۵ `not_supported` (`offline-endpoint-matrix.ts`). نوبت و سفارش اشتراک `online_required`؛ جلسه‌ی خدمت، بسته‌ی اعتباری و بیعانه‌ی سفارش `available`.
+- `CAPABILITIES` دو بار با دو معنا تعریف شده: مجوز کاربر (`backend/src/services/authorization/authorization.domain.ts:50`) و قابلیت کسب‌وکار (`packages/validation/src/schemas/business-capabilities.ts:81`).
+- قابلیت کسب‌وکار در API و موتور محلی **اجرا نمی‌شود**؛ فقط entitlement و permission اجرا می‌شوند.
+- بیلد ویندوز و اندروید روی این دستگاه مسدود است (قفل فایل موقت esbuild) — `V54-IMPLEMENTATION-PROGRESS.md`.

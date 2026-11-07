@@ -103,12 +103,18 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim() || !minTotal.ok) return
-    await onCreate({
-      name: name.trim(),
-      entity_type: entityType,
-      steps: [{ step_order: 1, approver_role: approverRole, is_final: true }],
-      minTotal: entityType === 'invoice' ? minTotal.value : null,
-    })
+    try {
+      await onCreate({
+        name: name.trim(),
+        entity_type: entityType,
+        steps: [{ step_order: 1, approver_role: approverRole, is_final: true }],
+        minTotal: entityType === 'invoice' ? minTotal.value : null,
+      })
+    } catch {
+      // The container has already said why (AUDIT-80 #146). The form stays
+      // open with what was typed, so the person can correct and resend.
+      return
+    }
     setName('')
     setMinTotalText('')
     setIsFormOpen(false)

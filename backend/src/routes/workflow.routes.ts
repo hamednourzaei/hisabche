@@ -51,7 +51,9 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       try {
         const data = createWorkflowSchema.parse(request.body)
         const workflow = await workflowService.createWorkflow(request.tenancy.workspaceId, data)
-        await clearCache('workflows:*')
+        // This workspace's keys only (AUDIT-80 #160). `workflows:*` emptied
+        // every business's cached workflow list on each create.
+        await clearCache(`*workflow*${request.tenancy.workspaceId}*`)
         return reply.code(201).send(workflow)
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -304,8 +306,12 @@ export async function workflowRoutes(fastify: FastifyInstance) {
           instance_id: id,
         })
 
-        await clearCache(`workflow-instance:${id}`)
-        await clearCache('workflow-instances:*')
+        // ⚠️ AUDIT-80 #160. These keys are `<prefix>:<userId>:<workspaceId>:<url>`
+        // (scope 'member', cache.middleware.ts), so `workflow-instance:<id>`
+        // matched NOTHING — the approver kept seeing the instance as it was for
+        // up to a minute — and `workflow-instances:*` emptied every business's
+        // list. One pattern: every workflow key of this workspace.
+        await clearCache(`*workflow*${request.tenancy.workspaceId}*`)
         return reply.send(result)
       } catch (err) {
         if (err instanceof z.ZodError) {

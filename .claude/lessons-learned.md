@@ -2023,3 +2023,92 @@ Electron Ø¨Ø§Ø²Ø³Ø§Ø²ÛŒ Ø´Ø¯Ù‡Â» Ùˆ **Ù‡ÛŒÚ† Ú
   نمی‌کند و اگر سرور قدیمی context نفرستد، عددی از خودش نمی‌سازد.
 - **تغییر یک تنظیم workspace باید فقط `workspaces` را لمس کند — و این را با mock ثابت کن، نه با نیت.**
   mock باید هر `from(table)` را ثبت کند؛ آن‌گاه «نقش/مجوز/فاکتور دست نخورد» یک ادعای آزمون‌پذیر می‌شود.
+
+## درس ۲۴۵ — ممیزی سفر کاربر و P0 های آن (۷ نوامبر ۲۰۲۶)
+
+- **«سرویس throw می‌کند» در مسیری که catch بلعنده دارد، یعنی «سرویس throw نمی‌کند».** `createWorkspace`
+  خطای عضویت مالک را با صدای بلند throw می‌کرد، و ثبت‌نام همان را در `try/catch` بلعید و ۲۰۱ داد. قبل از
+  تکیه بر «خطا گزارش می‌شود»، caller را بخوان (`auth.routes.ts`).
+- **نوشتن دو جدولی = یک تابع Postgres، حتی برای «فقط دو INSERT».** `workspace_create_with_owner`
+  (`docs/workspace-create-01-migration.sql`) — هر دو یا هیچ. ستون اختیاریِ migration های بعدی را فقط وقتی
+  مقدار آمده با UPDATE داخل همان تابع بنویس؛ plpgsql نام ستون را هنگام اجرا می‌سنجد، نه هنگام ساخت.
+- **fallback به مسیر قدیمی فقط روی «خودِ تابع نیست» — با نام تابع در پیام.** `42883` از داخل بدنه (تابع
+  دیگری گم است) خطای واقعی است. مسیر دو مرحله‌ای فقط تا VERIFY زنده می‌ماند؛ refuse کردن، ثبت‌نام را از لحظه‌ی
+  دیپلوی تا اجرای اسکریپت قطع می‌کرد (تفاوت با `invoice_write_document` که از قبل اجرا شده بود).
+- **هیچ چیزِ مشتق از secret در لاگ نه — پیشوند و طول هم.** `email.service.ts` پنج نویسه‌ی اول کلید Resend
+  را در هر بوت چاپ می‌کرد. فقط «تنظیم شده / نشده». گارد: `workspace-create-atomic.test.ts`.
+- **worktree بدون `node_modules`:** junction به `backend/node_modules` و `packages/{validation,local-engine}/node_modules`
+  checkout اصلی (git آن‌ها را ignore می‌کند) — tsc و vitest روی فایل‌های همان worktree اجرا می‌شوند.
+  `mklink` از bash با مسیر نقطه‌دار شکست خورد؛ `New-Item -ItemType Junction` در یک فایل `.ps1` کار کرد.
+- **باینری embedded-postgres روی این دستگاه نیست** (`@embedded-postgres/windows-x64/native/bin/postgres.exe`) —
+  همه‌ی `*.pg.test.ts` تا نصب دوباره‌ی وابستگی‌ها `BLOCKED_BY_ENVIRONMENT` هستند.
+
+## درس ۲۴۶ — مطابقت ۱۶۰ باگ گزارش Antigravity با کد (۷ نوامبر ۲۰۲۶)
+
+- **گزارش باگ ایجنت دیگر را با فایل روی دیسک بسنج، نه با جمله.** از ۱۶۰ مورد، ۳۸ به فایلی ارجاع می‌دادند که
+  وجود ندارد (`till.service.ts`، `cheque.service.ts`، `commission.service.ts`، `payroll-calculator.ts`، …) و
+  چند عنوان شناسه‌ی BUG رجیستری را به باگ دیگری نسبت می‌داد. حکم نهایی: ۴ رفع، ۹۲ قبلاً رفع، ۲۳ نادرست، ۱۱ شکاف
+  محصول، ۹ تصمیم مالک، ۲۱ مبهم — `docs/audit/AUDIT-80-VERIFICATION.md`. اسکریپت اول: استخراج مسیرها و `existsSync`.
+- **کلید کش را از `cacheMiddleware` بخوان، نه از prefix.** scope `member` یعنی `prefix:userId:workspaceId:url`؛
+  پس `clearCache('workflow-instance:<id>')` هرگز چیزی پاک نمی‌کرد و `workflows:*` کش همه‌ی کسب‌وکارها را.
+  الگوی درست همان `*workflow*<workspaceId>*`.
+- **«گلوبال hook احراز می‌کند» یعنی «هر مشتری می‌بیند».** `/api/debug/*` پشت سشن بود ولی هیچ دروازه‌ی ادمینی نداشت.
+- **سوئیت `main` را قبل از ادعای «قرمزها مال من نیست» روی خودِ `main` اجرا کن.** ۵ گارد UI و ۳ تست بک‌اند روی
+  `28154aca` قرمز بودند — از جمله چرخه‌ی barrel در ۴ اسکلتون (`from '@hisabche/ui'` داخل خود پکیج) و متن فارسیِ
+  ثابت با `text-neutral-400` در `dashboard-layout.tsx`. هر دو رفع شدند.
+- **worktree زیر `.claude/` گاردهای درخت‌خوان را کور می‌کند.** `rtl-logical-properties` هر مسیری با `/.claude/`
+  را رد می‌کند ⇒ ۰ فایل ⇒ قرمز. قرمزِ محیطی است؛ روی checkout اصلی سبز.
+- **pg test ها بی‌باینری هر کدام تا ۴ دقیقه منتظر می‌مانند.** بدون `postgres.exe`، `vitest run --project unit` بزن.
+- **این سشن فقط داخل worktree می‌نویسد** (hook)؛ checkout اصلی را تنها می‌شود خواند و تست گرفت.
+
+## درس ۲۴۷ — ممیزی V54 Phase 5.0، دکمه‌ی «صفحه‌ها و تب‌ها»، بیلد مسدود (۷ نوامبر ۲۰۲۶)
+
+- **سند پیشرفتِ «VERIFIED_COMPLETE» را با مصرف‌کننده بسنج.** `V54-IMPLEMENTATION-PROGRESS.md` (۴ نوامبر) ناوبری تطبیقی و
+  نوبتِ وصل‌به‌UI را تمام‌شده می‌خواند؛ `resolveDnaCapabilities` جز چک‌لیست مصرف‌کننده نداشت و `useAppointments`،
+  `useCreateSubscriptionOrder`، `useOrderDeposits` صفر مصرف‌کننده‌ی UI. اصلاح شد؛ ممیزی کامل در
+  `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md`.
+- **DNA فقط روی دستگاه است** (`useOnboardingStore`)؛ سرور تنها `workspaces.business_types` را دارد. هر قابلیتی که «پروفایل»
+  را می‌خواند باید بداند روی دستگاه دیگر چیز دیگری می‌بیند.
+- **کلید i18n گم در وب خام چاپ می‌شود، نه throw** (`intl-provider.tsx` → `getMessageFallback`). `pageLook.hubSections` در
+  هیچ زبانی نبود و عنوان گروه تب‌ها در هر هاب «pageLook.hubSections» بود. `as any` روی کلید ترجمه همین را پنهان می‌کند.
+- **دکمه‌ی «صفحه‌ها و تب‌ها» = همان `PageCustomizer`** با `triggerLabel`؛ تب‌ها از خودِ هاب (لینک `?customize=1` که
+  `GlobalPageCustomizer` یک بار می‌خواند و از نشانی پاک می‌کند — دو نمونه‌ی وب، یک دیالوگ). فهرست تب‌ها در تنظیمات کپی نشد.
+- ⚠️ **کلاس `inline-flex` اتریبیوت `hidden` را بی‌اثر می‌کند** — شرطی رندر کن (بار دوم).
+- ⚠️ **بیلد ویندوز و اندروید روی این دستگاه:** `vite:esbuild-transpile … remove …\Temp\esbuild-…: Access is denied`.
+  esbuild ورودی بالای ۱ مگابایت را از فایل موقت می‌گذراند (`esbuild/lib/main.js:1055`) و حذفش رد می‌شود — در sandbox،
+  بیرون از sandbox و در ترمینال خودِ کاربر. بیلد ۴ نوامبر موفق بود ⇒ یک chunk از ۱ مگابایت گذشته یا محیط عوض شده.
+  exclusion آنتی‌ویروس راه‌حل نیست؛ تصمیم مالک.
+- PowerShell این دستگاه اسکریپت امضانشده را اجرا نمی‌کند (execution policy) — فرمان را مستقیم در ترمینال بنویس.
+
+## درس ۲۴۸ — اجرای V54 (5.2، 5.3، 5.5، 5.6) و پیوند node_modules worktree (۷ نوامبر ۲۰۲۶)
+
+- ⚠️ **«نوبت» در حسابچه جلسه‌ی خدمت است، نه جدول `appointments`.** جلسه‌ی خدمت UI، موتور محلی، صف و sync دارد و CHECK
+  دیتابیسش از اول `in_progress` و `no_show` را می‌پذیرفت؛ `appointments` هیچ UI ای ندارد و پاسخش snake_case خام است در
+  حالی که `AppointmentRecord` camelCase تایپ شده (الگوی کارمندان). قبل از «وصل‌کردن هوک بی‌مصرف» بپرس آیا موتور دیگری
+  همین کار را با مصرف‌کننده‌ی واقعی انجام می‌دهد — وصل‌کردنش یعنی دو خط موازی.
+- ⚠️ **وضعیت تازه‌ای که در صف دستگاه می‌رود، باید شاخه‌ی خودش را در `sync-engine.ts` داشته باشد.** هر `update` جلسه که
+  `delivered`/`cancelled` نبود به `POST /service-delivery/sessions` (ساختن) می‌افتاد؛ «حاضر شد» آفلاین یا جلسه‌ی دوم می‌ساخت
+  یا conflict. حرکت بی‌پول = `POST …/:id/status` با فهرست بسته‌ی `SESSION_STATUS_MOVES`؛ تحویل و لغو در آن نیستند.
+- **«یک بار» در سرور = وضعیت‌های مبدأ در WHERE** (`sessionStatusMoveSources`)؛ صفر ردیف ⇒ دوباره بخوان: همان وضعیت =
+  replay، غیر آن = ردِ دامنه. route محلی POST پیش‌فرض ۲۰۱ می‌دهد — برای حرکت `{ __status: 200 }` صریح.
+- **DNA روی workspace فقط با `workspace_set_operational_dna`** (قفل، نسخه‌ی خوانده‌شده، تاریخچه‌ی append-only)؛ DNA یکسان =
+  replay بدون ردیف تاریخچه؛ نسخه‌ی کهنه = `OPERATIONAL_PROFILE_CHANGED` و wizard نسخه‌ی دستگاه دیگر را بازنویسی نمی‌کند.
+  پیشرفت onboarding یک شکل بسته است (`onboardingProgressSchema`)، نه JSON آزاد. `docs/operational-profile-01` منتظر اجرا.
+- **منوی پیشنهادی از DNA یک بار به‌ازای نسخه** (`usePageLook.suggest(ids, token)`)؛ نشانه کنار نما ذخیره می‌شود تا «همه را
+  نشان بده» (reset) در رندر بعد برنگردد. فقط کسی که منوی خودش را ندارد. صفحه‌های پولی هرگز. گارد injection دارد.
+- ⚠️ **`node_modules` worktree که junction به مخزن اصلی است، `@hisabche/*` را به کد main می‌برد** — تست بین‌پکیجی کد
+  main را می‌سنجید و `planSessionStatusMove is not a function` داد. هر `node_modules` را پوشه‌ی واقعی کن: junction برای هر
+  ورودی، و `@hisabche/*` به `packages/*` همین worktree (اسکریپت در scratchpad: `relink.mjs`). main دست نمی‌خورد.
+
+## درس ۲۴۹ — قفل بیلد esbuild حل شد: پوشه‌ی موقت، نه آنتی‌ویروس (۷ نوامبر ۲۰۲۶)
+
+- ⚠️ **`[vite:esbuild-transpile] remove …\AppData\Local\Temp\esbuild-…: Access is denied`** فقط وقتی است که پوشه‌ی موقت
+  `AppData\Local\Temp` باشد. esbuild ورودی بالای ۱ مگابایت را از فایل موقت می‌گذراند و باینری Go آن را حذف می‌کند؛ روی این
+  دستگاه حذف در آن پوشه رد می‌شود (Node همان فایل را حذف می‌کند). با `TMP`/`TEMP` = `C:\Users\hamed\Desktop\hisabche\.esbuild-tmp`
+  (در `.gitignore`) هر سه بیلد گذشت. اسکریپت آزمون: transform یک رشته‌ی ۱٫۲ مگابایتی با و بدون این متغیر.
+- بیلدها با این دو متغیر: `apps/desktop`: `npx electron-vite build` و `npx electron-builder --win --publish never -c.electronDist=node_modules/electron/dist`؛
+  `apps/mobile`: `pnpm run android:release`؛ `apps/web`: `npx next build`.
+- **تست‌های migration دستگاه فقط گام خودشان را اجرا کنند** (`m.to > from && m.to <= from + 1`): هر migration تازه‌ای که
+  جدولی را عوض کند که fixture قدیمی ندارد (v19 → `invoice.credit_status`) همه‌ی تست‌های قبلی را قرمز می‌کرد.
+- ⚠️ **route دستگاهی بدون `requireCapability`** (`POST /invoices/:id/credit-status`) را گارد `viewer-cannot-write` گرفت:
+  بیننده ۴۰۰ می‌گرفت نه ۴۰۳. مجوز قبل از خواندن بدنه.

@@ -157,7 +157,7 @@ export function isValidSessionStatusTransition(
 
   switch (from) {
     case 'scheduled':
-      return to === 'in_progress' || to === 'delivered' || to === 'cancelled'
+      return to === 'in_progress' || to === 'delivered' || to === 'cancelled' || to === 'no_show'
     case 'in_progress':
       return to === 'delivered' || to === 'no_show' || to === 'cancelled'
     case 'delivered':
@@ -168,6 +168,58 @@ export function isValidSessionStatusTransition(
       return false
     default:
       return false
+  }
+}
+
+/**
+ * The moves a person makes on a booked session that carry NO money:
+ *   in_progress  «حاضر شد» — the customer arrived (check-in) and the service began
+ *   no_show      «نیامد»   — the customer never came
+ *
+ * ⚠️ `delivered` and `cancelled` are NOT here. A delivery is a settlement and a
+ * cancellation may reverse credit; each keeps its own planner and its own
+ * transaction. This list is closed so that a status change can never become a
+ * back door around them.
+ */
+export const SESSION_STATUS_MOVES = ['in_progress', 'no_show'] as const
+export type SessionStatusMove = (typeof SESSION_STATUS_MOVES)[number]
+export const sessionStatusMoveSchema = z.enum(SESSION_STATUS_MOVES)
+
+/** The statuses a session may be in for `to` to be reached — the WHERE of the update. */
+export function sessionStatusMoveSources(to: SessionStatusMove): readonly ServiceDeliveryStatus[] {
+  return SERVICE_DELIVERY_STATUSES.filter(
+    (from) => from !== to && isValidSessionStatusTransition(from, to),
+  )
+}
+
+export interface PlanSessionStatusMoveResult {
+  readonly session: ServiceDeliverySession
+  /** True when the session was already in `to`: nothing is written, the answer is repeated. */
+  readonly replayed: boolean
+}
+
+/**
+ * One rule for the server and the device:
+ *  - `to` outside {@link SESSION_STATUS_MOVES}: refused (`SESSION_STATUS_MOVE_NOT_ALLOWED`)
+ *  - already in `to`: a replay (a retried tap, a re-delivered outbox entry)
+ *  - a move the transition table forbids (e.g. delivered -> no_show): refused
+ */
+export function planSessionStatusMove(params: {
+  readonly session: ServiceDeliverySession
+  readonly to: string
+  readonly now?: string | undefined
+}): PlanSessionStatusMoveResult {
+  const parsed = sessionStatusMoveSchema.safeParse(params.to)
+  if (!parsed.success) throw new Error('SESSION_STATUS_MOVE_NOT_ALLOWED')
+  const to = parsed.data
+  const { session } = params
+  if (session.status === to) return { session, replayed: true }
+  if (!isValidSessionStatusTransition(session.status, to)) {
+    throw new Error(`INVALID_STATUS_TRANSITION:${session.status}->${to}`)
+  }
+  return {
+    session: { ...session, status: to, updatedAt: params.now ?? new Date().toISOString() },
+    replayed: false,
   }
 }
 

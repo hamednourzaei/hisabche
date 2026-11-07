@@ -4,6 +4,7 @@
 import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  apiErrorMessage,
   useBusinessRules,
   useCreateBusinessRule,
   useWorkflows,
@@ -12,6 +13,7 @@ import {
   type WorkflowEntityType,
   type WorkflowStep,
 } from '@hisabche/api'
+import { useToast } from '../../toast-provider'
 import { WorkflowTemplatesView } from '../workflow-templates-view'
 import { EscalationPolicyEditor } from '../escalation-policy-editor'
 import { approvalConditionOf, invoiceApprovalRule } from '../../../../lib/workflow/approval-rule'
@@ -31,6 +33,21 @@ export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContain
   const rules = useBusinessRules('invoice')
   const { mutateAsync: createRule, isPending: isSavingCondition } = useCreateBusinessRule()
 
+  // ⚠️ A REFUSAL IS SAID (AUDIT-80 #146). Both writes used to reject into the
+  // view's click handler with nothing catching them: the form stayed open, no
+  // message appeared, and the only trace was an unhandled rejection in the
+  // console — the «silent error» the audit described. The server's reason is
+  // read with the shared `apiErrorMessage`.
+  const toast = useToast()
+  const sayFailed = useCallback(
+    (error: unknown) =>
+      toast.error(
+        tOriginal('workflow.actionErrorTitle'),
+        apiErrorMessage(error, tOriginal('workflow.actionError')),
+      ),
+    [toast, tOriginal],
+  )
+
   const handleCreate = useCallback(
     async (input: {
       name: string
@@ -39,19 +56,29 @@ export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContain
       minTotal: number | null
     }) => {
       const { minTotal, ...template } = input
-      const created = (await createWorkflow(template)) as { id?: string } | null
-      if (template.entity_type === 'invoice' && created?.id) {
-        await createRule(invoiceApprovalRule(template.name, created.id, minTotal))
+      try {
+        const created = (await createWorkflow(template)) as { id?: string } | null
+        if (template.entity_type === 'invoice' && created?.id) {
+          await createRule(invoiceApprovalRule(template.name, created.id, minTotal))
+        }
+      } catch (error) {
+        sayFailed(error)
+        // Still a failure to the form: it must stay open with what was typed.
+        throw error
       }
     },
-    [createWorkflow, createRule],
+    [createWorkflow, createRule, sayFailed],
   )
 
   const handleSetCondition = useCallback(
     async (workflow: Workflow, minTotal: number | null) => {
-      await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal))
+      try {
+        await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal))
+      } catch (error) {
+        sayFailed(error)
+      }
     },
-    [createRule],
+    [createRule, sayFailed],
   )
 
   return (

@@ -6,6 +6,9 @@ import {
   apiErrorMessage,
   useSetBaseCurrency,
   useSaveWorkspaceProfile,
+  useOperationalProfile,
+  useSaveOperationalDna,
+  useSaveOnboardingProgress,
   apiClient,
 } from '@hisabche/api'
 import { useLocale, useTranslations } from 'next-intl'
@@ -18,9 +21,9 @@ import {
   type Currency,
 } from '@hisabche/store'
 import { OnboardingPage } from '../onboarding-page'
-import { useCallback, useMemo, memo, useState } from 'react'
+import { useCallback, useEffect, useMemo, memo, useRef, useState } from 'react'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
-import { inferOperationalDna } from '@hisabche/validation'
+import { inferOperationalDna, type OnboardingProgress } from '@hisabche/validation'
 import { BUSINESS_MODELS, BUSINESS_TYPES, BUSINESS_TYPE_OTHER } from '@hisabche/ui-contract'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -89,6 +92,61 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const saveBookCurrency = useSetBaseCurrency()
   const toast = useToast()
 
+  // ─── V54 5.3: the wizard's place is kept on the WORKSPACE ───────────────
+  // Another device, a reinstall or a cleared browser resumes where the person
+  // stopped instead of starting over. Before docs/operational-profile-01 runs
+  // the server answers `configurable: false` and nothing here changes.
+  const operational = useOperationalProfile()
+  const saveOperationalDna = useSaveOperationalDna()
+  const saveOnboardingProgress = useSaveOnboardingProgress()
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId)
+
+  // Resume ONCE, and only into an untouched wizard: answers already given on
+  // this device are never overwritten by an older copy from elsewhere.
+  const resumed = useRef(false)
+  const serverProgress = operational.data?.onboarding ?? null
+  useEffect(() => {
+    if (resumed.current || !serverProgress) return
+    resumed.current = true
+    const local = useOnboardingStore.getState()
+    if (local.step !== 0 || local.businessType || serverProgress.state === 'ACTIVE') return
+    const { answers } = serverProgress
+    useOnboardingStore.setState({
+      step: serverProgress.step,
+      ...(answers.businessType ? { businessType: answers.businessType as BusinessType } : {}),
+      ...(answers.storeSize ? { storeSize: answers.storeSize as StoreSize } : {}),
+      ...(answers.defaultCurrency && isSupportedCurrency(answers.defaultCurrency)
+        ? { defaultCurrency: answers.defaultCurrency as Currency }
+        : {}),
+    })
+  }, [serverProgress])
+
+  // Each answer is kept as it is given. Best effort by design: the device copy
+  // is the one the wizard runs on, so a failed save loses nothing here — it
+  // only means another device would start this step again. No success is
+  // claimed for it anywhere.
+  useEffect(() => {
+    if (!workspaceId || step === 0 || operational.data?.configurable !== true) return
+    const progress: OnboardingProgress = {
+      state: 'IN_PROGRESS',
+      step,
+      answers: {
+        businessType: businessType ?? null,
+        storeSize: storeSize ?? null,
+        defaultCurrency: defaultCurrency || null,
+      },
+    }
+    saveOnboardingProgress(progress).catch(() => undefined)
+  }, [
+    workspaceId,
+    step,
+    businessType,
+    storeSize,
+    defaultCurrency,
+    operational.data?.configurable,
+    saveOnboardingProgress,
+  ])
+
   /**
    * Persist what the wizard collected, then finish.
    *
@@ -156,6 +214,31 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       // workspace's own declaration, and a database that cannot store it yet
       // answers `null` rather than failing.
       await saveWorkspaceProfile(selected)
+
+      // V54 5.2: the 8-axis profile on the workspace, versioned. The version
+      // named is the one this screen read; if another device saved in between
+      // the server refuses (`OPERATIONAL_PROFILE_CHANGED`) and THAT profile
+      // stands — this wizard does not overwrite it.
+      const operationalView = operational.data
+      if (operationalView?.configurable === true) {
+        try {
+          await saveOperationalDna(inferredDna, operationalView.version)
+        } catch (dnaError) {
+          if (!apiErrorMessage(dnaError, '').includes('OPERATIONAL_PROFILE_CHANGED')) {
+            throw dnaError
+          }
+          await operational.refetch()
+        }
+        await saveOnboardingProgress({
+          state: 'ACTIVE',
+          step: 0,
+          answers: {
+            businessType: businessType ?? null,
+            storeSize: storeSize ?? null,
+            defaultCurrency,
+          },
+        })
+      }
     } catch (error) {
       // The chosen currency is the whole point of the wizard, so a refusal is
       // said and the wizard stays — finishing locally would look like success
@@ -176,6 +259,9 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     businessNote,
     businessType,
     completeOnboarding,
+    operational,
+    saveOperationalDna,
+    saveOnboardingProgress,
     defaultCurrency,
     push,
     saveBookCurrency,
