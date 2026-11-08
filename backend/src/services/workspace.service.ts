@@ -68,21 +68,6 @@ function isMissingStampColumn(error: { code?: string; message?: string } | null)
   if (!/stamp_url/.test(message)) return false
   return error.code === '42703' || /does not exist|schema cache|could not find/i.test(message)
 }
-/**
- * Is this the database saying `workspace_create_with_owner` itself does not
- * exist (workspace-create-01 not run yet)?
- *
- * PGRST202 is PostgREST's «no such function in the schema cache»; 42883 is
- * undefined_function. The function's NAME must be in the message: a 42883
- * raised from inside the function body (another function missing) is a real
- * failure, not a reason to fall back.
- */
-function isMissingCreateFunction(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false
-  if (error.code !== 'PGRST202' && error.code !== '42883') return false
-  return /workspace_create_with_owner/.test(error.message ?? '')
-}
-
 const SIGNATURE_MIGRATION = 'docs/workspace-signature-01-migration.sql'
 
 /** Is this Postgres saying `signature_url` does not exist (the migration has not run)? */
@@ -154,11 +139,9 @@ export class WorkspaceService {
    * answered 201. `workspace_create_with_owner` writes both rows in one
    * transaction.
    *
-   * Until the owner runs docs/workspace-create-01-migration.sql the function is
-   * not there; only THAT answer (the function itself missing) falls back to the
-   * old two-step write, loudly. Refusing instead would stop every signup and
-   * onboarding the moment this backend deploys before the script runs. Every
-   * other database failure is a failure.
+   * The two-step fallback for a database without the function was removed on
+   * 8 Nov 2026, after VERIFY-workspace-create-01 came back all true on the live
+   * database. Every database failure is now a failure.
    */
   async createWorkspace(userId: string, data: CreateWorkspace) {
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
@@ -174,13 +157,6 @@ export class WorkspaceService {
       p_time_zone: data.timeZone ?? null,
     })
 
-    if (rpcError && isMissingCreateFunction(rpcError)) {
-      console.error(
-        '[WorkspaceService] WORKSPACE_ATOMIC_RPC_MISSING: run docs/workspace-create-01-migration.sql — ' +
-          'this workspace is written in two non-atomic steps.',
-      )
-      return this.createWorkspaceInTwoSteps(userId, data, slug)
-    }
     if (rpcError) throw new DatabaseError('Failed to create workspace', rpcError)
     if (typeof createdId !== 'string' || createdId.length === 0) {
       throw new DatabaseError('Workspace creation returned no id')
@@ -195,79 +171,6 @@ export class WorkspaceService {
       throw new DatabaseError('Workspace was created but could not be read', error)
 
     await this.invalidateUserCache(userId)
-    return workspace
-  }
-
-  /**
-   * The pre-workspace-create-01 path. Reached ONLY when the atomic function is
-   * missing from the database (see createWorkspace). Delete it once
-   * VERIFY-workspace-create-01 has come back all true on the live database.
-   */
-  private async createWorkspaceInTwoSteps(userId: string, data: CreateWorkspace, slug: string) {
-    const insertPayload: Record<string, unknown> = {
-      name: data.name,
-      slug,
-      description: data.description || null,
-      logo_url: data.logoUrl || null,
-      stamp_url: data.stampUrl || null,
-      owner_id: userId,
-    }
-    if (data.baseCurrency) {
-      insertPayload.base_currency = data.baseCurrency
-    }
-    if (data.timeZone) {
-      insertPayload.time_zone = data.timeZone
-    }
-
-    const { data: workspace, error } = await supabase
-      .from('workspaces')
-      .insert(insertPayload)
-      .select(WORKSPACE_COLUMNS)
-      .single()
-
-    if (error || !workspace) throw new DatabaseError('Failed to create workspace', error)
-
-    // ⚠️ THE RESULT IS CHECKED, AND THAT IS THE WHOLE POINT.
-    //
-    // supabase-js NEVER throws — it returns `{ error }`. The previous version
-    // was `await supabase.from(...).insert(...)` with nothing destructured, so
-    // a failure here was silently discarded.
-    //
-    // That is exactly what happened when `workspace_members.has_access` lost
-    // its `DEFAULT true` in the schema rebuild:
-    //
-    //     workspaces        created ✓
-    //     workspace_members 23502 not-null violation — SWALLOWED
-    //     → a workspace whose owner is not a member of it
-    //     → every later request 403, hours later, with no log line to connect
-    //       it to onboarding
-    //
-    // Checking it turns a day of debugging into one clear error at the moment
-    // the thing actually goes wrong.
-    const { error: membershipError } = await supabase
-      .from('workspace_members')
-      .insert({ workspace_id: workspace.id, user_id: userId, role: 'owner', has_access: true })
-
-    if (membershipError) {
-      // ⚠️ The workspace row already exists at this point and is NOT deleted.
-      //
-      // supabase-js has no transactions, and a compensating DELETE is its own
-      // failure mode: it can fail too, and then the caller is told the create
-      // failed while the row survives. An orphaned workspace is recoverable —
-      // `docs/_repair-owner-memberships.sql` derives the missing membership
-      // from `owner_id`. A half-deleted one is not.
-      //
-      // So it is left in place and reported loudly.
-      throw new DatabaseError(
-        'Workspace was created but its owner membership could not be. ' +
-          'The owner cannot access it until a membership row exists.',
-        membershipError,
-      )
-    }
-
-    // ✅ Invalidate cache
-    await this.invalidateUserCache(userId)
-
     return workspace
   }
 

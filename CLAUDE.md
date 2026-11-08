@@ -187,7 +187,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **مطابقت ۱۶۰ باگ گزارش Antigravity با کد؛ ۹ تصمیم مالک (۷ نوامبر)**   | `docs/audit/AUDIT-80-VERIFICATION.md`                                       |
 | **V54 ممیزی Phase 5.0 با کد (DNA فقط روی دستگاه؛ نوبت/بیعانه/اشتراک بی‌UI) (۷ نوامبر)** | `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی · `V54-IMPLEMENTATION-PROGRESS.md` — **5.1+ منتظر تأیید** |
 | **V54 اجرا: «حاضر شد/نیامد» جلسه، DNA نسخه‌دار، ادامه‌ی onboarding، منوی پیشنهادی (۷ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور دوم — **operational-profile-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۴۹)**                                     | `.claude/lessons-learned.md`                                                |
+| **V54 دور سوم: پیش‌فروش/پیش‌خرید، OTP، کمیسیون، مواد، بیعانه‌ی نوبت (۸ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور سوم — **session-deposit-01، advances-02، email-otp-01، provider-commission-01 منتظر اجرا و VERIFY** |
+| **همه‌ی درس‌ها با شماره (۱–۲۵۰)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -441,6 +442,7 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **عضویت را با `has_access` صریح بساز** (کد و تابع SQL)؛ به default ستون تکیه نکن (`docs/FIX-403.sql`).
 - **تنظیمات ← «صفحه‌ها و تب‌ها»** (`settings/pages-and-tabs-settings.tsx`) همان `PageCustomizer` و همان `useMenuCustomizerGroup` آچار هدر است؛ تب‌ها با لینک `?customize=1` (`lib/customize-flag.ts`) از خودِ هاب. فهرست تب‌ها را در تنظیمات کپی نکن؛ هاب تازه = یک ردیف در `PAGES_WITH_TABS` + گارد `pages-and-tabs-settings.test.ts`.
 - ⚠️ **workspace و عضویت مالک فقط با `workspace_create_with_owner`** (یک تراکنش، `workspace-create-01`). مسیر دو مرحله‌ای فقط وقتی خودِ تابع نیست و با لاگ `WORKSPACE_ATOMIC_RPC_MISSING`؛ بعد از VERIFY حذفش کن. هیچ چیزِ مشتق از secret (پیشوند، طول) لاگ نشود.
+- ⚠️ **پیش‌فروش/پیش‌خرید/بیعانه = یک موتور `order_deposits` با `source_type`** (پیش‌فروش و پیش‌خرید سند خودشان‌اند: `order_id = id`). سمت تأمین‌کننده نقش `supplier_advances` و توابع `supplier_advance_apply/refund`؛ موتور پیش‌پرداخت دوم نساز. درآمد/هزینه فقط با فاکتور.
 - ⚠️ **نوبت = جلسه‌ی خدمت** (UI، آفلاین، sync)؛ جدول `appointments` موتور موازیِ بی‌UI است — وصلش نکن. حرکت بی‌پول جلسه فقط `POST /service-delivery/sessions/:id/status` (`SESSION_STATUS_MOVES`) و هر وضعیت تازه‌ی صف دستگاه شاخه‌ی خودش را در `sync-engine.ts` می‌خواهد. DNA روی workspace فقط با `workspace_set_operational_dna` (نسخه + تاریخچه)؛ منوی پیشنهادی از DNA یک بار به‌ازای نسخه (`usePageLook.suggest`).
 - ⚠️ **اول FINDING، بعد migration.** حدس درباره‌ی دیتابیس زنده را با یک کوئری خواندنی بسنج؛ کدِ ۴۰۳ را از **بدنه‌ی پاسخ** بخوان (`code`)، نه از عدد.
 - ⚠️ **راه خروج را پشت همان درخواستی نگذار که ممکن است رد شود** (`SandboxNotice`).

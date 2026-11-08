@@ -66,6 +66,10 @@ export const accountRoles = [
   // it was: scrap/waste from returns, never a count.
   'inventory_shrinkage',
   'inventory_gain',
+  // advances-02 (8 Nov 2026): money paid to a supplier BEFORE the goods — an
+  // asset. Payment Dr supplier_advances / Cr cash|bank; applying it to the
+  // purchase invoice Dr payable / Cr supplier_advances.
+  'supplier_advances',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

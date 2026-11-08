@@ -9,6 +9,8 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ServiceDeliveryService } from '../services/service-delivery/service-delivery.service'
+import { ProviderCommissionService } from '../services/service-delivery/provider-commission.service'
+import { providerCommissionRateSchema } from '@hisabche/validation'
 import { sendFailure } from '../errors/http-failure'
 import { sendCreated } from '../utils/client-request'
 
@@ -101,6 +103,40 @@ export async function serviceDeliveryRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to change service session status')
+      }
+    },
+  )
+
+  // ─── 4c. Provider commission (V54, owner decision N-7) ──────────
+  // A REPORT: what each provider earned at their rate over delivered
+  // sessions. Not posted, not paid. Staff pay is payroll's business, so the
+  // same capabilities: payroll.read to see it, payroll.write to set a rate.
+  const commission = new ProviderCommissionService()
+  fastify.get(
+    '/api/service-delivery/commission',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = (request.query || {}) as { from?: string; to?: string }
+        const report = await commission.report(request.tenancy, query.from ?? '', query.to ?? '')
+        return reply.send(report)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to build the commission report')
+      }
+    },
+  )
+
+  fastify.put(
+    '/api/service-delivery/commission-rates/:employeeId',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { employeeId } = request.params as { employeeId: string }
+        const body = providerCommissionRateSchema.parse(request.body)
+        await commission.setRate(request.tenancy, employeeId, body.rateBp)
+        return reply.send({ employeeId, rateBp: body.rateBp })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to store the commission rate')
       }
     },
   )

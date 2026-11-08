@@ -47,6 +47,7 @@ import { supabase } from './db'
 // Routes
 // ──────────────────────────────────────────────
 import { authRoutes } from './routes/auth.routes'
+import { emailOtpRoutes } from './routes/email-otp.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { syncStreamRoutes } from './routes/sync-stream.routes'
 import cmsRoutes from './routes/cms.routes'
@@ -717,6 +718,8 @@ export async function buildServer(): Promise<typeof server> {
   server.log.info('📦 Registering routes...')
 
   await server.register(authRoutes)
+  // V54 5.1: email codes — infrastructure, off until EMAIL_OTP_ENABLED=true.
+  await server.register(emailOtpRoutes)
   await server.register(syncRoutes)
   await server.register(syncStreamRoutes)
   await server.register(cmsRoutes)

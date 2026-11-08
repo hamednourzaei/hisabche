@@ -114,6 +114,8 @@ export function CustomerDepositsPanel({ customerId, formatDate }: CustomerDeposi
   const availability = useActionAvailability('order.deposits')
   const depositsQuery = useCustomerDeposits(customerId)
   const openInvoicesQuery = useOpenInvoices('customer', customerId)
+  // advances-02: a pre-purchase is applied to this party's PURCHASE invoices.
+  const openPurchasesQuery = useOpenInvoices('supplier', customerId)
   const applyDeposit = useApplyOrderDeposit()
   const refundDeposit = useRefundOrderDeposit()
   const postReceipt = usePostOrderDepositReceipt()
@@ -193,7 +195,15 @@ export function CustomerDepositsPanel({ customerId, formatDate }: CustomerDeposi
                     <p className="flex flex-wrap items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))]">
                       <span>{formatDate(deposit.createdAt)}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{t('orderReference', { id: deposit.orderId.slice(0, 8) })}</span>
+                      <span>
+                        {deposit.sourceType === 'service_session'
+                          ? t('sessionReference', { id: deposit.orderId.slice(0, 8) })
+                          : deposit.sourceType === 'pre_sale'
+                            ? t('preSaleReference', { id: deposit.orderId.slice(0, 8) })
+                            : deposit.sourceType === 'pre_purchase'
+                              ? t('prePurchaseReference', { id: deposit.orderId.slice(0, 8) })
+                              : t('orderReference', { id: deposit.orderId.slice(0, 8) })}
+                      </span>
                       <Badge size="sm" variant={STATUS_TONE[deposit.status]}>
                         {t(`status.${deposit.status}`)}
                       </Badge>
@@ -290,8 +300,16 @@ export function CustomerDepositsPanel({ customerId, formatDate }: CustomerDeposi
       {dialog?.kind === 'apply' && (
         <ApplyDialog
           deposit={dialog.deposit}
-          invoices={openInvoicesQuery.data ?? []}
-          invoicesLoading={openInvoicesQuery.isLoading}
+          invoices={
+            dialog.deposit.sourceType === 'pre_purchase'
+              ? (openPurchasesQuery.data ?? [])
+              : (openInvoicesQuery.data ?? [])
+          }
+          invoicesLoading={
+            dialog.deposit.sourceType === 'pre_purchase'
+              ? openPurchasesQuery.isLoading
+              : openInvoicesQuery.isLoading
+          }
           pending={applyDeposit.isPending}
           onClose={close}
           onSubmit={(invoiceId, amountMinor) => {

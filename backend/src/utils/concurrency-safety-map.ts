@@ -1005,6 +1005,25 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   // ─── Order Deposits ──────────────────────────────────────────────────────
   {
     routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/advances',
+    // advances-02: a pre-sale / pre-purchase is a deposit that is its own
+    // document. The id is fixed before the insert, so a retry with the same id
+    // hits the primary key and answers with the first row; the receipt entry
+    // is keyed by that id.
+    mechanisms: ['unique-constraint', 'idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: 'const id = input.id ?? (isAdvance ? randomUUID() : undefined)',
+      },
+      {
+        file: 'docs/accounting-core-migration.sql',
+        text: 'ON journal_entries (workspace_id, source_type, source_id)',
+      },
+    ],
+  },
+  {
+    routeFile: 'order-deposit.routes.ts',
     route: 'POST /api/orders/:id/deposits',
     // P1 (V53): the receipt is booked as a liability with a ledger entry keyed
     // by the deposit id, so a retry can never book the same money twice.
@@ -1071,7 +1090,8 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [
       {
         file: `${SVC}/sales/order-deposit.service.ts`,
-        text: "rpc('order_deposit_refund'",
+        // advances-02: the same locked function family; a pre-purchase uses its mirror.
+        text: "const fn = kind === 'pre_purchase' ? 'supplier_advance_refund' : 'order_deposit_refund'",
       },
       {
         file: 'docs/order-deposit-apply-refund-01-migration.sql',
@@ -1377,6 +1397,19 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     // V54 5.5 «حاضر شد» / «نیامد»: one UPDATE whose WHERE names the statuses the
     // move may start from — two taps cannot both win; the same move again is a
     // replay read back, not a second write. No money moves on this route.
+    routeFile: 'service-delivery.routes.ts',
+    route: 'PUT /api/service-delivery/commission-rates/:employeeId',
+    // One row per (workspace, employee); the newest rate is the rate. No money
+    // moves on this route and nothing is derived from the previous value.
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/provider-commission.service.ts`,
+        text: "{ onConflict: 'workspace_id,employee_id' }",
+      },
+    ],
+  },
+  {
     routeFile: 'service-delivery.routes.ts',
     route: 'POST /api/service-delivery/sessions/:id/status',
     mechanisms: ['conditional-update', 'state-idempotent'],

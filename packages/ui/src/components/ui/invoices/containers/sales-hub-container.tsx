@@ -8,6 +8,8 @@
 //   invoices   ONE table of every invoice — sale and purchase. «همه / فروش /
 //              خرید» and the status filter change what the table holds, never
 //              which table it is.
+//   advances   پیش‌فروش / پیش‌خرید (advances-02): money before the invoice,
+//              on the one deposit engine; applied later to the invoice.
 //   pricing    promotions and price lists (was /promotions)
 //
 // ⚠️ THERE IS NO «PURCHASE ORDERS» TAB, ON PURPOSE. A purchase is a purchase
@@ -25,7 +27,7 @@
 
 import { Suspense, lazy } from 'react'
 import { useTranslations } from 'next-intl'
-import { ReceiptText, Tags } from 'lucide-react'
+import { HandCoins, ReceiptText, Tags } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
@@ -35,11 +37,14 @@ import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
 import { InvoicesContainer } from './invoices-container'
 
+const AdvancesContainer = lazy(() =>
+  import('./advances-container').then((m) => ({ default: m.AdvancesContainer })),
+)
 const PromotionsContainer = lazy(() =>
   import('../../promotions/promotions-container').then((m) => ({ default: m.PromotionsContainer })),
 )
 
-export const SALES_HUB_TABS = ['invoices', 'pricing'] as const
+export const SALES_HUB_TABS = ['invoices', 'advances', 'pricing'] as const
 export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
 
 /**
@@ -48,10 +53,12 @@ export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
  */
 export const SALES_HUB_SOURCE: Record<SalesHubTab, string> = {
   invoices: '/invoices',
+  // advances-02: money before the invoice — the invoices module's own lock.
+  advances: '/invoices',
   pricing: '/promotions',
 }
 
-const TAB_ICON = { invoices: ReceiptText, pricing: Tags } as const
+const TAB_ICON = { invoices: ReceiptText, advances: HandCoins, pricing: Tags } as const
 
 export function SalesHubContainer() {
   return <SalesHub />
@@ -88,7 +95,17 @@ function SalesHub() {
       />
 
       <div role="tabpanel">
-        {active === 'pricing' ? (
+        {active === 'advances' ? (
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('loading')}
+              </p>
+            }
+          >
+            <AdvancesContainer />
+          </Suspense>
+        ) : active === 'pricing' ? (
           <Suspense
             fallback={
               <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">

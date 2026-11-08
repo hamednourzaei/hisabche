@@ -9,10 +9,10 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 
 | Measure                               | Value |
 | ------------------------------------- | ----- |
-| Industry keys in the registry         | 66    |
-| Selectable in onboarding              | 66    |
+| Industry keys in the registry         | 67    |
+| Selectable in onboarding              | 67    |
 | Specialised profile                   | 23    |
-| General-purpose baseline              | 43    |
+| General-purpose baseline              | 44    |
 | Exact match with `JOURNEY_INDUSTRIES` | 14    |
 | Available capabilities                | 3     |
 | Partial capabilities                  | 5     |
@@ -69,6 +69,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | لوازم آرایشی و بهداشتی     | `cosmetics`          | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | کلینیک و مطب               | `clinic`             | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | آرایشگاه و سلمانی          | `barber`             | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
+| ناخن و سالن زیبایی         | `beautySalon`        | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | عینک‌فروشی                 | `optician`           | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | زراعت و کشاورزی            | `agriculture`        | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | مالداری و دامداری          | `livestock`          | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |

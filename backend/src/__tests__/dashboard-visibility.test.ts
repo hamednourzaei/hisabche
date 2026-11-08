@@ -117,9 +117,11 @@ describe('the routes', () => {
       analytics.indexOf("'/api/analytics/sales'"),
     )
     expect(route).toContain("cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'dashboard' })")
-    expect(route).toContain(
-      'hiddenDashboardGroups((capability) => holds(request.tenancy, capability))',
-    )
+    // advances-02 added the open-advances figure: the groups are computed once
+    // and the SAME mask is applied before anything is answered.
+    expect(route).toContain('hiddenDashboardGroups((capability) =>')
+    expect(route).toContain('holds(request.tenancy, capability)')
+    expect(route).toContain('maskDashboardKpis(kpis as Record<string, unknown>, hiddenGroups)')
   })
 
   it('the sales series needs the invoices', () => {

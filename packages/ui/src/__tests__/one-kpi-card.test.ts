@@ -87,8 +87,10 @@ describe('no screen declares a KPI card of its own', () => {
     expect(view).toContain("import { KpiCard, KpiGrid } from '../kpi-card'")
     expect(view).toContain('<KpiGrid>')
     // Four cards, each opening the rows its figure was computed from.
-    expect((view.match(/<KpiCard/g) ?? []).length).toBe(4)
-    expect((view.match(/onOpen=\{/g) ?? []).length).toBe(4)
+    // Five since 8 Nov 2026: advances-02 added «پیش‌دریافت / پیش‌پرداخت باز»,
+    // the same shared card in the same row.
+    expect((view.match(/<KpiCard/g) ?? []).length).toBe(5)
+    expect((view.match(/onOpen=\{/g) ?? []).length).toBe(5)
     // ⚠️ Debt is the one where rising is bad.
     const debt = view.slice(view.indexOf('dashboard.customerDebt'))
     expect(debt.slice(0, 400)).toContain('invertDelta')

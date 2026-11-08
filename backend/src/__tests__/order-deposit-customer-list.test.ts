@@ -144,6 +144,10 @@ describe('GET /api/customers/:id/deposits', () => {
         paymentMethod: 'cash',
         postingStatus: 'posted',
         journalEntryId: 'je-receipt',
+        // session-deposit-01: a row without the column was taken for an order.
+        sourceType: 'sales_order',
+        // advances-02: no note on an order deposit.
+        note: null,
         createdAt: '2026-11-03T00:00:00Z',
         amountMinor: 100_000,
         appliedMinor: 40_000,

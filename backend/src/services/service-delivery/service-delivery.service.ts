@@ -1,4 +1,5 @@
 import { costing } from '../inventory-costing'
+import { ledger } from '../accounting'
 // ============================================
 // backend/src/services/service-delivery/service-delivery.service.ts
 //
@@ -308,37 +309,8 @@ export class ServiceDeliveryService {
     if (error) throw this.failureOf(error, 'Failed to deliver service session')
 
     const result = (data ?? {}) as { package_credit_id?: string | null }
-    // Deduct consumables if provided using CostingService and record stock_movements
     if (input.consumables && input.consumables.length > 0) {
-      for (const item of input.consumables) {
-        if (!item.productId || Number(item.quantity) <= 0) continue
-        const qty = Number(item.quantity)
-        await costing.recordIssue(ctx, {
-          productId: item.productId,
-          warehouseId: item.warehouseId ?? null,
-          quantity: qty,
-          entryDate: session.sessionDate,
-          consumerType: 'adjustment',
-          consumerId: id,
-          consumerLine: item.productId,
-        })
-
-        const movementRow = {
-          product_id: item.productId,
-          type: 'adjustment',
-          quantity: -qty,
-          reference_type: 'service_session',
-          reference_id: id,
-          workspace_id: ctx.workspaceId,
-          user_id: ctx.userId,
-          notes: 'Material consumed during service session ' + id,
-          ...(item.warehouseId ? { from_warehouse_id: item.warehouseId } : {}),
-        }
-        const { error: smErr } = await this.db.from('stock_movements').insert(movementRow)
-        if (smErr) {
-          throw new DatabaseError('Failed to record stock movement for consumable', smErr)
-        }
-      }
+      await this.consumeMaterials(ctx, session, input.consumables)
     }
 
     const delivered = await this.getById(ctx, id)
@@ -426,6 +398,88 @@ export class ServiceDeliveryService {
     const now = await this.getById(ctx, id)
     if (now.status === target) return { session: now, replayed: true }
     throw new ConflictError(`INVALID_STATUS_TRANSITION:${now.status}->${target}`)
+  }
+
+  /**
+   * The materials a delivered session used (V54 5.4): stock out, its cost, and
+   * ONE ledger entry — Dr cost of goods/services, Cr inventory — at the
+   * session's date.
+   *
+   * ⚠️ ONCE PER LINE, ONCE PER SESSION, SAFE TO RETRY. supabase-js has no
+   * transaction, so each step is idempotent instead and a retry completes what
+   * a failure interrupted, never doubles it:
+   *   · the cost issue is keyed by (session, product) — the database answers
+   *     `already_consumed` with the cost it recorded the first time;
+   *   · the stock movement is written ONLY for an issue that was new;
+   *   · the ledger entry is keyed by the session (`postDocument` books a
+   *     source once) and carries the summed cost of every line.
+   * A replayed delivery used to deduct every material again.
+   *
+   * A chart of accounts without `cogs`/`inventory` is created on demand
+   * (`ensureAccountsForRoles`); if it still cannot be expressed the stock and
+   * cost stand and the skipped entry is logged — the same rule as opening
+   * stock — rather than failing a service that was already delivered.
+   */
+  private async consumeMaterials(
+    ctx: TenancyContext,
+    session: ServiceDeliverySession,
+    items: NonNullable<DeliverSessionInput['consumables']>,
+  ): Promise<void> {
+    let totalCost = 0
+    for (const item of items) {
+      const qty = Number(item.quantity)
+      if (!item.productId || !(qty > 0)) continue
+      const issue = await costing.recordIssue(ctx, {
+        productId: item.productId,
+        warehouseId: item.warehouseId ?? null,
+        quantity: qty,
+        entryDate: session.sessionDate,
+        consumerType: 'adjustment',
+        consumerId: session.id,
+        consumerLine: item.productId,
+      })
+      totalCost += Number(issue.totalCost) || 0
+      if (issue.status === 'already_consumed') continue
+
+      const { error: smErr } = await this.db.from('stock_movements').insert({
+        product_id: item.productId,
+        type: 'adjustment',
+        quantity: -qty,
+        reference_type: 'service_session',
+        reference_id: session.id,
+        workspace_id: ctx.workspaceId,
+        user_id: ctx.userId,
+        notes: 'Material consumed during service session ' + session.id,
+        ...(item.warehouseId ? { from_warehouse_id: item.warehouseId } : {}),
+      })
+      if (smErr) throw new DatabaseError('Failed to record stock movement for consumable', smErr)
+    }
+
+    const amount = Math.round(totalCost * 100) / 100
+    if (!(amount > 0)) return
+    const { accounts } = await ledger.ensureAccountsForRoles(ctx, ['cogs', 'inventory'])
+    if (!accounts.cogs || !accounts.inventory) {
+      console.error(
+        `[ServiceDelivery] materials of session ${session.id} not booked: no cogs/inventory account`,
+      )
+      return
+    }
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'stock_adjustment',
+      sourceId: session.id,
+      date: session.sessionDate,
+      description: 'مواد مصرفی جلسه‌ی خدمت',
+      reference: session.id,
+      lines: [
+        { accountId: accounts.cogs, debit: amount, credit: 0 },
+        { accountId: accounts.inventory, debit: 0, credit: amount },
+      ],
+    })
+    if (outcome.status === 'skipped') {
+      console.error(
+        `[ServiceDelivery] materials of session ${session.id} not booked: ${outcome.missing.join(', ')}`,
+      )
+    }
   }
 
   private async ledgerRow(ctx: TenancyContext, entryId: string): Promise<unknown | null> {

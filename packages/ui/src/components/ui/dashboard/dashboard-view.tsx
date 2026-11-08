@@ -49,6 +49,8 @@ interface DashboardViewProps {
   customerDebt: number
   warehouseValue: number
   monthlyGrowth?: number | null | undefined
+  /** advances-02: «held for customers · paid to suppliers», already formatted; null = unreadable. */
+  openAdvancesText?: string | null | undefined
 
   // Loading States
   kpiLoading: boolean
@@ -491,6 +493,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     customerDebt,
     warehouseValue,
     monthlyGrowth,
+    openAdvancesText,
     kpiLoading,
     insights,
     insightsLoading,
@@ -625,6 +628,20 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   isLoading={kpiLoading}
                   onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
                   openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
+                />
+              )}
+              {hiddenFigures.includes('customers') ||
+              hiddenFigures.includes('sales') ||
+              openAdvancesText === undefined ? null : (
+                <KpiCard
+                  icon={CreditCard}
+                  label={t('dashboard.openAdvances', 'پیش‌دریافت / پیش‌پرداخت باز')}
+                  value={openAdvancesText ?? t('dashboard.openAdvancesUnread', 'خوانده نشد')}
+                  delta={null}
+                  showEmptyDelta
+                  isLoading={kpiLoading}
+                  onOpen={() => onNavigate('/invoices?tab=advances')}
+                  openLabel={t('dashboard.openAdvancesOpen', 'پیش‌فروش و پیش‌خرید')}
                 />
               )}
               {hiddenFigures.includes('stockValue') ? null : (

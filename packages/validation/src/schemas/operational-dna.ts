@@ -311,20 +311,24 @@ export interface OperationalInferenceInput {
  * without forcing inventory or appointments.
  */
 export function inferOperationalDna(input: OperationalInferenceInput): OperationalDna {
-  const isAppointmentDriven =
-    input.takesAppointments === 'yes' || input.tradeKey === 'barber' || input.tradeKey === 'clinic'
-  const isPackageDriven =
-    input.deliversCoursesOrPackages === 'yes' || input.tradeKey === 'education'
-  const isRepairDriven =
-    input.takesJobTicketsOrRepairs === 'yes' ||
-    input.tradeKey === 'repairs' ||
-    input.tradeKey === 'mechanic'
-  const isProducer =
-    input.producesGoods === 'yes' ||
-    input.tradeKey === 'manufacturing' ||
-    input.tradeKey === 'bakery'
-  const isRetailTrade =
-    input.tradeKey === 'retail' || input.tradeKey === 'grocery' || input.hasPointOfSale === 'yes'
+  // ⚠️ AN ANSWER BEATS THE TRADE. The trade only fills a question the person
+  // left unanswered: a barber who says «no appointments» is a walk-in shop.
+  // (Until 8 Nov 2026 the trade won, so a «no» could not be given.)
+  const trade = suggestedOperatingAnswers(input.tradeKey)
+  const said = <K extends YesNoQuestion>(key: K): YesNo =>
+    input[key] && input[key] !== 'unknown' ? (input[key] as YesNo) : (trade[key] ?? 'unknown')
+  const isAppointmentDriven = said('takesAppointments') === 'yes'
+  const isPackageDriven = said('deliversCoursesOrPackages') === 'yes'
+  const isRepairDriven = said('takesJobTicketsOrRepairs') === 'yes'
+  const isProducer = said('producesGoods') === 'yes'
+  const isRetailTrade = said('hasPointOfSale') === 'yes'
+  input = {
+    ...input,
+    holdsStock: said('holdsStock'),
+    sellsOnCredit: said('sellsOnCredit'),
+    hasPointOfSale: said('hasPointOfSale'),
+    hasStaff: said('hasStaff'),
+  }
 
   // 1. Offering
   const offering: OfferingModel[] = []
@@ -455,6 +459,93 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
   }
 }
 
+// ─── Adaptive operating questions (V54 5.3) ──────────────────────────
+// The few questions that decide the DNA. Every answer is optional: «unknown»
+// leaves the trade's own default in place. Which questions are SHOWN depends
+// on the answers already given (`operatingQuestionsFor`), so a service that
+// keeps no stock is never asked about production or a counter.
+
+export type YesNo = 'yes' | 'no' | 'unknown'
+
+export const YES_NO_QUESTIONS = [
+  'takesAppointments',
+  'deliversCoursesOrPackages',
+  'takesJobTicketsOrRepairs',
+  'holdsStock',
+  'producesGoods',
+  'hasPointOfSale',
+  'sellsOnCredit',
+  'hasStaff',
+] as const
+export type YesNoQuestion = (typeof YES_NO_QUESTIONS)[number]
+export type OperatingQuestion = YesNoQuestion | 'locations'
+
+export type OperatingAnswers = {
+  readonly [K in YesNoQuestion]?: YesNo | undefined
+} & { readonly locations?: 'single' | 'multiple' | 'unknown' | undefined }
+
+const yesNo = z.enum(['yes', 'no', 'unknown'])
+export const operatingAnswersSchema = z
+  .object({
+    takesAppointments: yesNo.optional(),
+    deliversCoursesOrPackages: yesNo.optional(),
+    takesJobTicketsOrRepairs: yesNo.optional(),
+    holdsStock: yesNo.optional(),
+    producesGoods: yesNo.optional(),
+    hasPointOfSale: yesNo.optional(),
+    sellsOnCredit: yesNo.optional(),
+    hasStaff: yesNo.optional(),
+    locations: z.enum(['single', 'multiple', 'unknown']).optional(),
+  })
+  .strict()
+
+/** Trades whose work is booked ahead. Onboarding metadata only — never read by a money rule. */
+const APPOINTMENT_TRADES = new Set(['barber', 'beautySalon', 'clinic'])
+const PACKAGE_TRADES = new Set(['education'])
+const REPAIR_TRADES = new Set(['repairs', 'mechanic'])
+const PRODUCER_TRADES = new Set(['manufacturing', 'bakery'])
+const COUNTER_TRADES = new Set(['retail', 'grocery'])
+
+/**
+ * What the trade suggests for each question — the wizard's pre-filled answer.
+ * Unknown trades suggest nothing (every question stays open).
+ */
+export function suggestedOperatingAnswers(tradeKey: string | undefined): OperatingAnswers {
+  if (!tradeKey) return {}
+  const out: { -readonly [K in YesNoQuestion]?: YesNo } = {}
+  if (APPOINTMENT_TRADES.has(tradeKey)) out.takesAppointments = 'yes'
+  if (PACKAGE_TRADES.has(tradeKey)) out.deliversCoursesOrPackages = 'yes'
+  if (REPAIR_TRADES.has(tradeKey)) out.takesJobTicketsOrRepairs = 'yes'
+  if (PRODUCER_TRADES.has(tradeKey)) {
+    out.producesGoods = 'yes'
+    out.holdsStock = 'yes'
+  }
+  if (COUNTER_TRADES.has(tradeKey)) {
+    out.hasPointOfSale = 'yes'
+    out.holdsStock = 'yes'
+  }
+  return out
+}
+
+/**
+ * The questions to SHOW, given the answers so far (the trade's suggestions
+ * merged in). Production and the counter only matter to a business that keeps
+ * stock; every other question is always asked.
+ */
+export function operatingQuestionsFor(answers: OperatingAnswers): OperatingQuestion[] {
+  const keepsStock = answers.holdsStock !== 'no'
+  return [
+    'takesAppointments',
+    'deliversCoursesOrPackages',
+    'takesJobTicketsOrRepairs',
+    'holdsStock',
+    ...(keepsStock ? (['producesGoods', 'hasPointOfSale'] as const) : []),
+    'sellsOnCredit',
+    'hasStaff',
+    'locations',
+  ]
+}
+
 // ─── Onboarding progress (V54 5.3) ───────────────────────────────────
 // Where the wizard stands, kept on the WORKSPACE so another device or a
 // cleared browser resumes instead of starting over. The answers are the
@@ -479,6 +570,7 @@ export const onboardingProgressSchema = z
         businessType: z.string().max(400).nullable().optional(),
         storeSize: z.string().max(32).nullable().optional(),
         defaultCurrency: z.string().max(8).nullable().optional(),
+        operating: operatingAnswersSchema.optional(),
       })
       .strict(),
   })

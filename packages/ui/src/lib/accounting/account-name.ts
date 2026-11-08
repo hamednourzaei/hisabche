@@ -30,6 +30,7 @@ const STANDARD_NAMES: Record<string, string> = {
   'ضرر و زیان ضایعات کالا': 'inventory_loss',
   'کسری موجودی (شمارش)': 'inventory_shrinkage',
   'اضافه موجودی (شمارش)': 'inventory_gain',
+  'پیش‌پرداخت به تأمین‌کنندگان': 'supplier_advances',
 }
 
 /** The default name in the reader's language; any other name as it is. */

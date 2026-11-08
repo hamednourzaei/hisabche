@@ -81,6 +81,9 @@ export const INDUSTRY_KEYS = [
   'cosmetics',
   'clinic',
   'barber',
+  // V54 (8 Nov 2026): nail technicians and beauty salons — booked services
+  // with consumables. Generic profile: nothing promised beyond what exists.
+  'beautySalon',
   'optician',
   'agriculture',
   'livestock',

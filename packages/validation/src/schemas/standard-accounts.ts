@@ -41,4 +41,6 @@ export const STANDARD_ACCOUNT_FOR_ROLE: Partial<Record<AccountRole, StandardAcco
   // V53 (owner decision CC): two accounts, never one netted account.
   inventory_shrinkage: { code: '5210', name: 'کسری موجودی (شمارش)', type: 'expense' },
   inventory_gain: { code: '4910', name: 'اضافه موجودی (شمارش)', type: 'revenue' },
+  // advances-02: the mirror of 2150 on the asset side, next to receivables.
+  supplier_advances: { code: '1250', name: 'پیش‌پرداخت به تأمین‌کنندگان', type: 'asset' },
 }

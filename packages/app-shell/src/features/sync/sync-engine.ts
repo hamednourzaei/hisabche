@@ -821,6 +821,7 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
           amountMinor: payload.amountMinor,
           ...(payload.paymentMethod ? { paymentMethod: payload.paymentMethod } : {}),
           ...(payload.date ? { date: payload.date } : {}),
+          ...(payload.sourceType === 'service_session' ? { sourceType: 'service_session' } : {}),
         },
         { headers },
       )

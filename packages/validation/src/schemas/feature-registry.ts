@@ -316,6 +316,11 @@ export const FEATURE_REGISTRY = {
   // Paying the customer back needs the cap read under a lock the device cannot hold: online only.
   'invoice.return_refund': { execution: 'server', plans: ALL },
   'order.deposits': { execution: 'local', plans: ALL },
+  // advances-02: pre-sale / pre-purchase — the supplier side's functions live
+  // only on the server, so the whole feature is online.
+  'order.advances': { execution: 'server', plans: ALL },
+  // V54 (N-7): the commission report reads server-only rates.
+  'operations.provider_commission': { execution: 'server', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
   'operations.service_delivery': { execution: 'local', plans: ALL },
   // Suspending ONE package GRANT is a manager's decision recorded on the server (append-only events): online only.

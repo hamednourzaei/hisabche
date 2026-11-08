@@ -8,6 +8,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { AnalyticsService } from '../services/analytics.service'
+import { OrderDepositService } from '../services/sales/order-deposit.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
@@ -110,6 +111,14 @@ const DashboardKPIsSchema = z.object({
   // Figure groups this person may not be told (dashboard-visibility.domain):
   // their fields are zero AND named here, so the client leaves the card out.
   hidden: z.array(z.enum(DASHBOARD_FIGURE_GROUPS)).default([]),
+  // advances-02: money held for customers / paid to suppliers before the
+  // invoice, per currency in MINOR units. Not revenue, not expense — a
+  // balance. Empty when the person may not see sales or customers.
+  openAdvances: z
+    .object({ customer: z.record(z.number()), supplier: z.record(z.number()) })
+    .default({ customer: {}, supplier: {} }),
+  // The read failed: «unknown», not «nothing open».
+  openAdvancesUnread: z.boolean().default(false),
 })
 
 const DateRangeSchema = z.object({
@@ -120,6 +129,7 @@ const DateRangeSchema = z.object({
 
 export default async function analyticsRoutes(fastify: FastifyInstance) {
   const analyticsService = new AnalyticsService()
+  const depositService = new OrderDepositService()
 
   // ══════════════════════════════════════════════════════
   // DASHBOARD KPIs
@@ -151,12 +161,24 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
         const kpis = await analyticsService.getDashboardKpis(request.tenancy, timeZone)
         // Computed once for the business (the service caches it); what THIS
         // person may be told is decided here, after it.
-        const validated = DashboardKPIsSchema.parse(
-          maskDashboardKpis(
-            kpis as Record<string, unknown>,
-            hiddenDashboardGroups((capability) => holds(request.tenancy, capability)),
-          ),
+        const hiddenGroups = hiddenDashboardGroups((capability) =>
+          holds(request.tenancy, capability),
         )
+        let openAdvances: unknown = { customer: {}, supplier: {} }
+        let openAdvancesUnread = false
+        if (!hiddenGroups.includes('sales') && !hiddenGroups.includes('customers')) {
+          try {
+            openAdvances = await depositService.openAdvances(request.tenancy)
+          } catch (err) {
+            fastify.log.error({ err }, 'open advances not read')
+            openAdvancesUnread = true
+          }
+        }
+        const validated = DashboardKPIsSchema.parse({
+          ...maskDashboardKpis(kpis as Record<string, unknown>, hiddenGroups),
+          openAdvances,
+          openAdvancesUnread,
+        })
         return reply.send(validated)
       } catch (err) {
         if (err instanceof z.ZodError) {

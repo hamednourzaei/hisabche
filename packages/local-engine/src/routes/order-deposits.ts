@@ -379,6 +379,9 @@ export function registerOrderDepositsRoutes(router: Router) {
         ? raw.date
         : nowIso().slice(0, 10)
     const id = typeof raw.id === 'string' && raw.id ? raw.id : generateUuid()
+    // V54 5.4: a booking deposit. The money is identical; the server checks the
+    // session and records the kind when the receipt arrives.
+    const sourceType = raw.sourceType === 'service_session' ? 'service_session' : null
     const now = nowIso()
 
     return db.transaction(() => {
@@ -444,6 +447,7 @@ export function registerOrderDepositsRoutes(router: Router) {
           amountMinor,
           paymentMethod,
           date,
+          ...(sourceType ? { sourceType } : {}),
         },
         id,
       )

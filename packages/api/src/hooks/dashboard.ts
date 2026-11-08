@@ -52,6 +52,9 @@ export interface DashboardKPIs {
   convertedToBooks?: boolean | undefined
   /** Invoices in another currency with no rate — left out, never added at 1. */
   unconvertedInvoices?: number | undefined
+  /** advances-02: open advances per currency, MINOR units. */
+  openAdvances?: { customer: Record<string, number>; supplier: Record<string, number> } | undefined
+  openAdvancesUnread?: boolean | undefined
 }
 
 export interface AIInsight {

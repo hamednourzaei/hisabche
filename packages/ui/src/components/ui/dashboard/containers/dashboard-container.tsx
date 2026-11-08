@@ -26,6 +26,7 @@ import { useActionAvailability } from '../../../../lib/capability'
 import { RegisterCustomizer } from '../../register-customizer'
 import { useDashboardData } from '../../../../hooks/dashboard/use-dashboard-data'
 import { fmt } from '../../../../lib/dashboard/dashboard-format'
+import { openAdvancesText as advancesTextOf } from '../../../../lib/dashboard/open-advances-text'
 import { useDisplayBasis } from '../../../../hooks/dashboard/use-display-basis'
 import { DisplayBasisPicker } from '../display-basis-picker'
 import { ExchangeRateDialog, useLatestCustomUnits } from '../exchange-rate-dialog'
@@ -72,6 +73,7 @@ export function DashboardContainer() {
   )
   const push = useLocalePush()
   const intlLocale = useIntlLocale()
+  // advances-02: «held for customers / paid to suppliers», per currency.
   const routeLang = useRouteLang()
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -369,6 +371,7 @@ export function DashboardContainer() {
         previousRangeSalesTotal={previousRangeSalesTotal}
         rangeLoading={rangeLoading}
         customerDebt={kpis?.customerDebt ?? 0}
+        openAdvancesText={advancesTextOf(kpis, intlLocale, t('dashboard.openAdvancesNone', 'هیچ'))}
         warehouseValue={kpis?.warehouseValue ?? 0}
         monthlyGrowth={kpis?.monthlyGrowth ?? null}
         kpiLoading={kpiLoading}

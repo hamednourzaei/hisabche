@@ -87,9 +87,6 @@ const UNWIRED: Record<string, { capability?: CapabilityKey; reason: string }> = 
   useOrderDeposits: {
     reason: 'the customer screen uses useCustomerDeposits; the order-scoped list has no screen',
   },
-  useCreateOrderDeposit: {
-    reason: 'a deposit is taken from the order/invoice flow; the order-scoped create has no screen',
-  },
   useAppointments: { reason: 'appointment API only; no scheduling screen' },
   useCreateAppointment: { reason: 'appointment API only; no scheduling screen' },
   useCropCycles: { reason: 'crop-cycle API only; no farm screen' },

@@ -232,6 +232,10 @@ export interface CustomerDepositRecord {
   paymentMethod: string
   postingStatus: string | null
   journalEntryId: string | null
+  /** What the document is; absent from an older server or a device row = an order. */
+  sourceType?: 'sales_order' | 'service_session' | 'pre_sale' | 'pre_purchase' | undefined
+  /** advances-02: what was pre-sold / pre-bought. */
+  note?: string | null | undefined
   status: 'pending_posting' | 'posting_unknown' | 'available' | 'partially_used' | 'fully_used'
   /** True while a change to this deposit is still waiting in the device's outbox. */
   pendingSync: boolean
@@ -571,6 +575,8 @@ export function useCreateOrderDeposit(orderId: string) {
       customerId: string
       amountMinor: number
       paymentMethod?: string | undefined
+      /** V54 5.4: `service_session` = a booking deposit; `orderId` is then the session. */
+      sourceType?: 'sales_order' | 'service_session' | undefined
     }) => {
       const { data } = await apiClient.post<{ data: OrderDepositRecord }>(
         `/orders/${orderId}/deposits`,
@@ -578,8 +584,56 @@ export function useCreateOrderDeposit(orderId: string) {
       )
       return data.data
     },
-    onSuccess: () => {
+    onSuccess: (_result, input) => {
       queryClient.invalidateQueries({ queryKey: universalCoreKeys.deposits(orderId) })
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.customerDeposits(input.customerId),
+      })
+    },
+  })
+}
+
+// ─── advances-02: پیش‌فروش / پیش‌خرید ─────────────────────────────
+
+export type AdvanceKind = 'pre_sale' | 'pre_purchase'
+
+/** Every pre-sale (or pre-purchase) of the workspace, with what is left of each. */
+export function useAdvances(kind: AdvanceKind) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...universalCoreKeys.all, 'advances', kind] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: CustomerDepositRecord[] }>('/advances', {
+        params: { kind },
+      })
+      return asList<CustomerDepositRecord>(data?.data, '/advances')
+    },
+    enabled: authReady,
+  })
+}
+
+export function useCreateAdvance() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      /** Made once per filled form: a retried tap is the same advance. */
+      id: string
+      kind: AdvanceKind
+      partyId: string
+      amountMinor: number
+      paymentMethod?: string | undefined
+      date?: string | undefined
+      note?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: OrderDepositRecord }>('/advances', input)
+      return data.data
+    },
+    onSuccess: (_result, input) => {
+      queryClient.invalidateQueries({ queryKey: [...universalCoreKeys.all, 'advances'] })
+      queryClient.invalidateQueries({
+        queryKey: universalCoreKeys.customerDeposits(input.partyId),
+      })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -1196,6 +1250,13 @@ export function useDeliverServiceDeliverySession() {
       reason?: string | undefined
       /** Refuse when the session changed since it was read. */
       expectedUpdatedAt?: string | undefined
+      /**
+       * V54 5.4: materials the service used. The server takes them out of stock
+       * at cost and books Dr cost of goods/services / Cr inventory, once per
+       * session (safe to retry).
+       */
+      consumables?:
+        Array<{ productId: string; quantity: number; warehouseId?: string | undefined }> | undefined
     }) => {
       const { data } = await apiClient.post<{
         session: ServiceDeliverySessionItem
@@ -1224,6 +1285,58 @@ export function useMoveServiceSessionStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
+// ─── Provider commission (V54, owner decision N-7) — a report ─────
+
+export interface ProviderCommissionRowView {
+  practitionerId: string
+  currency: string
+  sessions: number
+  baseMinor: number
+  rateBp: number | null
+  commissionMinor: number | null
+}
+
+export interface ProviderCommissionView {
+  rows: ProviderCommissionRowView[]
+  unpriced: number
+  unassigned: number
+  configurable: boolean
+  priceBasis: 'current_list_price'
+}
+
+export function useProviderCommission(from: string, to: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: ['provider-commission', from, to] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<ProviderCommissionView>('/service-delivery/commission', {
+        params: { from, to },
+      })
+      return {
+        ...data,
+        rows: asList<ProviderCommissionRowView>(data?.rows, '/service-delivery/commission'),
+      }
+    },
+    enabled: authReady && Boolean(from) && Boolean(to),
+  })
+}
+
+export function useSetProviderCommissionRate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ employeeId, rateBp }: { employeeId: string; rateBp: number }) => {
+      const { data } = await apiClient.put<{ employeeId: string; rateBp: number }>(
+        `/service-delivery/commission-rates/${employeeId}`,
+        { rateBp },
+      )
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['provider-commission'] })
     },
   })
 }

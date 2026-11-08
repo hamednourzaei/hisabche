@@ -20,6 +20,8 @@ import { BUSINESS_MODELS, BUSINESS_TYPE_OTHER, filterBusinessTypes } from '@hisa
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 import { CurrencyPicker } from './currency-picker'
 import { SearchableOptionList } from './searchable-option-list'
+import { OperatingQuestions } from './operating-questions'
+import type { OperatingAnswers, OperatingQuestion } from '@hisabche/validation'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OnboardingPage v4 — Memoized · Performance Optimized
@@ -44,6 +46,9 @@ export interface OnboardingPageProps {
   onSetStoreSize: (size: string) => void
   onSetCurrency: (currency: string) => void
   onSetBusinessNote: (note: string) => void
+  /** V54 5.3: «how do you work» — the person's answers over the trade's suggestions. */
+  operatingAnswers: OperatingAnswers
+  onSetOperatingAnswer: (question: OperatingQuestion, answer: string) => void
   onComplete: () => void
 }
 
@@ -447,7 +452,68 @@ const CurrencyStep = memo(function CurrencyStep({
 })
 CurrencyStep.displayName = 'CurrencyStep'
 
-// ─── Step 4: Complete ─────────────────────────────────────────────────────
+// ─── Step 4: How the business works (adaptive) ────────────────────────────
+
+const OperatingStep = memo(function OperatingStep({
+  answers,
+  onAnswer,
+  onBack,
+  onNext,
+  t,
+}: {
+  answers: OperatingAnswers
+  onAnswer: (question: OperatingQuestion, answer: string) => void
+  onBack: () => void
+  onNext: () => void
+  t: (key: string, fallback?: string) => string
+}) {
+  return (
+    <div className="mx-auto w-full max-w-3xl">
+      <h2 className="mb-2 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
+        {t('onboarding.operating.title', 'کسب‌وکارت چطور کار می‌کند؟')}
+      </h2>
+      <p className="mb-5 text-center text-sm text-[hsl(var(--fg-secondary))] sm:mb-8">
+        {t(
+          'onboarding.operating.description',
+          'از روی صنف پیشنهاد دادیم؛ هر چیزی را که درست نیست عوض کن. بعداً از تنظیمات هم قابل تغییر است.',
+        )}
+      </p>
+      <OperatingQuestions answers={answers} onAnswer={onAnswer} t={t} />
+      <div className="mt-6 flex justify-between sm:mt-8">
+        <button
+          type="button"
+          onClick={onBack}
+          className={cn(
+            'inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium',
+            'text-[hsl(var(--fg-secondary))]',
+            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+            'transition-colors duration-150',
+            'motion-reduce:transition-none',
+          )}
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          {t('action.back', 'برگشت')}
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          className={cn(
+            'inline-flex items-center justify-center rounded-full px-6 py-2.5',
+            'text-sm font-bold text-white',
+            'bg-[image:var(--gradient-brand)]',
+            'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
+            'motion-reduce:transition-none',
+          )}
+        >
+          {t('action.next', 'ادامه')}
+        </button>
+      </div>
+    </div>
+  )
+})
+OperatingStep.displayName = 'OperatingStep'
+
+// ─── Step 5: Complete ─────────────────────────────────────────────────────
 
 const CompleteStep = memo(function CompleteStep({
   businessType,
@@ -534,6 +600,8 @@ export const OnboardingPage = memo(function OnboardingPage({
   onSetStoreSize,
   onSetCurrency,
   onSetBusinessNote,
+  operatingAnswers,
+  onSetOperatingAnswer,
   onComplete,
 }: OnboardingPageProps) {
   const handleStart = useCallback(() => onSetStep(1), [onSetStep])
@@ -543,12 +611,14 @@ export const OnboardingPage = memo(function OnboardingPage({
   const handleNext2 = useCallback(() => onSetStep(3), [onSetStep])
   const handleBack3 = useCallback(() => onSetStep(2), [onSetStep])
   const handleNext3 = useCallback(() => onSetStep(4), [onSetStep])
+  const handleBack4 = useCallback(() => onSetStep(3), [onSetStep])
+  const handleNext4 = useCallback(() => onSetStep(5), [onSetStep])
 
   return (
     <div className="min-h-[100dvh] bg-[hsl(var(--surface-base))]">
       <div className="mx-auto flex max-w-5xl flex-col px-4 py-5 sm:py-8">
         <div className="mb-6 flex items-center justify-center gap-1.5 sm:mb-10 sm:gap-2">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div
               key={s}
               className={cn(
@@ -591,6 +661,15 @@ export const OnboardingPage = memo(function OnboardingPage({
           />
         )}
         {step === 4 && (
+          <OperatingStep
+            answers={operatingAnswers}
+            onAnswer={onSetOperatingAnswer}
+            onBack={handleBack4}
+            onNext={handleNext4}
+            t={t}
+          />
+        )}
+        {step === 5 && (
           <CompleteStep
             businessType={businessType ?? ''}
             businessTypeLabel={businessTypeLabel}

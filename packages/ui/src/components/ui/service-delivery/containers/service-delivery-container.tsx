@@ -53,6 +53,7 @@ import { ServiceSessionCreateDialog } from '../service-session-create-dialog'
 import { ServiceSessionDeliverDialog } from '../service-session-deliver-dialog'
 import { ServiceSessionCancelDialog } from '../service-session-cancel-dialog'
 import { ServiceSessionDetails } from '../service-session-details'
+import { ProviderCommissionPanel } from '../provider-commission-panel'
 
 interface EmployeeRow {
   id?: string | null | undefined
@@ -280,6 +281,17 @@ function ServiceDeliveryContent() {
         }))
     : []
 
+  // V54 5.4: what a service may use up — goods, never a service or a package.
+  // A device row without `offeringType` is offered (it is a product row).
+  const materialOptions: SelectFieldOption[] = productList
+    .filter(
+      (product): product is typeof product & { id: string } =>
+        Boolean(product.id) &&
+        product.offeringType !== 'service' &&
+        product.offeringType !== 'package',
+    )
+    .map((product) => ({ value: product.id, label: product.name }))
+
   const branchOptions: SelectFieldOption[] = branchList.map((branch) => ({
     value: branch.id,
     label: branch.name,
@@ -361,6 +373,16 @@ function ServiceDeliveryContent() {
           : {})}
       />
 
+      {/* V54 (N-7): the commission report, for whoever may read staff pay. */}
+      {capabilities.can('payroll.read') === true ? (
+        <div className="mt-6 rounded-2xl border border-[hsl(var(--border-default))] p-4">
+          <ProviderCommissionPanel
+            nameById={practitionerById}
+            mayEditRates={capabilities.can('payroll.write') === true}
+          />
+        </div>
+      ) : null}
+
       <ServiceSessionCreateDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -382,6 +404,7 @@ function ServiceDeliveryContent() {
         syncAvailable={sync.available}
         onOpenInvoices={() => push('/invoices')}
         onReload={() => void sessions.refetch()}
+        materialOptions={materialOptions}
       />
 
       <ServiceSessionCancelDialog
@@ -397,6 +420,7 @@ function ServiceDeliveryContent() {
         hasBranches={hasBranches}
         onOpenInvoice={(invoiceId) => push(`/invoices/${invoiceId}`)}
         maySuspendPackage={capabilities.can('payment.cancel') === true}
+        mayTakeDeposit={mayWrite}
         {...(sync.available
           ? { onOpenSyncCentre: () => push('/data-and-sync?tab=details&view=sync') }
           : {})}

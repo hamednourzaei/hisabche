@@ -26,6 +26,7 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import type { ServiceSessionRow } from './service-delivery-model'
 import { SessionSyncBadge } from './service-delivery-view'
 import { PackageGrantsPanel } from './package-grants-panel'
+import { SessionDepositPanel } from './session-deposit-panel'
 
 export interface ServiceSessionDetailsProps {
   open: boolean
@@ -37,6 +38,8 @@ export interface ServiceSessionDetailsProps {
   onOpenSyncCentre?: (() => void) | undefined
   /** May this person suspend / resume one of the customer's packages? (payment.cancel - manager by default.) */
   maySuspendPackage?: boolean | undefined
+  /** V54 5.4: may this person take a booking deposit? (invoice.create, as the server asks.) */
+  mayTakeDeposit?: boolean | undefined
 }
 
 function Fact({ label, value }: { label: string; value: ReactNode }) {
@@ -56,6 +59,7 @@ export function ServiceSessionDetails({
   onOpenInvoice,
   onOpenSyncCentre,
   maySuspendPackage = false,
+  mayTakeDeposit = false,
 }: ServiceSessionDetailsProps) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
@@ -221,6 +225,16 @@ export function ServiceSessionDetails({
               />
             ) : null}
           </dl>
+        ) : null}
+
+        {session && session.status !== 'cancelled' ? (
+          <div className="border-t border-[hsl(var(--border-default))] pt-4">
+            <SessionDepositPanel
+              sessionId={session.id}
+              customerId={session.customerId}
+              mayWrite={mayTakeDeposit && session.status !== 'no_show'}
+            />
+          </div>
         ) : null}
 
         {session ? (

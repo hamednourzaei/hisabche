@@ -2,8 +2,9 @@
 // WorkspaceService.createWorkspace — one transaction (workspace-create-01).
 //
 // The workspace and its owner's membership are written by ONE Postgres
-// function. Only «the function itself does not exist yet» falls back to the
-// old two-step write; every other database failure is a failure. The database
+// function. Since 8 Nov 2026 (VERIFY all true on the live database) there is
+// no two-step fallback: every database failure, the function missing
+// included, is a failure that writes nothing. The database
 // side of the rule (both rows or neither) is held by
 // workspace-create-01.pg.test.ts.
 // ============================================
@@ -75,7 +76,7 @@ describe('createWorkspace — atomic', () => {
     expect(ws).toMatchObject({ id: WS_ID })
   })
 
-  it('falls back to the two-step write ONLY when the function itself is missing', async () => {
+  it('the function missing is a failure too — no two-step write any more', async () => {
     state.rpcResult = {
       data: null,
       error: {
@@ -84,11 +85,16 @@ describe('createWorkspace — atomic', () => {
           'Could not find the function public.workspace_create_with_owner in the schema cache',
       },
     }
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    await new WorkspaceService().createWorkspace(OWNER, { name: 'x', isActive: true } as never)
-    expect(spy.mock.calls.flat().join(' ')).toContain('WORKSPACE_ATOMIC_RPC_MISSING')
-    expect(state.inserts.map((i) => i.table)).toEqual(['workspaces', 'workspace_members'])
-    spy.mockRestore()
+    await expect(
+      new WorkspaceService().createWorkspace(OWNER, { name: 'x', isActive: true } as never),
+    ).rejects.toThrow('Failed to create workspace')
+    expect(state.inserts).toEqual([])
+  })
+
+  it('the service source has no two-step path left', () => {
+    const service = readFileSync(join(SRC, 'services', 'workspace.service.ts'), 'utf8')
+    expect(service).not.toContain('createWorkspaceInTwoSteps')
+    expect(service).not.toContain('WORKSPACE_ATOMIC_RPC_MISSING')
   })
 
   it('a missing function raised from INSIDE the body is a failure, not a fallback', async () => {

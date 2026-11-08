@@ -107,7 +107,10 @@ describe('a membership is created with has_access written', () => {
       .map((after) => after.trimStart())
       .filter((after) => after.startsWith('.insert('))
       .map((after) => after.slice(0, after.indexOf(')')))
-    expect(inserts).toHaveLength(3)
+    // Two since 8 Nov 2026: the owner's membership is written by
+    // workspace_create_with_owner (checked below in SQL) and the two-step
+    // fallback that also inserted one was removed after VERIFY.
+    expect(inserts).toHaveLength(2)
     for (const insert of inserts) {
       // Either the flag is in the literal, or the row is the one built above it.
       expect(insert.includes('has_access') || insert === '.insert(memberRow', insert).toBe(true)

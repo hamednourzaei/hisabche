@@ -52,7 +52,15 @@ import {
 } from './service-delivery-model'
 import { serviceDeliveryErrorCode, serviceDeliveryErrorKey } from './service-delivery-errors'
 
+interface MaterialRow {
+  key: number
+  productId: string
+  quantity: number
+}
+
 export interface ServiceSessionDeliverDialogProps {
+  /** V54 5.4: goods that can be used up by a service (not services or packages). */
+  materialOptions?: readonly SelectFieldOption[] | undefined
   open: boolean
   onClose: () => void
   /** The row the list already holds. Never re-read one by id: no such endpoint is in the matrix. */
@@ -86,6 +94,7 @@ export function ServiceSessionDeliverDialog({
   syncAvailable,
   onOpenInvoices,
   onReload,
+  materialOptions,
 }: ServiceSessionDeliverDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
@@ -98,6 +107,7 @@ export function ServiceSessionDeliverDialog({
             onOpenInvoices={onOpenInvoices}
             onReload={onReload}
             onClose={onClose}
+            materialOptions={materialOptions}
           />
         ) : null}
       </DialogContent>
@@ -112,6 +122,7 @@ function DeliverBody({
   onOpenInvoices,
   onReload,
   onClose,
+  materialOptions,
 }: {
   session: ServiceSessionRow
   packageNameById: ReadonlyMap<string, string>
@@ -119,6 +130,7 @@ function DeliverBody({
   onOpenInvoices: () => void
   onReload: () => void
   onClose: () => void
+  materialOptions?: readonly SelectFieldOption[] | undefined
 }) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
@@ -148,6 +160,10 @@ function DeliverBody({
   const [quantity, setQuantity] = useState(1)
   const [invoiceId, setInvoiceId] = useState('')
   const [reason, setReason] = useState('')
+  const [materials, setMaterials] = useState<MaterialRow[]>([])
+  const materialsToSend = materials
+    .filter((row) => row.productId && row.quantity > 0)
+    .map((row) => ({ productId: row.productId, quantity: row.quantity }))
   const [errors, setErrors] = useState<Partial<Record<DeliverField, string>>>({})
   const [refusalCode, setRefusalCode] = useState<string | null>(null)
   const [refusalField, setRefusalField] = useState<DeliverField | null>(null)
@@ -245,6 +261,7 @@ function DeliverBody({
         ...(settlement === 'invoice' ? { invoiceId } : {}),
         ...(settlement === 'complementary' ? { reason: reason.trim() } : {}),
         ...(session.updatedAt ? { expectedUpdatedAt: session.updatedAt } : {}),
+        ...(materialsToSend.length > 0 ? { consumables: materialsToSend } : {}),
       },
       {
         onSuccess: () => onClose(),
@@ -327,6 +344,74 @@ function DeliverBody({
             'تسویه همین‌جا انتخاب می‌شود؛ پیش‌فرض جلسه فقط یک پیشنهاد بود.',
           )}
         />
+
+        {materialOptions && materialOptions.length > 0 ? (
+          <fieldset
+            data-service-materials
+            className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] p-3"
+          >
+            <legend className="px-1 text-xs font-semibold text-[hsl(var(--fg-secondary))]">
+              {t('serviceDelivery.materials.title', 'مواد مصرفی (اختیاری)')}
+            </legend>
+            {materials.map((row) => (
+              <div
+                key={row.key}
+                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-end"
+              >
+                <SelectInput
+                  label={t('serviceDelivery.materials.product', 'ماده')}
+                  name="materialProductId"
+                  value={row.productId}
+                  onChange={(value) =>
+                    setMaterials((rows) =>
+                      rows.map((r) => (r.key === row.key ? { ...r, productId: value } : r)),
+                    )
+                  }
+                  options={materialOptions}
+                  searchable
+                  searchPlaceholder={t('serviceDelivery.fields.search', 'جست‌وجو…')}
+                  noResultsText={t('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
+                  placeholder={t('serviceDelivery.materials.choose', 'انتخاب ماده…')}
+                />
+                <NumberField
+                  label={t('serviceDelivery.fields.quantity', 'تعداد')}
+                  value={row.quantity}
+                  onChange={(value) =>
+                    setMaterials((rows) =>
+                      rows.map((r) => (r.key === row.key ? { ...r, quantity: value } : r)),
+                    )
+                  }
+                  min={0}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => setMaterials((rows) => rows.filter((r) => r.key !== row.key))}
+                >
+                  {t('serviceDelivery.materials.remove', 'حذف')}
+                </Button>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t(
+                  'serviceDelivery.materials.help',
+                  'از موجودی کم و به بهای تمام‌شده در دفتر ثبت می‌شود؛ یک بار برای هر جلسه.',
+                )}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setMaterials((rows) => [
+                    ...rows,
+                    { key: (rows.at(-1)?.key ?? 0) + 1, productId: '', quantity: 1 },
+                  ])
+                }
+              >
+                {t('serviceDelivery.materials.add', 'افزودن ماده')}
+              </Button>
+            </div>
+          </fieldset>
+        ) : null}
 
         {settlement === 'package_credit' ? (
           <>

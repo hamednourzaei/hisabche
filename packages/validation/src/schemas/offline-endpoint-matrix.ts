@@ -471,6 +471,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /orders/:x/deposits/:x/apply': ['order.deposits', 'available'],
   'POST /orders/:x/deposits/:x/refund': ['order.deposits', 'available'],
   'POST /orders/:x/deposits/:x/post': ['order.deposits', 'available'],
+  // advances-02: pre-sale / pre-purchase are created and listed on the server
+  // (the supplier side's functions exist only there).
+  'GET /advances': ['order.advances', 'online_required'],
+  'POST /advances': ['order.advances', 'online_required'],
   'POST /package-credits/consume': ['operations.service_delivery', 'available'],
   'POST /package-credits/expire': ['operations.service_delivery', 'available'],
   // Suspending ONE GRANT is a manager's decision recorded on the server (append-only SUSPEND / RESUME events).
@@ -514,6 +518,12 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /service-delivery/sessions/:x/deliver': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/cancel': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/status': ['operations.service_delivery', 'available'],
+  // The commission report reads server-only rates; the device has no copy.
+  'GET /service-delivery/commission': ['operations.provider_commission', 'online_required'],
+  'PUT /service-delivery/commission-rates/:x': [
+    'operations.provider_commission',
+    'online_required',
+  ],
   'POST /shift-assignments': ['hr.shifts', 'available'],
   'POST /shift-assignments/:x/cancel': ['hr.shifts', 'available'],
   'POST /shifts': ['hr.shifts', 'available'],

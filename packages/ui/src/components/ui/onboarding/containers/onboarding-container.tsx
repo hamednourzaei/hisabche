@@ -23,7 +23,12 @@ import {
 import { OnboardingPage } from '../onboarding-page'
 import { useCallback, useEffect, useMemo, memo, useRef, useState } from 'react'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
-import { inferOperationalDna, type OnboardingProgress } from '@hisabche/validation'
+import {
+  inferOperationalDna,
+  suggestedOperatingAnswers,
+  type OnboardingProgress,
+  type OperatingAnswers,
+} from '@hisabche/validation'
 import { BUSINESS_MODELS, BUSINESS_TYPES, BUSINESS_TYPE_OTHER } from '@hisabche/ui-contract'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 
@@ -88,6 +93,20 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const updateProfile = useAuthStore((s) => s.updateProfile)
   const saveWorkspaceProfile = useSaveWorkspaceProfile()
   const setOperationalDna = useOnboardingStore((s) => s.setOperationalDna)
+  const ownAnswers = useOnboardingStore((s) => s.operatingAnswers)
+  const setOperatingAnswer = useOnboardingStore((s) => s.setOperatingAnswer)
+  const primaryTrade = businessType
+    ? businessType
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)[0]
+    : undefined
+  // The trade's suggestion under the person's own answers: what the wizard
+  // shows AND what the DNA is inferred from.
+  const operatingAnswers = useMemo<OperatingAnswers>(
+    () => ({ ...suggestedOperatingAnswers(primaryTrade), ...ownAnswers }),
+    [primaryTrade, ownAnswers],
+  )
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const saveBookCurrency = useSetBaseCurrency()
   const toast = useToast()
@@ -118,6 +137,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       ...(answers.defaultCurrency && isSupportedCurrency(answers.defaultCurrency)
         ? { defaultCurrency: answers.defaultCurrency as Currency }
         : {}),
+      ...(answers.operating ? { operatingAnswers: answers.operating } : {}),
     })
   }, [serverProgress])
 
@@ -134,6 +154,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
         businessType: businessType ?? null,
         storeSize: storeSize ?? null,
         defaultCurrency: defaultCurrency || null,
+        operating: ownAnswers,
       },
     }
     saveOnboardingProgress(progress).catch(() => undefined)
@@ -143,6 +164,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     businessType,
     storeSize,
     defaultCurrency,
+    ownAnswers,
     operational.data?.configurable,
     saveOnboardingProgress,
   ])
@@ -174,7 +196,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     // Infer DNA deterministically from the user's choices
     const inferredDna = inferOperationalDna({
       tradeKey: selected[0],
-      holdsStock: storeSize ? 'yes' : 'unknown',
+      ...operatingAnswers,
     })
     setOperationalDna(inferredDna)
 
@@ -236,6 +258,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
             businessType: businessType ?? null,
             storeSize: storeSize ?? null,
             defaultCurrency,
+            operating: operatingAnswers,
           },
         })
       }
@@ -260,6 +283,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     businessType,
     completeOnboarding,
     operational,
+    operatingAnswers,
     saveOperationalDna,
     saveOnboardingProgress,
     defaultCurrency,
@@ -350,6 +374,8 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       businessNote={businessNote}
       onSetBusinessNote={setBusinessNote}
       onSetCurrency={handleSetCurrency}
+      operatingAnswers={operatingAnswers}
+      onSetOperatingAnswer={setOperatingAnswer}
       onComplete={handleComplete}
     />
   )

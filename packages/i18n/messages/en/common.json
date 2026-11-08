@@ -2773,6 +2773,19 @@
       "warn": "Warn (Show notice only)",
       "block": "Block (Prevent creation)",
       "success": "Credit limit policy saved successfully."
+    },
+    "operatingProfile": {
+      "title": "Business operating profile",
+      "description": "Has your business changed (new staff, a new branch, a new service)? Update the answers and the menu and defaults follow.",
+      "save": "Save new profile",
+      "saving": "Saving…",
+      "saved": "Operating profile saved",
+      "failed": "Operating profile was not saved",
+      "changedElsewhere": "Someone changed the profile at the same time; the new version was loaded. Try again.",
+      "notConfigured": "This is not enabled on the server yet.",
+      "unread": "The operating profile could not be read; this is not «empty».",
+      "noAccess": "Only someone allowed to manage the business can change this.",
+      "nothingRewritten": "No recorded invoice, entry or stock is changed."
     }
   },
   "sync": {
@@ -2985,7 +2998,11 @@
         "action": "Go to accounting"
       }
     },
-    "unconvertedInvoices": "{count} invoice(s) in another currency have no exchange rate and are not included in these figures."
+    "unconvertedInvoices": "{count} invoice(s) in another currency have no exchange rate and are not included in these figures.",
+    "openAdvances": "Open advances (received / paid)",
+    "openAdvancesUnread": "Could not be read",
+    "openAdvancesOpen": "Pre-sales and pre-purchases",
+    "openAdvancesNone": "None"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -3344,7 +3361,8 @@
       "customer_advances": "Customer advances",
       "inventory_loss": "Inventory scrap loss",
       "inventory_shrinkage": "Inventory shrinkage (count)",
-      "inventory_gain": "Inventory gain (count)"
+      "inventory_gain": "Inventory gain (count)",
+      "supplier_advances": "Advances to suppliers"
     }
   },
   "hr": {
@@ -4086,7 +4104,29 @@
     "bookCurrencyFailed": "The chosen currency was not saved on the server. Try again from Settings.",
     "currencyRequired": "Choose a currency.",
     "saveFailed": "Your business details were not saved. Check the connection and try again.",
-    "preparingWorkspace": "Preparing your workspace…"
+    "preparingWorkspace": "Preparing your workspace…",
+    "operating": {
+      "title": "How does your business work?",
+      "description": "We suggested answers from your trade; change anything that isn't right. You can change it later in Settings.",
+      "questions": {
+        "takesAppointments": "Do customers book ahead?",
+        "deliversCoursesOrPackages": "Do you sell multi-session packages or courses?",
+        "takesJobTicketsOrRepairs": "Do you take in repairs or custom jobs?",
+        "holdsStock": "Do you keep goods or consumables in stock?",
+        "producesGoods": "Do you produce anything yourself?",
+        "hasPointOfSale": "Do you sell over a counter (till)?",
+        "sellsOnCredit": "Do you sell on credit or installments?",
+        "hasStaff": "Do you have staff?",
+        "locations": "How many branches?"
+      },
+      "answers": {
+        "yes": "Yes",
+        "no": "No",
+        "unknown": "Don't know",
+        "single": "One place",
+        "multiple": "Several"
+      }
+    }
   },
   "status": {
     "excellent": "Excellent",
@@ -4783,6 +4823,7 @@
     "cosmetics": "Cosmetics and toiletries",
     "clinic": "Clinic and surgery",
     "barber": "Barber and salon",
+    "beautySalon": "Nails and beauty salon",
     "optician": "Optician",
     "agriculture": "Agriculture and farming",
     "livestock": "Livestock",
@@ -8012,7 +8053,10 @@
     "errorIdempotency": "The same request was already recorded with another amount or reason.",
     "errorCurrencyUnknown": "The currency of this deposit is unknown, so the amount cannot be computed.",
     "errorAccounts": "The ledger is missing the accounts this needs; create the customer advances account first.",
-    "errorPermission": "This needs the «record payment» permission."
+    "errorPermission": "This needs the «record payment» permission.",
+    "sessionReference": "Booking {id}",
+    "preSaleReference": "Pre-sale {id}",
+    "prePurchaseReference": "Pre-purchase {id}"
   },
   "customer360": {
     "weOweIncludesReturns": "Includes credit from returns",
@@ -10591,7 +10635,8 @@
     "loading": "Loading…",
     "tabs": {
       "invoices": "Invoices",
-      "pricing": "Prices and discounts"
+      "pricing": "Prices and discounts",
+      "advances": "Pre-sales & pre-purchases"
     }
   },
   "warehouseHub": {
@@ -10847,7 +10892,49 @@
       "DEFERRED_REVENUE_ACCOUNT_MISSING": "Your books have no «deferred revenue» account.",
       "ACCOUNTING_PERIOD_LOCKED": "The session date is in a closed accounting period."
     },
-    "moveFailed": "The session status was not changed"
+    "moveFailed": "The session status was not changed",
+    "materials": {
+      "title": "Materials used (optional)",
+      "product": "Material",
+      "choose": "Choose a material…",
+      "remove": "Remove",
+      "add": "Add material",
+      "help": "Taken out of stock at cost and booked in the ledger; once per session."
+    },
+    "deposit": {
+      "title": "Deposit for this booking",
+      "none": "No deposit recorded for this booking.",
+      "unread": "Deposits could not be read; this is not «none».",
+      "remaining": "Remaining",
+      "amount": "Deposit amount",
+      "method": "Received by",
+      "cash": "Cash",
+      "bank": "Bank",
+      "record": "Record deposit",
+      "saved": "Deposit recorded",
+      "failed": "Deposit was not recorded",
+      "amountInvalid": "Enter a valid amount",
+      "currencyUnknown": "Books currency could not be read",
+      "help": "Not revenue: a customer advance, applied to the invoice from the customer's page."
+    },
+    "commission": {
+      "title": "Provider commission",
+      "provider": "Provider",
+      "sessions": "Delivered sessions",
+      "base": "Service value",
+      "rate": "Rate",
+      "amount": "Commission",
+      "noRate": "No rate set",
+      "unknown": "Unknown",
+      "edit": "Change",
+      "save": "Save",
+      "rateInvalid": "The percent must be between 0 and 100",
+      "rateFailed": "The rate was not saved",
+      "unread": "The commission report could not be read; this is not «empty».",
+      "empty": "No delivered sessions with a provider in this period.",
+      "outside": "Outside the report: {unpriced} sessions without a price, {unassigned} without a provider.",
+      "help": "A report, not a payment: delivered sessions at each service's current price. Nothing is booked."
+    }
   },
   "teamHub": {
     "label": "Team & payroll",
@@ -11534,6 +11621,46 @@
         "title": "Subscription and wallet",
         "desc": "Your current plan, renewal date and wallet balance. Referrals top up the wallet, and the wallet pays this bill."
       }
+    }
+  },
+  "advances": {
+    "label": "Pre-sales and pre-purchases",
+    "sections": {
+      "preSale": "Pre-sale",
+      "prePurchase": "Pre-purchase"
+    },
+    "newPreSale": "New pre-sale",
+    "newPrePurchase": "New pre-purchase",
+    "customer": "Customer",
+    "supplier": "Supplier",
+    "amount": "Amount",
+    "method": "Method",
+    "cash": "Cash",
+    "bank": "Bank",
+    "save": "Record",
+    "saving": "Recording…",
+    "cancel": "Cancel",
+    "failed": "Not recorded",
+    "amountInvalid": "Enter a valid amount",
+    "currencyUnknown": "Books currency could not be read",
+    "customerRequired": "Choose a customer",
+    "supplierRequired": "Choose a supplier",
+    "notePreSale": "What was pre-sold?",
+    "notePrePurchase": "What was pre-bought?",
+    "preSaleHelp": "The customer pays before delivery. Not revenue: a customer advance, applied when the sale invoice is made.",
+    "prePurchaseHelp": "You pay the supplier before the goods arrive. Not an expense: a supplier advance, applied when the purchase invoice is made.",
+    "unread": "The list could not be read; this is not «empty».",
+    "loading": "Loading…",
+    "emptyPreSale": "No pre-sales yet.",
+    "emptyPrePurchase": "No pre-purchases yet.",
+    "unknownParty": "Name not read",
+    "applyOnParty": "Apply / refund",
+    "columns": {
+      "date": "Date",
+      "remaining": "Open",
+      "status": "Status",
+      "note": "Note",
+      "action": "Action"
     }
   }
 }

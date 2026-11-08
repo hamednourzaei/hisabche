@@ -251,7 +251,20 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       invoiceId?: string
       reason?: string
       expectedUpdatedAt?: string
+      consumables?: Array<{ productId?: unknown; quantity?: unknown; warehouseId?: unknown }>
     }
+    // V54 5.4: materials are costed and booked by the SERVER (cost layers and
+    // the ledger live there). The device does not deduct them; it carries them
+    // in the delivery command, and the server takes them out once on sync.
+    const consumables = Array.isArray(body.consumables)
+      ? body.consumables
+          .map((item) => ({
+            productId: typeof item.productId === 'string' ? item.productId : '',
+            quantity: Number(item.quantity),
+            ...(typeof item.warehouseId === 'string' ? { warehouseId: item.warehouseId } : {}),
+          }))
+          .filter((item) => item.productId && item.quantity > 0)
+      : []
 
     // ONE transaction: the session, the credit entry and the command either all exist or none does.
     return c.db.transaction(() => {
@@ -366,6 +379,7 @@ export function registerServiceDeliveryRoutes(router: Router): void {
           quantity: body.quantity ?? 1,
           consumptionEntryId: entry?.id ?? null,
           reason: body.reason ?? null,
+          ...(consumables.length > 0 ? { consumables } : {}),
         })
       }
 

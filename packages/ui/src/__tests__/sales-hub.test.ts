@@ -36,10 +36,17 @@ const tabs = ui('hub-tabs.tsx')
 const view = ui('invoices', 'invoices-view.tsx')
 const pageHook = code(read('packages', 'ui', 'src', 'hooks', 'invoices', 'use-invoices-page.ts'))
 
-describe('two tabs, built from shared parts', () => {
-  it('invoices and pricing — and nothing else', () => {
-    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'pricing'])
-    expect(SALES_HUB_SOURCE).toEqual({ invoices: '/invoices', pricing: '/promotions' })
+describe('three tabs, built from shared parts', () => {
+  it('invoices, advances and pricing — and nothing else', () => {
+    // advances-02 (owner request, 8 Nov 2026): pre-sale / pre-purchase.
+    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'advances', 'pricing'])
+    // Advances are locked with the invoices module (no new module key).
+    expect(SALES_HUB_SOURCE).toEqual({
+      invoices: '/invoices',
+      advances: '/invoices',
+      pricing: '/promotions',
+    })
+    expect(hub).toContain('<AdvancesContainer />')
   })
 
   it('mounts the containers that own those screens and fetches nothing itself', () => {

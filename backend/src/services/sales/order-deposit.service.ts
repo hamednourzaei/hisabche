@@ -34,6 +34,7 @@
 // silent skip. `postReceipt` re-posts it idempotently and flips the flag.
 // ============================================
 
+import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   ledgerFractionDigitsOf,
@@ -69,7 +70,33 @@ export interface OrderDepositRow {
   /** `posted` | `pending_posting` | NULL (written before the column existed). */
   posting_status: string | null
   journal_entry_id: string | null
+  /** session-deposit-01: what the document is. Absent before that migration = an order. */
+  source_type?: DepositSourceType | null
+  /** advances-02 */
+  note?: string | null
   created_at: string
+}
+
+/**
+ * V54 5.4: a deposit is taken for a DOCUMENT — a sales order, or a booked
+ * service session (بیعانه‌ی نوبت). The money is the same in both: Dr cash|bank
+ * / Cr customer advances, applied later to the customer's invoice.
+ */
+export type DepositSourceType = 'sales_order' | 'service_session' | 'pre_sale' | 'pre_purchase'
+
+/** advances-02: a pre-sale / pre-purchase is its OWN document (order_id = id). */
+export const ADVANCE_KINDS = ['pre_sale', 'pre_purchase'] as const
+export type AdvanceKind = (typeof ADVANCE_KINDS)[number]
+
+function sourceTypeOf(raw: string | null | undefined): DepositSourceType {
+  return raw === 'service_session' || raw === 'pre_sale' || raw === 'pre_purchase'
+    ? raw
+    : 'sales_order'
+}
+
+/** The money side of a deposit: what the customer owes us back, or what the supplier does. */
+function advanceRole(kind: DepositSourceType): 'customer_advances' | 'supplier_advances' {
+  return kind === 'pre_purchase' ? 'supplier_advances' : 'customer_advances'
 }
 
 export interface CreateOrderDepositInput {
@@ -82,6 +109,10 @@ export interface CreateOrderDepositInput {
   paymentMethod?: string | undefined
   /** The ACCOUNTING day the money was taken. Defaults to today. */
   date?: string | undefined
+  /** Default `sales_order`. The CALLER has checked that the document exists. */
+  sourceType?: DepositSourceType | undefined
+  /** advances-02: what was pre-sold / pre-bought, in the person's words. */
+  note?: string | undefined
 }
 
 export interface CreatedOrderDeposit {
@@ -168,6 +199,8 @@ export interface CustomerDepositView extends DepositBalanceView {
   paymentMethod: string
   postingStatus: string | null
   journalEntryId: string | null
+  sourceType: DepositSourceType
+  note: string | null
   status: DepositUsageStatus
   /** On the server nothing is waiting to be sent; the device fills this in. */
   pendingSync: boolean
@@ -240,6 +273,44 @@ function mapRefund(raw: unknown): DepositRefund {
   }
 }
 
+/**
+ * advances-02: what is still open, per side and currency, in minor units.
+ * customer = money customers paid before their sale (orders, bookings,
+ * pre-sales); supplier = money paid to suppliers before the goods.
+ * Only posted receipts count; applications and refunds count while their
+ * payment is posted — the same rule as `order_deposit_balance`.
+ */
+export interface OpenAdvances {
+  customer: Record<string, number>
+  supplier: Record<string, number>
+}
+
+export function summarizeOpenAdvances(
+  deposits: ReadonlyArray<{
+    id: string
+    amount_minor: number
+    currency: string | null
+    source_type?: string | null
+    posting_status: string | null
+  }>,
+  used: ReadonlyArray<{ deposit_id: string; amount_minor: number }>,
+): OpenAdvances {
+  const usedBy = new Map<string, number>()
+  for (const row of used) {
+    usedBy.set(row.deposit_id, (usedBy.get(row.deposit_id) ?? 0) + Number(row.amount_minor))
+  }
+  const out: OpenAdvances = { customer: {}, supplier: {} }
+  for (const deposit of deposits) {
+    // An unbooked receipt or an unknown currency is not a figure to add.
+    if (deposit.posting_status !== 'posted' || !deposit.currency) continue
+    const open = Number(deposit.amount_minor) - (usedBy.get(deposit.id) ?? 0)
+    if (open <= 0) continue
+    const side = deposit.source_type === 'pre_purchase' ? out.supplier : out.customer
+    side[deposit.currency] = (side[deposit.currency] ?? 0) + open
+  }
+  return out
+}
+
 export class OrderDepositService {
   constructor(
     private readonly db: SupabaseClient = supabase,
@@ -277,8 +348,72 @@ export class OrderDepositService {
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    const rows = (data ?? []) as OrderDepositRow[]
+    return this.viewsOf(ctx, (data ?? []) as OrderDepositRow[])
+  }
 
+  /** advances-02: the dashboard's open advances (three reads, summed here). */
+  async openAdvances(ctx: TenancyContext): Promise<OpenAdvances> {
+    type DepositFigures = Parameters<typeof summarizeOpenAdvances>[0]
+    let rows: DepositFigures
+    const deposits = await this.db
+      .from('order_deposits')
+      .select('id, amount_minor, currency, source_type, posting_status')
+      .eq('workspace_id', ctx.workspaceId)
+    if (!deposits.error) {
+      rows = (deposits.data ?? []) as DepositFigures
+    } else {
+      // Before session-deposit-01 there is no source_type: every deposit is a customer's.
+      if (deposits.error.code !== '42703' && deposits.error.code !== 'PGRST204') {
+        throw deposits.error
+      }
+      const legacy = await this.db
+        .from('order_deposits')
+        .select('id, amount_minor, currency, posting_status')
+        .eq('workspace_id', ctx.workspaceId)
+      if (legacy.error) throw legacy.error
+      rows = (legacy.data ?? []) as DepositFigures
+    }
+    const applied = await this.db
+      .from('order_deposit_applications')
+      .select('deposit_id, amount_minor, payments!inner(status)')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('payments.status', 'posted')
+    if (applied.error) throw applied.error
+    const refunded = await this.db
+      .from('order_deposit_refunds')
+      .select('deposit_id, amount_minor, payments!inner(status)')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('payments.status', 'posted')
+    if (refunded.error) throw refunded.error
+    return summarizeOpenAdvances(rows, [
+      ...((applied.data ?? []) as Array<{ deposit_id: string; amount_minor: number }>),
+      ...((refunded.data ?? []) as Array<{ deposit_id: string; amount_minor: number }>),
+    ])
+  }
+
+  /**
+   * advances-02: every pre-sale (or pre-purchase) of the workspace, newest
+   * first, each with what is left of it — the same balance apply/refund check.
+   */
+  async listAdvances(ctx: TenancyContext, kind: AdvanceKind): Promise<CustomerDepositView[]> {
+    const { data, error } = await this.db
+      .from('order_deposits')
+      .select('*')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_type', kind)
+      .order('created_at', { ascending: false })
+    if (error) {
+      // Before advances-02 there is no such kind (or column): none exist yet.
+      if (error.code === '42703' || error.code === 'PGRST204') return []
+      throw error
+    }
+    return this.viewsOf(ctx, (data ?? []) as OrderDepositRow[])
+  }
+
+  private async viewsOf(
+    ctx: TenancyContext,
+    rows: OrderDepositRow[],
+  ): Promise<CustomerDepositView[]> {
     const deposits: CustomerDepositView[] = []
     for (const row of rows) {
       const { data: balance, error: balanceError } = await this.db.rpc('order_deposit_balance', {
@@ -298,6 +433,8 @@ export class OrderDepositService {
         paymentMethod: row.payment_method,
         postingStatus: row.posting_status,
         journalEntryId: row.journal_entry_id,
+        sourceType: sourceTypeOf(row.source_type),
+        note: row.note ?? null,
         createdAt: row.created_at,
         ...view,
         status: depositStatusOf(row.posting_status, view),
@@ -325,40 +462,57 @@ export class OrderDepositService {
     // the deposit so that an apply can later refuse an invoice in another one
     // instead of treating 100 dollars as 100 afghani.
     const currency = await this.booksCurrencyOf(ctx.workspaceId)
+    const kind = input.sourceType ?? 'sales_order'
+    const isAdvance = kind === 'pre_sale' || kind === 'pre_purchase'
+    // An advance names itself as its document; the id is fixed BEFORE the
+    // insert so a retry with the same id is the same advance.
+    const id = input.id ?? (isAdvance ? randomUUID() : undefined)
+    const note = input.note?.trim() ? input.note.trim().slice(0, 500) : undefined
 
     const { data, error } = await this.db
       .from('order_deposits')
       .insert({
-        ...(input.id ? { id: input.id } : {}),
+        ...(id ? { id } : {}),
         workspace_id: ctx.workspaceId,
-        order_id: input.orderId,
+        order_id: isAdvance ? id : input.orderId,
         customer_id: input.customerId,
         amount_minor: input.amountMinor,
         payment_method: input.paymentMethod ?? 'cash',
         currency,
+        // Written only for a session: an order deposit keeps working on a
+        // database that has not run session-deposit-01 yet.
+        ...(kind !== 'sales_order' ? { source_type: kind } : {}),
+        ...(note ? { note } : {}),
       })
       .select()
       .single()
 
     if (error) {
+      if (kind !== 'sales_order' && (error.code === '42703' || error.code === 'PGRST204')) {
+        throw new ConflictError(
+          isAdvance ? 'ADVANCES_NOT_CONFIGURED' : 'SESSION_DEPOSIT_NOT_CONFIGURED',
+        )
+      }
+      // advances-02 not run: the CHECK knows only orders and sessions.
+      if (isAdvance && error.code === '23514') throw new ConflictError('ADVANCES_NOT_CONFIGURED')
       // The same receipt delivered twice — a device retrying its queue after a
       // lost answer. The row is the one it already created, so the second
       // delivery answers with THAT: re-booking is idempotent (the ledger keys
       // the entry by the deposit id), and writing a second deposit would be a
       // liability the shop does not owe.
-      if (error.code === '23505' && input.id) {
+      if (error.code === '23505' && id) {
         const existing = await this.db
           .from('order_deposits')
           .select('*')
           .eq('workspace_id', ctx.workspaceId)
-          .eq('id', input.id)
+          .eq('id', id)
           .maybeSingle()
         if (existing.error) throw existing.error
         if (existing.data) {
           const replay = existing.data as OrderDepositRow
           // A retry must not re-send different money under the same id.
           if (
-            replay.order_id !== input.orderId ||
+            (!isAdvance && replay.order_id !== input.orderId) ||
             replay.customer_id !== input.customerId ||
             Number(replay.amount_minor) !== input.amountMinor
           ) {
@@ -416,6 +570,32 @@ export class OrderDepositService {
       }),
     )
 
+    if (sourceTypeOf(deposit.source_type) === 'pre_purchase') {
+      const supplier = await this.ledgerPort.ensureAccountsForRoles(ctx, [
+        'supplier_advances',
+        'payable',
+      ])
+      if (supplier.missing.length > 0) {
+        throw new ValidationError(`DEPOSIT_ACCOUNTS_MISSING:${supplier.missing.join(',')}`)
+      }
+      const applied = await this.db.rpc('supplier_advance_apply', {
+        p_workspace_id: ctx.workspaceId,
+        p_user_id: ctx.userId,
+        p_deposit_id: depositId,
+        p_invoice_id: input.invoiceId,
+        p_amount_minor: input.amountMinor,
+        p_fraction_digits: fractionDigits,
+        p_entry_date: input.date ?? todayIso(),
+        p_idempotency_key: input.idempotencyKey,
+        p_advances_account_id: supplier.accounts.supplier_advances,
+        p_payable_account_id: supplier.accounts.payable,
+        p_actor_role: ctx.role,
+      })
+      if (applied.error) throw this.rpcError(applied.error, 'apply the supplier advance')
+      await invalidateMoneyCaches(ctx.workspaceId)
+      return mapApplication(applied.data)
+    }
+
     const { accounts, missing } = await this.ledgerPort.ensureAccountsForRoles(ctx, [
       'customer_advances',
       'receivable',
@@ -469,15 +649,18 @@ export class OrderDepositService {
     )
 
     const moneyRole = moneyAccountRole(method)
+    const kind = sourceTypeOf(deposit.source_type)
     const { accounts, missing } = await this.ledgerPort.ensureAccountsForRoles(ctx, [
-      'customer_advances',
+      advanceRole(kind),
       moneyRole,
     ])
     if (missing.length > 0) {
       throw new ValidationError(`DEPOSIT_ACCOUNTS_MISSING:${missing.join(',')}`)
     }
 
-    const { data, error } = await this.db.rpc('order_deposit_refund', {
+    // The supplier side: money comes BACK in (Dr cash / Cr supplier advances).
+    const fn = kind === 'pre_purchase' ? 'supplier_advance_refund' : 'order_deposit_refund'
+    const { data, error } = await this.db.rpc(fn, {
       p_workspace_id: ctx.workspaceId,
       p_user_id: ctx.userId,
       p_deposit_id: depositId,
@@ -487,7 +670,7 @@ export class OrderDepositService {
       p_method: method,
       p_reason: input.reason,
       p_idempotency_key: input.idempotencyKey,
-      p_advances_account_id: accounts.customer_advances,
+      p_advances_account_id: accounts[advanceRole(kind)],
       p_money_account_id: accounts[moneyRole],
       p_actor_role: ctx.role,
     })
@@ -609,7 +792,9 @@ export class OrderDepositService {
   ): Promise<LedgerPostingOutcome> {
     const amount = tillMinorToMajor(deposit.amount_minor, currency)
     const moneyRole = moneyAccountRole(deposit.payment_method)
-    const needed: AccountRole[] = [moneyRole, 'customer_advances']
+    const kind = sourceTypeOf(deposit.source_type)
+    const advance = advanceRole(kind)
+    const needed: AccountRole[] = [moneyRole, advance]
 
     const { accounts, missing } = await this.ledgerPort.ensureAccountsForRoles(ctx, needed)
     if (missing.length > 0) {
@@ -623,12 +808,27 @@ export class OrderDepositService {
       sourceType: 'order_deposit',
       sourceId: deposit.id,
       date: date ?? todayIso(),
-      description: `بیعانه سفارش ${deposit.order_id}`,
+      description:
+        kind === 'service_session'
+          ? `بیعانه نوبت ${deposit.order_id}`
+          : kind === 'pre_sale'
+            ? `پیش‌فروش ${deposit.order_id}`
+            : kind === 'pre_purchase'
+              ? `پیش‌خرید ${deposit.order_id}`
+              : `بیعانه سفارش ${deposit.order_id}`,
       reference: deposit.order_id,
-      lines: [
-        { accountId: accounts[moneyRole]!, debit: amount, credit: 0 },
-        { accountId: accounts.customer_advances!, debit: 0, credit: amount },
-      ],
+      // A pre-purchase is money OUT: Dr supplier advances / Cr cash|bank.
+      // Everything else is money IN: Dr cash|bank / Cr customer advances.
+      lines:
+        kind === 'pre_purchase'
+          ? [
+              { accountId: accounts[advance]!, debit: amount, credit: 0 },
+              { accountId: accounts[moneyRole]!, debit: 0, credit: amount },
+            ]
+          : [
+              { accountId: accounts[moneyRole]!, debit: amount, credit: 0 },
+              { accountId: accounts[advance]!, debit: 0, credit: amount },
+            ],
     })
   }
 }

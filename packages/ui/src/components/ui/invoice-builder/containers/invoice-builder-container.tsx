@@ -6,6 +6,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { AdvanceForm } from '../../invoices/advance-form'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
@@ -55,7 +56,18 @@ import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
+/**
+ * /invoices/new: the line grid — or, for `?type=pre_sale | pre_purchase`
+ * (advances-02), the advance form. A wrapper, so the grid's hooks are never
+ * called conditionally.
+ */
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
+  const type = useSearchParams()?.get('type')
+  if (type === 'pre_sale' || type === 'pre_purchase') return <AdvanceForm kind={type} />
+  return <InvoiceBuilderGrid />
+})
+
+const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   const push = useLocalePush()
   const searchParams = useSearchParams()
   const { setSaveStatus } = useSyncStore()
@@ -486,3 +498,4 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
 })
 
 InvoiceBuilderContainer.displayName = 'InvoiceBuilderContainer'
+InvoiceBuilderGrid.displayName = 'InvoiceBuilderGrid'

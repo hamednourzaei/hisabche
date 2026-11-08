@@ -248,6 +248,7 @@ const NO_SHELF = new Set([
   'repairs',
   'laundry',
   'barber',
+  'beautySalon',
   'wedding',
   'security',
   'transport',

@@ -14,6 +14,7 @@ import { HardwareSection } from './hardware-section'
 import { BookCurrencySection } from './book-currency-section'
 import { IndustryProfileSection } from './industry-profile-section'
 import { PagesAndTabsSettings } from './pages-and-tabs-settings'
+import { OperatingProfileSettings } from './operating-profile-settings'
 import { CreditLimitModeSection } from './credit-limit-mode-section'
 import { MetalUnitSection } from './metal-unit-section'
 import { LanguageSection } from './language-section'
@@ -1124,6 +1125,7 @@ export const SettingsPage = memo(function SettingsPage({
       <IndustryProfileSection />
       {/* After the business type: Hisabche shaped the workspace from it; here
           the person adds or removes pages and tabs for themselves. */}
+      <OperatingProfileSettings />
       <PagesAndTabsSettings />
       <CreditLimitModeSection />
       <MetalUnitSection />

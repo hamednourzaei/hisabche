@@ -92,6 +92,7 @@ export const BUSINESS_TYPES: readonly BusinessTypeOption[] = [
   { id: 'cosmetics', labelKey: 'businessType.cosmetics', labelFa: 'لوازم آرایشی و بهداشتی' },
   { id: 'clinic', labelKey: 'businessType.clinic', labelFa: 'کلینیک و مطب' },
   { id: 'barber', labelKey: 'businessType.barber', labelFa: 'آرایشگاه و سلمانی' },
+  { id: 'beautySalon', labelKey: 'businessType.beautySalon', labelFa: 'ناخن و سالن زیبایی' },
   { id: 'optician', labelKey: 'businessType.optician', labelFa: 'عینک‌فروشی' },
 
   // ─── Agriculture ───
