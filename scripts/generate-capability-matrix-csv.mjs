@@ -47,10 +47,16 @@ const rel = (abs) => path.relative(ROOT, abs).split(path.sep).join('/')
 // ───────────────────────────────────────────────────────────────────────────
 const matrixLines = read(MATRIX_FILE).split('\n')
 const rows = []
-const rowRegex = /^\s*'([A-Z]+ (?:\/[^']*))':\s*\[\s*'([^']+)'\s*,\s*'([^']+)'\s*\]/
+const rowRegex = /^\s*'([A-Z]+ (?:\/[^']*))':\s*\[\s*'([^']+)'\s*,\s*'([^']+)'\s*,?\s*\]/
 
 matrixLines.forEach((line, index) => {
-  const m = line.match(rowRegex)
+  // prettier wraps an entry longer than the print width over three lines
+  // ('KEY': [ / 'feature', / 'status', / ]). Read it as one row; the evidence
+  // stays the line that names the endpoint.
+  const joined = line.trimEnd().endsWith('[')
+    ? [line, ...matrixLines.slice(index + 1, index + 4)].join(' ')
+    : line
+  const m = joined.match(rowRegex)
   if (!m) return
   rows.push({
     endpoint: m[1],

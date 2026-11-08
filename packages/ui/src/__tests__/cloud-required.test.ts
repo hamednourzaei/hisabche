@@ -69,8 +69,10 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 61 since 3 Nov 2026: settings.business_profile (reading the workspace profile - always allowed) and
     // settings.business_profile_edit (changing it - workspace.manage on the server). Two features because a
     // feature that is «always allowed» must not also write (entitlement-reads-never-stop.test.ts).
-    it('has exactly 61 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(61)
+    // 63 since 8 Nov 2026: order.advances (pre-sale / pre-purchase - the supplier-advance functions
+    // live only on the server) and operations.provider_commission (rates are server-only).
+    it('has exactly 63 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(63)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {
