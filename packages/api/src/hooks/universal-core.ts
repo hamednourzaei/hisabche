@@ -23,6 +23,7 @@ import { useIntentKey } from '../lib/intent-key'
 import { useAuthReady } from './useAuthReady'
 import { invoiceKeys } from './invoices'
 import { paymentKeys } from './payments'
+import { accountingKeys } from './accounting'
 import { productKeys } from './products'
 
 // ─── Query Key Families ──────────────────────────────────────────
@@ -761,6 +762,9 @@ function invalidateAfterDeposit(
   orderId: string,
   customerId: string,
 ) {
+  // Pre-sale / pre-purchase lists and the journal show what was just booked.
+  queryClient.invalidateQueries({ queryKey: [...universalCoreKeys.all, 'advances'] })
+  queryClient.invalidateQueries({ queryKey: accountingKeys.all })
   queryClient.invalidateQueries({ queryKey: universalCoreKeys.deposits(orderId) })
   queryClient.invalidateQueries({ queryKey: universalCoreKeys.customerDeposits(customerId) })
   queryClient.invalidateQueries({ queryKey: invoiceKeys.all })

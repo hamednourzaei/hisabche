@@ -20,15 +20,7 @@
 // ============================================
 
 import { memo } from 'react'
-import {
-  CalendarClock,
-  CircleSlash,
-  CloudOff,
-  Plus,
-  RefreshCw,
-  TriangleAlert,
-  X,
-} from 'lucide-react'
+import { CalendarClock, CircleSlash, CloudOff, Plus, RefreshCw, TriangleAlert } from 'lucide-react'
 
 import {
   ActionButton,
@@ -40,7 +32,7 @@ import {
 } from '../capability/capability-kit'
 import { DataTable } from '../data-table/data-table'
 import type { TableColumn } from '../data-table/table-types'
-import { TableFilterSelect } from '../data-table/table-filter-select'
+import { TableFilterMenu } from '../data-table/table-filter-menu'
 import type { EntitySyncState } from '@hisabche/api'
 import {
   cancellable,
@@ -424,31 +416,27 @@ export function ServiceDeliveryView({
               same place every other table in the product keeps them. The time
               range and the status are filter controls, so they sit on one row
               of their own instead of inside the icon strip. */}
-            <TableFilterSelect
-              label={t('serviceDelivery.filters.status', 'وضعیت')}
-              value={statusFilter}
-              options={statusOptions}
-              onChange={onStatusFilterChange}
+            {/* One «فیلتر» for status and date (owner request, 8 Nov 2026). */}
+            <TableFilterMenu
+              label={t('common.filter')}
+              clearLabel={t('serviceDelivery.filters.clear')}
+              groups={[
+                {
+                  id: 'status',
+                  label: t('serviceDelivery.filters.status'),
+                  value: statusFilter,
+                  options: statusOptions,
+                  onChange: onStatusFilterChange,
+                },
+                {
+                  id: 'date',
+                  label: t('serviceDelivery.filters.date'),
+                  value: dateFilter,
+                  options: dateOptions,
+                  onChange: onDateFilterChange,
+                },
+              ]}
             />
-            <TableFilterSelect
-              label={t('serviceDelivery.filters.date', 'تاریخ')}
-              value={dateFilter}
-              options={dateOptions}
-              onChange={onDateFilterChange}
-            />
-            {statusFilter !== 'all' || dateFilter !== 'all' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onStatusFilterChange('all')
-                  onDateFilterChange('all')
-                }}
-                className="inline-flex h-9 items-center gap-1 rounded-[var(--radius-md)] border border-dashed border-[hsl(var(--border-default))] px-2.5 text-xs text-[hsl(var(--fg-secondary))] hover:border-[hsl(var(--color-primary))] hover:text-[hsl(var(--fg-primary))]"
-              >
-                <X aria-hidden="true" className="size-3.5" />
-                {t('serviceDelivery.filters.clear', 'پاک کردن فیلترها')}
-              </button>
-            ) : null}
           </div>
 
           <DataTable<ServiceSessionRow>

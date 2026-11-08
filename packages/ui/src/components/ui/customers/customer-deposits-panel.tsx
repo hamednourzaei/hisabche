@@ -74,7 +74,7 @@ const STATUS_TONE: Record<
 }
 
 /** A code the server answered, turned into the sentence a person can act on. */
-function refusalText(error: unknown, t: (key: string) => string, fallback: string): string {
+export function refusalText(error: unknown, t: (key: string) => string, fallback: string): string {
   const code = apiErrorCode(error)
   const known: Record<string, string> = {
     DEPOSIT_INSUFFICIENT_BALANCE: t('errorInsufficient'),
@@ -499,7 +499,8 @@ function ApplyDialog({
   )
 }
 
-function RefundDialog({
+/** Also opened from the accounting journal (advances-02, owner request 8 Nov 2026). */
+export function RefundDialog({
   deposit,
   pending,
   onClose,

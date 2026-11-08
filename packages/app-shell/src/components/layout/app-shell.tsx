@@ -13,7 +13,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied } from '@hisabche/ui/menu'
 import {
-  GlobalPageCustomizer,
   InteractiveGuide,
   LanguageSwitchProvider,
   NoAccessNotice,
@@ -119,10 +118,6 @@ export function AppShell() {
           <SandboxNotice />
           <BookCurrencySync />
           <InteractiveGuide currentRoute={location.pathname} t={(key) => t(key as never)} />
-          {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
-          <div className="mb-2 flex justify-end md:hidden">
-            <GlobalPageCustomizer />
-          </div>
           <LanguageSwitchProvider value={language}>
             <Suspense fallback={<RouteFallback />}>
               {routeLocked ? (

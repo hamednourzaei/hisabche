@@ -12,6 +12,7 @@ import { useDateFormat } from '../../../../hooks/use-date-format'
 import { routeForEntity } from '../../../../lib/entity-route'
 import type { JournalEntry, Account } from '@hisabche/api'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { AdvanceEntryActions } from './advance-entry-actions'
 
 interface JournalEntryRowProps {
   entry: JournalEntry
@@ -169,6 +170,12 @@ export const JournalEntryRow = memo(function JournalEntryRow({
                   {safeT('accounting.journal.source', 'مبدأ')}: {entry.sourceType}
                 </span>
               )}
+              {/* A pre-sale / pre-purchase: show it, or give back what is unapplied. */}
+              {entry.sourceType === 'order_deposit' && entry.sourceId ? (
+                <div className="mt-1.5">
+                  <AdvanceEntryActions depositId={entry.sourceId} />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

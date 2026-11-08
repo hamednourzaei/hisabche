@@ -40,7 +40,7 @@ import type { ExpiryBucket, ExpiryReport, ExpiryState, StockBatch } from '@hisab
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatSelectedMoney } from '../../../lib/money-display'
 import { BentoStats, type BentoStat } from '../bento-stats'
-import { DataTable, TableFilterSelect, matchesSearch, type TableColumn } from '../data-table'
+import { DataTable, TableFilterMenu, matchesSearch, type TableColumn } from '../data-table'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../dialog'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import {
@@ -399,24 +399,33 @@ export const ExpiryView = memo(function ExpiryView({
             searchValue={search}
             onSearchChange={setSearch}
             actions={
-              <>
-                <TableFilterSelect
-                  label={t('common.status', 'وضعیت')}
-                  value={stateFilter}
-                  onChange={setStateFilter}
-                  options={stateOptions}
-                  allValue={ALL}
-                />
-                {warehouses.length > 0 ? (
-                  <TableFilterSelect
-                    label={t('expiry.warehouse', 'انبار')}
-                    value={warehouseFilter}
-                    onChange={setWarehouseFilter}
-                    options={warehouseOptions}
-                    allValue={ALL}
-                  />
-                ) : null}
-              </>
+              // One «فیلتر» for status and warehouse (owner request, 8 Nov 2026).
+              <TableFilterMenu
+                label={t('common.filter')}
+                clearLabel={t('common.clearFilters')}
+                groups={[
+                  {
+                    id: 'status',
+                    label: t('common.status'),
+                    value: stateFilter,
+                    onChange: setStateFilter,
+                    options: stateOptions,
+                    allValue: ALL,
+                  },
+                  ...(warehouses.length > 0
+                    ? [
+                        {
+                          id: 'warehouse',
+                          label: t('expiry.warehouse'),
+                          value: warehouseFilter,
+                          onChange: setWarehouseFilter,
+                          options: warehouseOptions,
+                          allValue: ALL,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
             }
             minWidthClass="min-w-[420px] sm:min-w-[640px]"
             emptyState={

@@ -321,6 +321,9 @@ export const FEATURE_REGISTRY = {
   'order.advances': { execution: 'server', plans: ALL },
   // V54 (N-7): the commission report reads server-only rates.
   'operations.provider_commission': { execution: 'server', plans: ALL },
+  // Owner request (8 Nov 2026): the guide steps a person has seen live on the
+  // server. Offline, the device copy answers alone.
+  'ui.guide_progress': { execution: 'server', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
   'operations.service_delivery': { execution: 'local', plans: ALL },
   // Suspending ONE package GRANT is a manager's decision recorded on the server (append-only events): online only.

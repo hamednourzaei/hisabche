@@ -52,6 +52,8 @@ export {
   GUIDE_CATALOG,
   GUIDE_SECTION_ATTRIBUTE,
   guidePageAnchor,
+  GUIDE_TOUR,
+  nextGuideRoute,
   type GuideStepDefinition,
 } from './guide-catalog'
 

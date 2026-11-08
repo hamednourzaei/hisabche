@@ -111,7 +111,7 @@ export const CurrencyPicker = memo(function CurrencyPicker({
           }
         },
       ),
-    [primaryCodes, t, serverCurrencies],
+    [primaryCodes, t, serverCurrencies, lang],
   )
 
   const selected = useMemo(() => new Set(value ? [value] : []), [value])
@@ -145,8 +145,8 @@ export const CurrencyPicker = memo(function CurrencyPicker({
           options={searchable}
           selected={selected}
           onToggle={onChange}
-          placeholder={t('onboarding.searchCurrency', 'واحد پولت را جست‌وجو کن')}
-          emptyLabel={t('onboarding.noCurrencyMatch', 'موردی پیدا نشد')}
+          placeholder={t('onboarding.searchCurrency')}
+          emptyLabel={t('onboarding.noCurrencyMatch')}
         />
       </div>
     </div>

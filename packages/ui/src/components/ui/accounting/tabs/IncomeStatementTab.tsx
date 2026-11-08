@@ -1,7 +1,8 @@
 // packages/ui/src/components/ui/accounting/tabs/IncomeStatementTab.tsx
 'use client'
 
-import { memo, useCallback, useEffect, useState, useMemo } from 'react'
+import { memo, useCallback, useState, useMemo } from 'react'
+import { useStoredString } from '../../../../lib/use-stored-string'
 import { useTranslations } from 'next-intl'
 import {
   CURRENCY_SIGN,
@@ -161,37 +162,28 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
 
   // Accounts this viewer chose to hide from the statement — a per-viewer
   // view setting (browser storage), never a change to the books.
-  const [hiddenAccounts, setHiddenAccounts] = useState<ReadonlySet<string>>(() => new Set())
-  const [choosing, setChoosing] = useState(false)
-  useEffect(() => {
+  const [storedHidden, writeHidden] = useStoredString(HIDDEN_ACCOUNTS_KEY)
+  const hiddenAccounts = useMemo<ReadonlySet<string>>(() => {
     try {
-      const raw = window.localStorage.getItem(HIDDEN_ACCOUNTS_KEY)
-      if (raw) setHiddenAccounts(new Set(JSON.parse(raw) as string[]))
+      const parsed: unknown = storedHidden ? JSON.parse(storedHidden) : []
+      return new Set(
+        Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [],
+      )
     } catch {
-      // Storage unavailable (private window): every account stays visible.
+      return new Set()
     }
-  }, [])
-  const toggleAccount = useCallback((accountId: string) => {
-    setHiddenAccounts((current) => {
-      const next = new Set(current)
+  }, [storedHidden])
+  const [choosing, setChoosing] = useState(false)
+  const toggleAccount = useCallback(
+    (accountId: string) => {
+      const next = new Set(hiddenAccounts)
       if (next.has(accountId)) next.delete(accountId)
       else next.add(accountId)
-      try {
-        window.localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...next]))
-      } catch {
-        // Not persisted — still applied for this visit.
-      }
-      return next
-    })
-  }, [])
-  const showAllAccounts = useCallback(() => {
-    setHiddenAccounts(new Set())
-    try {
-      window.localStorage.removeItem(HIDDEN_ACCOUNTS_KEY)
-    } catch {
-      // Nothing stored to clear.
-    }
-  }, [])
+      writeHidden(next.size > 0 ? JSON.stringify([...next]) : null)
+    },
+    [hiddenAccounts, writeHidden],
+  )
+  const showAllAccounts = useCallback(() => writeHidden(null), [writeHidden])
   const visible = useCallback(
     (rows: TrialBalance[]) => rows.filter((row) => !hiddenAccounts.has(row.accountId)),
     [hiddenAccounts],

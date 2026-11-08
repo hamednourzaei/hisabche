@@ -12,13 +12,7 @@ import {
 } from '@hisabche/store'
 import { useMyCapabilities } from '@hisabche/api'
 import { isRouteDenied, isOnboardingRoute } from '@hisabche/ui-contract'
-import {
-  APP_LANGUAGES,
-  GlobalPageCustomizer,
-  LanguageSwitchProvider,
-  NoAccessNotice,
-  usePageLook,
-} from '@hisabche/ui'
+import { APP_LANGUAGES, LanguageSwitchProvider, NoAccessNotice, usePageLook } from '@hisabche/ui'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   DashboardHeader,
@@ -602,10 +596,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           <SandboxNotice />
           <BookCurrencySync />
           <InteractiveGuide currentRoute={pathname || '/dashboard'} t={t} />
-          {/* Below a tablet the wrench sits at the top of the page, not in the header. */}
-          <div className="mb-2 flex justify-end md:hidden">
-            <GlobalPageCustomizer />
-          </div>
           <Breadcrumb className="mb-4" />
           {routeLocked ? (
             <SubscriptionLockNotice />

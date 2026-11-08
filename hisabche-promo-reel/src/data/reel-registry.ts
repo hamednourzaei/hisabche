@@ -2026,6 +2026,29 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'ردیابی بارکد با دوربین موبایل، هماهنگی آنلاین موجودی تمام شعب و حذف کسری مشکوک قفسه انبار',
   },
+  {
+    id: '109',
+    title: 'نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه',
+    artDirection: 'procedural-spatial',
+    layoutTopology: 'data-flow-matrix',
+    operators: [
+      'BrassNeedleTension',
+      'ToolToppleTrio',
+      'FragmentVacuumFunnel',
+      'InvoiceStampQuintet',
+      'BazaarConstellationHub',
+      'QuietBrandCurtain',
+    ],
+    themeName: 'financial-intelligence',
+    cardQuotaMax: 0,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'visual-pattern-interrupt',
+    merchantPainCategory: 'multi-branch-blindness',
+    audioStrategy: 'tactile-foley',
+    viralTemplate: 'infinite-spatial-board',
+    description:
+      'چهار شاخه پراکنده کسب‌وکار — فروش، انبار، نسیه و حقوق — در یک قطب‌نمای برنزی یکجا می‌شوند؛ یک فاکتور هم‌زمان پنج سند می‌خورد و نقشه‌ی کامل داده روی بوم واحد شکل می‌گیرد.',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

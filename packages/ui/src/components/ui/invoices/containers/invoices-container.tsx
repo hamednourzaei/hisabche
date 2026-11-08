@@ -1,10 +1,13 @@
 // packages/ui/src/containers/invoices-container.tsx
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { asList, useBranches, useWarehouseOverview, type Branch } from '@hisabche/api'
 import { useInvoicesPage } from '../../../../hooks/invoices/use-invoices-page'
-import { InvoicesView } from '../invoices-view'
+import { InvoicesView, type InvoiceTypeFilter } from '../invoices-view'
+import type { NewDocumentKind } from '../new-invoice-chooser'
+import { AdvancesContainer, type AdvanceListKind } from './advances-container'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { RecurringInvoicesButton } from '../recurring-invoices'
 
@@ -64,6 +67,34 @@ export function InvoicesContainer() {
   // and still works — it is the fast path for a one-line cash sale, reachable
   // from the command palette and the FAB, and every bookmark to it is intact.
   const handleNewInvoice = useCallback(() => push('/invoices/new'), [push])
+  // Every document starts at the same address; only `?type=` differs.
+  const handleNewDocument = useCallback(
+    (kind: NewDocumentKind) => push(`/invoices/new?type=${kind}`),
+    [push],
+  )
+
+  // Pre-sale / pre-purchase are type options of this page (`?type=pre_sale`),
+  // listed from /advances rather than /invoices. `?advance=<id>` narrows the
+  // list to one (the journal's «show document»).
+  const params = useSearchParams()
+  const initialKind = params?.get('type')
+  const [advanceKind, setAdvanceKind] = useState<AdvanceListKind | null>(
+    initialKind === 'pre_sale' || initialKind === 'pre_purchase' ? initialKind : null,
+  )
+  const [focusAdvance, setFocusAdvance] = useState<string | null>(params?.get('advance') ?? null)
+
+  const handleTypeChange = useCallback(
+    (value: InvoiceTypeFilter) => {
+      setFocusAdvance(null)
+      if (value === 'pre_sale' || value === 'pre_purchase') {
+        setAdvanceKind(value)
+        return
+      }
+      setAdvanceKind(null)
+      handleTypeFilterChange(value)
+    },
+    [handleTypeFilterChange],
+  )
 
   return (
     <InvoicesView
@@ -81,11 +112,21 @@ export function InvoicesContainer() {
       onNavigateParty={handleNavigateParty}
       onNavigateInvoiceAction={handleNavigateInvoiceAction}
       onNewInvoice={handleNewInvoice}
+      onNewDocument={handleNewDocument}
+      advancesSlot={
+        advanceKind ? (
+          <AdvancesContainer
+            kind={advanceKind}
+            focusId={focusAdvance}
+            onShowAll={() => setFocusAdvance(null)}
+          />
+        ) : undefined
+      }
       toolbarExtra={<RecurringInvoicesButton t={safeT} />}
       onDeleteInvoice={handleDeleteInvoice}
       statusVariant={statusVariant}
-      typeFilter={typeFilter}
-      onTypeFilterChange={handleTypeFilterChange}
+      typeFilter={advanceKind ?? typeFilter}
+      onTypeFilterChange={handleTypeChange}
       statusFilter={statusFilter}
       onStatusFilterChange={handleStatusFilterChange}
       branches={branchOptions}

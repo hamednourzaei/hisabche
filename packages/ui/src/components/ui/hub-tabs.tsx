@@ -20,6 +20,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '../../lib/utils'
 import { HubBranchStrip } from './hub-branch'
+import { useFitRow } from '../../lib/fit-row'
 
 export interface HubTabItem<T extends string> {
   id: T
@@ -37,6 +38,9 @@ export interface HubTabsProps<T extends string> {
 
 export function HubTabs<T extends string>({ label, items, active, onSelect }: HubTabsProps<T>) {
   const bar = useRef<HTMLDivElement>(null)
+  // Never a sideways scroll, in any language: the bar shrinks itself to fit.
+  useFitRow(bar, items.map((item) => item.label).join('|'))
+
   // One tab is not a choice.
   if (items.length < 2) return null
 
@@ -48,7 +52,7 @@ export function HubTabs<T extends string>({ label, items, active, onSelect }: Hu
         <div
           ref={bar}
           role="tablist"
-          className="flex w-fit gap-1 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.5)] p-1"
+          className="flex w-fit max-w-full gap-1 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.5)] p-1"
         >
           {items.map((item) => {
             const Icon = item.icon
@@ -61,7 +65,7 @@ export function HubTabs<T extends string>({ label, items, active, onSelect }: Hu
                 aria-selected={selected}
                 onClick={() => onSelect(item.id)}
                 className={cn(
-                  'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-[clamp(0.625rem,3vw,1rem)] text-[clamp(0.75rem,3.2vw,0.875rem)]',
+                  'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-[var(--fit-px,clamp(0.625rem,3vw,1rem))] text-[length:var(--fit-font,clamp(0.75rem,3.2vw,0.875rem))]',
                   'transition-colors motion-reduce:transition-none',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]',
                   selected
@@ -69,7 +73,12 @@ export function HubTabs<T extends string>({ label, items, active, onSelect }: Hu
                     : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
                 )}
               >
-                {Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}
+                {Icon ? (
+                  <Icon
+                    className="size-4 shrink-0 [display:var(--fit-icon,block)]"
+                    aria-hidden="true"
+                  />
+                ) : null}
                 {item.label}
               </button>
             )

@@ -103,13 +103,14 @@ describe('the switch is placed, not moved', () => {
 describe('nothing wraps', () => {
   it('a choice is one line, and gets smaller on a narrow screen', () => {
     expect(control).toContain('whitespace-nowrap')
-    expect(control).toContain('text-[clamp(0.6875rem,3vw,0.875rem)]')
-    expect(control).toContain('px-[clamp(0.5rem,2.6vw,1rem)]')
+    // The clamp is the default; lib/fit-row steps below it when the row is still too wide.
+    expect(control).toContain('text-[length:var(--fit-font,clamp(0.6875rem,3vw,0.875rem))]')
+    expect(control).toContain('px-[var(--fit-px,clamp(0.5rem,2.6vw,1rem))]')
   })
 
   it('a tab is one line, and gets smaller on a narrow screen', () => {
     expect(tabs).toContain('whitespace-nowrap')
-    expect(tabs).toContain('text-[clamp(0.75rem,3.2vw,0.875rem)]')
+    expect(tabs).toContain('text-[length:var(--fit-font,clamp(0.75rem,3.2vw,0.875rem))]')
   })
 })
 

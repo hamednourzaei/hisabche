@@ -329,21 +329,6 @@ interface HeaderProps {
   onNavigateLogin: () => void
 }
 
-/** Initials for an avatar, from whatever identity is actually known. */
-function initialsOf(name?: string, email?: string): string {
-  const source = (name ?? '').trim() || (email ?? '').trim()
-  if (!source) return '?'
-  // An email has no meaningful second word — «h.nourzaei@gmail.com» would give
-  // «HG» from the domain, which names nothing.
-  if (!name?.trim() && source.includes('@')) return source[0]!.toUpperCase()
-  const parts = source.split(/\s+/).filter(Boolean)
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]!)
-    .join('')
-    .toUpperCase()
-}
-
 /**
  * ⚠️ THE «سازمان: …» CHIP USED TO BE HERE, AND IT IS GONE ON PURPOSE.
  *
@@ -439,7 +424,8 @@ const IdentityMenu = memo(function IdentityMenu({
       <DropdownMenuTrigger
         aria-label={t('nav.account')}
         className={cn(
-          'inline-flex h-7 shrink-0 items-center gap-2 rounded-lg px-2.5 text-[11px] font-medium',
+          // A third smaller than it was (owner, 8 Nov 2026): 28px → 19px tall.
+          'inline-flex h-[19px] shrink-0 items-center gap-1 rounded-md px-1.5 text-[9px] font-medium leading-none',
           'transition-colors hover:brightness-95 motion-reduce:transition-none',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
           tone,
@@ -456,14 +442,14 @@ const IdentityMenu = memo(function IdentityMenu({
             colour alone is not a message (راهنمای سشن §۷٫۵). */}
         {/* Its own padded block, so the dot does not touch the label beside it. */}
         <span
-          className="inline-flex shrink-0 items-center gap-1.5 px-1.5 py-0.5 tabular-nums"
+          className="inline-flex shrink-0 items-center gap-1 px-0.5 tabular-nums"
           data-connection-group=""
         >
           <span
             aria-hidden="true"
             data-connection={isOnline ? 'online' : 'offline'}
             className={cn(
-              'inline-block size-2 shrink-0 rounded-full align-middle transition-colors motion-reduce:transition-none',
+              'inline-block size-1.5 shrink-0 rounded-full align-middle transition-colors motion-reduce:transition-none',
               isOnline ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--color-destructive))]',
             )}
           />
@@ -471,7 +457,7 @@ const IdentityMenu = memo(function IdentityMenu({
           {isOnline && canSeePeople && onlineCount > 0 ? (
             <span
               data-online-count=""
-              className="inline-flex min-w-5 items-center justify-center rounded-full bg-[hsl(var(--fg-primary)/0.12)] px-1.5 py-px leading-4"
+              className="inline-flex min-w-3.5 items-center justify-center rounded-full bg-[hsl(var(--fg-primary)/0.12)] px-1 leading-3"
             >
               {onlineCount}
             </span>
@@ -796,8 +782,10 @@ export const DashboardHeader = memo(function DashboardHeader({
 
         {/* ── Controls ── */}
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {/* The wrench lives HERE at every width (owner, 8 Nov 2026) — not as a
+              row of its own at the top of each page on a phone. */}
+          <GlobalPageCustomizer />
           <div className={variant === 'dashboard' ? 'hidden md:contents' : 'contents'}>
-            <GlobalPageCustomizer />
             <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
           </div>
           <button

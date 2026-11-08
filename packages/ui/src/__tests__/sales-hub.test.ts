@@ -37,16 +37,19 @@ const view = ui('invoices', 'invoices-view.tsx')
 const pageHook = code(read('packages', 'ui', 'src', 'hooks', 'invoices', 'use-invoices-page.ts'))
 
 describe('three tabs, built from shared parts', () => {
-  it('invoices, advances and pricing — and nothing else', () => {
-    // advances-02 (owner request, 8 Nov 2026): pre-sale / pre-purchase.
-    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'advances', 'pricing'])
-    // Advances are locked with the invoices module (no new module key).
-    expect(SALES_HUB_SOURCE).toEqual({
-      invoices: '/invoices',
-      advances: '/invoices',
-      pricing: '/promotions',
-    })
-    expect(hub).toContain('<AdvancesContainer />')
+  it('invoices and pricing — and nothing else', () => {
+    // Pre-sale / pre-purchase are type options of the invoices tab, not a tab
+    // (owner request, 8 Nov 2026: the page must not get crowded).
+    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'pricing'])
+    expect(SALES_HUB_SOURCE).toEqual({ invoices: '/invoices', pricing: '/promotions' })
+    expect(hub).not.toContain('AdvancesContainer')
+    // …they live inside the invoices page, under its own lock.
+    const container = readFileSync(
+      join(__dirname, '..', 'components', 'ui', 'invoices', 'containers', 'invoices-container.tsx'),
+      'utf8',
+    )
+    expect(container).toContain('<AdvancesContainer')
+    expect(container).toContain('push(`/invoices/new?type=${kind}`)')
   })
 
   it('mounts the containers that own those screens and fetches nothing itself', () => {
@@ -94,8 +97,11 @@ describe('one table for every invoice', () => {
     expect(pageHook).toContain('return { ...next, status }')
   })
 
-  it('the status filter is the shared control, in the table’s own toolbar', () => {
-    expect(view).toContain('<TableFilterSelect')
+  it('status, branch and warehouse are ONE shared filter, in the table’s own toolbar', () => {
+    // Owner request, 8 Nov 2026: not three selects side by side.
+    expect(view).toContain('<TableFilterMenu')
+    expect(view).not.toContain('<TableFilterSelect')
+    for (const id of ["id: 'status'", "id: 'branch'", "id: 'warehouse'"]) expect(view).toContain(id)
     expect(view).toMatch(/actions=\{\s*onStatusFilterChange \?/)
   })
 

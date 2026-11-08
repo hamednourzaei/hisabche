@@ -166,5 +166,13 @@
     "primaryTemplate": "word-sync",
     "visualLanguage": "swiss-editorial",
     "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 109,
+    "topic": "نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه",
+    "creativeMechanism": "brass-compass-observatory",
+    "primaryTemplate": "bespoke",
+    "visualLanguage": "financial-intelligence",
+    "hookMechanism": "visual-pattern-interrupt"
   }
 ]

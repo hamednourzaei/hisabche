@@ -12,7 +12,7 @@
 
 'use client'
 
-import { memo, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { memo, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { PAGE_SIZES } from '@hisabche/ui-contract'
 
 import { cn } from '../../../lib/utils'
@@ -73,17 +73,21 @@ const CARDS_QUERY = '(max-width: 767px)'
  * and the first paint render the table; the effect switches to cards on a
  * narrow screen, so there is no hydration mismatch (CLAUDE.md §8, React 19).
  */
+function subscribeCards(onChange: () => void): () => void {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return () => {}
+  const media = window.matchMedia(CARDS_QUERY)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
+const cardsNow = () =>
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia(CARDS_QUERY).matches
+/** The server and hydration always see the table (`false`). */
+const cardsOnServer = () => false
+
 function useCards(): boolean {
-  const [cards, setCards] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const media = window.matchMedia(CARDS_QUERY)
-    setCards(media.matches)
-    const onChange = (event: MediaQueryListEvent) => setCards(event.matches)
-    media.addEventListener('change', onChange)
-    return () => media.removeEventListener('change', onChange)
-  }, [])
-  return cards
+  return useSyncExternalStore(subscribeCards, cardsNow, cardsOnServer)
 }
 
 /** Which slice of the rows a page shows. Exported for the guard test. */
@@ -134,7 +138,6 @@ function DataTableInner<T>({
   // "All" means all rows the user can currently see, not everything on the
   // server — selecting rows hidden behind a filter would be a trap.
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds?.has(id))
-  const someSelected = !allSelected && visibleIds.some((id) => selectedIds?.has(id))
 
   return (
     <div className="w-full">
@@ -197,12 +200,12 @@ function DataTableInner<T>({
                       <th scope="col" className="w-10 px-3 py-2.5">
                         <input
                           type="checkbox"
+                          // ⚠️ Ticked ONLY when every row is (owner, 8 Nov 2026).
+                          // The browser's «partly selected» mark is a filled box
+                          // with a dash, and was read as «all selected» after
+                          // ticking two rows. Partial = unticked; a click
+                          // selects the rest.
                           checked={allSelected}
-                          ref={(node) => {
-                            // Indeterminate is DOM-only state — React has no prop
-                            // for it, so it must be written on the node.
-                            if (node) node.indeterminate = someSelected
-                          }}
                           onChange={() => onToggleAll?.(visibleIds)}
                           aria-label={t('common.selectAll', 'انتخاب همه')}
                           className="size-4 cursor-pointer accent-[hsl(var(--color-primary))]"

@@ -2126,3 +2126,33 @@ Electron Ø¨Ø§Ø²Ø³Ø§Ø²ÛŒ Ø´Ø¯Ù‡Â» Ùˆ **Ù‡ÛŒÚ† Ú
 - ⚠️ **مسیر پشتیبانِ «migration هنوز اجرا نشده» تا VERIFY می‌ماند و بعد از VERIFY حذف می‌شود** (`createWorkspaceInTwoSteps`)، وگرنه کد مرده است.
 - **پاسخ شخص بر پیش‌فرض صنف غالب است** (`inferOperationalDna`): صنف فقط سؤالِ بی‌جواب را پر می‌کند.
 - **ابزار:** Edit/Write این سشن به worktree بسته است؛ برای main، اسکریپت `edit.cjs` (`replaceOnce` با شمارش تطابق) در scratchpad.
+
+## درس ۲۵۱ — APK اندروید باز نمی‌شد: hermesc را آنتی‌ویروس برداشته بود (۸ نوامبر ۲۰۲۶)
+
+- ⚠️ **`couldn't find DSO to load: libjscexecutor.so`** = برنامه با JSC بالا می‌آید ولی APK فقط Hermes دارد.
+  ریشه: `hermesEnabled=false` در commit `b9f90056` (۳۰ اکتبر). Gradle با BUILD SUCCESSFUL و همه‌ی تست‌ها سبز تمام می‌شد.
+  Hermes دوباره روشن شد؛ گارد: `apps/mobile/src/__tests__/js-engine-is-hermes.test.ts`.
+- ⚠️ **چرا خاموش شده بود:** Defender در ۳۱ اکتبر `Trojan:Win32/IRCbot` را روی ۱۱۵۰ فایل exe این دستگاه گرفت، از جمله
+  `hermesc.exe`، `postgres.exe`/`initdb.exe` (embedded-postgres — علت «باینری embedded-postgres نیست»)، `esbuild.exe`،
+  `7z.exe` و `signtool.exe`. بی hermesc، باندل release نمی‌سازد. **راه‌حل خاموش‌کردن Hermes یا exclusion آنتی‌ویروس نیست**؛
+  پاک‌سازی دستگاه کار صاحب پروژه است و تا آن موقع APK و نصب‌کننده‌ی قابل‌انتشار روی ماشین تمیز (CI/EAS) ساخته شود.
+- ⚠️ **`gradle clean` پشت پروکسی، دانلودهای کش‌شده را هم پاک می‌کند** (`expo-sqlite:downloadSQLite` از 127.0.0.1:10808).
+
+## درس ۲۵۲ — راهنما یک بار، فیلتر یکی، ردیف بی‌اسکرول (۸ نوامبر ۲۰۲۶)
+
+- ⚠️ **پیشرفت راهنما مالِ آدم است، نه مرورگر.** `user_guide_progress` (user-guide-progress-01) + `/api/me/guide-progress`
+  (فقط `authenticate`، ردیف خودِ شخص، فقط افزودنی). استور دستگاه `ownerId` دارد — بدون آن نفر دوم روی همان مرورگر
+  «دیده‌شده»ی نفر اول را به ارث می‌برد. تا جواب سرور نیامده چیزی رسم نمی‌شود. × = بقیه‌ی گام‌های صفحه «دیده شد».
+  «راهنما» = بازپخش جلسه‌ای، هیچ ردیفی پاک نمی‌شود.
+- ⚠️ **کارت راهنما در RTL به لبه‌ی شروعِ بخش می‌چسبد** (`guide-placement.ts`، خالص و تست‌شده)؛ قبلاً به لبه‌ی چپِ فیزیکی.
+  اسپات‌لایت = چهار پنل blur دور بخش + لایه‌ی قفل؛ wheel/touchmove/کلید اسکرول بیرون کارت رد می‌شود. آخر هر صفحه
+  `nextGuideRoute` صفحه‌ی بعدیِ ناخوانده را پیشنهاد می‌کند.
+- ⚠️ **ردیف تب/سوییچ هرگز اسکرول افقی نمی‌خواهد:** `lib/fit-row.ts` خودِ ردیف را می‌سنجد و پله‌پله کم می‌کند (آیکون ← padding ← فونت).
+  clamp از viewport حدس می‌زند و طول برچسب دری را نمی‌داند.
+- ⚠️ **چند فیلتر روی یک جدول = یک `TableFilterMenu`** با بخش برای هر بُعد؛ `TableFilterSelect` فقط برای تک‌فیلتر.
+- ⚠️ **چک‌باکس «انتخاب همه» indeterminate نمی‌شود** — مربع پر با خط تیره «همه انتخاب شد» خوانده شد.
+- **پیش‌فروش/پیش‌خرید گزینه‌ی نوعِ `/invoices`‌اند (`?type=pre_sale`)، نه تب؛ ساختن از «صورت‌حساب جدید» → `/invoices/new?type=…`.**
+  دفتر روزنامه برای سند `order_deposit`ِ پیش‌دریافت «نمایش» و «برگشت (معکوس)» دارد — همان تابع refund پنل مشتری.
+- ⚠️ **setState داخل effect برای خواندن localStorage → `useSyncExternalStore`** (`lib/use-stored-string.ts`، `use-table-state`)؛
+  سرور و hydration مقدار سرور را می‌بینند، پس mismatch نیست.
+- ⚠️ **APK release در ۳۱ اکتبر بی‌صدا شکست:** `hermesEnabled=false` (درس ۲۵۱). Defender ۱۱۵۰ exe آلوده (IRCbot) را برداشت.

@@ -5,9 +5,6 @@ import { cn } from '../../../lib/utils'
 import {
   Store,
   Building2,
-  Utensils,
-  Wrench,
-  MoreHorizontal,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -15,7 +12,7 @@ import {
   Building2 as BuildingIcon,
   ShoppingBag,
 } from 'lucide-react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { BUSINESS_MODELS, BUSINESS_TYPE_OTHER, filterBusinessTypes } from '@hisabche/ui-contract'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 import { CurrencyPicker } from './currency-picker'
@@ -79,20 +76,19 @@ const WelcomeStep = memo(function WelcomeStep({
   t: (key: string, fallback?: string) => string
 }) {
   return (
-    <div className="mx-auto max-w-xl text-center">
+    <div className="mx-auto my-auto max-w-xl text-center">
       <div className="mb-4 flex justify-center sm:mb-6">
         <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[image:var(--gradient-brand)] shadow-lg shadow-[hsl(var(--color-primary)/0.2)] sm:h-20 sm:w-20">
-          <span className="text-2xl font-bold text-white sm:text-3xl">ح</span>
+          <span className="text-2xl font-bold text-white sm:text-3xl">
+            {t('onboarding.brandInitial')}
+          </span>
         </div>
       </div>
       <h2 className="mb-3 text-2xl font-bold text-[hsl(var(--fg-primary))] sm:mb-4 sm:text-3xl">
-        {t('onboarding.welcome', 'به حسابچه خوش آمدید')}
+        {t('onboarding.welcome')}
       </h2>
       <p className="mb-6 text-base text-[hsl(var(--fg-secondary))] sm:mb-8 sm:text-lg">
-        {t(
-          'onboarding.welcomeDesc',
-          'در چند مرحله کوتاه حسابچه را برای کسب و کار شما آماده می‌کنیم.',
-        )}
+        {t('onboarding.welcomeDesc')}
       </p>
       <button
         type="button"
@@ -107,7 +103,7 @@ const WelcomeStep = memo(function WelcomeStep({
         )}
       >
         <ArrowRight className="size-5" aria-hidden="true" />
-        {t('onboarding.start', 'شروع')}
+        {t('onboarding.start')}
       </button>
     </div>
   )
@@ -141,7 +137,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
     () =>
       filterBusinessTypes('', t).map((option) => ({
         id: option.id,
-        label: t(option.labelKey, option.labelFa),
+        label: t(option.labelKey),
       })),
     [t],
   )
@@ -157,56 +153,61 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
   )
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
-        {t('onboarding.businessType', 'نوع کسب و کار')}
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+      <h2 className="mb-4 shrink-0 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-6 sm:text-2xl">
+        {t('onboarding.businessType')}
       </h2>
-      {/* Sales model: two cards, side by side at every width. Almost every
+      <div
+        data-onboarding-body=""
+        className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
+      >
+        {/* Sales model: two cards, side by side at every width. Almost every
           business is one of the two, so they stay cards rather than list rows. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {BUSINESS_MODELS.map((item) => {
-          const Icon = item.id === 'wholesale' ? Building2 : Store
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="checkbox"
-              aria-checked={selectedIds.has(item.id)}
-              onClick={() => handleToggle(item.id)}
-              className={cn(
-                'rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6',
-                'motion-reduce:transition-none',
-                selectedIds.has(item.id) ? selectedClasses : unselectedClasses,
-              )}
-            >
-              <Icon
-                className="mb-2 size-7 text-[hsl(var(--color-primary))] sm:mb-4 sm:size-10"
-                aria-hidden="true"
-              />
-              <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
-                {t(item.labelKey, item.labelFa)}
-              </h3>
-            </button>
-          )
-        })}
-      </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {BUSINESS_MODELS.map((item) => {
+            const Icon = item.id === 'wholesale' ? Building2 : Store
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="checkbox"
+                aria-checked={selectedIds.has(item.id)}
+                onClick={() => handleToggle(item.id)}
+                className={cn(
+                  'rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6',
+                  'motion-reduce:transition-none',
+                  selectedIds.has(item.id) ? selectedClasses : unselectedClasses,
+                )}
+              >
+                <Icon
+                  className="mb-2 size-7 text-[hsl(var(--color-primary))] sm:mb-4 sm:size-10"
+                  aria-hidden="true"
+                />
+                <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
+                  {t(item.labelKey)}
+                </h3>
+              </button>
+            )
+          })}
+        </div>
 
-      {/* The actual trade, searchable. The old five-card set forced most shops
+        {/* The actual trade, searchable. The old five-card set forced most shops
           to answer "other", which told us nothing about them. */}
-      <div className="mt-4">
-        <SearchableOptionList
-          options={trades}
-          selected={selectedIds}
-          onToggle={handleToggle}
-          placeholder={t('onboarding.searchBusiness', 'کسب‌وکارت را جست‌وجو کن')}
-          emptyLabel={t('onboarding.noBusinessMatch', 'موردی پیدا نشد')}
-          fallbackOption={{
-            id: BUSINESS_TYPE_OTHER.id,
-            label: t(BUSINESS_TYPE_OTHER.labelKey, BUSINESS_TYPE_OTHER.labelFa),
-          }}
-        />
+        <div className="mt-4">
+          <SearchableOptionList
+            options={trades}
+            selected={selectedIds}
+            onToggle={handleToggle}
+            placeholder={t('onboarding.searchBusiness')}
+            emptyLabel={t('onboarding.noBusinessMatch')}
+            fallbackOption={{
+              id: BUSINESS_TYPE_OTHER.id,
+              label: t(BUSINESS_TYPE_OTHER.labelKey, BUSINESS_TYPE_OTHER.labelFa),
+            }}
+          />
+        </div>
       </div>
-      <div className="mt-6 flex justify-between sm:mt-8">
+      <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
           type="button"
           onClick={onBack}
@@ -219,7 +220,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
           )}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          {t('action.back', 'برگشت')}
+          {t('action.back')}
         </button>
         <button
           type="button"
@@ -234,7 +235,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
             'motion-reduce:transition-none',
           )}
         >
-          {t('action.next', 'ادامه')}
+          {t('action.next')}
         </button>
       </div>
     </div>
@@ -283,78 +284,80 @@ const StoreSizeStep = memo(function StoreSizeStep({
   ]
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
-        {t('onboarding.storeSize', 'اندازه کسب و کار')}
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+      <h2 className="mb-4 shrink-0 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-6 sm:text-2xl">
+        {t('onboarding.storeSize')}
       </h2>
-      {/* Two per row rather than a vertical stack, so the three sizes and the
+      <div
+        data-onboarding-body=""
+        className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
+      >
+        {/* Two per row rather than a vertical stack, so the three sizes and the
           free-text card below form one 2x2 block instead of a long column. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-        {storeSizes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSetStoreSize(item.id)}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-2xl border-2 p-3.5 transition-all duration-200 text-start sm:gap-4 sm:p-5',
-              'motion-reduce:transition-none',
-              storeSize === item.id ? selectedClasses : unselectedClasses,
-            )}
-          >
-            <item.icon
-              className="size-8 shrink-0 text-[hsl(var(--color-primary))] sm:size-10"
-              aria-hidden="true"
-            />
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
-                {t(item.labelKey, item.id)}
-              </h3>
-              <p className="text-xs text-[hsl(var(--fg-secondary))] sm:text-sm">
-                {t(item.descKey, '')}
-              </p>
-            </div>
-            {storeSize === item.id && (
-              <Check
-                className="ms-auto size-5 shrink-0 text-[hsl(var(--color-primary))]"
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+          {storeSizes.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onSetStoreSize(item.id)}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-2xl border-2 p-3.5 transition-all duration-200 text-start sm:gap-4 sm:p-5',
+                'motion-reduce:transition-none',
+                storeSize === item.id ? selectedClasses : unselectedClasses,
+              )}
+            >
+              <item.icon
+                className="size-8 shrink-0 text-[hsl(var(--color-primary))] sm:size-10"
                 aria-hidden="true"
               />
-            )}
-          </button>
-        ))}
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
+                  {t(item.labelKey, item.id)}
+                </h3>
+                <p className="text-xs text-[hsl(var(--fg-secondary))] sm:text-sm">
+                  {t(item.descKey, '')}
+                </p>
+              </div>
+              {storeSize === item.id && (
+                <Check
+                  className="ms-auto size-5 shrink-0 text-[hsl(var(--color-primary))]"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          ))}
 
-        {/* Fourth cell: free text, completing the 2x2 block. Purely optional —
+          {/* Fourth cell: free text, completing the 2x2 block. Purely optional —
             it never gates the Next button, so leaving it blank costs nothing. */}
-        <div
-          className={cn(
-            'flex flex-col rounded-2xl border-2 p-3.5 sm:p-5',
-            'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]',
-          )}
-        >
-          <label
-            htmlFor="onboarding-business-note"
-            className="mb-1.5 text-sm font-semibold text-[hsl(var(--fg-primary))]"
-          >
-            {t('onboarding.aboutBusiness', 'درباره کسب‌وکارت')}
-          </label>
-          <textarea
-            id="onboarding-business-note"
-            value={businessNote}
-            onChange={(event) => onSetBusinessNote(event.target.value)}
-            rows={3}
-            placeholder={t(
-              'onboarding.aboutBusinessPlaceholder',
-              'اگر دوست داشتی بیشتر درمورد کسب‌وکارت بنویس',
-            )}
+          <div
             className={cn(
-              'w-full flex-1 resize-none rounded-xl border p-2.5 text-sm outline-none',
-              'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-              'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
-              'focus:border-[hsl(var(--color-primary))]',
+              'flex flex-col rounded-2xl border-2 p-3.5 sm:p-5',
+              'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]',
             )}
-          />
+          >
+            <label
+              htmlFor="onboarding-business-note"
+              className="mb-1.5 text-sm font-semibold text-[hsl(var(--fg-primary))]"
+            >
+              {t('onboarding.aboutBusiness')}
+            </label>
+            <textarea
+              id="onboarding-business-note"
+              value={businessNote}
+              onChange={(event) => onSetBusinessNote(event.target.value)}
+              rows={3}
+              placeholder={t('onboarding.aboutBusinessPlaceholder')}
+              className={cn(
+                'w-full flex-1 resize-none rounded-xl border p-2.5 text-sm outline-none',
+                'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+                'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
+                'focus:border-[hsl(var(--color-primary))]',
+              )}
+            />
+          </div>
         </div>
       </div>
-      <div className="mt-6 flex justify-between sm:mt-8">
+      <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
           type="button"
           onClick={onBack}
@@ -367,7 +370,7 @@ const StoreSizeStep = memo(function StoreSizeStep({
           )}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          {t('action.back', 'برگشت')}
+          {t('action.back')}
         </button>
         <button
           type="button"
@@ -382,7 +385,7 @@ const StoreSizeStep = memo(function StoreSizeStep({
             'motion-reduce:transition-none',
           )}
         >
-          {t('action.next', 'ادامه')}
+          {t('action.next')}
         </button>
       </div>
     </div>
@@ -409,14 +412,24 @@ const CurrencyStep = memo(function CurrencyStep({
   t: (key: string, fallback?: string) => string
 }) {
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
-        {t('onboarding.defaultCurrency', 'ارز پیشفرض')}
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+      <h2 className="mb-4 shrink-0 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-6 sm:text-2xl">
+        {t('onboarding.defaultCurrency')}
       </h2>
-      {/* The picker itself is shared with the offline first run — one control,
+      <div
+        data-onboarding-body=""
+        className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
+      >
+        {/* The picker itself is shared with the offline first run — one control,
           one list of codes, one place where a code can be refused. */}
-      <CurrencyPicker value={defaultCurrency || null} onChange={onSetCurrency} lang={lang} t={t} />
-      <div className="mt-6 flex justify-between sm:mt-8">
+        <CurrencyPicker
+          value={defaultCurrency || null}
+          onChange={onSetCurrency}
+          lang={lang}
+          t={t}
+        />
+      </div>
+      <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
           type="button"
           onClick={onBack}
@@ -429,7 +442,7 @@ const CurrencyStep = memo(function CurrencyStep({
           )}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          {t('action.back', 'برگشت')}
+          {t('action.back')}
         </button>
         <button
           type="button"
@@ -444,7 +457,7 @@ const CurrencyStep = memo(function CurrencyStep({
             'motion-reduce:transition-none',
           )}
         >
-          {t('action.next', 'ادامه')}
+          {t('action.next')}
         </button>
       </div>
     </div>
@@ -468,18 +481,20 @@ const OperatingStep = memo(function OperatingStep({
   t: (key: string, fallback?: string) => string
 }) {
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-2 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
-        {t('onboarding.operating.title', 'کسب‌وکارت چطور کار می‌کند؟')}
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+      <h2 className="mb-2 shrink-0 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
+        {t('onboarding.operating.title')}
       </h2>
-      <p className="mb-5 text-center text-sm text-[hsl(var(--fg-secondary))] sm:mb-8">
-        {t(
-          'onboarding.operating.description',
-          'از روی صنف پیشنهاد دادیم؛ هر چیزی را که درست نیست عوض کن. بعداً از تنظیمات هم قابل تغییر است.',
-        )}
+      <p className="mb-4 shrink-0 text-center text-sm text-[hsl(var(--fg-secondary))] sm:mb-6">
+        {t('onboarding.operating.description')}
       </p>
-      <OperatingQuestions answers={answers} onAnswer={onAnswer} t={t} />
-      <div className="mt-6 flex justify-between sm:mt-8">
+      <div
+        data-onboarding-body=""
+        className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
+      >
+        <OperatingQuestions answers={answers} onAnswer={onAnswer} t={t} />
+      </div>
+      <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
           type="button"
           onClick={onBack}
@@ -492,7 +507,7 @@ const OperatingStep = memo(function OperatingStep({
           )}
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
-          {t('action.back', 'برگشت')}
+          {t('action.back')}
         </button>
         <button
           type="button"
@@ -505,7 +520,7 @@ const OperatingStep = memo(function OperatingStep({
             'motion-reduce:transition-none',
           )}
         >
-          {t('action.next', 'ادامه')}
+          {t('action.next')}
         </button>
       </div>
     </div>
@@ -532,7 +547,7 @@ const CompleteStep = memo(function CompleteStep({
 }) {
   const noteKey = industrySupportNoteKey(businessType)
   return (
-    <div className="mx-auto max-w-xl text-center">
+    <div className="mx-auto my-auto max-w-xl text-center">
       <div className="mb-4 flex justify-center sm:mb-6">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.1)] sm:h-20 sm:w-20">
           <Check
@@ -542,16 +557,16 @@ const CompleteStep = memo(function CompleteStep({
         </div>
       </div>
       <h2 className="mb-3 text-2xl font-bold text-[hsl(var(--fg-primary))] sm:mb-4 sm:text-3xl">
-        {t('onboarding.ready', 'همه چیز آماده است')}
+        {t('onboarding.ready')}
       </h2>
       <p className="mb-5 text-sm text-[hsl(var(--fg-secondary))] sm:mb-8 sm:text-base">
-        {t('onboarding.readyDesc', 'حسابچه با موفقیت پیکربندی شد.')}
+        {t('onboarding.readyDesc')}
       </p>
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] mb-5 sm:mb-8">
         <div className="p-4 space-y-3 text-start sm:p-6 sm:space-y-4">
-          <Row label={t('onboarding.businessType', 'نوع کسب و کار')} value={businessTypeLabel} />
-          <Row label={t('onboarding.size', 'اندازه')} value={storeSizeLabel} />
-          <Row label={t('onboarding.currency', 'ارز')} value={currencyLabel} />
+          <Row label={t('onboarding.businessType')} value={businessTypeLabel} />
+          <Row label={t('onboarding.size')} value={storeSizeLabel} />
+          <Row label={t('onboarding.currency')} value={currencyLabel} />
         </div>
       </div>
       {noteKey ? (
@@ -575,7 +590,7 @@ const CompleteStep = memo(function CompleteStep({
         )}
       >
         <ArrowRight className="size-5" aria-hidden="true" />
-        {t('onboarding.enter', 'ورود به حسابچه')}
+        {t('onboarding.enter')}
       </button>
     </div>
   )
@@ -615,9 +630,12 @@ export const OnboardingPage = memo(function OnboardingPage({
   const handleNext4 = useCallback(() => onSetStep(5), [onSetStep])
 
   return (
-    <div className="min-h-[100dvh] bg-[hsl(var(--surface-base))]">
-      <div className="mx-auto flex max-w-5xl flex-col px-4 py-5 sm:py-8">
-        <div className="mb-6 flex items-center justify-center gap-1.5 sm:mb-10 sm:gap-2">
+    <div
+      className="flex h-[100dvh] flex-col overflow-hidden bg-[hsl(var(--surface-base))]"
+      data-onboarding-screen=""
+    >
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-4 sm:py-6">
+        <div className="mb-4 flex shrink-0 items-center justify-center gap-1.5 sm:mb-6 sm:gap-2">
           {[1, 2, 3, 4, 5].map((s) => (
             <div
               key={s}

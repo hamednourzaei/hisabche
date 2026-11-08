@@ -21,7 +21,7 @@ beforeAll(async () => {
 
 describe('the catalogue covers the studio', () => {
   it('has every registered reel, with the real timeline duration', () => {
-    expect(fresh.reels).toHaveLength(103)
+    expect(fresh.reels).toHaveLength(109)
     for (const reel of fresh.reels) {
       expect(reel.seconds, `reel ${reel.id}`).toBeGreaterThan(0)
       expect(reel.scenes.length, `reel ${reel.id}`).toBeGreaterThan(0)

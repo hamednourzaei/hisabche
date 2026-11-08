@@ -7,21 +7,60 @@
 
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 
 import { compareValues, type SortDirection, type TableColumn } from './table-types'
 
 const STORAGE_PREFIX = 'hisabche.table.columns.'
 
-function readHidden(tableId: string): string[] {
-  if (typeof window === 'undefined') return []
+// Column choices are an external store (localStorage + this tab's own copy),
+// read with useSyncExternalStore: the server and hydration see «nothing
+// hidden», then the stored choice — without a setState inside an effect.
+const memory = new Map<string, string>()
+const listeners = new Set<() => void>()
+
+function subscribeHidden(onChange: () => void): () => void {
+  listeners.add(onChange)
+  const onStorage = (event: StorageEvent) => {
+    if (event.key?.startsWith(STORAGE_PREFIX)) onChange()
+  }
+  if (typeof window !== 'undefined') window.addEventListener('storage', onStorage)
+  return () => {
+    listeners.delete(onChange)
+    if (typeof window !== 'undefined') window.removeEventListener('storage', onStorage)
+  }
+}
+
+function rawHidden(tableId: string): string | null {
+  const key = STORAGE_PREFIX + tableId
+  const local = memory.get(key)
+  if (local !== undefined) return local
   try {
-    const raw = window.localStorage.getItem(STORAGE_PREFIX + tableId)
+    return typeof window === 'undefined' ? null : window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function parseHidden(raw: string | null): string[] {
+  try {
     const parsed: unknown = raw ? JSON.parse(raw) : null
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
   } catch {
     return []
   }
+}
+
+function writeHidden(tableId: string, next: readonly string[]): void {
+  const key = STORAGE_PREFIX + tableId
+  const raw = JSON.stringify(next)
+  memory.set(key, raw)
+  try {
+    window.localStorage.setItem(key, raw)
+  } catch {
+    // A full or blocked storage must not break the toggle; this tab keeps it.
+  }
+  for (const listener of listeners) listener()
 }
 
 export interface TableState<T> {
@@ -44,27 +83,20 @@ export function useTableState<T>(
   tableId: string,
   columns: readonly TableColumn<T>[],
 ): TableState<T> {
-  const [hiddenIds, setHiddenIds] = useState<string[]>([])
+  const raw = useSyncExternalStore(
+    subscribeHidden,
+    () => rawHidden(tableId),
+    () => null,
+  )
+  const hiddenIds = useMemo(() => parseHidden(raw), [raw])
   const [sortId, setSortId] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  // Read after mount so server and client render the same first paint.
-  useEffect(() => setHiddenIds(readHidden(tableId)), [tableId])
-
   const toggleColumn = useCallback(
     (id: string) => {
-      setHiddenIds((current) => {
-        const next = current.includes(id)
-          ? current.filter((value) => value !== id)
-          : [...current, id]
-
-        try {
-          window.localStorage.setItem(STORAGE_PREFIX + tableId, JSON.stringify(next))
-        } catch {
-          // A full or blocked storage must not break the toggle.
-        }
-        return next
-      })
+      const current = parseHidden(rawHidden(tableId))
+      const next = current.includes(id) ? current.filter((value) => value !== id) : [...current, id]
+      writeHidden(tableId, next)
     },
     [tableId],
   )
@@ -111,12 +143,7 @@ export function useTableState<T>(
     }) => {
       const known = new Set(columns.map((column) => column.id))
       const nextHidden = look.hiddenIds.filter((id) => known.has(id))
-      setHiddenIds(nextHidden)
-      try {
-        window.localStorage.setItem(STORAGE_PREFIX + tableId, JSON.stringify(nextHidden))
-      } catch {
-        // A full or blocked storage must not break applying a view.
-      }
+      writeHidden(tableId, nextHidden)
       setSortId(look.sortId !== null && known.has(look.sortId) ? look.sortId : null)
       setSortDirection(look.sortDirection)
     },

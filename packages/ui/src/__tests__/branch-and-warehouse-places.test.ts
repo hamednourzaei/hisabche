@@ -98,10 +98,12 @@ describe('the invoice table', () => {
   const view = ui('invoices', 'invoices-view.tsx')
   const hook = code(read('packages', 'ui', 'src', 'hooks', 'invoices', 'use-invoices-page.ts'))
 
-  it('has both filters in its own toolbar, drawn with the shared control', () => {
-    expect(view.split('<TableFilterSelect').length - 1).toBe(3)
-    expect(view).toContain('{onBranchFilterChange && branches.length > 0 ? (')
-    expect(view).toContain('{onWarehouseFilterChange && warehouses.length > 0 ? (')
+  it('has both filters in its own toolbar, inside the ONE shared filter menu', () => {
+    // Owner request, 8 Nov 2026: status, branch and warehouse are one «فیلتر».
+    expect(view.split('<TableFilterMenu').length - 1).toBe(1)
+    expect(view).not.toContain('<TableFilterSelect')
+    expect(view).toContain('...(onBranchFilterChange && branches.length > 0')
+    expect(view).toContain('...(onWarehouseFilterChange && warehouses.length > 0')
     // Still ONE table.
     expect(view.split('<DataTable').length - 1).toBe(1)
   })
@@ -147,8 +149,9 @@ describe('the expiry screen', () => {
     expect(expiryFigures([]).nearestDays).toBeNull()
   })
 
-  it('filters by state and by warehouse in the table’s toolbar', () => {
-    expect(view.split('<TableFilterSelect').length - 1).toBe(2)
+  it('filters by state and by warehouse in the table’s toolbar — one menu', () => {
+    expect(view.split('<TableFilterMenu').length - 1).toBe(1)
+    expect(view).not.toContain('<TableFilterSelect')
     expect(view).not.toContain('<SegmentedFilter')
     expect(NO_WAREHOUSE).toBe('none')
     expect(view).toContain('? batch.warehouseId === null')

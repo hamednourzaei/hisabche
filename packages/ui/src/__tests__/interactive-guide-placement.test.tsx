@@ -1,122 +1,198 @@
 // ============================================
-// packages/ui/src/__tests__/interactive-guide-placement.test.tsx
-// Where the guide card stands, and how a step is finished.
-//
-// The card used to live in the bottom corner of every page. These tests pin the
-// behaviour that replaced it: it measures the section a step names and stands
-// directly above it, it docks in the corner only when the section is not on
-// screen, and the route's progress can be read a second time.
+// The guide card (owner request, 8 Nov 2026): it waits for the person's
+// record, points at its section in both reading directions, locks the page
+// behind a spotlight, records what was read, and leads to the next page.
 // ============================================
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useGuideStore } from '@hisabche/store'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useAuthStore, useGuideStore } from '@hisabche/store'
+import { placeGuideCard, spotlightHole } from '../components/ui/guide/guide-placement'
 
-import { InteractiveGuide } from '../components/ui/guide/interactive-guide'
+const remote = vi.hoisted(() => ({
+  state: { isSuccess: true, isError: false, data: { configured: true, steps: [] as unknown[] } },
+  saved: [] as unknown[],
+  pushed: [] as string[],
+  mutation: { mutate: (steps: unknown) => void remote.saved.push(steps) },
+}))
 
 vi.mock('next-intl', () => ({ useLocale: () => 'fa' }))
+vi.mock('@hisabche/api', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  useGuideProgress: () => remote.state,
+  // Stable, as TanStack's `mutate` is.
+  useMarkGuideStepsSeen: () => remote.mutation,
+}))
+vi.mock('../hooks/use-locale-push', () => ({
+  useLocalePush: () => (path: string) => remote.pushed.push(path),
+}))
+vi.mock('../lib/capability/use-action-availability', () => ({
+  useActionAvailability: () => ({ available: true }),
+}))
 
+const { InteractiveGuide } = await import('../components/ui/guide/interactive-guide')
 const translate = (key: string) => key
 
-const rect = (values: { top: number; bottom: number; left: number }): DOMRect =>
-  ({
-    top: values.top,
-    bottom: values.bottom,
-    left: values.left,
-    right: values.left + 560,
-    width: 560,
-    height: values.bottom - values.top,
-    x: values.left,
-    y: values.top,
-    toJSON: () => ({}),
-  }) as DOMRect
+describe('placeGuideCard — pure', () => {
+  const viewport = { width: 1200, height: 800 }
 
-function mountSection(sectionId: string, values: { top: number; bottom: number; left: number }) {
-  const host = document.createElement('div')
-  host.innerHTML = `<div data-guide="${sectionId}"></div>`
-  document.body.appendChild(host)
-  const element = host.querySelector(`[data-guide="${sectionId}"]`) as HTMLElement
-  element.getBoundingClientRect = () => rect(values)
-  return host
-}
-
-beforeEach(() => {
-  useGuideStore.getState().resetProgress()
-  localStorage.clear()
-  // jsdom has no layout: the card's height is what decides "above" vs "below",
-  // and the viewport is what it is clamped into.
-  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
-    configurable: true,
-    get: () => 120,
-  })
-  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 })
-  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
-  Element.prototype.scrollIntoView = () => {}
-})
-
-afterEach(() => {
-  cleanup()
-  document.body.innerHTML = ''
-})
-
-describe('InteractiveGuide placement', () => {
-  it('stands above the section the step describes', async () => {
-    mountSection('dashboard-kpis', { top: 400, bottom: 600, left: 80 })
-    useGuideStore.getState().markStepSeen('dashboard-overview', 'dashboard')
-
-    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
-
-    const card = await screen.findByRole('region')
-    // 400 − card height 120 − the 12px gap.
-    await waitFor(() => expect(card.style.top).toBe('268px'))
-    expect(card.style.left).toBe('80px')
-    expect(card.style.width).toBe('340px')
-    expect(screen.getByText('guide.dashboard.kpis.title')).toBeTruthy()
+  it('LTR: a wide section — the card starts where the section starts', () => {
+    const p = placeGuideCard({
+      target: { top: 400, bottom: 600, left: 100, right: 1100 },
+      viewport,
+      cardHeight: 120,
+      direction: 'ltr',
+    })
+    expect(p.left).toBe(100)
+    expect(p.top).toBe(400 - 120 - 12)
+    expect(p.arrow).toBe('bottom')
+    expect(p.arrowOffset).toBe(28 - 6)
   })
 
-  it('goes below the section when the top of the viewport is too close', async () => {
-    mountSection('dashboard-kpis', { top: 40, bottom: 200, left: 80 })
-    useGuideStore.getState().markStepSeen('dashboard-overview', 'dashboard')
-
-    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
-
-    const card = await screen.findByRole('region')
-    // 200 + the 12px gap — there is no room for a 120px card above 40px.
-    await waitFor(() => expect(card.style.top).toBe('212px'))
+  it('⚠️ RTL: a wide section — the card aligns with its RIGHT edge and the arrow points there', () => {
+    const p = placeGuideCard({
+      target: { top: 400, bottom: 600, left: 100, right: 1100 },
+      viewport,
+      cardHeight: 120,
+      direction: 'rtl',
+    })
+    expect(p.left).toBe(1100 - 340)
+    // The arrow sits near the card's right end, over the section's start.
+    expect(p.left + p.arrowOffset + 6).toBe(1100 - 28)
   })
 
-  it('docks in the corner when the screen marks no section', async () => {
-    render(<InteractiveGuide currentRoute="/fa/billing" t={translate} />)
-
-    const card = await screen.findByRole('region')
-    await waitFor(() => expect(card.className).toContain('bottom-6'))
-    expect(card.style.top).toBe('')
-    expect(screen.getByText('guide.billing.plans.desc')).toBeTruthy()
-  })
-
-  it('marks the step as read when the reader moves on', async () => {
-    mountSection('dashboard-kpis', { top: 400, bottom: 600, left: 80 })
-    useGuideStore.getState().markStepSeen('dashboard-overview', 'dashboard')
-
-    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
-
-    fireEvent.click(await screen.findByText('guide.next'))
-
-    await waitFor(() => expect(useGuideStore.getState().isStepSeen('dashboard-kpis')).toBe(true))
-  })
-
-  it('leaves a way back in once every step of the page has been read', async () => {
-    for (const stepId of ['dashboard-overview', 'dashboard-kpis', 'dashboard-sales-chart']) {
-      useGuideStore.getState().markStepSeen(stepId, 'dashboard')
+  it('a narrow section — centred on it, arrow at its middle, either direction', () => {
+    for (const direction of ['ltr', 'rtl'] as const) {
+      const p = placeGuideCard({
+        target: { top: 400, bottom: 440, left: 500, right: 560 },
+        viewport,
+        cardHeight: 120,
+        direction,
+      })
+      expect(p.left + p.arrowOffset + 6).toBe(530)
     }
+  })
 
+  it('goes below when there is no room above, and inside when the section fills the screen', () => {
+    const below = placeGuideCard({
+      target: { top: 40, bottom: 200, left: 0, right: 300 },
+      viewport,
+      cardHeight: 120,
+      direction: 'rtl',
+    })
+    expect(below.arrow).toBe('top')
+    expect(below.top).toBe(212)
+    const inside = placeGuideCard({
+      target: { top: 0, bottom: 800, left: 0, right: 1200 },
+      viewport,
+      cardHeight: 120,
+      direction: 'rtl',
+    })
+    expect(inside.arrow).toBeNull()
+  })
+
+  it('no section: the middle of the screen', () => {
+    const p = placeGuideCard({ target: null, viewport, cardHeight: 200, direction: 'rtl' })
+    expect(p).toMatchObject({ top: 300, left: 430, arrow: null })
+  })
+
+  it('the spotlight hole keeps a little room and stays on screen', () => {
+    expect(spotlightHole({ top: 2, bottom: 900, left: 10, right: 200 }, viewport)).toEqual({
+      top: 0,
+      bottom: 800,
+      left: 4,
+      right: 206,
+    })
+  })
+})
+
+describe('InteractiveGuide', () => {
+  beforeEach(() => {
+    remote.state = { isSuccess: true, isError: false, data: { configured: true, steps: [] } }
+    remote.saved = []
+    remote.pushed = []
+    useAuthStore.setState({ user: { id: 'person-1' } } as never)
+    useGuideStore.setState({
+      ownerId: 'person-1',
+      completedSteps: {},
+      replayRoute: null,
+      replaySeen: [],
+    })
+    document.body.innerHTML = ''
+    const section = document.createElement('section')
+    section.setAttribute('data-guide', 'dashboard-overview')
+    document.body.appendChild(section)
+  })
+  afterEach(() => cleanup())
+
+  it('⚠️ draws nothing until the server record has answered', () => {
+    remote.state = { isSuccess: false, isError: false, data: { configured: true, steps: [] } }
     render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    expect(document.querySelector('[data-guide-card]')).toBeNull()
+  })
 
-    const reopen = await screen.findByRole('button', { name: 'guide.short' })
-    fireEvent.click(reopen)
-
+  it('⚠️ a step the server already has is never shown again', async () => {
+    const all = ['dashboard-overview', 'dashboard-kpis', 'dashboard-sales-chart']
+    remote.state = {
+      isSuccess: true,
+      isError: false,
+      data: {
+        configured: true,
+        steps: all.map((stepId) => ({ stepId, routeId: 'dashboard', seenAt: 'x' })),
+      },
+    }
+    useGuideStore.setState({ completedSteps: {} })
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
     await waitFor(() =>
-      expect(useGuideStore.getState().isStepSeen('dashboard-overview')).toBe(false),
+      expect(useGuideStore.getState().isStepSeen('dashboard-overview')).toBe(true),
     )
+    expect(document.querySelector('[data-guide-card]')).toBeNull()
+  })
+
+  it('is a modal that locks the page: wheel and scroll keys outside the card are stopped', () => {
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    const card = document.querySelector('[data-guide-card]') as HTMLElement
+    expect(card.getAttribute('role')).toBe('dialog')
+    expect(card.getAttribute('aria-modal')).toBe('true')
+    const wheel = new WheelEvent('wheel', { bubbles: true, cancelable: true })
+    document.body.dispatchEvent(wheel)
+    expect(wheel.defaultPrevented).toBe(true)
+    const key = new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true, cancelable: true })
+    document.body.dispatchEvent(key)
+    expect(key.defaultPrevented).toBe(true)
+  })
+
+  it('«next» records the step on the device and on the server', async () => {
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    fireEvent.click(screen.getByText('guide.next'))
+    await waitFor(() =>
+      expect(useGuideStore.getState().isStepSeen('dashboard-overview')).toBe(true),
+    )
+    expect(remote.saved).toContainEqual([{ stepId: 'dashboard-overview', routeId: 'dashboard' }])
+  })
+
+  it('× records the rest of the page as seen — it does not come back', async () => {
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    fireEvent.click(screen.getByLabelText('guide.close'))
+    await waitFor(() =>
+      expect(useGuideStore.getState().isStepSeen('dashboard-sales-chart')).toBe(true),
+    )
+    expect(document.querySelector('[data-guide-card]')).toBeNull()
+  })
+
+  it('the last step leads to the next page that still has something to teach', async () => {
+    const steps = ['dashboard-overview', 'dashboard-kpis']
+    useGuideStore
+      .getState()
+      .markStepsSeen(steps.map((stepId) => ({ stepId, routeId: 'dashboard' })))
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    await act(async () => {
+      fireEvent.click(screen.getByText('guide.finish'))
+    })
+    const go = await screen.findByText(/guide\.goTo/)
+    expect(go.closest('button')?.getAttribute('data-guide-next-page')).toBe('invoices')
+    fireEvent.click(go)
+    expect(remote.pushed).toEqual(['/invoices'])
   })
 })

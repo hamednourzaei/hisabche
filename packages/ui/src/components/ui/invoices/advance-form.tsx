@@ -104,7 +104,7 @@ export function AdvanceForm({ kind }: { kind: AdvanceKind }) {
         note: note.trim() || undefined,
       },
       {
-        onSuccess: () => push(`/invoices?tab=advances&view=${isSale ? 'preSale' : 'prePurchase'}`),
+        onSuccess: () => push(`/invoices?type=${kind}`),
         onError: (cause) => setError(apiErrorMessage(cause, tr('advances.failed', 'ثبت نشد'))),
       },
     )
@@ -169,7 +169,7 @@ export function AdvanceForm({ kind }: { kind: AdvanceKind }) {
       ) : null}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={() => push('/invoices?tab=advances')}>
+        <Button variant="outline" onClick={() => push(`/invoices?type=${kind}`)}>
           {tr('advances.cancel', 'انصراف')}
         </Button>
         <Button onClick={submit} disabled={create.isPending}>

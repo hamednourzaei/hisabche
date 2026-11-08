@@ -357,6 +357,15 @@
       "dominantLayout": "spatial-2.5d-portal",
       "cardQuotaPercent": 0,
       "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "109",
+      "title": "نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه",
+      "theme": "financial-intelligence",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 0,
+      "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
     }
   ]
 }

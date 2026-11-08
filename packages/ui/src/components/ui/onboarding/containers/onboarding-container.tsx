@@ -37,18 +37,22 @@ import { useLocalePush } from '../../../../hooks/use-locale-push'
    ✅ memo · useCallback · useMemo · safeT · type-safe
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const storeSizes: { id: StoreSize; labelFa: string }[] = [
-  { id: 'small', labelFa: 'دکان کوچک' },
-  { id: 'medium', labelFa: 'فروشگاه متوسط' },
-  { id: 'large', labelFa: 'تجارت بزرگ' },
-]
+/** The same keys the size cards use — one name per size in every language. */
+const STORE_SIZE_LABEL_KEY: Record<StoreSize, string> = {
+  small: 'onboarding.smallStore',
+  medium: 'onboarding.mediumStore',
+  large: 'onboarding.largeStore',
+}
 
 export const OnboardingContainer = memo(function OnboardingContainer() {
   const tOriginal = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
   const push = useLocalePush()
   const lang = useLocale()
 
@@ -76,12 +80,17 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
           .filter(Boolean)
       : []
     const catalogue = [...BUSINESS_MODELS, ...BUSINESS_TYPES, BUSINESS_TYPE_OTHER]
-    return ids.map((id) => catalogue.find((option) => option.id === id)?.labelFa ?? id).join('، ')
-  }, [businessType])
+    return ids
+      .map((id) => {
+        const option = catalogue.find((entry) => entry.id === id)
+        return option ? t(option.labelKey) : id
+      })
+      .join(t('common.listSeparator'))
+  }, [businessType, t])
 
   const storeSizeLabel = useMemo(
-    () => storeSizes.find((s) => s.id === storeSize)?.labelFa || '',
-    [storeSize],
+    () => (storeSize ? t(STORE_SIZE_LABEL_KEY[storeSize as StoreSize] ?? '') : ''),
+    [storeSize, t],
   )
 
   const currencyLabel = useMemo(() => defaultCurrency, [defaultCurrency])
@@ -206,7 +215,9 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
 
       // 1. No workspace at all: create it with the answers in one request.
       if (!workspaceId && user?.id) {
-        const wsName = (user.businessName || user.fullName || 'کسب‌وکار من').trim().slice(0, 100)
+        const wsName = (user.businessName || user.fullName || t('onboarding.defaultWorkspaceName'))
+          .trim()
+          .slice(0, 100)
         const created = await apiClient.post<{ id?: string }>('/workspaces', {
           name: wsName,
           baseCurrency: defaultCurrency,
@@ -293,6 +304,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     setOperationalDna,
     setPrimaryCurrency,
     storeSize,
+    t,
     tOriginal,
     toast,
     updateProfile,

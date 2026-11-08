@@ -1825,7 +1825,9 @@
     "published": "Published",
     "title": "Title",
     "showMore": "More",
-    "showLess": "Less"
+    "showLess": "Less",
+    "listSeparator": ", ",
+    "clearFilters": "Clear filters"
   },
   "invoices": {
     "creditPending": "Awaiting credit approval",
@@ -2079,7 +2081,19 @@
     },
     "returnErrStockDecision": "Putting returned goods back on the shelf, or writing them off, needs a manager or owner.",
     "returnErrScrapCostUnknown": "The purchase cost of these goods was not recorded, so the loss cannot be valued and the write-off is not approved.",
-    "returnScrapNeedsPermission": "Writing goods off needs the «adjust stock» permission - ask a manager or the owner."
+    "returnScrapNeedsPermission": "Writing goods off needs the «adjust stock» permission - ask a manager or the owner.",
+    "typeLabel": "Type",
+    "newDocument": {
+      "label": "What kind of document?",
+      "sale": "Sale",
+      "saleHint": "You sell goods or a service",
+      "purchase": "Purchase",
+      "purchaseHint": "You buy from a supplier",
+      "pre_sale": "Pre-sale",
+      "pre_saleHint": "The customer pays before delivery",
+      "pre_purchase": "Pre-purchase",
+      "pre_purchaseHint": "You pay the supplier before delivery"
+    }
   },
   "warehouse": {
     "deleteWarehouse": "Delete warehouse",
@@ -3133,7 +3147,10 @@
       "openSource": "Open source document",
       "source": "Source",
       "noMatch": "No entry matches this search",
-      "total": "Total"
+      "total": "Total",
+      "showPreSale": "Show the pre-sale",
+      "showPrePurchase": "Show the pre-purchase",
+      "refundAdvance": "Refund (reverse)"
     },
     "trialBalance": {
       "title": "Trial Balance",
@@ -4126,7 +4143,9 @@
         "single": "One place",
         "multiple": "Several"
       }
-    }
+    },
+    "brandInitial": "H",
+    "defaultWorkspaceName": "My business"
   },
   "status": {
     "excellent": "Excellent",
@@ -11621,7 +11640,14 @@
         "title": "Subscription and wallet",
         "desc": "Your current plan, renewal date and wallet balance. Referrals top up the wallet, and the wallet pays this bill."
       }
-    }
+    },
+    "close": "Close this page’s guide",
+    "pageDoneTitle": "You’ve learned this page",
+    "pageDoneBody": "The next section has a few things to show you too. Shall we go?",
+    "allDoneTitle": "You’ve seen every guide",
+    "allDoneBody": "Whenever you need it, the «Guide» button at the bottom shows that page again.",
+    "later": "Later",
+    "goTo": "Go to"
   },
   "advances": {
     "label": "Pre-sales and pre-purchases",
@@ -11661,6 +11687,7 @@
       "status": "Status",
       "note": "Note",
       "action": "Action"
-    }
+    },
+    "showAll": "Show all"
   }
 }

@@ -5,6 +5,11 @@ export { useRowSelection, type RowSelection } from './use-row-selection'
 export { useBulkAction, type BulkActionResult, type BulkActionState } from './use-bulk-action'
 export { TableToolbar, type TableToolbarProps } from './table-toolbar'
 export { TableFilterSelect, type TableFilterSelectProps } from './table-filter-select'
+export {
+  TableFilterMenu,
+  type TableFilterGroup,
+  type TableFilterMenuProps,
+} from './table-filter-menu'
 export { SearchableTable, type SearchableTableProps } from './searchable-table'
 export { SortableHeader } from './sortable-header'
 export { useTableState, type TableState } from './use-table-state'

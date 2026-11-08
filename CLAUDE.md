@@ -188,7 +188,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **V54 ممیزی Phase 5.0 با کد (DNA فقط روی دستگاه؛ نوبت/بیعانه/اشتراک بی‌UI) (۷ نوامبر)** | `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی · `V54-IMPLEMENTATION-PROGRESS.md` — **5.1+ منتظر تأیید** |
 | **V54 اجرا: «حاضر شد/نیامد» جلسه، DNA نسخه‌دار، ادامه‌ی onboarding، منوی پیشنهادی (۷ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور دوم — **operational-profile-01 منتظر اجرا و VERIFY** |
 | **V54 دور سوم: پیش‌فروش/پیش‌خرید، OTP، کمیسیون، مواد، بیعانه‌ی نوبت (۸ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور سوم — **session-deposit-01، advances-02، email-otp-01، provider-commission-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۵۰)**                                     | `.claude/lessons-learned.md`                                                |
+| **راهنمای یک‌باره (سرور)، اسپات‌لایت، فیلتر واحد، fit-row، پیش‌فروش در نوع فاکتور (۸ نوامبر)** | `.claude/lessons-learned.md` درس ۲۵۱–۲۵۲ — **user-guide-progress-01 منتظر اجرا و VERIFY** |
+| **همه‌ی درس‌ها با شماره (۱–۲۵۲)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

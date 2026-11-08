@@ -22,9 +22,11 @@
 // a ragged block.
 // ============================================
 
+import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { cn } from '../../lib/utils'
+import { useFitRow } from '../../lib/fit-row'
 import { useNearestBranchSlot } from './hub-branch'
 
 export interface SegmentedOption<T extends string> {
@@ -52,8 +54,12 @@ export function SegmentedControl<T extends string>({
   branch = false,
 }: SegmentedControlProps<T>) {
   const { anchor, slot } = useNearestBranchSlot(branch)
+  // Never a sideways scroll, in any language (see lib/fit-row).
+  const row = useRef<HTMLDivElement | null>(null)
+  useFitRow(row, options.map((option) => option.label).join('|') + (slot ? '|slot' : ''))
   const control = (
     <div
+      ref={row}
       role="radiogroup"
       aria-label={label}
       className={cn(
@@ -71,7 +77,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'whitespace-nowrap rounded-lg px-[clamp(0.5rem,2.6vw,1rem)] py-1.5 text-[clamp(0.6875rem,3vw,0.875rem)] font-medium transition-colors motion-reduce:transition-none',
+              'whitespace-nowrap rounded-lg px-[var(--fit-px,clamp(0.5rem,2.6vw,1rem))] py-1.5 text-[length:var(--fit-font,clamp(0.6875rem,3vw,0.875rem))] font-medium transition-colors motion-reduce:transition-none',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
               active
                 ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'

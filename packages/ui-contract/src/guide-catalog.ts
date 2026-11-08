@@ -148,3 +148,35 @@ export const GUIDE_CATALOG: Record<string, GuideStepDefinition[]> = {
     },
   ],
 }
+
+/**
+ * The order the pages are taught in — the sidebar's order. When a page's guide
+ * ends, the card offers the next page that still has something unseen, so the
+ * guide leads somewhere instead of just stopping (owner request, 8 Nov 2026).
+ */
+export const GUIDE_TOUR: readonly { routeId: string; path: string; labelKey: string }[] = [
+  { routeId: 'dashboard', path: '/dashboard', labelKey: 'nav.today' },
+  { routeId: 'invoices', path: '/invoices', labelKey: 'nav.getPaid' },
+  { routeId: 'warehouse', path: '/warehouse', labelKey: 'nav.stock' },
+  { routeId: 'accounting', path: '/accounting', labelKey: 'nav.money' },
+  { routeId: 'customers', path: '/customers', labelKey: 'nav.buyers' },
+  { routeId: 'billing', path: '/billing', labelKey: 'nav.billing' },
+]
+
+/**
+ * The next page (after `currentRouteId`, wrapping round) that still has an
+ * unseen step, or `null` when every page has been read.
+ */
+export function nextGuideRoute(
+  currentRouteId: string,
+  isSeen: (stepId: string) => boolean,
+): (typeof GUIDE_TOUR)[number] | null {
+  const start = GUIDE_TOUR.findIndex((stop) => stop.routeId === currentRouteId)
+  for (let offset = 1; offset <= GUIDE_TOUR.length; offset++) {
+    const stop = GUIDE_TOUR[(start + offset + GUIDE_TOUR.length) % GUIDE_TOUR.length]!
+    if (stop.routeId === currentRouteId) continue
+    const steps = GUIDE_CATALOG[stop.routeId] ?? []
+    if (steps.some((step) => !isSeen(step.id))) return stop
+  }
+  return null
+}

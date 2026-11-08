@@ -520,6 +520,9 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /service-delivery/sessions/:x/status': ['operations.service_delivery', 'available'],
   // The commission report reads server-only rates; the device has no copy.
   'GET /service-delivery/commission': ['operations.provider_commission', 'online_required'],
+  // The person's own guide progress; offline the device copy answers.
+  'GET /me/guide-progress': ['ui.guide_progress', 'online_required'],
+  'POST /me/guide-progress': ['ui.guide_progress', 'online_required'],
   'PUT /service-delivery/commission-rates/:x': [
     'operations.provider_commission',
     'online_required',

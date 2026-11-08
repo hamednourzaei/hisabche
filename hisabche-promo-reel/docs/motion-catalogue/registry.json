@@ -1,8 +1,8 @@
 {
   "summary": {
-    "assets": 739,
-    "types": 121,
-    "reels": 107,
+    "assets": 752,
+    "types": 122,
+    "reels": 109,
     "specKinds": 34,
     "reelsWithoutSource": [],
     "reelsWithIdCollision": ["75"],
@@ -1410,7 +1410,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cash-tide.tsx",
-        "line": 551
+        "line": 558
       },
       "params": [
         {
@@ -1464,7 +1464,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cash-tide.tsx",
-        "line": 628
+        "line": 635
       },
       "params": [
         {
@@ -1518,7 +1518,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cash-tide.tsx",
-        "line": 819
+        "line": 826
       },
       "params": [
         {
@@ -1572,7 +1572,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cash-tide.tsx",
-        "line": 976
+        "line": 990
       },
       "params": [
         {
@@ -1626,7 +1626,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cash-tide.tsx",
-        "line": 1074
+        "line": 1088
       },
       "params": [
         {
@@ -2026,6 +2026,306 @@
       "example": {
         "file": "src/reels/reel-102-deal-rescue.ts",
         "line": 11
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#RadarSweepScene",
+      "name": "RadarSweepScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 235
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 1: Blind Radar Sweep (0.00–7.00s) ──────────────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 20
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 20
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#AnomalyBlipScene",
+      "name": "AnomalyBlipScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 380
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 2: Anomaly Blips Target Lock (7.00–14.00s) ─────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 17
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 17
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#WaveformHarmonicsScene",
+      "name": "WaveformHarmonicsScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 591
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 3: Oscilloscope Turbulence to Harmony (14.00–21.00s) ───────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 22
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#TelemetryLockScene",
+      "name": "TelemetryLockScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 700
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 4: Telemetry Lock (21.00–28.00s) ───────────────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 21
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 21
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#CockpitStabilityScene",
+      "name": "CockpitStabilityScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 798
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 5: Executive Cockpit Stability (28.00–35.00s) ──────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 18
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 18
+      }
+    },
+    {
+      "id": "scenes/cashflow-radar#RadarCtaScene",
+      "name": "RadarCtaScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/cashflow-radar.tsx",
+        "line": 932
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "mix", "progress", "spring"]
+        }
+      ],
+      "doc": "─── Scene 6: Radar CTA Finale (35.00–42.00s) ─────────────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 19
+        }
+      ],
+      "themes": ["cyber-emerald"],
+      "example": {
+        "file": "src/reels/reel-108-cashflow-radar.ts",
+        "line": 19
       }
     },
     {
@@ -2582,7 +2882,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/clockwork-brass.tsx",
-        "line": 737
+        "line": 739
       },
       "params": [
         {
@@ -2636,7 +2936,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/clockwork-brass.tsx",
-        "line": 844
+        "line": 846
       },
       "params": [
         {
@@ -2690,7 +2990,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/clockwork-brass.tsx",
-        "line": 1136
+        "line": 1138
       },
       "params": [
         {
@@ -3687,7 +3987,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 328
+        "line": 330
       },
       "params": [
         {
@@ -3741,7 +4041,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 484
+        "line": 486
       },
       "params": [
         {
@@ -3795,7 +4095,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 610
+        "line": 612
       },
       "params": [
         {
@@ -3849,7 +4149,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 725
+        "line": 736
       },
       "params": [
         {
@@ -3903,7 +4203,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 814
+        "line": 825
       },
       "params": [
         {
@@ -4312,7 +4612,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-dialogue.tsx",
-        "line": 299
+        "line": 348
       },
       "params": [
         {
@@ -4366,7 +4666,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/customer-dialogue.tsx",
-        "line": 469
+        "line": 536
       },
       "params": [
         {
@@ -4420,7 +4720,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-dialogue.tsx",
-        "line": 605
+        "line": 684
       },
       "params": [
         {
@@ -4474,7 +4774,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-dialogue.tsx",
-        "line": 706
+        "line": 806
       },
       "params": [
         {
@@ -4528,7 +4828,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-dialogue.tsx",
-        "line": 813
+        "line": 915
       },
       "params": [
         {
@@ -5691,7 +5991,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/deadstock-liquidation.tsx",
-        "line": 307
+        "line": 353
       },
       "params": [
         {
@@ -5745,7 +6045,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/deadstock-liquidation.tsx",
-        "line": 446
+        "line": 529
       },
       "params": [
         {
@@ -5799,7 +6099,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/deadstock-liquidation.tsx",
-        "line": 576
+        "line": 677
       },
       "params": [
         {
@@ -5853,7 +6153,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/deadstock-liquidation.tsx",
-        "line": 694
+        "line": 821
       },
       "params": [
         {
@@ -5907,7 +6207,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/deadstock-liquidation.tsx",
-        "line": 791
+        "line": 916
       },
       "params": [
         {
@@ -6313,7 +6613,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 299
+        "line": 305
       },
       "params": [
         {
@@ -6367,7 +6667,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 407
+        "line": 419
       },
       "params": [
         {
@@ -6421,7 +6721,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 650
+        "line": 671
       },
       "params": [
         {
@@ -6475,7 +6775,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 769
+        "line": 790
       },
       "params": [
         {
@@ -6529,7 +6829,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 1067
+        "line": 1088
       },
       "params": [
         {
@@ -6583,7 +6883,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/distilbook.tsx",
-        "line": 1224
+        "line": 1251
       },
       "params": [
         {
@@ -8438,7 +8738,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/fx-rate-fluctuation.tsx",
-        "line": 316
+        "line": 354
       },
       "params": [
         {
@@ -8492,7 +8792,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/fx-rate-fluctuation.tsx",
-        "line": 461
+        "line": 519
       },
       "params": [
         {
@@ -8546,7 +8846,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/fx-rate-fluctuation.tsx",
-        "line": 572
+        "line": 652
       },
       "params": [
         {
@@ -8600,7 +8900,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/fx-rate-fluctuation.tsx",
-        "line": 694
+        "line": 798
       },
       "params": [
         {
@@ -8654,7 +8954,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/fx-rate-fluctuation.tsx",
-        "line": 791
+        "line": 893
       },
       "params": [
         {
@@ -9955,7 +10255,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/ink-flood.tsx",
-        "line": 828
+        "line": 830
       },
       "params": [
         {
@@ -10009,7 +10309,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/ink-flood.tsx",
-        "line": 1120
+        "line": 1121
       },
       "params": [
         {
@@ -10063,7 +10363,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/ink-flood.tsx",
-        "line": 1261
+        "line": 1262
       },
       "params": [
         {
@@ -11364,7 +11664,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 424
+        "line": 419
       },
       "params": [
         {
@@ -11450,7 +11750,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 492
+        "line": 487
       },
       "params": [
         {
@@ -11526,7 +11826,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 543
+        "line": 538
       },
       "params": [
         {
@@ -11580,7 +11880,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 641
+        "line": 643
       },
       "params": [
         {
@@ -11634,7 +11934,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 697
+        "line": 778
       },
       "params": [
         {
@@ -11688,7 +11988,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 747
+        "line": 844
       },
       "params": [
         {
@@ -11742,7 +12042,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 806
+        "line": 920
       },
       "params": [
         {
@@ -11796,7 +12096,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/isometric-neon.tsx",
-        "line": 895
+        "line": 1009
       },
       "params": [
         {
@@ -12613,7 +12913,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/manufacturing-bom.tsx",
-        "line": 328
+        "line": 332
       },
       "params": [
         {
@@ -12667,7 +12967,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/manufacturing-bom.tsx",
-        "line": 447
+        "line": 451
       },
       "params": [
         {
@@ -12721,7 +13021,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/manufacturing-bom.tsx",
-        "line": 584
+        "line": 592
       },
       "params": [
         {
@@ -12775,7 +13075,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/manufacturing-bom.tsx",
-        "line": 733
+        "line": 743
       },
       "params": [
         {
@@ -12829,7 +13129,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/manufacturing-bom.tsx",
-        "line": 822
+        "line": 832
       },
       "params": [
         {
@@ -14828,7 +15128,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/offline-pos-checkout.tsx",
-        "line": 299
+        "line": 348
       },
       "params": [
         {
@@ -14882,7 +15182,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/offline-pos-checkout.tsx",
-        "line": 457
+        "line": 530
       },
       "params": [
         {
@@ -14936,7 +15236,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/offline-pos-checkout.tsx",
-        "line": 577
+        "line": 672
       },
       "params": [
         {
@@ -14990,7 +15290,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/offline-pos-checkout.tsx",
-        "line": 711
+        "line": 824
       },
       "params": [
         {
@@ -15044,7 +15344,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/offline-pos-checkout.tsx",
-        "line": 808
+        "line": 919
       },
       "params": [
         {
@@ -15089,6 +15389,410 @@
       "example": {
         "file": "src/reels/reel-80-offline-pos-checkout.ts",
         "line": 12
+      }
+    },
+    {
+      "id": "scenes/one-map#SceneProps",
+      "name": "SceneProps",
+      "type": "type",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 51
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "scenes/one-map#FIVE_DOMAINS",
+      "name": "FIVE_DOMAINS",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 156
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "The five records one invoice moves — every scene downstream reuses them.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "scenes/one-map#NeedleScene",
+      "name": "NeedleScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 160
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "─── Scene 1: The Compass of Four Duties (0.00–5.50s) ───────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 26
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 26
+      }
+    },
+    {
+      "id": "scenes/one-map#ToolToppleScene",
+      "name": "ToolToppleScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 227
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 27
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 27
+      }
+    },
+    {
+      "id": "scenes/one-map#FragmentVacuumScene",
+      "name": "FragmentVacuumScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 292
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "─── Scene 3: The Fragment Vacuum (12.00–19.00s) ────────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 24
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 24
+      }
+    },
+    {
+      "id": "scenes/one-map#InvoiceStampsScene",
+      "name": "InvoiceStampsScene",
+      "type": "scene-component",
+      "tags": ["product-demo"],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 398
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "─── Scene 4: One Invoice, Five Records (19.00–26.00s) ──────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 25
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 25
+      }
+    },
+    {
+      "id": "scenes/one-map#ConstellationMapScene",
+      "name": "ConstellationMapScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 545
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 22
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "scenes/one-map#CurtainBrandScene",
+      "name": "CurtainBrandScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 644
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": [
+            "clamp",
+            "deterministicHash",
+            "ease",
+            "enter",
+            "mix",
+            "progress",
+            "spring",
+            "strokeDraw"
+          ]
+        }
+      ],
+      "doc": "─── Scene 6: The Quiet Brand Curtain (33.00–42.00s) ────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 23
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 23
       }
     },
     {
@@ -15488,7 +16192,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-true-number.tsx",
-        "line": 343
+        "line": 386
       },
       "params": [
         {
@@ -15542,7 +16246,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-true-number.tsx",
-        "line": 527
+        "line": 590
       },
       "params": [
         {
@@ -15596,7 +16300,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/scenes/one-true-number.tsx",
-        "line": 668
+        "line": 770
       },
       "params": [
         {
@@ -15650,7 +16354,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-true-number.tsx",
-        "line": 800
+        "line": 929
       },
       "params": [
         {
@@ -15704,7 +16408,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-true-number.tsx",
-        "line": 897
+        "line": 1024
       },
       "params": [
         {
@@ -16236,7 +16940,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 297
+        "line": 303
       },
       "params": [
         {
@@ -16290,7 +16994,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 394
+        "line": 400
       },
       "params": [
         {
@@ -16344,7 +17048,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 485
+        "line": 491
       },
       "params": [
         {
@@ -16398,7 +17102,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 635
+        "line": 641
       },
       "params": [
         {
@@ -16452,7 +17156,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 858
+        "line": 866
       },
       "params": [
         {
@@ -16506,7 +17210,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-galaxy.tsx",
-        "line": 1099
+        "line": 1111
       },
       "params": [
         {
@@ -16984,7 +17688,7 @@
       "tags": ["character"],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 342
+        "line": 387
       },
       "params": [],
       "dependencies": [
@@ -17023,7 +17727,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 346
+        "line": 391
       },
       "params": [
         {
@@ -17081,7 +17785,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 470
+        "line": 515
       },
       "params": [
         {
@@ -17139,7 +17843,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 594
+        "line": 646
       },
       "params": [
         {
@@ -17197,7 +17901,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 695
+        "line": 749
       },
       "params": [
         {
@@ -17255,7 +17959,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 789
+        "line": 843
       },
       "params": [
         {
@@ -17313,7 +18017,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 896
+        "line": 951
       },
       "params": [
         {
@@ -17371,7 +18075,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 1042
+        "line": 1101
       },
       "params": [
         {
@@ -17429,7 +18133,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 1161
+        "line": 1231
       },
       "params": [
         {
@@ -17487,7 +18191,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 1275
+        "line": 1345
       },
       "params": [
         {
@@ -17545,7 +18249,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/paper-pocket.tsx",
-        "line": 1347
+        "line": 1417
       },
       "params": [
         {
@@ -17758,7 +18462,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 223
+        "line": 231
       },
       "params": [
         {
@@ -17807,7 +18511,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 396
+        "line": 434
       },
       "params": [
         {
@@ -17856,7 +18560,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 531
+        "line": 579
       },
       "params": [
         {
@@ -17905,7 +18609,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 670
+        "line": 726
       },
       "params": [
         {
@@ -17954,7 +18658,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 787
+        "line": 855
       },
       "params": [
         {
@@ -18003,7 +18707,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 881
+        "line": 949
       },
       "params": [
         {
@@ -21370,7 +22074,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-payroll-settle.tsx",
-        "line": 302
+        "line": 351
       },
       "params": [
         {
@@ -21424,7 +22128,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-payroll-settle.tsx",
-        "line": 453
+        "line": 534
       },
       "params": [
         {
@@ -21478,7 +22182,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-payroll-settle.tsx",
-        "line": 584
+        "line": 685
       },
       "params": [
         {
@@ -21532,7 +22236,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-payroll-settle.tsx",
-        "line": 705
+        "line": 830
       },
       "params": [
         {
@@ -21586,7 +22290,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-payroll-settle.tsx",
-        "line": 802
+        "line": 925
       },
       "params": [
         {
@@ -23008,7 +23712,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/tiered-price-lists.tsx",
-        "line": 323
+        "line": 361
       },
       "params": [
         {
@@ -23062,7 +23766,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/tiered-price-lists.tsx",
-        "line": 444
+        "line": 485
       },
       "params": [
         {
@@ -23116,7 +23820,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/tiered-price-lists.tsx",
-        "line": 571
+        "line": 632
       },
       "params": [
         {
@@ -23170,7 +23874,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/tiered-price-lists.tsx",
-        "line": 689
+        "line": 776
       },
       "params": [
         {
@@ -23224,7 +23928,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/tiered-price-lists.tsx",
-        "line": 786
+        "line": 871
       },
       "params": [
         {
@@ -23628,7 +24332,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/till-shift-balance.tsx",
-        "line": 329
+        "line": 333
       },
       "params": [
         {
@@ -23682,7 +24386,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/till-shift-balance.tsx",
-        "line": 473
+        "line": 481
       },
       "params": [
         {
@@ -23736,7 +24440,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/till-shift-balance.tsx",
-        "line": 595
+        "line": 601
       },
       "params": [
         {
@@ -23790,7 +24494,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/till-shift-balance.tsx",
-        "line": 736
+        "line": 742
       },
       "params": [
         {
@@ -23844,7 +24548,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/till-shift-balance.tsx",
-        "line": 825
+        "line": 831
       },
       "params": [
         {
@@ -24563,7 +25267,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/scenes/warehouse-shelf-map.tsx",
-        "line": 330
+        "line": 332
       },
       "params": [
         {
@@ -24617,7 +25321,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-shelf-map.tsx",
-        "line": 511
+        "line": 513
       },
       "params": [
         {
@@ -24671,7 +25375,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-shelf-map.tsx",
-        "line": 701
+        "line": 705
       },
       "params": [
         {
@@ -24725,7 +25429,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-shelf-map.tsx",
-        "line": 858
+        "line": 862
       },
       "params": [
         {
@@ -24779,7 +25483,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-shelf-map.tsx",
-        "line": 947
+        "line": 951
       },
       "params": [
         {
@@ -25183,7 +25887,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-transfer.tsx",
-        "line": 328
+        "line": 330
       },
       "params": [
         {
@@ -25237,7 +25941,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-transfer.tsx",
-        "line": 507
+        "line": 509
       },
       "params": [
         {
@@ -25291,7 +25995,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-transfer.tsx",
-        "line": 650
+        "line": 656
       },
       "params": [
         {
@@ -25345,7 +26049,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-transfer.tsx",
-        "line": 773
+        "line": 779
       },
       "params": [
         {
@@ -25399,7 +26103,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/warehouse-transfer.tsx",
-        "line": 862
+        "line": 868
       },
       "params": [
         {
@@ -36980,7 +37684,7 @@
         },
         {
           "file": "src/reels/reel-01-cloud-or-desktop.ts",
-          "line": 132
+          "line": 135
         },
         {
           "file": "src/reels/reel-100-tech-explainer.ts",
@@ -37012,6 +37716,14 @@
         },
         {
           "file": "src/reels/reel-107-need-blueprint.ts",
+          "line": 2
+        },
+        {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 2
+        },
+        {
+          "file": "src/reels/reel-109-one-map.ts",
           "line": 2
         },
         {
@@ -37326,6 +38038,14 @@
           "line": 47
         },
         {
+          "file": "src/reels/reel-108-cashflow-radar.ts",
+          "line": 39
+        },
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 48
+        },
+        {
           "file": "src/reels/reel-71-full-cycle.ts",
           "line": 32
         },
@@ -37543,6 +38263,8 @@
         "105",
         "106",
         "107",
+        "108",
+        "109",
         "71",
         "72",
         "73",
@@ -37573,7 +38295,7 @@
         "98",
         "99"
       ],
-      "scenes": 216
+      "scenes": 228
     },
     {
       "id": "spec-kind:branch",
@@ -45724,6 +46446,182 @@
         "scenes/need-blueprint#NeedCtaScene"
       ],
       "importsFrom": ["../engine/types", "../scenes/need-blueprint", "./shared"]
+    },
+    {
+      "id": "108",
+      "title": "رادار نقدینگی و سنسور پالس زنده کسب‌وکار",
+      "seconds": 42,
+      "theme": "cyber-emerald",
+      "artDirection": null,
+      "layoutTopology": null,
+      "viralTemplate": null,
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-108-cashflow-radar.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 7,
+          "theme": "cyber-emerald",
+          "component": "RadarSweepScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 7,
+          "end": 14,
+          "theme": "cyber-emerald",
+          "component": "AnomalyBlipScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 14,
+          "end": 21,
+          "theme": "cyber-emerald",
+          "component": "WaveformHarmonicsScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 21,
+          "end": 28,
+          "theme": "cyber-emerald",
+          "component": "TelemetryLockScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 28,
+          "end": 35,
+          "theme": "cyber-emerald",
+          "component": "CockpitStabilityScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 35,
+          "end": 42,
+          "theme": "cyber-emerald",
+          "component": "RadarCtaScene",
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "chime",
+        "ctaResolution",
+        "dataFlow",
+        "financialMilestone",
+        "impact",
+        "insightReveal",
+        "precisionSequence",
+        "scan",
+        "success",
+        "sync",
+        "tick",
+        "titleHit",
+        "whoosh"
+      ],
+      "assetsUsed": [
+        "scenes/cashflow-radar#RadarSweepScene",
+        "scenes/cashflow-radar#AnomalyBlipScene",
+        "scenes/cashflow-radar#WaveformHarmonicsScene",
+        "scenes/cashflow-radar#TelemetryLockScene",
+        "scenes/cashflow-radar#CockpitStabilityScene",
+        "scenes/cashflow-radar#RadarCtaScene"
+      ],
+      "importsFrom": ["../engine/types", "../scenes/cashflow-radar", "./shared"]
+    },
+    {
+      "id": "109",
+      "title": "نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه",
+      "seconds": 42,
+      "theme": "financial-intelligence",
+      "artDirection": "procedural-spatial",
+      "layoutTopology": "data-flow-matrix",
+      "viralTemplate": "infinite-spatial-board",
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-109-one-map.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 5.5,
+          "theme": "financial-intelligence",
+          "component": "NeedleScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 5.5,
+          "end": 12,
+          "theme": "financial-intelligence",
+          "component": "ToolToppleScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 12,
+          "end": 19,
+          "theme": "financial-intelligence",
+          "component": "FragmentVacuumScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 19,
+          "end": 26,
+          "theme": "financial-intelligence",
+          "component": "InvoiceStampsScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 26,
+          "end": 33,
+          "theme": "financial-intelligence",
+          "component": "ConstellationMapScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 33,
+          "end": 42,
+          "theme": "financial-intelligence",
+          "component": "CurtainBrandScene",
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "cardThock",
+        "cash",
+        "cinematicReveal",
+        "ctaResolution",
+        "dataFlow",
+        "impact",
+        "insightReveal",
+        "majorReveal",
+        "precisionSequence",
+        "softTransition",
+        "success",
+        "sync",
+        "titleHit",
+        "typewriterClick",
+        "whoosh"
+      ],
+      "assetsUsed": [
+        "scenes/one-map#NeedleScene",
+        "scenes/one-map#ToolToppleScene",
+        "scenes/one-map#FragmentVacuumScene",
+        "scenes/one-map#InvoiceStampsScene",
+        "scenes/one-map#ConstellationMapScene",
+        "scenes/one-map#CurtainBrandScene"
+      ],
+      "importsFrom": ["../engine/types", "./shared", "../scenes/one-map"]
     }
   ],
   "sounds": {

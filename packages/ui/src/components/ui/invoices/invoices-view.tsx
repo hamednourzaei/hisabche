@@ -9,7 +9,7 @@ import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { InvoicesSkeleton } from './invoices-skeleton'
 import { CreditStatusBadge } from './credit-status-badge'
-import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
+import { FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
 import { csvFilename } from '@hisabche/formatting'
 import {
@@ -18,12 +18,13 @@ import {
   resolveExportColumns,
 } from '@hisabche/ui-contract'
 import { InvoiceRowActions } from './invoice-row-actions'
+import { NewInvoiceChooser, type NewDocumentKind } from './new-invoice-chooser'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import type { InvoiceListSummary } from '@hisabche/api'
 import {
   BulkActionBar,
   DataTable,
-  TableFilterSelect,
+  TableFilterMenu,
   useBulkAction,
   useRowSelection,
   type TableColumn,
@@ -57,6 +58,13 @@ interface InvoicesViewProps {
   onNavigateParty?: ((id: string) => void) | undefined
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void
   onNewInvoice: () => void
+  /** The «new invoice» chooser: sale, purchase, pre-sale or pre-purchase. */
+  onNewDocument: (kind: NewDocumentKind) => void
+  /**
+   * Pre-sale / pre-purchase are type options of this page; when one is open
+   * its list is drawn here instead of the invoice table.
+   */
+  advancesSlot?: ReactNode | undefined
   /** Rendered beside the export button (the recurring-invoices entry). */
   toolbarExtra?: ReactNode
   /**
@@ -89,7 +97,7 @@ export interface InvoicePlaceOption {
   name: string
 }
 
-export type InvoiceTypeFilter = 'all' | 'sale' | 'purchase'
+export type InvoiceTypeFilter = 'all' | 'sale' | 'purchase' | 'pre_sale' | 'pre_purchase'
 
 const statusBadgeStyles: Record<string, string> = {
   success:
@@ -191,14 +199,17 @@ const TypeFilter = memo(function TypeFilter({
   if (!onChange) return null
 
   const options: { key: InvoiceTypeFilter; label: string }[] = [
-    { key: 'all', label: t('invoices.filterAll', 'همه') },
-    { key: 'sale', label: t('invoices.type.sale', 'فروش') },
-    { key: 'purchase', label: t('invoices.type.purchase', 'خرید') },
+    { key: 'all', label: t('invoices.filterAll') },
+    { key: 'sale', label: t('invoices.type.sale') },
+    { key: 'purchase', label: t('invoices.type.purchase') },
+    // advances-02, owner request 8 Nov 2026: beside the three, not a tab.
+    { key: 'pre_sale', label: t('advances.sections.preSale') },
+    { key: 'pre_purchase', label: t('advances.sections.prePurchase') },
   ]
 
   return (
     <SegmentedControl
-      label={t('invoices.type', 'نوع')}
+      label={t('invoices.typeLabel')}
       options={options.map((option) => ({ value: option.key, label: option.label }))}
       value={value}
       onChange={onChange}
@@ -262,10 +273,10 @@ ExportButton.displayName = 'ExportButton'
 
 const InvoicesHeader = memo(function InvoicesHeader({
   t,
-  onNewInvoice,
+  onNewDocument,
 }: {
   t: (key: string, fallback?: string) => string
-  onNewInvoice: () => void
+  onNewDocument: (kind: NewDocumentKind) => void
 }) {
   return (
     // Title and action stay on one row at every width — on mobile the button
@@ -273,31 +284,14 @@ const InvoicesHeader = memo(function InvoicesHeader({
     <div className="flex flex-row items-start justify-between gap-3" data-guide="invoices-create">
       <div className="min-w-0 space-y-1">
         <h1 className="truncate text-xl font-bold sm:text-2xl lg:text-3xl text-[hsl(var(--fg-primary))]">
-          {t('nav.getPaid', 'دریافت پول')}
+          {t('nav.getPaid')}
         </h1>
         <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
-          {t('nav.getPaid_description', 'چه کسی چقدر باید بپردازد')}
+          {t('nav.getPaid_description')}
         </p>
       </div>
 
-      <button
-        type="button"
-        onClick={onNewInvoice}
-        className={cn(
-          'inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 sm:px-5',
-          'min-h-[44px] sm:min-h-[40px]',
-          'text-sm font-bold text-white',
-          'bg-[hsl(var(--color-primary))]',
-          'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
-          'transition-all duration-200',
-          'hover:brightness-110 active:scale-[0.98]',
-          FOCUS_RING,
-          'motion-reduce:transition-none motion-reduce:active:scale-100',
-        )}
-      >
-        <Plus className="size-4 sm:size-[18px]" aria-hidden="true" />
-        <span className="whitespace-nowrap">{t('invoices.newinvoices', 'فاکتور جدید')}</span>
-      </button>
+      <NewInvoiceChooser t={t} onChoose={onNewDocument} />
     </div>
   )
 })
@@ -549,6 +543,8 @@ export const InvoicesView = memo(function InvoicesView({
   onNavigateParty,
   onNavigateInvoiceAction,
   onNewInvoice,
+  onNewDocument,
+  advancesSlot,
   toolbarExtra,
   onDeleteInvoice,
   statusVariant,
@@ -605,7 +601,7 @@ export const InvoicesView = memo(function InvoicesView({
 
   return (
     <div className="space-y-5 sm:space-y-6" data-guide="invoices-page">
-      <InvoicesHeader t={t} onNewInvoice={onNewInvoice} />
+      <InvoicesHeader t={t} onNewDocument={onNewDocument} />
 
       <div
         className="flex flex-wrap items-center justify-between gap-3"
@@ -613,113 +609,137 @@ export const InvoicesView = memo(function InvoicesView({
       >
         {/* Drawn under the hub's tabs (`branch`), not in this row. */}
         <TypeFilter t={t} value={typeFilter} onChange={onTypeFilterChange} />
-        <div className="ms-auto flex flex-wrap items-center gap-2">
-          {toolbarExtra}
-          <ExportButton t={t} invoices={statsInvoices} />
-        </div>
+        {advancesSlot ? null : (
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            {toolbarExtra}
+            <ExportButton t={t} invoices={statsInvoices} />
+          </div>
+        )}
       </div>
 
-      {statsSummary && statsSummary.count > 0 && <BentoStats t={t} stats={stats} />}
+      {advancesSlot ? (
+        advancesSlot
+      ) : (
+        <>
+          {statsSummary && statsSummary.count > 0 && <BentoStats t={t} stats={stats} />}
 
-      <DataTable
-        paginate={false}
-        tableId="invoices"
-        t={t}
-        rows={invoices}
-        columns={columns}
-        rowKey={(inv) => inv.id}
-        onRowClick={(inv) => onNavigateInvoice(inv.id)}
-        searchValue={searchValue}
-        onSearchChange={onSearchChange}
-        // The status filter sits in the table's own toolbar, beside search, saved
-        // views and column settings: it changes what this table holds.
-        actions={
-          onStatusFilterChange ? (
-            <>
-              <TableFilterSelect
-                label={t('invoices.status', 'وضعیت')}
-                value={statusFilter}
-                onChange={onStatusFilterChange}
-                options={[
-                  { value: 'all', label: t('invoices.filterAll', 'همه') },
-                  ...INVOICE_STATUS_FILTERS.map((status) => ({
-                    value: status,
-                    label: t(`invoices.${status}`, status),
-                  })),
+          <DataTable
+            paginate={false}
+            tableId="invoices"
+            t={t}
+            rows={invoices}
+            columns={columns}
+            rowKey={(inv) => inv.id}
+            onRowClick={(inv) => onNavigateInvoice(inv.id)}
+            searchValue={searchValue}
+            onSearchChange={onSearchChange}
+            // The status filter sits in the table's own toolbar, beside search, saved
+            // views and column settings: it changes what this table holds.
+            actions={
+              onStatusFilterChange ? (
+                // ONE «فیلتر» for status, branch and warehouse (owner request,
+                // 8 Nov 2026). Branch and warehouse appear only when there is
+                // something to choose.
+                <TableFilterMenu
+                  label={t('common.filter')}
+                  clearLabel={t('common.clearFilters')}
+                  groups={[
+                    {
+                      id: 'status',
+                      label: t('invoices.status'),
+                      value: statusFilter,
+                      onChange: onStatusFilterChange,
+                      options: [
+                        { value: 'all', label: t('invoices.filterAll') },
+                        ...INVOICE_STATUS_FILTERS.map((status) => ({
+                          value: status,
+                          label: t(`invoices.${status}`),
+                        })),
+                      ],
+                    },
+                    ...(onBranchFilterChange && branches.length > 0
+                      ? [
+                          {
+                            id: 'branch',
+                            label: t('invoices.branch'),
+                            value: branchFilter,
+                            onChange: onBranchFilterChange,
+                            options: [
+                              { value: 'all', label: t('invoices.allBranches') },
+                              ...branches.map((branch) => ({
+                                value: branch.id,
+                                label: branch.name,
+                              })),
+                            ],
+                          },
+                        ]
+                      : []),
+                    ...(onWarehouseFilterChange && warehouses.length > 0
+                      ? [
+                          {
+                            id: 'warehouse',
+                            label: t('invoices.warehouse'),
+                            value: warehouseFilter,
+                            onChange: onWarehouseFilterChange,
+                            options: [
+                              { value: 'all', label: t('invoices.allWarehouses') },
+                              ...warehouses.map((warehouse) => ({
+                                value: warehouse.id,
+                                label: warehouse.name,
+                              })),
+                            ],
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              ) : undefined
+            }
+            minWidthClass="min-w-[420px] sm:min-w-[720px]"
+            selectedIds={selection.selectedIds}
+            onToggleRow={selection.toggleRow}
+            onToggleAll={selection.toggleAll}
+            bulkBar={
+              <BulkActionBar
+                t={t}
+                selectedCount={selection.selectedCount}
+                busy={bulkDelete.busy}
+                result={bulkDelete.result}
+                onClear={selection.clear}
+                actions={[
+                  {
+                    id: 'delete',
+                    label: t('common.delete', 'حذف'),
+                    icon: <Trash2 className="size-3.5" aria-hidden="true" />,
+                    destructive: true,
+                    confirmLabel: t('invoices.bulkDeleteConfirm', 'فاکتورهای انتخاب‌شده حذف شوند؟'),
+                    onRun: handleBulkDelete,
+                  },
                 ]}
               />
-              {/* By branch and by warehouse — offered only when there is one to choose. */}
-              {onBranchFilterChange && branches.length > 0 ? (
-                <TableFilterSelect
-                  label={t('invoices.branch', 'شعبه')}
-                  value={branchFilter}
-                  onChange={onBranchFilterChange}
-                  options={[
-                    { value: 'all', label: t('invoices.allBranches', 'همه‌ی شعبه‌ها') },
-                    ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
-                  ]}
-                />
-              ) : null}
-              {onWarehouseFilterChange && warehouses.length > 0 ? (
-                <TableFilterSelect
-                  label={t('invoices.warehouse', 'انبار')}
-                  value={warehouseFilter}
-                  onChange={onWarehouseFilterChange}
-                  options={[
-                    { value: 'all', label: t('invoices.allWarehouses', 'همه‌ی انبارها') },
-                    ...warehouses.map((warehouse) => ({
-                      value: warehouse.id,
-                      label: warehouse.name,
-                    })),
-                  ]}
-                />
-              ) : null}
-            </>
-          ) : undefined
-        }
-        minWidthClass="min-w-[420px] sm:min-w-[720px]"
-        selectedIds={selection.selectedIds}
-        onToggleRow={selection.toggleRow}
-        onToggleAll={selection.toggleAll}
-        bulkBar={
-          <BulkActionBar
-            t={t}
-            selectedCount={selection.selectedCount}
-            busy={bulkDelete.busy}
-            result={bulkDelete.result}
-            onClear={selection.clear}
-            actions={[
-              {
-                id: 'delete',
-                label: t('common.delete', 'حذف'),
-                icon: <Trash2 className="size-3.5" aria-hidden="true" />,
-                destructive: true,
-                confirmLabel: t('invoices.bulkDeleteConfirm', 'فاکتورهای انتخاب‌شده حذف شوند؟'),
-                onRun: handleBulkDelete,
-              },
-            ]}
+            }
+            emptyState={
+              <EmptyState
+                icon="invoice"
+                title={t('invoices.noInvoices', 'هیچ فاکتوری یافت نشد')}
+                description={t('invoices.noInvoicesDesc', 'هنوز هیچ فاکتوری ثبت نشده است.')}
+                action={{
+                  label: t('invoices.newinvoices', 'فاکتور جدید'),
+                  onClick: onNewInvoice,
+                }}
+              />
+            }
           />
-        }
-        emptyState={
-          <EmptyState
-            icon="invoice"
-            title={t('invoices.noInvoices', 'هیچ فاکتوری یافت نشد')}
-            description={t('invoices.noInvoicesDesc', 'هنوز هیچ فاکتوری ثبت نشده است.')}
-            action={{
-              label: t('invoices.newinvoices', 'فاکتور جدید'),
-              onClick: onNewInvoice,
-            }}
-          />
-        }
-      />
 
-      {total > filters.limit && (
-        <PaginationControls
-          t={t}
-          page={filters.page}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-        />
+          {total > filters.limit && (
+            <PaginationControls
+              t={t}
+              page={filters.page}
+              totalPages={totalPages}
+              onPageChange={onPageChange}
+            />
+          )}
+        </>
       )}
     </div>
   )

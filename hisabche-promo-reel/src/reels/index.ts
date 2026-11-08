@@ -93,6 +93,7 @@ import { reel105 } from './reel-105-landed-cost'
 import { reel106 } from './reel-106-single-thread'
 import { reel107 } from './reel-107-need-blueprint'
 import { reel108 } from './reel-108-cashflow-radar'
+import { reel109 } from './reel-109-one-map'
 export const REELS: Reel[] = [
   reel01,
   reel02,
@@ -202,6 +203,7 @@ export const REELS: Reel[] = [
   reel106,
   reel107,
   reel108,
+  reel109,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -278,4 +280,5 @@ export {
   reel106,
   reel107,
   reel108,
+  reel109,
 }

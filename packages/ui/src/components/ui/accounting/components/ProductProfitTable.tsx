@@ -12,7 +12,7 @@
 //   salaries row → /team-and-payroll (the payroll behind the figure)
 // ============================================
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import type { ProductProfitRow, ProfitReport } from '@hisabche/api'
 
@@ -38,7 +38,10 @@ export const ProductProfitTable = memo(function ProductProfitTable({
   const push = useLocalePush()
   const [search, setSearch] = useState('')
 
-  const percent = (value: number | null) => (value === null ? '—' : `${num(value)}٪`)
+  const percent = useCallback(
+    (value: number | null) => (value === null ? '—' : `${num(value)}٪`),
+    [num],
+  )
   // A profit nobody can compute has no colour: it is neither a gain nor a loss.
   const tone = (value: number | null) =>
     value === null
@@ -47,8 +50,10 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         ? 'text-[hsl(var(--color-destructive))]'
         : 'text-[hsl(var(--color-success))]'
   /** A profit, or the words «cannot be calculated» — never a number built on a missing cost. */
-  const profitText = (value: number | null) =>
-    value === null ? t('accounting.profit.unknown', 'قابل محاسبه نیست') : money(value)
+  const profitText = useCallback(
+    (value: number | null) => (value === null ? t('accounting.profit.unknown') : money(value)),
+    [money, t],
+  )
 
   const rows = useMemo(
     () => report.products.filter((row) => matchesSearch(search, [row.name])),
@@ -133,7 +138,7 @@ export const ProductProfitTable = memo(function ProductProfitTable({
         ),
       },
     ],
-    [money, num, t],
+    [money, num, t, percent, profitText],
   )
 
   const { totals } = report

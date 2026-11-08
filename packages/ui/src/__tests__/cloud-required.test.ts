@@ -71,8 +71,9 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // feature that is «always allowed» must not also write (entitlement-reads-never-stop.test.ts).
     // 63 since 8 Nov 2026: order.advances (pre-sale / pre-purchase - the supplier-advance functions
     // live only on the server) and operations.provider_commission (rates are server-only).
-    it('has exactly 63 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(63)
+    // 64 since 8 Nov 2026 (later the same day): ui.guide_progress — a person's seen guide steps.
+    it('has exactly 64 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(64)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {
