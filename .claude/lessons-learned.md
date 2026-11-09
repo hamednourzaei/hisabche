@@ -2172,3 +2172,13 @@ Electron Ø¨Ø§Ø²Ø³Ø§Ø²ÛŒ Ø´Ø¯Ù‡Â» Ùˆ **Ù‡ÛŒÚ† Ú
 - ⚠️ **backtick داخل `node -e "…"` در bash باز هم متن را خورد** (بار هشتم) — کامنت `err.message` خالی شد. فقط اسکریپت فایل.
 - **worktree بدون node_modules:** junction از main (`fs.symlinkSync(target, link, 'junction')`)؛ ⚠️ `@hisabche/*` در node_modules به پکیج‌های **main** اشاره می‌کند، پس تغییر یک پکیج مشترک در worktree را پکیج دیگر نمی‌بیند.
 - ⚠️ **FINDING زنده دو باگ واقعی پیدا کرد که تست سبزشان را قفل کرده بود** (۹ نوامبر): `payments` ستون `invoice_id` ندارد — fixture تست ستونی ساختگی داشت و شعبه‌ی هر پرداخت در سابقه «—» بود؛ `purchase_order_items` ستون `workspace_id` ندارد — تحلیل تأمین‌کننده ۵۰۰ می‌داد. supabase-js خطای 42703 را برمی‌گرداند و throw نمی‌کند، پس `const { data } =` بی‌چک‌کردن `error` یعنی «خالی» بی‌صدا. ستونِ تأییدشده با FINDING در `CONFIRMED_LIVE` ابزار drift ثبت می‌شود، با نام فایل و تاریخ — هرگز از روی حدس.
+
+
+## درس ۲۵۴ — گزارش Search Console: `loading.tsx` وضعیت HTTP را دروغ می‌کرد (۹ نوامبر ۲۰۲۶)
+
+- **نشانه:** Coverage گوگل: «Not found (404)» با validation ناموفق، «Redirect error»، «Excluded by noindex». روی سایت زنده `/fa/blog/<نبود>`، `/fa/docs/<نبود>`، `/fa/features/<نبود>` و `/fa/market` (بازار خاموش) **۲۰۰** با `noindex` و `NEXT_HTTP_ERROR_FALLBACK;404` در بدنه برمی‌گرداندند (soft 404)، و `/fa/docs` به‌جای `308`، **۲۰۰** می‌داد.
+- **ریشه:** ۲۶ فایل `loading.tsx` (همه یک اسکلت «Auto-created») روی صفحه‌های عمومی، از جمله `[lang]/loading.tsx` که کل لندینگ را هم می‌پوشاند. `loading.tsx` = مرز Suspense = streaming؛ خط وضعیت ۲۰۰ همراه اسکلت فرستاده می‌شود **قبل از** اجرای صفحه، پس `notFound()` و `permanentRedirect()` دیگر نمی‌توانند وضعیت را عوض کنند.
+- **اصلاح:** هر ۲۶ حذف شد (لندینگ، about، contact، blog، docs، features، legal، market). صفحه‌های توکنی و فرم‌های ورود (noindex) اسکلتشان را نگه داشتند. اندازه‌گیری روی بیلد production محلی: صفحه‌ی نبود = ۴۰۴، `/fa/docs` = ۳۰۸، صفحه‌های واقعی ۲۰۰ و index.
+- **گارد:** `packages/ui/src/__tests__/public-pages-do-not-stream.test.ts` (injection-test شد: یک `loading.tsx` برگردانده ⇒ قرمز).
+- ⚠️ **وضعیت HTTP را با `curl` بسنج، نه با چشم.** صفحه‌ی soft-404 در مرورگر دقیقاً مثل ۴۰۴ دیده می‌شود.
+- **عمداً دست نخورد:** «Page with redirect» (http/www/ریشه/اسلش آخر و ۲۸ جفت `moved`) رفتار درست است؛ وبلاگ تا مقاله ندارد `noindex` می‌ماند؛ «Discovered – currently not indexed» صف خزش گوگل است و با کد مستقیم بسته نمی‌شود.
