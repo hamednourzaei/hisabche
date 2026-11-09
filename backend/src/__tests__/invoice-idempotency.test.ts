@@ -106,6 +106,54 @@ describe('InvoiceService.create with a client request id', () => {
     expect(writes).toEqual([{ table: 'invoices', op: 'insert' }])
   })
 
+  // Audit C-01 (8 Nov 2026): the first attempt committed the invoice and its
+  // stock, then the ledger step failed (500). The retry must FINISH that
+  // invoice — not answer «already made» and leave it without a journal entry.
+  it('a replay of an invoice that never reached the ledger books it now', async () => {
+    const { InvoiceService } = await import('../services/invoice.service')
+    lookup = { data: EXISTING, error: null }
+    lookupAfterConflict = { data: { status: 'paid', document_status: 'draft' }, error: null }
+    const service = new InvoiceService()
+    const book = vi
+      .spyOn(service as unknown as { bookToLedger: () => Promise<unknown> }, 'bookToLedger')
+      .mockResolvedValue({ status: 'posted' })
+    const out = await service.create(ctx, draft, null, { clientRequestId: 'inv_abc_12345678' })
+    expect(out).toMatchObject({ ...EXISTING, idempotentReplay: true })
+    expect(book).toHaveBeenCalledWith(EXISTING.id, ctx)
+  })
+
+  it('a replay of a posted, held or cancelled invoice books nothing', async () => {
+    const { InvoiceService } = await import('../services/invoice.service')
+    for (const row of [
+      { status: 'paid', document_status: 'posted' },
+      { status: 'cancelled', document_status: 'draft' },
+    ]) {
+      lookups = 0
+      lookup = { data: EXISTING, error: null }
+      lookupAfterConflict = { data: row, error: null }
+      const service = new InvoiceService()
+      const book = vi
+        .spyOn(service as unknown as { bookToLedger: () => Promise<unknown> }, 'bookToLedger')
+        .mockResolvedValue({ status: 'posted' })
+      await service.create(ctx, draft, null, { clientRequestId: 'inv_abc_12345678' })
+      expect(book).not.toHaveBeenCalled()
+    }
+  })
+
+  it('a replay whose booking fails again is refused, so the client keeps it queued', async () => {
+    const { InvoiceService } = await import('../services/invoice.service')
+    lookup = { data: EXISTING, error: null }
+    lookupAfterConflict = { data: { status: 'paid', document_status: 'draft' }, error: null }
+    const service = new InvoiceService()
+    vi.spyOn(
+      service as unknown as { bookToLedger: () => Promise<unknown> },
+      'bookToLedger',
+    ).mockRejectedValue(new Error('ledger down'))
+    await expect(
+      service.create(ctx, draft, null, { clientRequestId: 'inv_abc_12345678' }),
+    ).rejects.toThrow('ledger down')
+  })
+
   it('without the migration a keyed request is refused (never an unkeyed copy)', async () => {
     const { InvoiceService } = await import('../services/invoice.service')
     const { IdempotencyUnavailableError } = await import('../utils/client-request')

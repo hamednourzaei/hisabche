@@ -5,7 +5,7 @@
  * Run with: node scripts/build-ai-index.mjs
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'fs'
 import { join, extname, basename } from 'path'
 import { execSync } from 'child_process'
 import { extractSymbolsFromSource, inferPackageName } from './lib/ast-symbol-extractor.mjs'
@@ -705,6 +705,9 @@ function buildIndex() {
     routes,
   }
 
+  // .ai/codebase is gitignored: a fresh clone or worktree does not have it, and
+  // writing into a missing folder threw ENOENT after a full scan (8 Nov 2026).
+  mkdirSync(AI_DIR, { recursive: true })
   writeFileSync(GRAPH_JSON, JSON.stringify(graph, null, 2))
   console.log(`Graph written to ${GRAPH_JSON}`)
 

@@ -40,6 +40,7 @@ import {
   type VarianceLine,
 } from '../inventory-costing/stock-count.domain'
 import type { TenancyContext } from '../tenancy.service'
+import { isMissingFunctionError as isMissingFunction } from '../aggregates/aggregate-rpc'
 
 export type CycleCountStatus =
   | 'draft'
@@ -88,6 +89,33 @@ export class CycleCountService {
     if (productsError) throw new DatabaseError('Failed to read products', productsError)
     if ((products ?? []).length === 0) throw new NotFoundError('Product')
 
+    // ⚠️ ONE TRANSACTION (audit F-08, 8 Nov 2026). Header and lines used to be
+    // two inserts, «compensated» on failure by a DELETE of the header —
+    // forbidden (rule 4), and an empty count stayed forever when the DELETE
+    // failed too. `cycle_count_open` (cycle-count-04) writes both or neither.
+    const productIds = (products ?? []).map((product) => product.id)
+    const { data: openedId, error: openError } = await supabase.rpc('cycle_count_open', {
+      p_workspace_id: ctx.workspaceId,
+      p_warehouse_id: input.warehouseId,
+      p_user_id: ctx.userId,
+      p_notes: input.notes ?? null,
+      p_product_ids: productIds,
+    })
+    if (!openError && typeof openedId === 'string') return this.get(ctx, openedId)
+    if (openError && !isMissingFunction(openError)) {
+      const message = openError.message ?? ''
+      if (message.includes('CYCLE_COUNT_NO_PRODUCTS'))
+        throw new ValidationError('CYCLE_COUNT_NO_PRODUCTS')
+      if (message.includes('CYCLE_COUNT_WAREHOUSE_NOT_FOUND')) throw new NotFoundError('Warehouse')
+      throw new DatabaseError('Failed to open the count', openError)
+    }
+
+    // Until cycle-count-04 runs: the old two-step write, said out loud. No
+    // compensating DELETE any more — a header without lines is left for
+    // VERIFY-cycle-count-04 to report, never silently removed.
+    console.error(
+      '[cycle-count] CYCLE_COUNT_ATOMIC_RPC_MISSING — run docs/cycle-count-04-migration.sql',
+    )
     const { data: count, error } = await supabase
       .from('cycle_counts')
       .insert({
@@ -116,10 +144,6 @@ export class CycleCountService {
     )
 
     if (linesError) {
-      // Safe here and only here: the header is seconds old, still `counting`,
-      // and no movement has been written. A count with no lines can never be
-      // completed and would sit in the list forever.
-      await supabase.from('cycle_counts').delete().eq('id', count.id)
       throw new DatabaseError('Failed to add count lines', linesError)
     }
 

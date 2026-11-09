@@ -46,6 +46,33 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+/**
+ * One failure shape for the subscription-order routes. An operational error
+ * (4xx: not paid, wrong owner, bad token) says what it is; anything else is
+ * logged and answered with a code only — the old handlers sent the raw error
+ * message for 500s too, which leaked database and RPC text (audit F-10, 8 Nov 2026).
+ */
+function sendOrderFailure(
+  fastify: FastifyInstance,
+  reply: FastifyReply,
+  err: unknown,
+  fallbackCode: string,
+) {
+  if (err instanceof z.ZodError) {
+    return reply.code(400).send({ error: 'Validation', code: 'VALIDATION', details: err.errors })
+  }
+  if (err instanceof BaseError && err.statusCode < 500) {
+    const code = (err as BaseError & { code?: unknown }).code
+    return reply.code(err.statusCode).send({
+      error: typeof code === 'string' ? code : fallbackCode,
+      code: typeof code === 'string' ? code : fallbackCode,
+      message: err.message,
+    })
+  }
+  fastify.log.error(err)
+  return reply.code(500).send({ error: fallbackCode, code: fallbackCode })
+}
+
 export async function billingRoutes(fastify: FastifyInstance) {
   const billingService = new BillingService()
 
@@ -908,38 +935,42 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   // ─── POST /api/billing/orders (Path A or Path B) ───────────
+  //
+  // ⚠️ PUBLIC BY DESIGN, AND ONLY HERE (audit L-01, 8 Nov 2026). «Buy first,
+  // register later» needs an anonymous caller, but the global auth hook
+  // answered 401 before this handler ran, so the anonymous branch below was
+  // unreachable. The path is now in `exactPublicPaths` (index.ts) with its own
+  // rate limit. An anonymous order gets a claim token; a signed-in order is
+  // bound to its creator.
+  //
+  // ⚠️ A token that is SENT but does not verify is 401, never «anonymous». The
+  // old code swallowed the failure and made an UNOWNED order — which Path B
+  // then let any signed-in user provision (audit F-05).
   fastify.post(
     '/api/billing/orders',
     {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
       schema: {
         body: toJsonSchema(createSubscriptionOrderSchema),
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Optional auth: if token provided, check with Supabase auth
       let userId: string | undefined
-      const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+      const token = request.headers.authorization?.replace(/^Bearer\s+/i, '').trim()
       if (token) {
-        try {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser(token)
-          if (user?.id) userId = user.id
-        } catch {
-          // Token invalid or absent — proceed as anonymous Path A
+        const { data, error } = await supabase.auth.getUser(token)
+        if (error || !data.user?.id) {
+          return reply.code(401).send({ error: 'Unauthorized', code: 'UNAUTHORIZED' })
         }
+        userId = data.user.id
       }
 
       try {
-        const body = request.body as any
+        const body = createSubscriptionOrderSchema.parse(request.body)
         const result = await subscriptionOrderService.createOrder(body, userId)
         return reply.code(201).send(result)
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(err.statusCode || 500).send({
-          error: err.code || 'FAILED_TO_CREATE_ORDER',
-          message: err.message,
-        })
+      } catch (err) {
+        return sendOrderFailure(fastify, reply, err, 'FAILED_TO_CREATE_ORDER')
       }
     },
   )
@@ -971,12 +1002,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
           body.paymentMethod,
         )
         return reply.send(updated)
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(err.statusCode || 500).send({
-          error: err.code || 'PAYMENT_VERIFICATION_FAILED',
-          message: err.message,
-        })
+      } catch (err) {
+        return sendOrderFailure(fastify, reply, err, 'PAYMENT_VERIFICATION_FAILED')
       }
     },
   )
@@ -991,8 +1018,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as any
       try {
+        const body = claimSubscriptionOrderSchema.parse(request.body)
         const provisionResult = await subscriptionOrderService.claimOrderAndProvision(
           request.userId,
           body.claimToken,
@@ -1001,12 +1028,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
           body.timeZone,
         )
         return reply.code(200).send(provisionResult)
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(err.statusCode || 500).send({
-          error: err.code || 'CLAIM_PROVISION_FAILED',
-          message: err.message,
-        })
+      } catch (err) {
+        return sendOrderFailure(fastify, reply, err, 'CLAIM_PROVISION_FAILED')
       }
     },
   )
@@ -1021,8 +1044,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as any
       try {
+        const body = provisionFromOrderSchema.parse(request.body)
         const provisionResult = await subscriptionOrderService.provisionFromOrder(
           request.userId,
           body.orderId,
@@ -1031,12 +1054,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
           body.timeZone,
         )
         return reply.code(200).send(provisionResult)
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(err.statusCode || 500).send({
-          error: err.code || 'ORDER_PROVISION_FAILED',
-          message: err.message,
-        })
+      } catch (err) {
+        return sendOrderFailure(fastify, reply, err, 'ORDER_PROVISION_FAILED')
       }
     },
   )

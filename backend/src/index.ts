@@ -377,7 +377,6 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/auth/refresh',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
-    '/api/auth/verify-email',
     // ⚠️ Deliberately public, and ONLY what is registered under it: the
     // tokenised invoice view (invoice-public.routes.ts), the tokenised CRM task
     // link (crm.routes.ts) and the storefront (storefront.routes.ts), each with
@@ -399,7 +398,16 @@ server.addHook('preHandler', async (request, reply) => {
   // hook would hold an API key to the route allowlist, and the gateway is not a
   // Public API route — it is the door to them. Every tool call it makes goes
   // back through this hook, on a route the allowlist does name.
-  const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke', '/mcp']
+  // `/api/billing/orders` (POST only — the route is the only one at that exact
+  // path) is «buy first, register later»: the handler verifies a token when one
+  // is sent and binds the order to it, otherwise issues a claim token (audit L-01).
+  const exactPublicPaths = [
+    '/api/billing/plans',
+    '/api/billing/orders',
+    '/api/oauth/token',
+    '/api/oauth/revoke',
+    '/mcp',
+  ]
   const path = url.split('?')[0]
 
   if (publicPaths.some((p) => url.startsWith(p))) return

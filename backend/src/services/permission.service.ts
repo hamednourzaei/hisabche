@@ -11,7 +11,8 @@ import {
   AssignRole,
   RemoveRole,
 } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { isMissingFunctionError } from './aggregates/aggregate-rpc'
 import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
@@ -212,20 +213,29 @@ export class PermissionService {
     return data
   }
 
+  // ⚠️ ONE TRANSACTION (audit F-06, 8 Nov 2026). This used to update the role,
+  // DELETE every permission and INSERT the new set — three calls, no error
+  // checked. A failure after the DELETE left the role with no permissions and
+  // the caller was told it worked. `role_update_with_permissions`
+  // (role-permissions-atomic-01) does all of it or none of it.
   async updateRole(id: string, data: UpdateRole) {
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.name !== undefined) updates.name = data.name
-    if (data.description !== undefined) updates.description = data.description
+    const { error } = await supabase.rpc('role_update_with_permissions', {
+      p_role_id: id,
+      p_set_name: data.name !== undefined,
+      p_name: data.name ?? null,
+      p_set_description: data.description !== undefined,
+      p_description: data.description ?? null,
+      p_permission_ids: data.permissionIds ?? null,
+    })
 
-    await supabase.from('roles').update(updates).eq('id', id)
-
-    if (data.permissionIds !== undefined) {
-      await supabase.from('role_permissions').delete().eq('role_id', id)
-      if (data.permissionIds.length) {
-        await supabase
-          .from('role_permissions')
-          .insert(data.permissionIds.map((pid: string) => ({ role_id: id, permission_id: pid })))
-      }
+    if (error && isMissingFunctionError(error)) {
+      console.error(
+        '[permissions] ROLE_ATOMIC_RPC_MISSING — run docs/role-permissions-atomic-01-migration.sql',
+      )
+      await this.updateRoleInSteps(id, data)
+    } else if (error) {
+      if ((error.message ?? '').includes('ROLE_NOT_FOUND')) throw new NotFoundError('Role')
+      throw new DatabaseError('Failed to update role', error)
     }
 
     // ✅ Invalidate cache
@@ -233,6 +243,47 @@ export class PermissionService {
     await memoryCache.invalidate(this.getRoleCacheKey(id))
 
     return this.getRole(id)
+  }
+
+  /**
+   * Until role-permissions-atomic-01 runs. Every step is checked, and the new
+   * set is written BEFORE the old rows go: a failure leaves the role with too
+   * many permissions for a moment, never with none.
+   */
+  private async updateRoleInSteps(id: string, data: UpdateRole): Promise<void> {
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (data.name !== undefined) updates.name = data.name
+    if (data.description !== undefined) updates.description = data.description
+
+    const { error: roleError } = await supabase.from('roles').update(updates).eq('id', id)
+    if (roleError) throw new DatabaseError('Failed to update role', roleError)
+    if (data.permissionIds === undefined) return
+
+    const wanted = [...new Set(data.permissionIds)]
+    const { data: current, error: readError } = await supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', id)
+    if (readError) throw new DatabaseError('Failed to read role permissions', readError)
+
+    const have = new Set((current ?? []).map((row) => String(row.permission_id)))
+    const toAdd = wanted.filter((pid) => !have.has(pid))
+    const toRemove = [...have].filter((pid) => !wanted.includes(pid))
+
+    if (toAdd.length > 0) {
+      const { error } = await supabase
+        .from('role_permissions')
+        .insert(toAdd.map((pid) => ({ role_id: id, permission_id: pid })))
+      if (error) throw new DatabaseError('Failed to add role permissions', error)
+    }
+    if (toRemove.length > 0) {
+      const { error } = await supabase
+        .from('role_permissions')
+        .delete()
+        .eq('role_id', id)
+        .in('permission_id', toRemove)
+      if (error) throw new DatabaseError('Failed to remove role permissions', error)
+    }
   }
 
   async deleteRole(id: string) {

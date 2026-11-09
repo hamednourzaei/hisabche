@@ -78,15 +78,30 @@ async function branchOfRecord(
         .maybeSingle()
       return (data as { branch_id?: string | null } | null)?.branch_id ?? null
     }
+    // ⚠️ `payments` has NO `invoice_id` (live FINDING, 8 Nov 2026). The read
+    // answered 42703, supabase-js returned it as an error instead of throwing,
+    // and every payment's branch silently read «—». A payment reaches its
+    // invoices through `payment_allocations`. One branch across them is the
+    // payment's branch; several (or none) is «—» — never a guess (§12).
     if (entityType === 'payment') {
-      const { data } = await supabase
-        .from('payments')
+      const { data: allocations, error } = await supabase
+        .from('payment_allocations')
         .select('invoice_id')
         .eq('workspace_id', workspaceId)
-        .eq('id', entityId)
-        .maybeSingle()
-      const invoiceId = (data as { invoice_id?: string | null } | null)?.invoice_id
-      return invoiceId ? branchOfRecord(workspaceId, 'invoice', invoiceId) : null
+        .eq('payment_id', entityId)
+      if (error || !allocations || allocations.length === 0) return null
+      const invoiceIds = [...new Set(allocations.map((row) => String(row.invoice_id)))]
+      const { data: invoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('branch_id')
+        .eq('workspace_id', workspaceId)
+        .in('id', invoiceIds)
+      if (invoiceError || !invoices) return null
+      const branches = new Set(
+        invoices.map((row) => (row as { branch_id?: string | null }).branch_id ?? null),
+      )
+      const [only] = [...branches]
+      return branches.size === 1 && only ? only : null
     }
   } catch {
     // A missing column (branch_id before its migration) is «no branch», not a lost event.

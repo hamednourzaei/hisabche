@@ -124,7 +124,7 @@ export const PLANS: Record<
 }
 
 const TRIAL_DAYS = 7
-const GRACE_PERIOD_DAYS = 7
+export const GRACE_PERIOD_DAYS = 7
 
 /** Stripe status → our enum. Anything unmapped is REFUSED, never guessed. */
 const STRIPE_STATUS_MAP: Record<string, SubscriptionStatus> = {
@@ -242,27 +242,21 @@ export class BillingService {
    * belongs to a WORKSPACE, not to a user — otherwise handing the shop to a
    * new owner hands them a different subscription, or none.
    *
-   * The user_id lookup remains as a FALLBACK, not as an equal path: the
-   * migration's backfill deliberately leaves ambiguous rows NULL rather than
-   * guessing, so some subscriptions still have no workspace and must still
-   * resolve. Once every live row carries one, this fallback is dead code and
-   * can go.
+   * The OWNER's row remains as a FALLBACK (inside findWorkspaceSubscriptionRow),
+   * not as an equal path: the migration's backfill deliberately leaves
+   * ambiguous rows NULL rather than guessing, so some subscriptions still have
+   * no workspace and must still resolve. Once every live row carries one, this
+   * fallback is dead code and can go.
    */
+  //
+  // ⚠️ ONE RULE FOR «THIS BUSINESS'S SUBSCRIPTION» (audit L-03, 8 Nov 2026).
+  // With a workspace this used to fall back to the ACTING user's first row, while
+  // the write lock (getWorkspaceAccess) fell back to the workspace OWNER's. A
+  // member of someone else's shop saw their own plan on /billing while the lock
+  // judged the owner's. Both now call findWorkspaceSubscriptionRow.
+  // Without a workspace (account-level calls) the user's own row is the answer.
   private async findSubscriptionRow(userId: string, workspaceId?: string) {
-    if (workspaceId) {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-
-      if (error && !/column .*workspace_id.* does not exist/i.test(error.message ?? '')) {
-        throw new DatabaseError('Failed to fetch subscription', error)
-      }
-      if (data) return data
-    }
+    if (workspaceId) return this.findWorkspaceSubscriptionRow(workspaceId)
 
     const { data, error } = await supabase
       .from('subscriptions')
@@ -767,7 +761,9 @@ export class BillingService {
         }
       }
 
-      await this.expireTrial(userId)
+      // A subscription read back from a row always has an id; one without
+      // could only be expired by person, which is the bug expireTrial fixes.
+      if (subscription.id) await this.expireTrial(subscription.id, userId)
       return {
         isTrial: false,
         daysLeft: 0,
@@ -789,10 +785,16 @@ export class BillingService {
   }
 
   // ─── Expire Trial ────────────────────────────────────────────
-  // Called by the system cron worker with the subscriber's user id — a trusted
-  // internal caller, not a webhook — so the user-shaped predicate stands.
-  async expireTrial(userId: string): Promise<void> {
-    await supabase
+  // ⚠️ ONE SUBSCRIPTION, BY ITS ID, AND ONLY WHILE IT IS A TRIAL (8 Nov 2026).
+  // This used to update every row with the subscriber's user_id: a person with a
+  // paid subscription for one business and a trial for another had the PAID one
+  // turned into «free» the day the trial ended. The error was also ignored.
+  async expireTrial(
+    subscriptionId: string,
+    userId: string,
+    workspaceId?: string | null,
+  ): Promise<void> {
+    const { error } = await supabase
       .from('subscriptions')
       .update({
         is_trial: false,
@@ -801,10 +803,12 @@ export class BillingService {
         status: 'active',
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', userId)
+      .eq('id', subscriptionId)
+      .eq('is_trial', true)
 
-    // ✅ Clear cache
-    await this.invalidateCache(userId)
+    if (error) throw new DatabaseError('Failed to expire the trial', error)
+
+    await this.invalidateCache(userId, workspaceId ?? undefined)
   }
 
   // ─── Get Plan Features ──────────────────────────────────────

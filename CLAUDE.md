@@ -59,7 +59,7 @@ Rollback/Mitigation؛ (۲) Verification Query جدا. **انسان** آن‌ها
 - **route ای که با صفحه‌ای داده‌ی مشترک دارد، تب یا بخشِ همان صفحه می‌شود** — نه route تازه، نه مورد منو.
 - **نشانی قدیمی نمی‌میرد:** صفحه‌ای که بخش شد، یک جفت در `moved` (`apps/web/next.config.js`) و همان
   جفت به‌صورت `<Navigate>` در `packages/app-shell/src/app/app.tsx` می‌گیرد. دو فهرست باید یکی باشند
-  (گارد: `route-parity.test.ts`). ۲۷ جفت داریم؛ ۱۹ پوشه‌ی صفحه‌ی وب حذف شد.
+  (گارد: `route-parity.test.ts`). ۲۸ جفت داریم؛ ۱۹ پوشه‌ی صفحه‌ی وب حذف شد.
 - **قفل بخش = قفل صفحه‌ی قدیمی‌اش.** کلیدهایی مثل `/bank` و `/expiry` در `NAV_MODULE` می‌مانند با اینکه
   دیگر در منو نیستند — `isNavLocked(source)` بخش را با همان‌ها پنهان می‌کند. حذفشان = نمایش بخش به کسی که
   ماژولش قفل است. فهرست بسته در `nav-module-locks.test.ts`.
@@ -188,8 +188,9 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **V54 ممیزی Phase 5.0 با کد (DNA فقط روی دستگاه؛ نوبت/بیعانه/اشتراک بی‌UI) (۷ نوامبر)** | `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی · `V54-IMPLEMENTATION-PROGRESS.md` — **5.1+ منتظر تأیید** |
 | **V54 اجرا: «حاضر شد/نیامد» جلسه، DNA نسخه‌دار، ادامه‌ی onboarding، منوی پیشنهادی (۷ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور دوم — **operational-profile-01 منتظر اجرا و VERIFY** |
 | **V54 دور سوم: پیش‌فروش/پیش‌خرید، OTP، کمیسیون، مواد، بیعانه‌ی نوبت (۸ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور سوم — **session-deposit-01، advances-02، email-otp-01، provider-commission-01 منتظر اجرا و VERIFY** |
-| **راهنمای یک‌باره (سرور)، اسپات‌لایت، فیلتر واحد، fit-row، پیش‌فروش در نوع فاکتور (۸ نوامبر)** | `.claude/lessons-learned.md` درس ۲۵۱–۲۵۲ — **user-guide-progress-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۵۲)**                                     | `.claude/lessons-learned.md`                                                |
+| **راهنمای یک‌باره (سرور)، اسپات‌لایت، فیلتر واحد، fit-row، پیش‌فروش در نوع فاکتور (۸ نوامبر)** | `.claude/lessons-learned.md` درس ۲۵۱–۲۵۲ — user-guide-progress-01 اجرا و VERIFY شد (۸ نوامبر، همه true) |
+| **ممیزی معماری ۸ نوامبر (۱۲ سند) و اصلاح یافته‌ها؛ گام‌های مالک**       | `docs/audit/HISABCHE-MASTER-AUDIT-INDEX.md` · `docs/audit/HISABCHE-FIXES-2026-11-08.md` — **۳ migration اجرا و VERIFY شد (۹ نوامبر)؛ `offline-licence-keys-02` rev2 منتظر اجرای دوباره و VERIFY (۸ سطر)** |
+| **همه‌ی درس‌ها با شماره (۱–۲۵۳)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -442,7 +443,7 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **کش `scope: 'user'` روی routeِ `requireWorkspaceContext` ممنوع** — داده‌ی یک workspace را در دیگریِ همان آدم نشان می‌دهد. `scope: 'member'` یا `'workspace'`.
 - ⚠️ **عضویت را با `has_access` صریح بساز** (کد و تابع SQL)؛ به default ستون تکیه نکن (`docs/FIX-403.sql`).
 - **تنظیمات ← «صفحه‌ها و تب‌ها»** (`settings/pages-and-tabs-settings.tsx`) همان `PageCustomizer` و همان `useMenuCustomizerGroup` آچار هدر است؛ تب‌ها با لینک `?customize=1` (`lib/customize-flag.ts`) از خودِ هاب. فهرست تب‌ها را در تنظیمات کپی نکن؛ هاب تازه = یک ردیف در `PAGES_WITH_TABS` + گارد `pages-and-tabs-settings.test.ts`.
-- ⚠️ **workspace و عضویت مالک فقط با `workspace_create_with_owner`** (یک تراکنش، `workspace-create-01`). مسیر دو مرحله‌ای فقط وقتی خودِ تابع نیست و با لاگ `WORKSPACE_ATOMIC_RPC_MISSING`؛ بعد از VERIFY حذفش کن. هیچ چیزِ مشتق از secret (پیشوند، طول) لاگ نشود.
+- ⚠️ **workspace و عضویت مالک فقط با `workspace_create_with_owner`** (یک تراکنش، `workspace-create-01`). مسیر دو مرحله‌ای دیگر در کد نیست (`workspace.service.ts`: خطای RPC = خطا). هیچ چیزِ مشتق از secret (پیشوند، طول) لاگ نشود.
 - ⚠️ **پیش‌فروش/پیش‌خرید/بیعانه = یک موتور `order_deposits` با `source_type`** (پیش‌فروش و پیش‌خرید سند خودشان‌اند: `order_id = id`). سمت تأمین‌کننده نقش `supplier_advances` و توابع `supplier_advance_apply/refund`؛ موتور پیش‌پرداخت دوم نساز. درآمد/هزینه فقط با فاکتور.
 - ⚠️ **نوبت = جلسه‌ی خدمت** (UI، آفلاین، sync)؛ جدول `appointments` موتور موازیِ بی‌UI است — وصلش نکن. حرکت بی‌پول جلسه فقط `POST /service-delivery/sessions/:id/status` (`SESSION_STATUS_MOVES`) و هر وضعیت تازه‌ی صف دستگاه شاخه‌ی خودش را در `sync-engine.ts` می‌خواهد. DNA روی workspace فقط با `workspace_set_operational_dna` (نسخه + تاریخچه)؛ منوی پیشنهادی از DNA یک بار به‌ازای نسخه (`usePageLook.suggest`).
 - ⚠️ **اول FINDING، بعد migration.** حدس درباره‌ی دیتابیس زنده را با یک کوئری خواندنی بسنج؛ کدِ ۴۰۳ را از **بدنه‌ی پاسخ** بخوان (`code`)، نه از عدد.
@@ -464,7 +465,7 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **مدل فقط نام عملیات و فیلد پر می‌کند.** id، route، workspace و «حدس» از draft حذف می‌شوند (`parseIntent`)؛ انتخابِ کاربر باید یکی از گزینه‌های پیشنهادشده باشد (`applyAnswers`)؛ کالای بی‌قیمت **پرسیده می‌شود، صفر فروخته نمی‌شود**؛ مشتریِ نام‌برده‌ی پیدانشده سؤال است، نه فروش نقدیِ بی‌نام.
 - ⚠️ **«یک بار اجرا» = وضعیت در WHERE** (`repo.move(…, ['proposed'], …)`) + trigger رو‌به‌جلو + `Idempotency-Key = aip-<runId>`. dry-run هرگز تأیید نمی‌شود (trigger). عملیات مالی هرگز auto-approve نمی‌شود، هر چه تنظیم بگوید (`mayAutoApprove`). سهمیه = یک ردیف `ai_query_log` به‌ازای هر run، نه هر فراخوانی مدل.
 - ⚠️ **تغییری که پیشنهاد و بعداً تأیید می‌شود باید شرطی نوشته شود.** `CustomerService.update(…, { expectedUpdatedAt })` فقط اگر ردیف همان باشد می‌نویسد، وگرنه `CUSTOMER_CHANGED` (۴۰۹). `PATCH /api/customers/:id` حالا رد را با کد خودش برمی‌گرداند، نه ۵۰۰.
-- ⚠️ **`POST /api/invoices` و `POST|PATCH|DELETE /api/customers` در route هیچ `requireCapability` ندارند** (فقط عضویت؛ ویرایش مشتری در سرویس `scopes.assertMay` دارد، ساخت فاکتور ندارد). نقش سفارشیِ «فاکتور: نمی‌بیند» منو را پنهان می‌کند ولی HTTP مستقیم را نمی‌بندد. پایپ‌لاین خودش `holds()` را می‌سنجد؛ خودِ routeها هنوز باز و **گزارش‌شده، اصلاح‌نشده**‌اند.
+- ⚠️ **`POST /api/invoices` و `POST|PATCH|DELETE /api/customers` حالا `requireCapability` دارند** (`invoice.create` / `customer.write`، تأییدشده در ممیزی ۸ نوامبر). ⚠️ هنوز حدود ۵۰ route نوشتنی فقط `requireRole(…, 'manager')` (نقش پایه) دارند، نه capability — اثر نقش سفارشی روی آن‌ها سنجیده نشده (`HISABCHE-MULTITENANCY-SECURITY-AUDIT.md` F-07).
 - **چارچوب اتصال‌ها ساخته نشده** (۱۵ تعریف، صفر adapter، صفر اعتبارنامه) — صفحه‌ای برایش نساز.
 - **لندینگ یکی است (۱۰ اکتبر).** ده واریانتِ مقایسه‌ای ساخته، دیده و **حذف** شدند؛ دوباره نسازشان و نوار انتخاب واریانت هم برنگردد. بالای لندینگ «سفر یک فاکتور» است (`landing/journey/`): `journey-hero.tsx` سرور-کامپوننت است و `<h1>` و دعوت پایانی را خودش رندر می‌کند؛ `journey-stage.tsx` فقط می‌گوید کدام beat روی صفحه است؛ **فقط `scene.ts` حق import از `three` دارد** و `SceneCanvas` آن را بعد از idle می‌آورد تا LCP منتظر WebGL نماند. رنگ صحنه از توکن (`runtime.color('--color-success')`)، متن فاکتور از `invoices.*` و با برچسب «نمونه». بعد از سفر، همان بخش‌های لندینگ اصلی و فوتر می‌آیند. گارد: `landing-journey.test.ts`. ⚠️ **Lighthouse روی این لندینگ هنوز اجرا نشده** — قبل از انتشار روی بیلد production اندازه بگیر.
 - **سالن سفر فاکتور (دور دوم، ۱۰ اکتبر).** «داستان کجاست» فقط از `journey-machine.ts` می‌آید (`journeyAt` برای React، `journeyInto` برای صحنه — بدون ساختن آرایه در هر فریم). عددهای تابلوها فقط از `landing-demo-data.ts` → `journey-screens.ts`؛ شات دوربین هر ایستگاه در `journey-shots.ts`؛ نام کسب‌وکارهای روی دیوار در `journey-industries.ts` (فقط نوع‌هایی که محصول واقعاً پوشش می‌دهد). صاحب پروژه دوربین را **هم‌سطح چشم** می‌خواهد، نه از بالا (گارد در `landing-journey-scene-data.test.ts`). دعوت پایانی تا هسته نترکیده نمی‌آید (`snapshot.invited`).
@@ -627,6 +628,15 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **توکن برنامه‌ی OAuth خودش یک ردیف `api_keys` با `app_id` است** — سیستم توکن دوم نساز. حذف نصب = باطل‌کردن همان کلید (تریگر `api_keys_end_app_installation_trg` نصب را می‌بندد و endpoint را برمی‌دارد، از هر مسیری). نصب/به‌روزرسانی/ارسال و انتشار نسخه فقط با تابع‌های migration 07. هر نسخه snapshot پیش‌نویس است؛ کسب‌وکار ناشر پیش‌نویس را آزمایش می‌کند و بقیه فقط نسخه‌ی منتشرشده را می‌گیرند (`liveConfig`). بعد از تغییر scope کلید، `developerService.forgetKeys` — کلید کش را حدس نزن. grant هنگام exchange دوباره با دسترسیِ **فعلی** نصب‌کننده حساب می‌شود. تا سرور `redirect_uri` را تأیید نکرده، به هیچ‌جا redirect نکن (open redirect).
 - **Sandbox یک workspace است** (`is_sandbox`/`sandbox_of`، migration 06)، نه لایه‌ی تازه — ایزوله‌بودنش از همان `workspace_id` می‌آید. فقط با `create_sandbox_workspace` ساخته می‌شود؛ ورود/خروج فقط با `enterWorkspace` (`packages/ui/src/lib/enter-workspace.ts`)؛ نشانش `<SandboxNotice />` در هر دو shell است.
 - ⚠️ **صفحه‌ی وب بیرون از `(dashboard)` فقط namespace هایی را دارد که layoutش می‌دهد** (root فقط CORE). container مشترکی که آن‌جا رندر می‌شود باید layout با `ScopedMessages` و namespace های خودش داشته باشد، وگرنه اولین `t()` صفحه را می‌اندازد (BUG-079، گارد `public-page-namespaces.test.ts`).
+
+**ممیزی و اصلاح ۸–۹ نوامبر** — جزئیات: `docs/audit/HISABCHE-FIXES-2026-11-08.md`، درس ۲۵۳
+
+- ⚠️ **کلید عمومی مجوز آفلاین فقط از کد** (`app-shell/src/shared/lib/licence-keys.ts`)؛ دستگاه کلید را نه می‌گیرد نه نگه می‌دارد. ⚠️ **کلید خصوصی فقط در دیتابیس** (`offline_license_signing_keys`) — ریسک پذیرفته‌شده با تصمیم مالک (۹ نوامبر): «در دیتابیس بماند»؛ قاعده: «بک‌اند فقط یک پله، همه چیز در دیتابیس». مسیر env وجود ندارد و نسازش. در production کلید تازه ساخته نمی‌شود؛ کلید پاک یا عوض نمی‌شود (`offline-licence-keys-02` rev2). چرخش: `scripts/generate-offline-licence-keys.mjs`.
+- ⚠️ **اعلان = یک نفر داخل یک workspace** (`user_id` + `workspace_id` یا NULL برای اعلان حساب). routeها `requireWorkspaceContext` و کش `member` دارند.
+- ⚠️ **retry فاکتورِ دفترنشده آن را تمام می‌کند** (`finishReplayedInvoice` → `bookToLedger`). ثبت فاکتور هنوز یک تراکنش نیست.
+- ⚠️ **اشتراکِ یک workspace فقط از `findWorkspaceSubscriptionRow`** (ردیف workspace، بعد ردیف مالک) — هم صفحه و هم قفل. پایان آزمایشی فقط بعد از grace و با id ردیف.
+- ⚠️ **`payments` ستون `invoice_id` ندارد و `purchase_order_items` ستون `workspace_id` ندارد** (FINDING زنده، ۹ نوامبر). پرداخت ← فاکتور فقط از `payment_allocations`. ابزار drift حالا سبز است؛ ستونی که فقط زنده تأیید شده در `CONFIRMED_LIVE` آن می‌آید.
+- ⚠️ **سفارش اشتراکِ بی‌صاحب فقط با claim token** فعال می‌شود؛ `/api/billing/orders` عمومی است با rate limit.
 
 **وب عمومی، robots و سه پلتفرم (از باگ‌های ۳ اکتبر)**
 

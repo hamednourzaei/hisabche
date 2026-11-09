@@ -154,8 +154,21 @@ describe('routes', () => {
       ),
     ]
     expect(routes).toHaveLength(5)
-    for (const [, , , guard] of routes) expect(guard).toBe('guard')
-    expect(src).toContain('const guard = [authenticate, requireWorkspaceContext]')
+    // Audit F-03 (8 Nov 2026): membership alone let any member change images.
+    // Reading needs product.read; the four writes need product.write.
+    expect(routes.map(([, method, , guard]) => `${method}:${guard}`).sort()).toEqual([
+      'delete:write',
+      'get:read',
+      'patch:write',
+      'post:write',
+      'put:write',
+    ])
+    expect(src).toContain(
+      "const read = [authenticate, requireWorkspaceContext, requireCapability('product.read')]",
+    )
+    expect(src).toContain(
+      "const write = [authenticate, requireWorkspaceContext, requireCapability('product.write')]",
+    )
     const index = readFileSync(join(__dirname, '..', 'index.ts'), 'utf8')
     expect(index).toContain('await server.register(productImagesRoutes)')
   })

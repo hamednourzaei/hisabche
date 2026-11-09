@@ -316,9 +316,11 @@ describe('the gateway on the REAL server', () => {
   const index = readFileSync(join(__dirname, '..', 'index.ts'), 'utf8')
 
   it('the global auth hook leaves /mcp to the gateway’s own credential check', () => {
-    const line = index.split(/\r?\n/).find((entry) => entry.includes('const exactPublicPaths ='))
-    expect(line).toBeDefined()
-    expect(line).toContain("'/mcp'")
+    // The list spans several lines since /api/billing/orders joined it (8 Nov 2026).
+    const start = index.indexOf('const exactPublicPaths =')
+    expect(start).toBeGreaterThan(0)
+    const list = index.slice(start, index.indexOf(']', start))
+    expect(list).toContain("'/mcp'")
   })
 
   it('/mcp is matched exactly, never as a prefix that would open other paths', () => {

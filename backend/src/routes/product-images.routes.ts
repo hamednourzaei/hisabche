@@ -20,11 +20,16 @@ import { z } from 'zod'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { productImagesService } from '../services/product-images/product-images.service'
 
-const guard = [authenticate, requireWorkspaceContext]
+// ⚠️ Reading needs product.read, changing needs product.write (audit F-03, 8 Nov 2026).
+// These routes used to check membership only: any member — a custom role that
+// may not see products included — could add, reorder or delete product images.
+const read = [authenticate, requireWorkspaceContext, requireCapability('product.read')]
+const write = [authenticate, requireWorkspaceContext, requireCapability('product.write')]
 
 const altText = z.string().trim().max(200)
 const addBody = z.object({ base64: z.string().min(1), altText: altText.optional() })
@@ -37,7 +42,7 @@ export async function productImagesRoutes(fastify: FastifyInstance) {
   const fail = (reply: FastifyReply, err: unknown, fallback: string) =>
     sendFailure(reply, fastify.log, err, fallback)
 
-  fastify.get('/api/products/:id/images', { preHandler: guard }, async (request, reply) => {
+  fastify.get('/api/products/:id/images', { preHandler: read }, async (request, reply) => {
     try {
       const { id } = request.params as Params
       return reply.send({ images: await productImagesService.list(request.tenancy, id) })
@@ -46,7 +51,7 @@ export async function productImagesRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.post('/api/products/:id/images', { preHandler: guard }, async (request, reply) => {
+  fastify.post('/api/products/:id/images', { preHandler: write }, async (request, reply) => {
     try {
       const { id } = request.params as Params
       const body = addBody.parse(request.body)
@@ -59,7 +64,7 @@ export async function productImagesRoutes(fastify: FastifyInstance) {
   })
 
   // Declared before /:imageId so the static segment wins.
-  fastify.put('/api/products/:id/images/order', { preHandler: guard }, async (request, reply) => {
+  fastify.put('/api/products/:id/images/order', { preHandler: write }, async (request, reply) => {
     try {
       const { id } = request.params as Params
       const { ids } = orderBody.parse(request.body)
@@ -73,7 +78,7 @@ export async function productImagesRoutes(fastify: FastifyInstance) {
 
   fastify.patch(
     '/api/products/:id/images/:imageId',
-    { preHandler: guard },
+    { preHandler: write },
     async (request, reply) => {
       try {
         const { id, imageId } = request.params as Params
@@ -89,7 +94,7 @@ export async function productImagesRoutes(fastify: FastifyInstance) {
 
   fastify.delete(
     '/api/products/:id/images/:imageId',
-    { preHandler: guard },
+    { preHandler: write },
     async (request, reply) => {
       try {
         const { id, imageId } = request.params as Params

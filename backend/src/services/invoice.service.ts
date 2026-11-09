@@ -852,7 +852,10 @@ export class InvoiceService {
     // ═══════════════════════════════════════════════════════════════════════
     if (clientRequestId) {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
-      if (existing) return { ...existing, idempotentReplay: true }
+      if (existing) {
+        await this.finishReplayedInvoice(ctx, String(existing.id))
+        return { ...existing, idempotentReplay: true }
+      }
     }
 
     // Read AFTER a replayed request has been answered (a replay reads nothing
@@ -4073,8 +4076,51 @@ export class InvoiceService {
     }
   }
 
+  /**
+   * ⚠️ A RETRY FINISHES THE DOCUMENT IT ALREADY STARTED (audit C-01, 8 Nov 2026).
+   *
+   * Creating an invoice is not one transaction: `invoice_write_document` commits
+   * the invoice, its lines and its stock movements; costing and the ledger run
+   * after it. When the ledger step failed the request answered 500 — and the
+   * client's retry, with the same idempotency key, was answered «already made»
+   * from the replay branch, so the invoice stayed with stock moved and NO
+   * journal entry until someone ran «post unposted» by hand.
+   *
+   * Now a replay of an invoice that is not posted runs the same booking as
+   * «post to ledger». Both halves are idempotent (`inventory_consume_layers`
+   * per consumer line; one journal entry per source document), so a retry
+   * after a lost RESPONSE books nothing twice. A failure here throws again: the
+   * client keeps the request queued instead of being told it is done.
+   *
+   * No capability check of its own: the caller already passed
+   * `invoice.create` for this very request; this is that request, finished.
+   */
+  private async finishReplayedInvoice(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('status, document_status')
+      .eq('id', invoiceId)
+      .eq('workspace_id', ctx.workspaceId)
+      .maybeSingle()
+    if (error) {
+      // Before the J3 migration there is no document_status: nothing to finish.
+      if (error.code === '42703') return
+      throw new DatabaseError('Failed to read the replayed invoice', error)
+    }
+    if (!data) return
+    const status = String(data.status ?? '')
+    if (status === 'cancelled' || status === AWAITING_APPROVAL_STATUS) return
+    if (data.document_status === 'posted') return
+    await this.bookToLedger(invoiceId, ctx)
+  }
+
   async postToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {
     await scopes.assertMay(ctx, 'invoice', id, 'invoice.update')
+    return this.bookToLedger(id, ctx)
+  }
+
+  /** Costing + journal entry for an invoice that exists. Idempotent. */
+  private async bookToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {
     const invoice: any = await this.getById(id, ctx)
 
     const status = String(invoice?.status ?? '')

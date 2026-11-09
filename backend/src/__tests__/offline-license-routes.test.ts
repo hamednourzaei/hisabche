@@ -24,20 +24,23 @@ const dbState = {
   devices: [] as Array<Record<string, unknown>>,
   events: [] as Array<Record<string, unknown>>,
   logs: [] as Array<Record<string, unknown>>,
+  /** The signing-key row, or null = offline-licence-keys-01 not run (42P01). */
+  signingKey: null as Record<string, unknown> | null,
 }
 
 vi.mock('../db', () => ({
   supabase: {
     from: (table: string) => {
-      // The key table before offline-licence-keys-01 has run.
+      // The key lives ONLY here (owner decision, 9 Nov 2026). No row set =
+      // the table before offline-licence-keys-01 has run.
       if (table === 'offline_license_signing_keys') {
         return {
           select: () => ({
             is: () => ({
-              maybeSingle: async () => ({
-                data: null,
-                error: { code: '42P01', message: 'relation does not exist' },
-              }),
+              maybeSingle: async () =>
+                dbState.signingKey
+                  ? { data: dbState.signingKey, error: null }
+                  : { data: null, error: { code: '42P01', message: 'relation does not exist' } },
             }),
           }),
         }
@@ -179,12 +182,20 @@ vi.mock('../middleware/workspace.middleware', () => ({
   },
 }))
 
+/** Signing configured: the known pair is the active row of the key table. */
+function useTestKey() {
+  dbState.signingKey = {
+    key_id: 'v1',
+    private_key_hex: TEST_KEYPAIR.secretKeyHex,
+    public_key_hex: TEST_KEYPAIR.publicKeyHex,
+  }
+}
+
 describe('Offline Licence Endpoints', () => {
   let app: FastifyInstance
 
   beforeEach(async () => {
-    delete process.env.OFFLINE_LICENSE_PRIVATE_KEY
-    delete process.env.OFFLINE_LICENSE_KEY_ID
+    dbState.signingKey = null
 
     dbState.subscription = {
       plan: 'OFFLINE',
@@ -214,7 +225,7 @@ describe('Offline Licence Endpoints', () => {
   })
 
   it('POST /api/billing/offline-license returns 403 OFFLINE_PLAN_REQUIRED when workspace plan is not OFFLINE', async () => {
-    process.env.OFFLINE_LICENSE_PRIVATE_KEY = TEST_KEYPAIR.secretKeyHex
+    useTestKey()
     dbState.subscription = {
       plan: 'FREE',
       status: 'active',
@@ -234,8 +245,7 @@ describe('Offline Licence Endpoints', () => {
   })
 
   it('POST /api/billing/offline-license issues a valid cryptographically signed licence with configured key', async () => {
-    process.env.OFFLINE_LICENSE_PRIVATE_KEY = TEST_KEYPAIR.secretKeyHex
-    process.env.OFFLINE_LICENSE_KEY_ID = 'v1'
+    useTestKey()
 
     const targetDeviceId = '44444444-4444-4444-4444-444444444444'
 

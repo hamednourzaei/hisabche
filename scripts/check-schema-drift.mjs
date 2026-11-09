@@ -43,7 +43,9 @@ const SERVICES = join(ROOT, 'backend', 'src', 'services')
 const DRIZZLE = join(ROOT, 'backend', 'src', 'drizzle-schema.ts')
 
 const COLUMN_TYPES =
-  'uuid|text|integer|bigint|numeric|boolean|date|timestamptz|timestamp|jsonb|bigserial|serial'
+  // ⚠️ `time` and the rest were missing: `attendance.check_in time` was invisible,
+  // and every query reading it was reported as a 42703 that does not happen.
+  'uuid|text|integer|bigint|smallint|int|int4|int8|numeric|decimal|real|double precision|boolean|bool|date|timestamptz|timestamp|timetz|time|interval|jsonb|json|bigserial|serial|smallserial|varchar|character varying|char|character|bytea|inet|citext|text\[\]|uuid\[\]'
 
 // ─── 1. The schema this repository describes ────────────────────────────────
 
@@ -63,7 +65,12 @@ const add = (table, column) => {
   known.get(table).add(column)
 }
 
-for (const match of sql.matchAll(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)\s*\(([\s\S]*?)\n\);/gi)) {
+// ⚠️ `public.` is optional: most migrations since October write `public.x`, and
+// a parser that only knew bare names reported their columns as missing
+// (audit D-01, 8 Nov 2026 — e.g. invoices.exchange_rate, attendance.ends_next_day).
+for (const match of sql.matchAll(
+  /CREATE TABLE (?:IF NOT EXISTS )?(?:public\.)?(\w+)\s*\(([\s\S]*?)\n\);/gi,
+)) {
   const table = match[1].toLowerCase()
 
   for (const line of match[2].split('\n')) {
@@ -110,11 +117,42 @@ for (const match of drizzle.matchAll(/pgTable\(\s*'(\w+)',\s*\{([\s\S]*?)\n {2}\
  */
 const PREDATES_THIS_REPO = new Set(['workspaces'])
 
+/**
+ * Columns a LIVE read-only FINDING confirmed, which no SQL here describes.
+ *
+ * Each entry names the FINDING and its date. Only the owner's real output may
+ * add a line — never a guess from code — and a later migration that describes
+ * the column should remove it.
+ *
+ *   docs/FINDING-schema-drift-2026-11-08.sql, run by the owner 9 Nov 2026:
+ *     product_unit_options.is_sale_default  exists = true
+ *     workflow_instances.status             exists = true
+ *     interactions.opportunity_id           exists = false — read on purpose:
+ *       crm.repository.ts treats the 42703 as «no activity yet» (isMissingColumn)
+ *
+ * The same FINDING found payments.invoice_id and purchase_order_items.workspace_id
+ * ABSENT; those reads were real bugs and were fixed in code, not listed here.
+ */
+const CONFIRMED_LIVE = new Map([
+  ['product_unit_options', ['is_sale_default']],
+  ['workflow_instances', ['status']],
+  ['interactions', ['opportunity_id']],
+])
+for (const [table, columns] of CONFIRMED_LIVE) for (const column of columns) add(table, column)
+
 for (const table of PREDATES_THIS_REPO) judgeable.delete(table)
 
 // An ALTER teaches a column whichever source first described the table.
-for (const match of sql.matchAll(/ALTER TABLE (\w+)\s+ADD COLUMN (?:IF NOT EXISTS )?(\w+)/gi)) {
-  add(match[1].toLowerCase(), match[2].toLowerCase())
+// One ALTER may add several columns (`ADD COLUMN a …, ADD COLUMN b …`), span
+// lines, and name the table with `public.`, `ONLY` or `IF EXISTS`; the
+// statement runs to its `;`.
+for (const match of sql.matchAll(
+  /ALTER TABLE (?:IF EXISTS )?(?:ONLY )?(?:public\.)?(\w+)([\s\S]*?);/gi,
+)) {
+  const table = match[1].toLowerCase()
+  for (const column of match[2].matchAll(/ADD COLUMN (?:IF NOT EXISTS )?"?(\w+)"?/gi)) {
+    add(table, column[1].toLowerCase())
+  }
 }
 
 // ─── 2. What the services assume ────────────────────────────────────────────
@@ -158,8 +196,12 @@ function inspect(file) {
         .replace(/\w+\s*(?:!\w+)?\s*\([^)]*\)/g, '')
 
       for (const raw of flat.split(',')) {
-        const column = raw.trim().split(':')[0].trim().toLowerCase()
-        if (!column || /[()*!]/.test(column)) continue
+        // PostgREST alias is `alias:column` — the column is the part AFTER the colon.
+        const parts = raw.trim().split(':')
+        const column = (parts[1] ?? parts[0] ?? '').trim().toLowerCase()
+        // A ${CONSTANT} column list is a reference, not a column name: the
+        // constant is checked where it is declared.
+        if (!column || /[()*!]/.test(column) || column.includes('${')) continue
         report(column, 'select')
       }
     }

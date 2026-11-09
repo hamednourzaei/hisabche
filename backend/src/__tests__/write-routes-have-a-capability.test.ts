@@ -38,6 +38,11 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'activity.routes.ts PATCH /api/v1/activities/mark-read': 'OWN_STATE',
   'activity.routes.ts PATCH /api/v1/activities/mark-all-read': 'OWN_STATE',
   'activity.routes.ts DELETE /api/v1/activities/:id': 'OWN_STATE',
+  // Not new exemptions: these routes were OUTSIDE any workspace until 8 Nov 2026
+  // (audit F-04) and so outside this guard. Marking one's own notifications read
+  // is the same kind of write as the two activity lines above.
+  'notification.routes.ts PATCH /api/v1/notifications/mark-read': 'OWN_STATE',
+  'notification.routes.ts PATCH /api/v1/notifications/mark-all-read': 'OWN_STATE',
   'permission.routes.ts POST /api/permissions/check': 'OWN_STATE',
   'personalization.routes.ts PATCH /visibility': 'OWN_STATE',
   'personalization.routes.ts POST /visibility/reset': 'OWN_STATE',
@@ -65,10 +70,6 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'crm.routes.ts PATCH /api/opportunities/:id': 'SERVICE_DECIDES',
   'mcp.routes.ts POST /api/ai-requests/:id/reject': 'SERVICE_DECIDES',
   'mcp.routes.ts POST /api/ai-requests/:id/approve': 'SERVICE_DECIDES',
-  'product-images.routes.ts POST /api/products/:id/images': 'SERVICE_DECIDES',
-  'product-images.routes.ts PUT /api/products/:id/images/order': 'SERVICE_DECIDES',
-  'product-images.routes.ts PATCH /api/products/:id/images/:imageId': 'SERVICE_DECIDES',
-  'product-images.routes.ts DELETE /api/products/:id/images/:imageId': 'SERVICE_DECIDES',
   'sync.routes.ts POST /api/sync/push': 'SERVICE_DECIDES',
   'sync.routes.ts POST /api/sync/lease': 'SERVICE_DECIDES',
   'sync.routes.ts DELETE /api/sync/lease': 'SERVICE_DECIDES',
@@ -187,9 +188,7 @@ describe('write routes and the capability they need', () => {
   it('the money and stock families carry no exemption at all', () => {
     const money =
       /(invoice|payment|account|inventory|warehouse|product|customer|purchas|budget|payroll|ledger|stock|till|pos)/
-    const exempt = Object.keys(LEDGER).filter((key) =>
-      money.test(key.split(' ')[0]!.replace('product-images', '')),
-    )
+    const exempt = Object.keys(LEDGER).filter((key) => money.test(key.split(' ')[0]!))
     expect(exempt, 'a money or stock route must name its capability').toEqual([])
   })
 })

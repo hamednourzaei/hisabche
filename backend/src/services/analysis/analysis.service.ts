@@ -218,10 +218,7 @@ export class AnalysisService {
     if (orderError) throw new DatabaseError('Failed to read purchase orders', orderError)
 
     const live = (orders ?? []).filter((order) => order.supplier_id && order.status !== 'cancelled')
-    const items = await this.orderItems(
-      ctx.workspaceId,
-      live.map((order) => order.id),
-    )
+    const items = await this.orderItems(live.map((order) => order.id))
 
     return supplierAnalysis({
       asOf,
@@ -231,7 +228,11 @@ export class AnalysisService {
     })
   }
 
-  private async orderItems(workspaceId: string, orderIds: readonly string[]) {
+  // ⚠️ `purchase_order_items` has NO `workspace_id` (live FINDING, 8 Nov 2026):
+  // filtering on it answered 42703 and the supplier analysis failed with a 500.
+  // The boundary is the order ids themselves — every one comes from the
+  // workspace-scoped `purchase_orders` read above, never from the request.
+  private async orderItems(orderIds: readonly string[]) {
     const byOrder = new Map<
       string,
       Array<{ product_id: string; quantity: number | string; total_price: number | string }>
@@ -251,7 +252,6 @@ export class AnalysisService {
         supabase
           .from('purchase_order_items')
           .select('purchase_order_id, product_id, quantity, total_price')
-          .eq('workspace_id', workspaceId)
           .in('purchase_order_id', chunk)
           .order('id', { ascending: true })
           .range(from, to),

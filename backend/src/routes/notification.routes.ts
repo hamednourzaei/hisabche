@@ -7,7 +7,9 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { NotificationService } from '../services/notification.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import type { NotificationScope } from '../services/notification.service'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -30,6 +32,14 @@ const markReadBodySchema = z.object({
   ids: z.array(z.string()).min(1, 'ids must have at least one item'),
 })
 
+/**
+ * One person inside the workspace requireWorkspaceContext resolved (audit F-04).
+ * `request.tenancy` is the only source: never `request.userId` alone.
+ */
+function scopeOf(request: FastifyRequest): NotificationScope {
+  return { userId: request.tenancy.userId, workspaceId: request.tenancy.workspaceId }
+}
+
 export async function notificationRoutes(fastify: FastifyInstance) {
   const notificationService = new NotificationService()
 
@@ -39,18 +49,19 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 30, keyPrefix: 'notifications' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'notifications' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const raw = request.query as Record<string, string>
         const filters = querySchema.parse(raw)
-        const result = await notificationService.list(request.userId, filters)
+        const result = await notificationService.list(scopeOf(request), filters)
         return reply.send(result)
       } catch (err: any) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.code(500).send({ error: 'Failed to read notifications' })
       }
     },
   )
@@ -61,16 +72,17 @@ export async function notificationRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 15, keyPrefix: 'notifications-unread' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 15, keyPrefix: 'notifications-unread' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const count = await notificationService.getUnreadCount(request.userId)
+        const count = await notificationService.getUnreadCount(scopeOf(request))
         return reply.send({ count })
       } catch (err: any) {
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.code(500).send({ error: 'Failed to read notifications' })
       }
     },
   )
@@ -79,7 +91,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/v1/notifications/mark-read',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       // ✅ استفاده از Schema ساده
       schema: { body: toJsonSchema(markReadBodySchema) },
     },
@@ -87,14 +99,10 @@ export async function notificationRoutes(fastify: FastifyInstance) {
       try {
         const body = request.body as { ids: string[] }
 
-        console.log('📝 [mark-read] Received body:', JSON.stringify(body))
-
         // ✅ Validation با try-catch
         const { ids } = markReadBodySchema.parse(body)
 
-        console.log('📝 [mark-read] Validated ids:', ids)
-
-        const updated = await notificationService.markAsRead(request.userId, ids)
+        const updated = await notificationService.markAsRead(scopeOf(request), ids)
         await clearCache(`notifications:${request.userId}:*`)
         await clearCache(`notifications-unread:${request.userId}:*`)
         return reply.send({ success: true, count: updated.length })
@@ -110,10 +118,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
           })
         }
 
-        return reply.code(500).send({
-          error: err.message,
-          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-        })
+        return reply.code(500).send({ error: 'Failed to update notifications' })
       }
     },
   )
@@ -122,22 +127,17 @@ export async function notificationRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/v1/notifications/mark-all-read',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        console.log('📝 [mark-all-read] UserId:', request.userId)
-
-        await notificationService.markAllAsRead(request.userId)
-        await clearCache('notifications:*')
-        await clearCache('notifications-unread:*')
+        await notificationService.markAllAsRead(scopeOf(request))
+        await clearCache(`notifications:${request.userId}:*`)
+        await clearCache(`notifications-unread:${request.userId}:*`)
         return reply.send({ success: true })
       } catch (err: any) {
         fastify.log.error('❌ [mark-all-read] Error:', err)
-        return reply.code(500).send({
-          error: err.message,
-          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-        })
+        return reply.code(500).send({ error: 'Failed to update notifications' })
       }
     },
   )

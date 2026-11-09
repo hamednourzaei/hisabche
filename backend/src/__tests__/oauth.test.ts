@@ -202,12 +202,22 @@ describe('wiring', () => {
   it('only the token and revoke endpoints are public, and no oauth route is open to API keys', async () => {
     // Both are called by the APP'S SERVER, which proves itself with its client
     // secret — there is no user session to authenticate (RFC 6749 §3.2, RFC 7009).
-    expect(read('index.ts')).toContain(
-      // `/mcp` joined this list on 4 October 2026: the MCP gateway checks the
-      // integration credential itself (mcp-gateway.test.ts). No OTHER oauth
-      // path is public.
-      "const exactPublicPaths = ['/api/billing/plans', '/api/oauth/token', '/api/oauth/revoke', '/mcp']",
+    // `/mcp` joined this list on 4 October 2026 (the gateway checks its own
+    // credential, mcp-gateway.test.ts); `/api/billing/orders` on 8 November
+    // («buy first», which verifies a sent token itself). No OTHER oauth path is
+    // public — the list is read whole and compared exactly.
+    const index = read('index.ts')
+    const start = index.indexOf('const exactPublicPaths =')
+    const list = [...index.slice(start, index.indexOf(']', start)).matchAll(/'([^']+)'/g)].map(
+      (m) => m[1],
     )
+    expect(list).toEqual([
+      '/api/billing/plans',
+      '/api/billing/orders',
+      '/api/oauth/token',
+      '/api/oauth/revoke',
+      '/mcp',
+    ])
     const { API_ROUTE_SCOPES } = await import('../services/developer/developer.domain')
     expect(
       Object.keys(API_ROUTE_SCOPES).filter((k) => /oauth|developer|marketplace|admin/.test(k)),

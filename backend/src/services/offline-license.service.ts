@@ -7,7 +7,6 @@ import { randomUUID } from 'node:crypto'
 import {
   generateOfflineLicenseKeyPair,
   hexToBytes,
-  offlineLicensePublicKeyOf,
   signOfflineLicense,
   type DeviceSeat,
   type OfflineLicensePayload,
@@ -222,31 +221,37 @@ export function sanitizeLicenseLogEvidence(raw: unknown): Record<string, unknown
 
 export class OfflineLicenseService {
   /**
-   * The signing key. The backend makes it the first time it is needed and
-   * keeps it in `offline_license_signing_keys` (offline-licence-keys-01) —
-   * no environment file to set (owner, 22 Oct 2026). Only service_role can
-   * read that table. `OFFLINE_LICENSE_PRIVATE_KEY`, when set, still wins:
-   * that is how tests sign with a known pair.
-   * Returns null only when the table is missing (migration not run yet).
+   * The signing key — read ONLY from `offline_license_signing_keys`
+   * (offline-licence-keys-01). Returns null when no usable key exists (the
+   * route answers 503 LICENSE_SIGNING_NOT_CONFIGURED).
    */
+  //
+  // ⚠️ OWNER DECISION, 9 Nov 2026: «در دیتابیس بماند». The private key stays in
+  // the database; the backend stores nothing of its own («بک‌اند فقط یک پله»).
+  // Audit F-02 (a database read can copy the key and sign licences) is an
+  // ACCEPTED RISK by that decision — see docs/audit/HISABCHE-FIXES-2026-11-08.md.
+  // There is no environment path: an env key would be a second home for the
+  // same secret, and the rule is one home.
+  //
+  // ⚠️ NEVER A NEW KEY IN PRODUCTION. The apps trust only the keys shipped in
+  // their code (app-shell/src/shared/lib/licence-keys.ts). A key made here in
+  // production would sign licences no shipped app accepts. Outside production
+  // (tests, local) a key is made on first use.
   async getSigningKey(): Promise<{
     secretKey: Uint8Array
     keyId: string
     publicKey: string
   } | null> {
-    const rawKey = process.env.OFFLINE_LICENSE_PRIVATE_KEY?.trim()
-    if (rawKey && /^[0-9a-f]{64}$/i.test(rawKey)) {
-      const secretKey = hexToBytes(rawKey)
-      return {
-        secretKey,
-        keyId: process.env.OFFLINE_LICENSE_KEY_ID?.trim() || 'v1',
-        publicKey: offlineLicensePublicKeyOf(secretKey),
-      }
-    }
-
     const active = await this.readActiveKey()
     if (active === 'MISSING_TABLE') return null
     if (active) return active
+
+    if (process.env.NODE_ENV === 'production') {
+      console.error(
+        '[offline-licence] LICENCE_KEY_NOT_CONFIGURED — no active key in offline_license_signing_keys; not generating one in production',
+      )
+      return null
+    }
 
     const created = generateOfflineLicenseKeyPair()
     const { error } = await supabase.from('offline_license_signing_keys').insert({
@@ -280,8 +285,13 @@ export class OfflineLicenseService {
       throw new DatabaseError('Failed to read the licence signing key', error)
     }
     if (!data) return null
+    // NOT NULL in the schema (offline-licence-keys-02 rev2); a row without its
+    // private half cannot sign, and is never replaced by a fresh key.
+    if (typeof data.private_key_hex !== 'string' || data.private_key_hex === '') {
+      throw new DatabaseError('The active licence signing key has no private half', null)
+    }
     return {
-      secretKey: hexToBytes(data.private_key_hex as string),
+      secretKey: hexToBytes(data.private_key_hex),
       keyId: data.key_id as string,
       publicKey: data.public_key_hex as string,
     }

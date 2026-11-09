@@ -46,6 +46,23 @@ const dbState: MockState = {
 vi.mock('../db', () => ({
   supabase: {
     from: (table: string) => {
+      // The signing key lives ONLY in this table (owner decision, 9 Nov 2026).
+      if (table === 'offline_license_signing_keys') {
+        return {
+          select: () => ({
+            is: () => ({
+              maybeSingle: async () => ({
+                data: {
+                  key_id: 'v1',
+                  private_key_hex: TEST_KEYPAIR.secretKeyHex,
+                  public_key_hex: TEST_KEYPAIR.publicKeyHex,
+                },
+                error: null,
+              }),
+            }),
+          }),
+        }
+      }
       if (table === 'subscriptions') {
         return {
           select: () => ({
@@ -237,9 +254,6 @@ describe('E3 Offline Licence Policy Integration', () => {
   const licenseId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
   beforeEach(async () => {
-    process.env.OFFLINE_LICENSE_PRIVATE_KEY = TEST_KEYPAIR.secretKeyHex
-    process.env.OFFLINE_LICENSE_KEY_ID = 'v1'
-
     dbState.subscription = {
       plan: 'OFFLINE',
       status: 'active',

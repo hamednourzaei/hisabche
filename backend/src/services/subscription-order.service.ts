@@ -243,7 +243,18 @@ export class SubscriptionOrderService {
       throw new NotFoundError('Subscription order')
     }
 
-    if (order.created_by_user_id && order.created_by_user_id !== userId) {
+    // ⚠️ AN ORDER WITH NO OWNER IS CLAIMED WITH ITS TOKEN, NEVER BY ITS ID (audit
+    // F-05, 8 Nov 2026). This used to skip the check when `created_by_user_id`
+    // was null, so any signed-in user holding the id of a paid anonymous order
+    // could provision it without the claim token.
+    if (!order.created_by_user_id) {
+      throw new SubscriptionOrderError(
+        'This order is claimed with its claim token',
+        403,
+        'ORDER_REQUIRES_CLAIM_TOKEN',
+      )
+    }
+    if (order.created_by_user_id !== userId) {
       throw new SubscriptionOrderError('Order does not belong to this user', 403, 'ORDER_FORBIDDEN')
     }
 

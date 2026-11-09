@@ -8,17 +8,23 @@ import type { CreateNotificationInput, NotificationFilters } from '@hisabche/val
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
-const NOTIFICATION_COLUMNS =
-  'id, user_id, workspace_id, title, body, type, action_url, entity_type, entity_id, metadata, is_read, read_at, created_at, updated_at'
 const NOTIFICATION_MINIMAL = 'id, title, body, type, is_read, created_at'
 
+/** Who is reading: one person, inside one workspace. */
+export type NotificationScope = { userId: string; workspaceId: string }
+
+/** PostgREST `or` filter: this workspace, or no workspace (account-level). */
+function inWorkspace(scope: NotificationScope): string {
+  return `workspace_id.eq.${scope.workspaceId},workspace_id.is.null`
+}
+
 export class NotificationService {
-  private getUnreadCountCacheKey(userId: string) {
-    return `notifications:unread:${userId}`
+  private getUnreadCountCacheKey(scope: NotificationScope) {
+    return `notifications:unread:${scope.userId}:${scope.workspaceId}`
   }
 
-  private getListCacheKey(userId: string, filters: NotificationFilters) {
-    return `notifications:list:${userId}:${JSON.stringify(filters)}`
+  private getListCacheKey(scope: NotificationScope, filters: NotificationFilters) {
+    return `notifications:list:${scope.userId}:${scope.workspaceId}:${JSON.stringify(filters)}`
   }
 
   async create(workspaceId: string, input: CreateNotificationInput) {
@@ -66,16 +72,26 @@ export class NotificationService {
     return data
   }
 
-  async list(userId: string, filters: NotificationFilters) {
-    const cacheKey = this.getListCacheKey(userId, filters)
+  // ⚠️ THE READER IS A PERSON IN ONE WORKSPACE, NOT A PERSON (audit F-04,
+  // 8 Nov 2026). These reads used to filter by `user_id` alone, so a member
+  // removed or suspended from a business kept reading — and marking — that
+  // business's notifications from any other workspace. Every read and write
+  // below is scoped to the requester's ACTIVE workspace (resolved by
+  // requireWorkspaceContext, which refuses a suspended or removed member),
+  // plus the account-level rows that belong to no workspace (`workspace_id IS
+  // NULL`, e.g. the trial-expiry notice). Each statement names BOTH filters:
+  //   .eq('user_id', scope.userId).or(inWorkspace(scope))
+  async list(scope: NotificationScope, filters: NotificationFilters) {
+    const cacheKey = this.getListCacheKey(scope, filters)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('notifications')
-      .select(NOTIFICATION_MINIMAL, { count: 'estimated' })
-      .eq('user_id', userId)
+      .select(NOTIFICATION_MINIMAL, { count: 'exact' })
+      .eq('user_id', scope.userId)
+      .or(inWorkspace(scope))
       .order('created_at', { ascending: false })
 
     if (filters.is_read !== undefined) query = query.eq('is_read', filters.is_read)
@@ -96,66 +112,49 @@ export class NotificationService {
     return result
   }
 
-  async markAsRead(userId: string, ids: string[]) {
-    if (!ids || ids.length === 0) {
-      return []
-    }
+  async markAsRead(scope: NotificationScope, ids: string[]) {
+    if (!ids || ids.length === 0) return []
 
-    try {
-      const { data: updated, error: updateError } = await supabase
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('user_id', userId)
-        .in('id', ids)
-        .select()
+    const { data: updated, error } = await supabase
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .in('id', ids)
+      .eq('user_id', scope.userId)
+      .or(inWorkspace(scope))
+      .select()
 
-      if (updateError) {
-        throw new DatabaseError('Failed to mark notifications as read', updateError)
-      }
+    if (error) throw new DatabaseError('Failed to mark notifications as read', error)
 
-      await this.invalidateCache(userId)
-      return updated ?? []
-    } catch (err) {
-      console.error('❌ [NotificationService.markAsRead] Unexpected error:', err)
-      throw err
-    }
+    await this.invalidateCache(scope.userId)
+    return updated ?? []
   }
 
-  async markAllAsRead(userId: string) {
-    console.log('📝 [NotificationService.markAllAsRead] Called for user:', userId)
+  async markAllAsRead(scope: NotificationScope) {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('is_read', false)
+      .eq('user_id', scope.userId)
+      .or(inWorkspace(scope))
 
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .update({ is_read: true, read_at: new Date().toISOString() })
-        .eq('user_id', userId)
-        .eq('is_read', false)
-        .select()
+    if (error) throw new DatabaseError('Failed to mark all notifications as read', error)
 
-      if (error) {
-        console.error('❌ [NotificationService.markAllAsRead] Supabase error:', error)
-        throw new DatabaseError('Failed to mark all notifications as read', error)
-      }
-
-      console.log('✅ [NotificationService.markAllAsRead] Updated records:', data?.length || 0)
-      await this.invalidateCache(userId)
-    } catch (err) {
-      console.error('❌ [NotificationService.markAllAsRead] Unexpected error:', err)
-      throw err
-    }
+    await this.invalidateCache(scope.userId)
   }
 
-  async getUnreadCount(userId: string): Promise<number> {
-    const cacheKey = this.getUnreadCountCacheKey(userId)
+  /** Exact: the badge is a number someone acts on (CLAUDE.md §7.4). */
+  async getUnreadCount(scope: NotificationScope): Promise<number> {
+    const cacheKey = this.getUnreadCountCacheKey(scope)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as number
 
     const { count, error } = await supabase
       .from('notifications')
-      .select('id', { count: 'estimated', head: true })
-      .eq('user_id', userId)
+      .select('id', { count: 'exact', head: true })
       .eq('is_read', false)
+      .eq('user_id', scope.userId)
+      .or(inWorkspace(scope))
 
     if (error) {
       console.error('❌ [NotificationService.getUnreadCount] Supabase error:', error)
@@ -167,71 +166,10 @@ export class NotificationService {
     return result
   }
 
-  async getById(id: string, userId: string) {
-    const cacheKey = `notification:${userId}:${id}`
-
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select(NOTIFICATION_COLUMNS)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single()
-
-    if (error) {
-      console.error('❌ [NotificationService.getById] Supabase error:', error)
-      throw new DatabaseError('Failed to fetch notification', error)
-    }
-
-    await memoryCache.set(cacheKey, data, 300)
-    return data
-  }
-
-  async delete(id: string, userId: string) {
-    const { data: notification } = await supabase
-      .from('notifications')
-      .select('user_id')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single()
-
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('❌ [NotificationService.delete] Supabase error:', error)
-      throw new DatabaseError('Failed to delete notification', error)
-    }
-
-    if (notification) {
-      await this.invalidateCache(notification.user_id)
-    }
-  }
-
-  async deleteAllRead(userId: string) {
-    const { error } = await supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', userId)
-      .eq('is_read', true)
-
-    if (error) {
-      console.error('❌ [NotificationService.deleteAllRead] Supabase error:', error)
-      throw new DatabaseError('Failed to delete read notifications', error)
-    }
-
-    await this.invalidateCache(userId)
-  }
-
+  /** Every workspace view of this person: a new notification may belong to any of them. */
   private async invalidateCache(userId: string) {
-    await memoryCache.invalidate(this.getUnreadCountCacheKey(userId))
+    await memoryCache.invalidate(`notifications:unread:${userId}:*`)
     await memoryCache.invalidate(`notifications:list:${userId}:*`)
-    await memoryCache.invalidate(`notification:${userId}:*`)
   }
 }
 
