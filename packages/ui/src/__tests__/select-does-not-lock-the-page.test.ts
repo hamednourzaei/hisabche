@@ -24,6 +24,10 @@ const code = (source: string) =>
     .join('\n')
 
 const select = code(readFileSync(join(UI, 'components', 'ui', 'select.tsx'), 'utf8'))
+// 9 Nov 2026: the mark and the scroll-to-close moved into one hook that the
+// dropdown menu uses too (the header «پنل مدیریت» menu froze the page).
+const mark = code(readFileSync(join(UI, 'lib', 'use-menu-open-mark.ts'), 'utf8'))
+const dropdown = code(readFileSync(join(UI, 'components', 'ui', 'dropdown-menu.tsx'), 'utf8'))
 const css = readFileSync(join(UI, 'styles', 'globals.css'), 'utf8')
 
 describe('the select root', () => {
@@ -35,29 +39,32 @@ describe('the select root', () => {
   })
 
   it('marks <html> while open — counted, so two selects cannot clear each other', () => {
-    expect(select).toContain(
+    expect(select).toContain('useMenuOpenMark(open, close)')
+    expect(dropdown).toContain('useMenuOpenMark(open, close)')
+    expect(mark).toContain(
       "root.dataset.selectOpen = String(Number(root.dataset.selectOpen ?? '0') + 1)",
     )
-    expect(select).toContain('delete root.dataset.selectOpen')
+    expect(mark).toContain('delete root.dataset.selectOpen')
   })
 
   it('closes on the first wheel or touch-move OUTSIDE the list', () => {
-    expect(select).toContain(
+    expect(mark).toContain(
       "window.addEventListener('wheel', closeOnScroll, { capture: true, passive: true })",
     )
-    expect(select).toContain(
+    expect(mark).toContain(
       "window.addEventListener('touchmove', closeOnScroll, { capture: true, passive: true })",
     )
-    expect(select).toContain("target.closest('[data-select-content]')")
+    expect(mark).toContain(
+      "export const MENU_CONTENT_SELECTOR = '[data-select-content], [data-menu-content]'",
+    )
+    expect(mark).toContain('target.closest(MENU_CONTENT_SELECTOR)')
     // …and the list carries the mark that test looks for.
     expect(select).toContain('data-select-content=""')
   })
 
   it('removes both listeners when it closes', () => {
-    expect(select).toContain(
-      "window.removeEventListener('wheel', closeOnScroll, { capture: true })",
-    )
-    expect(select).toContain(
+    expect(mark).toContain("window.removeEventListener('wheel', closeOnScroll, { capture: true })")
+    expect(mark).toContain(
       "window.removeEventListener('touchmove', closeOnScroll, { capture: true })",
     )
   })

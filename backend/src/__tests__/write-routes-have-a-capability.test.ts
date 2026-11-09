@@ -49,6 +49,8 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'saved-views.routes.ts POST /api/saved-views': 'OWN_STATE',
   'saved-views.routes.ts PATCH /api/saved-views/:id': 'OWN_STATE',
   'saved-views.routes.ts DELETE /api/saved-views/:id': 'OWN_STATE',
+  // 9 Nov 2026: the cards a person added to their own dashboard (keyed by userId).
+  'dashboard-kpis.routes.ts PUT /api/me/dashboard-kpis': 'OWN_STATE',
   'ai-chat.routes.ts POST /api/ai/ask': 'MEMBER_USE',
   'ai.routes.ts POST /api/ai/query': 'MEMBER_USE',
   'marketplace.routes.ts POST /api/marketplace/apps/:app/report': 'MEMBER_USE',

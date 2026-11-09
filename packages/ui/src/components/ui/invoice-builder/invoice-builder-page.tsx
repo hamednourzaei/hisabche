@@ -8,6 +8,7 @@
 'use client'
 
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
+import type { NewDocumentKind } from '../invoices/new-invoice-chooser'
 import { ChevronLeft, FileText, Save } from 'lucide-react'
 import {
   canDeleteColumn,
@@ -62,7 +63,8 @@ export interface InvoiceBuilderPageProps {
   bookEquivalent?: string | null | undefined
 
   customers: readonly InvoiceDraftCustomer[]
-  transactionType: 'sale' | 'purchase'
+  /** sale · purchase · pre_sale · pre_purchase — the document being written. */
+  transactionType: NewDocumentKind
   currency: CurrencyCode
   rates: Partial<Record<CurrencyCode, string>>
   date: string
@@ -91,7 +93,7 @@ export interface InvoiceBuilderPageProps {
 
   onAddCustomer: (customer: InvoiceDraftCustomer) => void
   onRemoveCustomer: (id: string) => void
-  onTransactionTypeChange: (type: 'sale' | 'purchase') => void
+  onTransactionTypeChange: (type: NewDocumentKind) => void
   onCurrencyChange: (currency: CurrencyCode) => void
   onRateChange: (currency: CurrencyCode, value: string) => void
   onDateChange: (value: string) => void
@@ -134,7 +136,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   onAddRow,
   onRemoveRow,
   onDuplicateRow,
-  onRemoveLastRow,
+  onRemoveLastRow: _onRemoveLastRow,
   onPickProduct,
   onAddColumn,
   onUpdateColumn,
@@ -327,7 +329,9 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
             </nav>
             <h1 className="flex items-center gap-2 text-xl font-bold text-[hsl(var(--fg-primary))]">
               <FileText className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              {t('invoiceBuilder.new', 'فاکتور جدید')}
+              {transactionType === 'pre_sale' || transactionType === 'pre_purchase'
+                ? t(`invoices.newDocument.${transactionType}`)
+                : t('invoiceBuilder.new', 'فاکتور جدید')}
             </h1>
           </div>
 

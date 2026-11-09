@@ -2800,6 +2800,18 @@
       "unread": "The operating profile could not be read; this is not «empty».",
       "noAccess": "Only someone allowed to manage the business can change this.",
       "nothingRewritten": "No recorded invoice, entry or stock is changed."
+    },
+    "quick": {
+      "label": "Quick settings",
+      "language": "App language",
+      "bookCurrency": "Books currency",
+      "timeZone": "Time zone and branches",
+      "backup": "Backup",
+      "performance": "Performance",
+      "storage": "Storage and cache",
+      "pagesAndTabs": "Pages and tabs",
+      "expand": "Expand",
+      "collapse": "Collapse"
     }
   },
   "sync": {
@@ -3016,7 +3028,38 @@
     "openAdvances": "Open advances (received / paid)",
     "openAdvancesUnread": "Could not be read",
     "openAdvancesOpen": "Pre-sales and pre-purchases",
-    "openAdvancesNone": "None"
+    "openAdvancesNone": "None",
+    "customKpi": {
+      "add": "Add a KPI",
+      "pickTitle": "Choose a KPI for the dashboard",
+      "search": "Search KPIs…",
+      "noMatch": "No KPI matches.",
+      "alreadyAdded": "Added",
+      "remove": "Remove this card",
+      "replace": "Replace with another KPI",
+      "saveFailed": "The choice was not saved.",
+      "notConfigured": "Custom cards are not set up on the server yet",
+      "items": {
+        "sales_total": "Sales total",
+        "sales_pending": "Sales awaiting payment",
+        "sales_paid": "Sales paid",
+        "sales_count": "Sales invoices",
+        "purchases_total": "Purchases total",
+        "purchases_pending": "Purchases unpaid",
+        "purchases_count": "Purchase invoices",
+        "advances_preSaleRemaining": "Pre-sales not yet applied",
+        "advances_prePurchaseRemaining": "Pre-purchases not yet applied",
+        "customers_count": "Contacts",
+        "products_count": "Products"
+      },
+      "categories": {
+        "sales": "Sales",
+        "purchases": "Purchases",
+        "advances": "Pre-sales and pre-purchases",
+        "people": "People",
+        "stock": "Stock"
+      }
+    }
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -4548,11 +4591,9 @@
     "unread": "Unread",
     "by": "by {actor}",
     "itemLabel": "Activity: {title}",
-    "showMore": "Show {count} more activities",
+    "showMore": "Show more activity",
     "open": "Open",
     "feedLabel": "Activity feed",
-    "loadingMore": "Loading more...",
-    "scrollForMore": "Scroll for more",
     "endOfList": "You've reached the end of the list",
     "col": {
       "entity": "Record",
@@ -8753,7 +8794,9 @@
     "allScopes": "No limit (all permissions)",
     "noScopes": "None",
     "allScopesHint": "“No limit” means every permission in this list. A key never gets more than your own access, and no key can delete an invoice, post to the ledger or move money.",
-    "copyFailed": "Could not copy. The value is selected; press Ctrl+C."
+    "copyFailed": "Could not copy. The value is selected; press Ctrl+C.",
+    "endpointStatus": "Status",
+    "endpointEvents": "Events"
   },
   "webhook": {
     "urlMustBeHttps": "The webhook URL must start with https://."
@@ -9547,8 +9590,15 @@
         "NO_REVENUE": "No sales",
         "NO_CONTRIBUTION": "Cannot break even at this price",
         "NO_FIXED_COSTS": "No fixed cost recorded",
-        "COST_UNKNOWN": "No recorded cost"
-      }
+        "COST_UNKNOWN": "No recorded cost",
+        "NO_PRODUCT": "A line with no product: no cost is recorded for it"
+      },
+      "costMissingHelp": "Some products were sold before any cost was recorded. Record those sales’ cost from each product’s buy price.",
+      "costFromBuyPrice": "Record cost from buy price",
+      "costResult": "Result",
+      "costedCount": "sales costed",
+      "stillUncosted": "still without cost (no buy price on the product)",
+      "costFailed": "failed"
     },
     "cohorts": {
       "empty": "You have no sale to a recorded customer yet. Sales without a customer are not part of this analysis.",
@@ -10935,24 +10985,6 @@
       "amountInvalid": "Enter a valid amount",
       "currencyUnknown": "Books currency could not be read",
       "help": "Not revenue: a customer advance, applied to the invoice from the customer's page."
-    },
-    "commission": {
-      "title": "Provider commission",
-      "provider": "Provider",
-      "sessions": "Delivered sessions",
-      "base": "Service value",
-      "rate": "Rate",
-      "amount": "Commission",
-      "noRate": "No rate set",
-      "unknown": "Unknown",
-      "edit": "Change",
-      "save": "Save",
-      "rateInvalid": "The percent must be between 0 and 100",
-      "rateFailed": "The rate was not saved",
-      "unread": "The commission report could not be read; this is not «empty».",
-      "empty": "No delivered sessions with a provider in this period.",
-      "outside": "Outside the report: {unpriced} sessions without a price, {unassigned} without a provider.",
-      "help": "A report, not a payment: delivered sessions at each service's current price. Nothing is booked."
     }
   },
   "teamHub": {
@@ -11686,8 +11718,21 @@
       "remaining": "Open",
       "status": "Status",
       "note": "Note",
-      "action": "Action"
+      "action": "Action",
+      "total": "Document total"
     },
-    "showAll": "Show all"
+    "showAll": "Show all",
+    "booksCurrencyOnly": "Pre-sales and pre-purchases are recorded in the books currency only. Switch this document back to it.",
+    "receivedRequired": "Enter the amount received or paid now in the payment section.",
+    "confirm": {
+      "pre_sale": "Record pre-sale",
+      "pre_purchase": "Record pre-purchase"
+    },
+    "kpi": {
+      "amount": "Total advanced",
+      "count": "Documents",
+      "remaining": "Not yet applied",
+      "used": "Applied or refunded"
+    }
   }
 }

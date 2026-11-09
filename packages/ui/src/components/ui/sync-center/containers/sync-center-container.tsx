@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
@@ -12,7 +12,7 @@ export function SyncCenterContainer() {
   const t = useTranslations()
   const queryClient = useQueryClient()
   const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, addBackup, createBackup, auditLog } = useBackupStore()
+  const { backups, addBackup, createBackup } = useBackupStore()
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -44,7 +44,8 @@ export function SyncCenterContainer() {
     setLastSynced(Date.now())
   }, [queryClient, setLastSynced])
 
-  const localStorageSize = useMemo(() => {
+  // Read on every render: a backup just taken changes it, and the loop is cheap.
+  const localStorageSize = (() => {
     if (typeof window === 'undefined') return '0 KB'
     let bytes = 0
     for (let i = 0; i < localStorage.length; i++) {
@@ -56,7 +57,7 @@ export function SyncCenterContainer() {
     return bytes > 1024 * 1024
       ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
       : `${Math.max(1, Math.round(bytes / 1024))} KB`
-  }, [backups, auditLog])
+  })()
   // ✅ FIX: قبلاً اندازه‌ی بکاپ با Math.random() ساخته می‌شد (عدد جعلی).
   // حالا از createBackup() واقعی استفاده می‌کند که داده‌های واقعی
   // localStorage را serialize کرده و اندازه‌ی واقعی (Blob.size) را
@@ -78,7 +79,6 @@ export function SyncCenterContainer() {
         pendingCount={pendingCount}
         lastSyncedAt={lastSyncedAt}
         backups={backups as SyncCenterPageProps['backups']}
-        auditLog={auditLog as SyncCenterPageProps['auditLog']}
         localStorageSize={localStorageSize}
         onSync={handleSync}
         onBackup={handleBackup}

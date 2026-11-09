@@ -49,6 +49,7 @@ import { supabase } from './db'
 import { authRoutes } from './routes/auth.routes'
 import { emailOtpRoutes } from './routes/email-otp.routes'
 import { guideProgressRoutes } from './routes/guide-progress.routes'
+import { dashboardKpisRoutes } from './routes/dashboard-kpis.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { syncStreamRoutes } from './routes/sync-stream.routes'
 import cmsRoutes from './routes/cms.routes'
@@ -236,29 +237,37 @@ let inflightRequests = 0
  * the counter only grew, and inflightAtStart in the perf log — 14 on a quiet
  * server — was mostly ghosts. The raw response's 'close' fires in every case.
  */
-function releaseInflight(request: { countedInflight?: boolean }): void {
-  if (!request.countedInflight) return
-  request.countedInflight = false
+// Per-request bookkeeping kept beside the request, not as untyped fields on it.
+const requestStartedAt = new WeakMap<object, number>()
+const countedInflight = new WeakSet<object>()
+
+function releaseInflight(request: object): void {
+  if (!countedInflight.has(request)) return
+  countedInflight.delete(request)
   inflightRequests = Math.max(0, inflightRequests - 1)
 }
 
+function elapsedSince(request: object): number {
+  return Date.now() - (requestStartedAt.get(request) ?? Date.now())
+}
+
 server.addHook('onRequest', async (request, reply) => {
-  ;(request as any).startTime = Date.now()
+  requestStartedAt.set(request, Date.now())
   // context شمارنده‌ی کوئری را برای این درخواست فعال می‌کند.
   enterMetricsContext(inflightRequests)
   inflightRequests += 1
-  ;(request as any).countedInflight = true
-  reply.raw.once('close', () => releaseInflight(request as { countedInflight?: boolean }))
+  countedInflight.add(request)
+  reply.raw.once('close', () => releaseInflight(request))
 })
 
 server.addHook('onResponse', async (request, reply) => {
   // فاز ۰ — یک خط ساختاریافته به‌ازای هر درخواست، تا بتوان جدول
   // «Endpoint / تعداد Query / زمان DB / زمان کل» را مستقیماً از لاگ Render
   // ساخت. OPTIONS ها حذف می‌شوند چون نویز محض‌اند.
-  releaseInflight(request as { countedInflight?: boolean })
+  releaseInflight(request)
   if (request.method === 'OPTIONS') return
 
-  const total = Date.now() - ((request as any).startTime || Date.now())
+  const total = elapsedSince(request)
   const m = getMetrics()
   const db = m?.db
 
@@ -266,7 +275,7 @@ server.addHook('onResponse', async (request, reply) => {
     {
       perf: true,
       method: request.method,
-      route: (request as any).routeOptions?.url ?? request.url.split('?')[0],
+      route: request.routeOptions?.url ?? request.url.split('?')[0],
       status: reply.statusCode,
       totalMs: total,
       dbMs: m?.dbTimeMs ?? null,
@@ -303,14 +312,14 @@ server.addHook('onResponse', async (request, reply) => {
 
       cacheHits: m?.cacheHits ?? null,
       cacheMisses: m?.cacheMisses ?? null,
-      userId: (request as any).userId ?? null,
+      userId: request.userId ?? null,
 
       // The resolved workspace lives on `request.tenancy`, set by
       // `requireWorkspaceContext`. Reading `request.workspaceId` — a property
       // nothing assigns — logged null on every request ever made, so the logs
       // could never show whether tenancy resolved or which shop a slow query
       // belonged to.
-      workspaceId: (request as any).tenancy?.workspaceId ?? null,
+      workspaceId: request.tenancy?.workspaceId ?? null,
     },
     '📊 perf',
   )
@@ -333,7 +342,7 @@ server.addHook('onResponse', async (request, reply) => {
 })
 
 server.addHook('onSend', async (request, reply, payload) => {
-  const duration = Date.now() - ((request as any).startTime || Date.now())
+  const duration = elapsedSince(request)
 
   reply.header('X-Response-Time-MS', duration.toString())
   reply.header('X-Content-Type-Options', 'nosniff')
@@ -478,7 +487,7 @@ server.get('/live', async () => ({
 // and without it the backend still serves correctly (uncached, rate limit per
 // instance) — failing readiness on it would take every instance out at once.
 server.get('/ready', async (_request, reply) => {
-  let connected = false
+  let connected: boolean
   try {
     const { error } = await supabase.from('products').select('id').limit(1)
     connected = !error
@@ -541,7 +550,12 @@ server.setErrorHandler((error, request, reply) => {
     method: request.method,
   })
 
-  const err = error as any
+  const err = error as {
+    statusCode?: number
+    message?: string
+    name?: string
+    context?: unknown
+  }
   const status = err.statusCode || 500
   const message = err.message || 'Internal Server Error'
 
@@ -699,7 +713,7 @@ export async function buildServer(): Promise<typeof server> {
     // Live audit B1, 28 Oct 2026.
     allowList: (request) => request.method === 'OPTIONS',
     keyGenerator: (request) => {
-      const userId = (request as any).userId
+      const userId = request.userId
       return rateLimitBucket(request.headers.authorization, userId || request.ip || 'anonymous')
     },
     errorResponseBuilder: (_request, context) => {
@@ -730,6 +744,7 @@ export async function buildServer(): Promise<typeof server> {
   // V54 5.1: email codes — infrastructure, off until EMAIL_OTP_ENABLED=true.
   await server.register(emailOtpRoutes)
   await server.register(guideProgressRoutes)
+  await server.register(dashboardKpisRoutes)
   await server.register(syncRoutes)
   await server.register(syncStreamRoutes)
   await server.register(cmsRoutes)

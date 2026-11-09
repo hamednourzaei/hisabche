@@ -58,7 +58,7 @@ export const WORK_ITEMS: readonly WorkItemSpec[] = [
     kind: 'conflicts',
     urgency: 'blocking',
     labelKey: 'workQueue.conflicts',
-    path: '/data-and-sync?tab=details&view=conflicts',
+    path: '/data-and-sync?view=conflicts',
     capability: null,
   },
   {

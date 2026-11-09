@@ -148,6 +148,7 @@ describe('GET /api/customers/:id/deposits', () => {
         sourceType: 'sales_order',
         // advances-02: no note on an order deposit.
         note: null,
+        document: null,
         createdAt: '2026-11-03T00:00:00Z',
         amountMinor: 100_000,
         appliedMinor: 40_000,

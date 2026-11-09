@@ -15,7 +15,11 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { refundOrderDepositSchema, applyOrderDepositSchema } from '@hisabche/validation'
+import {
+  advanceDocumentInputSchema,
+  applyOrderDepositSchema,
+  refundOrderDepositSchema,
+} from '@hisabche/validation'
 import { z } from 'zod'
 
 import { sendFailure } from '../errors/http-failure'
@@ -66,6 +70,8 @@ const advanceBody = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     note: z.string().trim().max(500).optional(),
+    /** advances-03: the lines it was taken for (the full invoice builder). */
+    document: advanceDocumentInputSchema.optional(),
   })
   .strict()
 
@@ -224,6 +230,7 @@ export async function orderDepositRoutes(fastify: FastifyInstance) {
           date: body.date,
           sourceType: body.kind,
           note: body.note,
+          document: body.document,
         })
         return reply.status(201).send({ data: deposit, posting })
       } catch (err) {

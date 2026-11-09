@@ -15,7 +15,9 @@
 
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { CheckCircle2, Clock, FileText, Wallet } from 'lucide-react'
+import { FRACTION_DIGITS, fractionDigits, type KnownCurrency } from '@hisabche/formatting'
 import { useTranslations } from 'next-intl'
 import { useAdvances, useCustomers, type CustomerDepositRecord } from '@hisabche/api'
 
@@ -23,7 +25,8 @@ import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { Badge } from '../../badge'
 import { Money } from '../../capability/capability-kit'
-import { DataTable } from '../../data-table'
+import { DataTable, TableFilterMenu } from '../../data-table'
+import { BentoStats, type BentoStat } from '../../bento-stats'
 import type { TableColumn } from '../../data-table/table-types'
 
 export type AdvanceListKind = 'pre_sale' | 'pre_purchase'
@@ -39,7 +42,7 @@ export function AdvancesContainer({
   onShowAll?: (() => void) | undefined
 }) {
   const t = useTranslations()
-  const tr = (key: string): string => t(key as never)
+  const tr = useCallback((key: string): string => t(key as never), [t])
   const push = useLocalePush()
   const dates = useDateFormat()
   const advances = useAdvances(kind)
@@ -52,10 +55,59 @@ export function AdvancesContainer({
     return map
   }, [parties.data])
 
+  // The same status filter the invoice table has, in the table's own toolbar.
+  const [status, setStatus] = useState<'all' | CustomerDepositRecord['status']>('all')
   const rows = useMemo(() => {
     const list = advances.data ?? []
-    return focusId ? list.filter((row) => row.id === focusId) : list
-  }, [advances.data, focusId])
+    if (focusId) return list.filter((row) => row.id === focusId)
+    return status === 'all' ? list : list.filter((row) => row.status === status)
+  }, [advances.data, focusId, status])
+
+  // Four figures, like the invoice list above them (owner: «no more than 4»).
+  // Display only: minor → major for the card; a mixed-currency list gets no
+  // suffix rather than a wrong one.
+  const stats = useMemo<BentoStat[]>(() => {
+    const list = advances.data ?? []
+    const currencies = [...new Set(list.map((row) => row.currency ?? '?'))]
+    const only = currencies.length === 1 ? currencies[0] : undefined
+    const digits = only && only in FRACTION_DIGITS ? fractionDigits(only as KnownCurrency) : null
+    const major = (minor: number) => (digits === null ? undefined : minor / 10 ** digits)
+    const sum = (pick: (row: CustomerDepositRecord) => number) =>
+      list.reduce((acc, row) => acc + pick(row), 0)
+    const withSuffix = digits !== null && only ? { suffix: only } : {}
+    const money = (
+      id: string,
+      icon: BentoStat['icon'],
+      label: string,
+      minor: number,
+    ): BentoStat => {
+      const amount = major(minor)
+      return amount === undefined
+        ? { id, icon, label, text: '—' }
+        : { id, icon, label, amount, ...withSuffix }
+    }
+    return [
+      money(
+        'amount',
+        Wallet,
+        tr('advances.kpi.amount'),
+        sum((row) => row.amountMinor),
+      ),
+      { id: 'count', icon: FileText, label: tr('advances.kpi.count'), amount: list.length },
+      money(
+        'remaining',
+        Clock,
+        tr('advances.kpi.remaining'),
+        sum((row) => row.remainingMinor),
+      ),
+      money(
+        'used',
+        CheckCircle2,
+        tr('advances.kpi.used'),
+        sum((row) => row.appliedMinor + row.refundedMinor),
+      ),
+    ]
+  }, [advances.data, tr])
 
   const columns: TableColumn<CustomerDepositRecord>[] = [
     {
@@ -71,6 +123,20 @@ export function AdvancesContainer({
       labelFallback: '',
       locked: true,
       render: (row) => nameById.get(row.customerId) ?? tr('advances.unknownParty'),
+    },
+    {
+      id: 'total',
+      labelKey: 'advances.columns.total',
+      labelFallback: '',
+      align: 'end',
+      showFrom: 'sm',
+      render: (row) =>
+        row.document ? (
+          <Money minor={row.document.totalMinor} currency={row.currency ?? undefined} />
+        ) : (
+          '—'
+        ),
+      sortValue: (row) => row.document?.totalMinor ?? 0,
     },
     {
       id: 'amount',
@@ -136,6 +202,7 @@ export function AdvancesContainer({
           </button>
         ) : null}
       </div>
+      {!focusId && (advances.data?.length ?? 0) > 0 ? <BentoStats t={tr} stats={stats} /> : null}
       {advances.isError ? (
         <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
           {tr('advances.unread')}
@@ -148,6 +215,26 @@ export function AdvancesContainer({
           columns={columns}
           rowKey={(row) => row.id}
           minWidthClass="min-w-[640px]"
+          actions={
+            <TableFilterMenu
+              label={tr('common.filter')}
+              clearLabel={tr('common.clearFilters')}
+              groups={[
+                {
+                  id: 'status',
+                  label: tr('advances.columns.status'),
+                  value: status,
+                  onChange: (value) => setStatus(value as typeof status),
+                  options: [
+                    { value: 'all', label: tr('invoices.filterAll') },
+                    ...(
+                      ['available', 'partially_used', 'fully_used', 'pending_posting'] as const
+                    ).map((value) => ({ value, label: tr(`customerDeposits.status.${value}`) })),
+                  ],
+                },
+              ]}
+            />
+          }
           emptyState={
             <p className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
               {advances.isLoading

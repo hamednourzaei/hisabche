@@ -37,12 +37,15 @@
 import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  advanceDocumentFrom,
   ledgerFractionDigitsOf,
   moneyAccountRole,
   tillMinorToMajor,
   validateApplyDeposit,
   validateRefundDeposit,
   type AccountRole,
+  type AdvanceDocument,
+  type AdvanceDocumentInput,
   type OrderDepositRuleCode,
 } from '@hisabche/validation'
 
@@ -74,6 +77,8 @@ export interface OrderDepositRow {
   source_type?: DepositSourceType | null
   /** advances-02 */
   note?: string | null
+  /** advances-03 */
+  document?: AdvanceDocument | null
   created_at: string
 }
 
@@ -113,6 +118,8 @@ export interface CreateOrderDepositInput {
   sourceType?: DepositSourceType | undefined
   /** advances-02: what was pre-sold / pre-bought, in the person's words. */
   note?: string | undefined
+  /** advances-03: the priced lines (pre-sale / pre-purchase only). Totals are computed here. */
+  document?: AdvanceDocumentInput | undefined
 }
 
 export interface CreatedOrderDeposit {
@@ -201,6 +208,8 @@ export interface CustomerDepositView extends DepositBalanceView {
   journalEntryId: string | null
   sourceType: DepositSourceType
   note: string | null
+  /** advances-03: the lines it was taken for; null on an advance written without them. */
+  document: AdvanceDocument | null
   status: DepositUsageStatus
   /** On the server nothing is waiting to be sent; the device fills this in. */
   pendingSync: boolean
@@ -435,6 +444,7 @@ export class OrderDepositService {
         journalEntryId: row.journal_entry_id,
         sourceType: sourceTypeOf(row.source_type),
         note: row.note ?? null,
+        document: row.document ?? null,
         createdAt: row.created_at,
         ...view,
         status: depositStatusOf(row.posting_status, view),
@@ -468,6 +478,14 @@ export class OrderDepositService {
     // insert so a retry with the same id is the same advance.
     const id = input.id ?? (isAdvance ? randomUUID() : undefined)
     const note = input.note?.trim() ? input.note.trim().slice(0, 500) : undefined
+    // advances-03: only an advance carries lines, and the server prices them.
+    let document: AdvanceDocument | undefined
+    if (input.document) {
+      if (!isAdvance) throw new ValidationError('ADVANCE_DOCUMENT_NOT_ALLOWED')
+      const built = advanceDocumentFrom(input.document, currency, input.amountMinor)
+      if (!built.ok) throw new ValidationError(built.code)
+      document = built.document
+    }
 
     const { data, error } = await this.db
       .from('order_deposits')
@@ -483,11 +501,16 @@ export class OrderDepositService {
         // database that has not run session-deposit-01 yet.
         ...(kind !== 'sales_order' ? { source_type: kind } : {}),
         ...(note ? { note } : {}),
+        ...(document ? { document } : {}),
       })
       .select()
       .single()
 
     if (error) {
+      // advances-03 not run: the column for the lines is missing.
+      if (document && (error.code === '42703' || error.code === 'PGRST204')) {
+        throw new ConflictError('ADVANCE_DOCUMENT_NOT_CONFIGURED')
+      }
       if (kind !== 'sales_order' && (error.code === '42703' || error.code === 'PGRST204')) {
         throw new ConflictError(
           isAdvance ? 'ADVANCES_NOT_CONFIGURED' : 'SESSION_DEPOSIT_NOT_CONFIGURED',

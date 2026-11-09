@@ -64,7 +64,10 @@ export function InvoiceInstallmentsPanel({ invoiceId }: { invoiceId: string }) {
   const failure = save.error ?? clear.error
 
   return (
-    <section className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4">
+    <section
+      data-open={open ? '' : undefined}
+      className="space-y-3 rounded-2xl border border-[hsl(var(--border-default))] p-4"
+    >
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           <CalendarRange className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />

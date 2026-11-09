@@ -72,6 +72,9 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 63 since 8 Nov 2026: order.advances (pre-sale / pre-purchase - the supplier-advance functions
     // live only on the server) and operations.provider_commission (rates are server-only).
     // 64 since 8 Nov 2026 (later the same day): ui.guide_progress — a person's seen guide steps.
+    // 63 since 9 Nov 2026: operations.provider_commission removed (owner: «the commission
+    // section must go»; the report, its rates route and its panel were deleted).
+    // 64 again since 9 Nov 2026: ui.dashboard_kpis — the person's added dashboard cards.
     it('has exactly 64 server-execution features in FEATURE_REGISTRY', () => {
       expect(serverFeatures.length).toBe(64)
     })

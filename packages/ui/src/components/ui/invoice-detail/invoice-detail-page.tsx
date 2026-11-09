@@ -326,10 +326,12 @@ export function InvoiceDetailPage({
               invoice that does not exist yet — is unaffected. */}
           {relatedSlot ? <div className="mt-6">{relatedSlot}</div> : null}
           {historySlot ? <div className="mt-6">{historySlot}</div> : null}
+          {/* Under the history, in this column (owner request, 9 Nov 2026):
+              installments, late fee and «where this profit came from» as one
+              compact row; an opened one takes the whole row. */}
+          {evidenceSlot ? <div className="no-print mt-4">{evidenceSlot}</div> : null}
         </div>
       </div>
-      {/* Full width, under both columns: installments, late fee and profit evidence sit side by side. */}
-      {evidenceSlot ? <div className="no-print mt-6">{evidenceSlot}</div> : null}
     </div>
   )
 }

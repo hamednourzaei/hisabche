@@ -2,6 +2,7 @@
 'use client'
 
 import { KpiCard, KpiGrid } from '../kpi-card'
+import { CustomKpiCards } from './custom-kpis'
 import { memo, useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
@@ -11,13 +12,12 @@ import { roleTone, roleLabelKey } from '../../../lib/role-tone'
 import {
   Sparkles,
   TrendingUp,
-  Wallet,
   CreditCard,
   Boxes,
   Activity as ActivityIcon,
   Filter,
 } from 'lucide-react'
-import { SalesChart, type ChartDataPoint } from './sales-chart'
+import type { ChartDataPoint } from './sales-chart'
 import { DateRangePicker, type DateRange, type PresetKey } from './date-range-picker'
 import { SalesFunnel } from './sales-funnel'
 import type { AIInsight } from '@hisabche/api'
@@ -468,9 +468,6 @@ RecentActivities.displayName = 'RecentActivities'
 // ─── Main Component ───────────────────────────────────────────────────────
 
 export const DashboardView = memo(function DashboardView(props: DashboardViewProps) {
-  // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
-  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
-
   /**
    * Which of the two the card is showing.
    *
@@ -481,15 +478,14 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
    * in the production log) for data already in memory.
    */
   const [view, setView] = useState<'chart' | 'funnel'>('chart')
+  const locale = useLocale()
 
   const {
     t,
     fmt,
     totalSales,
-    todaySales,
     rangeSalesTotal,
     previousRangeSalesTotal,
-    rangeLoading,
     customerDebt,
     warehouseValue,
     monthlyGrowth,
@@ -517,53 +513,6 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     return map
   }, [order])
   const orderOf = (id: string) => rank.get(id) ?? 99
-
-  // ─── The range card ───────────────────────────────────────────────────
-  //
-  // ⚠️ IT FOLLOWS THE CHART'S RANGE. This card used to be pinned to «today»
-  // while the chart beside it showed whatever range was picked, so the two
-  // disagreed the moment the range changed. Its value is now the total for the
-  // selected range, and its label says which range that is.
-  //
-  // The percentage compares against the equally long period immediately before
-  // the range — a period that was actually fetched. With no such figure, or a
-  // previous period of zero (growth from nothing has no meaningful ratio), no
-  // percentage is shown rather than an invented one.
-  // ⚠️ «Today» is read after mount — same React #418 hazard as the greeting:
-  // the server's date and the browser's can differ around midnight.
-  const [today, setToday] = useState<string | null>(null)
-  useEffect(() => {
-    setToday(new Date().toDateString())
-  }, [])
-  const rangeIsToday = useMemo(() => {
-    const from = dateRange?.from
-    const to = dateRange?.to
-    if (!from || !to || today === null) return false
-    return from.toDateString() === today && to.toDateString() === today
-  }, [dateRange, today])
-
-  const rangeDays = useMemo(() => {
-    const from = dateRange?.from
-    const to = dateRange?.to
-    if (!from || !to) return 0
-    const start = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime()
-    const end = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime()
-    return Math.max(1, Math.round((end - start) / 86_400_000) + 1)
-  }, [dateRange])
-
-  const rangeChange = useMemo(() => {
-    if (rangeSalesTotal === null || previousRangeSalesTotal === null) return null
-    if (previousRangeSalesTotal <= 0) return null
-    return ((rangeSalesTotal - previousRangeSalesTotal) / previousRangeSalesTotal) * 100
-  }, [rangeSalesTotal, previousRangeSalesTotal])
-
-  const rangeLabel = rangeIsToday
-    ? t('dashboard.todaySales', 'فروش امروز')
-    : `${t('dashboard.rangeSales', 'فروش')} ${fmtIntlDate(dateRange?.from ?? null)} – ${fmtIntlDate(dateRange?.to ?? null)}`
-
-  const rangeChangeLabel = rangeIsToday
-    ? t('dashboard.vsYesterday', 'نسبت به دیروز')
-    : `${t('dashboard.vsPrevious', 'نسبت به')} ${rangeDays} ${t('dashboard.daysBefore', 'روز قبل')}`
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6" data-guide="dashboard-page">
@@ -599,21 +548,6 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
                 />
               )}
-              {hiddenFigures.includes('sales') ? null : (
-                <KpiCard
-                  icon={Wallet}
-                  label={rangeLabel}
-                  value={fmt(rangeSalesTotal ?? 0)}
-                  delta={rangeChange}
-                  {...(rangeChangeLabel ? { deltaLabel: rangeChangeLabel } : {})}
-                  showEmptyDelta
-                  isLoading={rangeLoading || rangeSalesTotal === null}
-                  onOpen={() =>
-                    onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))
-                  }
-                  openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
-                />
-              )}
               {hiddenFigures.includes('customers') ? null : (
                 <KpiCard
                   icon={CreditCard}
@@ -640,7 +574,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   delta={null}
                   showEmptyDelta
                   isLoading={kpiLoading}
-                  onOpen={() => onNavigate('/invoices?tab=advances')}
+                  onOpen={() => onNavigate('/invoices?type=pre_sale')}
                   openLabel={t('dashboard.openAdvancesOpen', 'پیش‌فروش و پیش‌خرید')}
                 />
               )}
@@ -656,6 +590,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   openLabel={t('dashboard.openWarehouse', 'انبار')}
                 />
               )}
+              {/* Up to four more, chosen by the person from figures other pages
+                  already show; never more than 8 cards in all (owner, 9 Nov 2026). */}
+              <CustomKpiCards locale={locale} onNavigate={onNavigate} />
             </KpiGrid>
           </div>
         )}

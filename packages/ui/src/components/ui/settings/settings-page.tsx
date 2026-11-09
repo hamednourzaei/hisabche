@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
 import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
+import { SettingsCollapsible, SettingsLinkRow, SettingsQuickChips } from './settings-compact'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { persistedBytes } from '../../../lib/persisted-bytes'
 import { HardwareSection } from './hardware-section'
@@ -38,6 +39,15 @@ import {
   Upload,
   X,
   Plug,
+  Languages,
+  Coins,
+  Clock,
+  DatabaseBackup,
+  Gauge,
+  HardDrive,
+  Briefcase,
+  LayoutGrid,
+  ScanBarcode,
 } from 'lucide-react'
 import { buildCsvZip, formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
@@ -67,10 +77,13 @@ const AccountSection = memo(function AccountSection({
 } = {}) {
   const tOriginal = useTranslations()
   const intlLocale = useIntlLocale()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
   const { user, logout, updateProfile } = useAuthStore()
   const { data: workspaces } = useWorkspaces()
   const updateWorkspace = useUpdateWorkspace()
@@ -431,7 +444,11 @@ const BrandImageSlot = memo(function BrandImageSlot({
       <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{label}</p>
       <div className="flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))]">
         {current ? (
-          <img src={current} alt="" className="max-h-16 max-w-full object-contain" />
+          <span
+            aria-hidden="true"
+            className="block h-16 w-full bg-contain bg-center bg-no-repeat"
+            style={{ backgroundImage: `url(${JSON.stringify(current)})` }}
+          />
         ) : (
           <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
             {t('settings.stampNotSet')}
@@ -552,10 +569,13 @@ BusinessStampSection.displayName = 'BusinessStampSection'
 const BackupSection = memo(function BackupSection() {
   const tOriginal = useTranslations()
   const intlLocale = useIntlLocale()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
   // G7 — `exportData` is no longer read: it returned localStorage metadata,
   // not the business's data. The store still owns the local history list.
   const { addBackup, backups } = useBackupStore()
@@ -1119,24 +1139,77 @@ export const SettingsPage = memo(function SettingsPage({
       </div>
 
       {accountSlot ?? <AccountSection onLogout={onLogout} />}
-      <LanguageSection />
+      {/* Small settings as titled chips; each opens in the middle of the
+          screen (owner request, 9 Nov 2026). */}
+      <SettingsQuickChips
+        items={[
+          {
+            id: 'language',
+            icon: Languages,
+            titleKey: 'settings.quick.language',
+            render: () => <LanguageSection />,
+          },
+          {
+            id: 'bookCurrency',
+            icon: Coins,
+            titleKey: 'settings.quick.bookCurrency',
+            render: () => <BookCurrencySection />,
+          },
+          {
+            id: 'timeZone',
+            icon: Clock,
+            titleKey: 'settings.quick.timeZone',
+            render: () => <WorkplaceTimeZoneSection />,
+          },
+          {
+            id: 'backup',
+            icon: DatabaseBackup,
+            titleKey: 'settings.quick.backup',
+            render: () => <BackupSection />,
+          },
+          {
+            id: 'performance',
+            icon: Gauge,
+            titleKey: 'settings.quick.performance',
+            render: () => <PerformanceSection />,
+          },
+          {
+            id: 'storage',
+            icon: HardDrive,
+            titleKey: 'settings.quick.storage',
+            render: () => <StorageSection />,
+          },
+        ]}
+      />
       <BusinessStampSection />
-      <BookCurrencySection />
       <IndustryProfileSection />
       {/* After the business type: Hisabche shaped the workspace from it; here
-          the person adds or removes pages and tabs for themselves. */}
-      <OperatingProfileSettings />
-      <PagesAndTabsSettings />
+          the person adds or removes pages and tabs for themselves. Both closed
+          until opened. */}
+      <SettingsCollapsible
+        id="operating-profile"
+        icon={Briefcase}
+        titleKey="settings.operatingProfile.title"
+      >
+        <OperatingProfileSettings />
+      </SettingsCollapsible>
+      <SettingsCollapsible
+        id="pages-and-tabs"
+        icon={LayoutGrid}
+        titleKey="settings.quick.pagesAndTabs"
+      >
+        <PagesAndTabsSettings />
+      </SettingsCollapsible>
       <CreditLimitModeSection />
       <MetalUnitSection />
-      <WorkplaceTimeZoneSection />
-      <BillingSection />
-      <WorkflowTemplatesSection />
-      <DevelopersSection />
-      <BackupSection />
-      <HardwareSection />
-      <PerformanceSection />
-      <StorageSection />
+      <SettingsLinkRow>
+        <BillingSection />
+        <WorkflowTemplatesSection />
+        <DevelopersSection />
+      </SettingsLinkRow>
+      <SettingsCollapsible id="hardware" icon={ScanBarcode} titleKey="hardware.scannerTitle">
+        <HardwareSection />
+      </SettingsCollapsible>
       {deviceSlot}
     </div>
   )

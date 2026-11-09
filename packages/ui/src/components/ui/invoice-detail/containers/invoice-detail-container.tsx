@@ -124,6 +124,37 @@ function ledgerPostMessageOf(
   }
 }
 
+/** A stored invoice line as the API may send it (camelCase or snake_case). */
+interface RawInvoiceItemDetail {
+  id?: string
+  title?: string
+  quantity?: number | string
+  amount?: number | string
+  unit?: string
+  unitLabel?: string | null
+  unit_label?: string | null
+  sortOrder?: number | string
+  sort_order?: number | string
+}
+interface RawInvoiceItem {
+  id?: string
+  productName?: string
+  product_name?: string
+  quantity?: number
+  unit?: string
+  unitLabel?: string | null
+  unit_label?: string | null
+  weightGrams?: number | null
+  weight_grams?: number | null
+  discount?: number
+  unitPrice?: number
+  unit_price?: number
+  totalPrice?: number
+  total_price?: number
+  details?: RawInvoiceItemDetail[]
+  invoice_item_details?: RawInvoiceItemDetail[]
+}
+
 export function InvoiceDetailContainer() {
   const t = useTranslations()
   const approvalAvailability = useActionAvailability('invoice.approval')
@@ -267,33 +298,36 @@ export function InvoiceDetailContainer() {
         (inv.invoiceItems as unknown[]) ??
         (inv.invoice_items as unknown[]) ??
         []
-      ).map((item: any) => ({
-        id: item.id,
-        productName: item.productName ?? item.product_name,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        // ✅ واحد حالا در invoice_items ذخیره می‌شود (ستون unit/unit_label).
-        unit: item.unit,
-        unitLabel: item.unitLabel ?? item.unit_label ?? null,
-        weightGrams: item.weightGrams ?? item.weight_grams ?? null,
-        discount: item.discount ?? 0,
-        unitPrice: item.unitPrice ?? item.unit_price,
-        unit_price: item.unit_price,
-        totalPrice: item.totalPrice ?? item.total_price,
-        total_price: item.total_price,
-        // اجزای این قلم، به همان ترتیبی که کاربر وارد کرده.
-        details: ((item.details ?? item.invoice_item_details ?? []) as any[])
-          .map((d: any) => ({
-            id: d.id,
-            title: d.title,
-            quantity: Number(d.quantity ?? 1),
-            amount: Number(d.amount ?? 0),
-            unit: d.unit,
-            unitLabel: d.unitLabel ?? d.unit_label ?? null,
-            sortOrder: Number(d.sortOrder ?? d.sort_order ?? 0),
-          }))
-          .sort((a, b) => a.sortOrder - b.sortOrder),
-      })),
+      ).map((raw) => {
+        const item = raw as RawInvoiceItem
+        return {
+          id: item.id,
+          productName: item.productName ?? item.product_name,
+          product_name: item.product_name,
+          quantity: item.quantity,
+          // ✅ واحد حالا در invoice_items ذخیره می‌شود (ستون unit/unit_label).
+          unit: item.unit,
+          unitLabel: item.unitLabel ?? item.unit_label ?? null,
+          weightGrams: item.weightGrams ?? item.weight_grams ?? null,
+          discount: item.discount ?? 0,
+          unitPrice: item.unitPrice ?? item.unit_price,
+          unit_price: item.unit_price,
+          totalPrice: item.totalPrice ?? item.total_price,
+          total_price: item.total_price,
+          // اجزای این قلم، به همان ترتیبی که کاربر وارد کرده.
+          details: (item.details ?? item.invoice_item_details ?? [])
+            .map((d) => ({
+              id: d.id,
+              title: d.title ?? '',
+              quantity: Number(d.quantity ?? 1),
+              amount: Number(d.amount ?? 0),
+              unit: d.unit,
+              unitLabel: d.unitLabel ?? d.unit_label ?? null,
+              sortOrder: Number(d.sortOrder ?? d.sort_order ?? 0),
+            }))
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        }
+      }),
     }
   }, [invoice, currentWorkspace])
 
@@ -361,7 +395,8 @@ export function InvoiceDetailContainer() {
     if (!action || autoActionRef.current || !invoice || !documentRef.current) return
     autoActionRef.current = true
     if (action === 'print') handlePrint()
-    if (action === 'png') handleExportPNG()
+    // Deferred: starting the export sets state, which must not happen inside the effect.
+    if (action === 'png') queueMicrotask(() => void handleExportPNG())
     // Auto-print after issuing: printed from the committed invoice just loaded.
     if (action === 'receipt' && display) void printReceipt(display)
     localeReplace(`/invoices/${id}`)
@@ -386,7 +421,9 @@ export function InvoiceDetailContainer() {
           title: `Invoice #${inv.invoiceNumber}`,
           text,
         })
-      } catch {}
+      } catch {
+        // The person closed the share sheet: nothing to do.
+      }
     } else {
       await navigator.clipboard.writeText(text)
       alert(t('invoices.copiedToClipboard'))
@@ -462,7 +499,7 @@ export function InvoiceDetailContainer() {
         // «Why this profit?» — loads only when the person opens it.
         evidenceSlot={
           display && id ? (
-            <div className="flex flex-wrap items-start gap-4 [&>*]:min-w-[16rem] [&>*]:flex-1">
+            <div className="flex flex-wrap items-start gap-2 [&>section]:min-w-[6.5rem] [&>section]:flex-1 [&>section]:basis-0 [&>section]:p-3 [&>section[data-open]]:basis-full [&>section>div:first-child]:flex-col [&>section>div:first-child]:items-start [&>section[data-open]>div:first-child]:flex-row [&>section[data-open]>div:first-child]:items-center [&_h3]:text-xs">
               {/* When the unpaid part is due, in parts (#123). Sales only. */}
               {display.type === 'sale' ? <InvoiceInstallmentsPanel invoiceId={id} /> : null}
               {/* What a late payment costs, and charging it (#124). Sales only. */}

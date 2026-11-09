@@ -16,6 +16,7 @@
 // ============================================
 
 import { useMemo, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { presetRange } from '@hisabche/ui-contract'
@@ -25,7 +26,9 @@ import {
   useBreakEven,
   useCohorts,
   useCollectionsWorklist,
+  useCostInvoice,
   useSupplierAnalysis,
+  useValueUnvaluedStock,
   useWorkingCapital,
 } from '@hisabche/api'
 
@@ -84,6 +87,7 @@ export const ANALYSIS_BREAK_EVEN_REASONS = [
   'NO_CONTRIBUTION',
   'NO_FIXED_COSTS',
   'COST_UNKNOWN',
+  'NO_PRODUCT',
 ] as const
 
 function Failed({ t, error }: { t: T; error: unknown }) {
@@ -511,6 +515,16 @@ function BreakEven({ t, locale }: { t: T; locale: string }) {
               value={money(analysis.data.fixedCostsTotal)}
             />
           </dl>
+          <CostFromBuyPrice
+            t={t}
+            invoiceIds={[
+              ...new Set(
+                analysis.data.rows
+                  .filter((row) => row.breakEvenReason === 'COST_UNKNOWN')
+                  .flatMap((row) => row.uncostedInvoiceIds ?? []),
+              ),
+            ]}
+          />
           {analysis.data.isLowerBound ? (
             <p className="rounded-[var(--radius-md)] border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.08)] p-3 text-xs text-[hsl(var(--fg-primary))]">
               {t(
@@ -604,6 +618,89 @@ function BreakEven({ t, locale }: { t: T; locale: string }) {
           />
         </>
       )}
+    </div>
+  )
+}
+
+/**
+ * «Give these sales their cost» — the products sold before any cost was
+ * recorded for them (owner report, 9 Nov 2026: items with a buy price showed
+ * «بهای تمام‌شده ثبت نشده»).
+ *
+ * ⚠️ AN ACT THE PERSON PRESSES, NOT AN AUTOMATIC FIX (accounting-integrity
+ * rule). It runs the two existing server actions: value the stock that has no
+ * cost layer at each product's own buy price, then cost each listed sale from
+ * its product's buy price (POST /invoices/:id/cost — its own journal entry,
+ * once). A product with no buy price stays unknown and is named as such.
+ */
+function CostFromBuyPrice({ t, invoiceIds }: { t: T; invoiceIds: readonly string[] }) {
+  const valueStock = useValueUnvaluedStock()
+  const costInvoice = useCostInvoice()
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState<{ costed: number; still: number; failed: number } | null>(
+    null,
+  )
+  if (invoiceIds.length === 0 && !result) return null
+
+  const run = async () => {
+    setRunning(true)
+    setResult(null)
+    let costed = 0
+    let still = 0
+    let failed = 0
+    try {
+      await valueStock.mutateAsync()
+    } catch {
+      // Stock that could not be valued leaves its sales uncosted; they are
+      // counted below, not hidden.
+    }
+    for (const id of invoiceIds) {
+      try {
+        const answer = await costInvoice.mutateAsync(id)
+        if (answer.status === 'costed' || answer.status === 'nothing_to_cost') costed += 1
+        else still += 1
+      } catch {
+        failed += 1
+      }
+    }
+    setResult({ costed, still, failed })
+    setRunning(false)
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] p-3 text-xs">
+      {invoiceIds.length > 0 ? (
+        <>
+          <span className="min-w-0 flex-1 text-[hsl(var(--fg-secondary))]">
+            {t(
+              'analysis.breakEven.costMissingHelp',
+              'بعضی کالاها پیش از ثبت بها فروخته شده‌اند؛ بهای آن فروش‌ها را از قیمت خرید هر کالا ثبت کنید.',
+            )}
+          </span>
+          <button
+            type="button"
+            data-cost-from-buy-price=""
+            disabled={running}
+            onClick={() => void run()}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[hsl(var(--color-primary))] px-3 font-medium text-[hsl(var(--color-primary-fg))] disabled:opacity-60"
+          >
+            {running ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
+            {t('analysis.breakEven.costFromBuyPrice', 'ثبت بها از قیمت خرید')}
+          </button>
+        </>
+      ) : null}
+      {result ? (
+        <span role="status" className="w-full text-[hsl(var(--fg-primary))]">
+          {t('analysis.breakEven.costResult', 'نتیجه')}: {result.costed}{' '}
+          {t('analysis.breakEven.costedCount', 'فروش بها گرفت')}
+          {result.still > 0
+            ? ` · ${result.still} ${t('analysis.breakEven.stillUncosted', 'هنوز بی‌بها (کالا قیمت خرید ندارد)')}`
+            : ''}
+          {result.failed > 0
+            ? ` · ${result.failed} ${t('analysis.breakEven.costFailed', 'انجام نشد')}`
+            : ''}
+        </span>
+      ) : null}
     </div>
   )
 }

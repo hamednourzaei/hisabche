@@ -15,9 +15,26 @@ import { memo, useState } from 'react'
 import { SearchableTable } from '../data-table'
 import type { ApiKeyScope, WebhookEventType } from '@hisabche/validation'
 import type { ApiKeyRow, ApiKeyUsage, WebhookDeliveryRow, WebhookEndpointRow } from '@hisabche/api'
-import { KeyRound, Loader2, RefreshCw, Send, Trash2, Webhook } from 'lucide-react'
+import {
+  KeyRound,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Send,
+  Trash2,
+  Webhook,
+  X,
+} from 'lucide-react'
 
 import { Badge } from '../badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../dropdown-menu'
 import { Button } from '../button'
 import { Card, CardContent } from '../card'
 import { Input } from '../input'
@@ -158,6 +175,10 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
   const [url, setUrl] = useState('')
   const [description, setDescription] = useState('')
   const [events, setEvents] = useState<WebhookEventType[]>([])
+  // Each «new» form opens from its own button beside the section title
+  // (owner request, 9 Nov 2026) instead of sitting open under the list.
+  const [keyFormOpen, setKeyFormOpen] = useState(false)
+  const [endpointFormOpen, setEndpointFormOpen] = useState(false)
 
   const days = Number(keyDays)
   const canCreateKey = keyName.trim().length > 0 && keyScopes.length > 0 && !props.creatingKey
@@ -206,9 +227,25 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex items-center gap-2">
             <KeyRound className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+            <h2 className="min-w-0 flex-1 text-lg font-semibold text-[hsl(var(--fg-primary))]">
               {t('developer.keysTitle')}
             </h2>
+            {props.keysState === 'ready' ? (
+              <Button
+                size="sm"
+                variant={keyFormOpen ? 'outline' : 'default'}
+                aria-expanded={keyFormOpen}
+                aria-controls="developer-new-key"
+                onClick={() => setKeyFormOpen((value) => !value)}
+              >
+                {keyFormOpen ? (
+                  <X className="size-4" aria-hidden="true" />
+                ) : (
+                  <Plus className="size-4" aria-hidden="true" />
+                )}
+                {keyFormOpen ? t('common.cancel') : t('developer.newKey')}
+              </Button>
+            ) : null}
           </div>
           <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.keysHelp')}</p>
 
@@ -309,58 +346,62 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
                 />
               ) : null}
 
-              <form
-                className="space-y-3 border-t border-[hsl(var(--border-default))] pt-4"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!canCreateKey) return
-                  props.onCreateKey({
-                    name: keyName.trim(),
-                    scopes: keyScopes,
-                    expiresInDays: Number.isInteger(days) && days > 0 ? days : undefined,
-                  })
-                  setKeyName('')
-                  setKeyScopes([])
-                  setKeyDays('')
-                }}
-              >
-                <h3 className="font-medium text-[hsl(var(--fg-primary))]">
-                  {t('developer.newKey')}
-                </h3>
-                <Input
-                  name="name"
-                  value={keyName}
-                  maxLength={80}
-                  placeholder={t('developer.keyNamePlaceholder')}
-                  aria-label={t('developer.keyName')}
-                  onChange={(e) => setKeyName(e.target.value)}
-                />
-                <CheckList
-                  name="scopes"
-                  values={props.scopes}
-                  selected={keyScopes}
-                  onChange={setKeyScopes}
-                  label={(s) => t(scopeKey(s))}
-                  allLabel={t('developer.allScopes')}
-                  noneLabel={t('developer.noScopes')}
-                />
-                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                  {t('developer.allScopesHint')}
-                </p>
-                <Input
-                  name="expiresInDays"
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={keyDays}
-                  placeholder={t('developer.expiresInDays')}
-                  aria-label={t('developer.expiresInDays')}
-                  onChange={(e) => setKeyDays(e.target.value)}
-                />
-                <Button type="submit" disabled={!canCreateKey} loading={props.creatingKey}>
-                  {t('developer.createKey')}
-                </Button>
-              </form>
+              {keyFormOpen ? (
+                <form
+                  id="developer-new-key"
+                  className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!canCreateKey) return
+                    props.onCreateKey({
+                      name: keyName.trim(),
+                      scopes: keyScopes,
+                      expiresInDays: Number.isInteger(days) && days > 0 ? days : undefined,
+                    })
+                    setKeyName('')
+                    setKeyScopes([])
+                    setKeyDays('')
+                    setKeyFormOpen(false)
+                  }}
+                >
+                  <h3 className="font-medium text-[hsl(var(--fg-primary))]">
+                    {t('developer.newKey')}
+                  </h3>
+                  <Input
+                    name="name"
+                    value={keyName}
+                    maxLength={80}
+                    placeholder={t('developer.keyNamePlaceholder')}
+                    aria-label={t('developer.keyName')}
+                    onChange={(e) => setKeyName(e.target.value)}
+                  />
+                  <CheckList
+                    name="scopes"
+                    values={props.scopes}
+                    selected={keyScopes}
+                    onChange={setKeyScopes}
+                    label={(s) => t(scopeKey(s))}
+                    allLabel={t('developer.allScopes')}
+                    noneLabel={t('developer.noScopes')}
+                  />
+                  <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('developer.allScopesHint')}
+                  </p>
+                  <Input
+                    name="expiresInDays"
+                    type="number"
+                    min={1}
+                    max={3650}
+                    value={keyDays}
+                    placeholder={t('developer.expiresInDays')}
+                    aria-label={t('developer.expiresInDays')}
+                    onChange={(e) => setKeyDays(e.target.value)}
+                  />
+                  <Button type="submit" disabled={!canCreateKey} loading={props.creatingKey}>
+                    {t('developer.createKey')}
+                  </Button>
+                </form>
+              ) : null}
             </>
           )}
         </CardContent>
@@ -371,9 +412,25 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex items-center gap-2">
             <Webhook className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+            <h2 className="min-w-0 flex-1 text-lg font-semibold text-[hsl(var(--fg-primary))]">
               {t('developer.webhooksTitle')}
             </h2>
+            {props.endpointsState === 'ready' ? (
+              <Button
+                size="sm"
+                variant={endpointFormOpen ? 'outline' : 'default'}
+                aria-expanded={endpointFormOpen}
+                aria-controls="developer-new-endpoint"
+                onClick={() => setEndpointFormOpen((value) => !value)}
+              >
+                {endpointFormOpen ? (
+                  <X className="size-4" aria-hidden="true" />
+                ) : (
+                  <Plus className="size-4" aria-hidden="true" />
+                )}
+                {endpointFormOpen ? t('common.cancel') : t('developer.newEndpoint')}
+              </Button>
+            ) : null}
           </div>
           <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('developer.webhooksHelp')}</p>
 
@@ -386,212 +443,231 @@ export const DevelopersView = memo(function DevelopersView(props: DevelopersView
 
           {props.endpointsState === 'ready' && (
             <>
-              {props.endpoints.length === 0 ? (
-                <p className="text-sm text-[hsl(var(--fg-secondary))]">
-                  {t('developer.noEndpoints')}
-                </p>
-              ) : (
-                <ul className="divide-y divide-[hsl(var(--border-default))]">
-                  {props.endpoints.map((ep) => {
-                    const busy = props.busyEndpointId === ep.id
-                    const open = props.selectedEndpointId === ep.id
-                    return (
-                      <li key={ep.id} className="space-y-2 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="min-w-0 flex-1 break-all text-sm font-medium" dir="ltr">
-                            {ep.url}
-                          </p>
-                          <Badge variant={ep.is_active ? 'success' : 'outline'}>
-                            {ep.is_active ? t('developer.active') : t('developer.inactive')}
-                          </Badge>
-                        </div>
-                        {ep.description && (
-                          <p className="text-sm text-[hsl(var(--fg-secondary))]">
+              <SearchableTable
+                tableId="developer-webhooks"
+                rows={props.endpoints}
+                rowKey={(ep) => ep.id}
+                onRowClick={(ep) =>
+                  props.onSelectEndpoint(props.selectedEndpointId === ep.id ? null : ep.id)
+                }
+                words={(ep) => [ep.url, ep.description ?? '']}
+                empty={t('developer.noEndpoints')}
+                columns={[
+                  {
+                    id: 'url',
+                    labelKey: 'developer.endpointUrl',
+                    labelFallback: t('developer.endpointUrl'),
+                    locked: true,
+                    render: (ep) => (
+                      <>
+                        <span className="block break-all text-sm font-medium" dir="ltr">
+                          {ep.url}
+                        </span>
+                        {ep.description ? (
+                          <span className="block text-xs text-[hsl(var(--fg-tertiary))]">
                             {ep.description}
-                          </p>
-                        )}
-                        {!ep.is_active && ep.disabled_reason === 'TOO_MANY_FAILURES' && (
-                          <p className="text-sm text-[hsl(var(--color-destructive))]">
+                          </span>
+                        ) : null}
+                        {!ep.is_active && ep.disabled_reason === 'TOO_MANY_FAILURES' ? (
+                          <span className="block text-xs text-[hsl(var(--color-destructive))]">
                             {t('developer.disabledFailures')}
-                          </p>
-                        )}
-                        <p className="text-xs text-[hsl(var(--fg-secondary))]">
-                          {ep.events.map((e) => t(eventKey(e))).join('، ')}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => props.onSendTest(ep.id)}
-                          >
-                            <Send className="size-4" aria-hidden="true" />
-                            {t('developer.sendTest')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => props.onToggleEndpoint(ep.id, !ep.is_active)}
-                          >
-                            {ep.is_active ? t('developer.disable') : t('developer.enable')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => props.onRotateSecret(ep.id)}
-                          >
-                            <RefreshCw className="size-4" aria-hidden="true" />
-                            {t('developer.rotateSecret')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => props.onSelectEndpoint(open ? null : ep.id)}
-                          >
-                            {open ? t('developer.hideDeliveries') : t('developer.showDeliveries')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => props.onReplay(ep.id, 1)}
-                          >
-                            {t('developer.replay1d')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() => props.onReplay(ep.id, 7)}
-                          >
-                            {t('developer.replay7d')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={busy}
-                            onClick={() => props.onDeleteEndpoint(ep.id)}
-                          >
-                            <Trash2 className="size-4" aria-hidden="true" />
-                            {t('developer.delete')}
-                          </Button>
-                        </div>
+                          </span>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'status',
+                    labelKey: 'developer.endpointStatus',
+                    labelFallback: t('developer.endpointStatus'),
+                    render: (ep) => (
+                      <Badge variant={ep.is_active ? 'success' : 'outline'}>
+                        {ep.is_active ? t('developer.active') : t('developer.inactive')}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    id: 'events',
+                    labelKey: 'developer.endpointEvents',
+                    labelFallback: t('developer.endpointEvents'),
+                    showFrom: 'md',
+                    render: (ep) => (
+                      <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                        {ep.events.map((e) => t(eventKey(e))).join('، ')}
+                      </span>
+                    ),
+                  },
+                  {
+                    id: 'actions',
+                    labelKey: 'common.actions',
+                    labelFallback: t('common.actions'),
+                    locked: true,
+                    align: 'end',
+                    render: (ep) => {
+                      const busy = props.busyEndpointId === ep.id
+                      return (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              aria-label={t('common.actions')}
+                              disabled={busy}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <MoreHorizontal className="size-4" aria-hidden="true" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => props.onSendTest(ep.id)}>
+                              <Send className="size-4" aria-hidden="true" />
+                              {t('developer.sendTest')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => props.onToggleEndpoint(ep.id, !ep.is_active)}
+                            >
+                              {ep.is_active ? t('developer.disable') : t('developer.enable')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => props.onRotateSecret(ep.id)}>
+                              <RefreshCw className="size-4" aria-hidden="true" />
+                              {t('developer.rotateSecret')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => props.onReplay(ep.id, 1)}>
+                              {t('developer.replay1d')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => props.onReplay(ep.id, 7)}>
+                              {t('developer.replay7d')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => props.onDeleteEndpoint(ep.id)}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              {t('developer.delete')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )
+                    },
+                  },
+                ]}
+              />
+              {props.selectedEndpointId &&
+              props.endpoints.some((ep) => ep.id === props.selectedEndpointId) ? (
+                <div className="space-y-2 rounded-xl bg-[hsl(var(--surface-muted))] p-3">
+                  <p className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+                    {t('developer.showDeliveries')}
+                  </p>
+                  <StateMessage
+                    state={props.deliveriesState}
+                    error={null}
+                    t={t}
+                    onRetry={props.onRetry}
+                  />
+                  {props.deliveriesState === 'ready' &&
+                    (props.deliveries.length === 0 ? (
+                      <p className="text-sm text-[hsl(var(--fg-secondary))]">
+                        {t('developer.noDeliveries')}
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {props.deliveries.map((d) => (
+                          <li key={d.id} className="flex flex-wrap items-center gap-2 text-xs">
+                            <Badge variant={DELIVERY_VARIANT[d.status]}>
+                              {t(`developer.delivery.${d.status}`)}
+                            </Badge>
+                            <code dir="ltr">{d.event_type}</code>
+                            <span className="text-[hsl(var(--fg-tertiary))]">
+                              {props.formatDate(d.created_at)}
+                            </span>
+                            {d.last_status_code !== null && (
+                              <code dir="ltr">HTTP {d.last_status_code}</code>
+                            )}
+                            <span className="text-[hsl(var(--fg-tertiary))]">
+                              {t('developer.attempts')}: {d.attempts}/{d.max_attempts}
+                            </span>
+                            {d.last_error && (
+                              <span
+                                className="w-full break-all text-[hsl(var(--color-destructive))]"
+                                dir="ltr"
+                              >
+                                {d.last_error}
+                              </span>
+                            )}
+                            {(d.status === 'failed' || d.status === 'succeeded') && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => props.onRetryDelivery(d.id)}
+                              >
+                                {t('developer.redeliver')}
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                </div>
+              ) : null}
 
-                        {open && (
-                          <div className="rounded-xl bg-[hsl(var(--surface-muted))] p-3">
-                            <StateMessage
-                              state={props.deliveriesState}
-                              error={null}
-                              t={t}
-                              onRetry={props.onRetry}
-                            />
-                            {props.deliveriesState === 'ready' &&
-                              (props.deliveries.length === 0 ? (
-                                <p className="text-sm text-[hsl(var(--fg-secondary))]">
-                                  {t('developer.noDeliveries')}
-                                </p>
-                              ) : (
-                                <ul className="space-y-2">
-                                  {props.deliveries.map((d) => (
-                                    <li
-                                      key={d.id}
-                                      className="flex flex-wrap items-center gap-2 text-xs"
-                                    >
-                                      <Badge variant={DELIVERY_VARIANT[d.status]}>
-                                        {t(`developer.delivery.${d.status}`)}
-                                      </Badge>
-                                      <code dir="ltr">{d.event_type}</code>
-                                      <span className="text-[hsl(var(--fg-tertiary))]">
-                                        {props.formatDate(d.created_at)}
-                                      </span>
-                                      {d.last_status_code !== null && (
-                                        <code dir="ltr">HTTP {d.last_status_code}</code>
-                                      )}
-                                      <span className="text-[hsl(var(--fg-tertiary))]">
-                                        {t('developer.attempts')}: {d.attempts}/{d.max_attempts}
-                                      </span>
-                                      {d.last_error && (
-                                        <span
-                                          className="w-full break-all text-[hsl(var(--color-destructive))]"
-                                          dir="ltr"
-                                        >
-                                          {d.last_error}
-                                        </span>
-                                      )}
-                                      {(d.status === 'failed' || d.status === 'succeeded') && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => props.onRetryDelivery(d.id)}
-                                        >
-                                          {t('developer.redeliver')}
-                                        </Button>
-                                      )}
-                                    </li>
-                                  ))}
-                                </ul>
-                              ))}
-                          </div>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-
-              <form
-                className="space-y-3 border-t border-[hsl(var(--border-default))] pt-4"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!canCreateEndpoint) return
-                  props.onCreateEndpoint({
-                    url: url.trim(),
-                    description: description.trim() || undefined,
-                    events,
-                  })
-                  setUrl('')
-                  setDescription('')
-                  setEvents([])
-                }}
-              >
-                <h3 className="font-medium text-[hsl(var(--fg-primary))]">
-                  {t('developer.newEndpoint')}
-                </h3>
-                <Input
-                  name="url"
-                  type="url"
-                  dir="ltr"
-                  value={url}
-                  placeholder="https://"
-                  aria-label={t('developer.endpointUrl')}
-                  onChange={(e) => setUrl(e.target.value)}
-                />
-                <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('developer.httpsOnly')}</p>
-                <Input
-                  name="description"
-                  value={description}
-                  maxLength={200}
-                  placeholder={t('developer.endpointDescription')}
-                  aria-label={t('developer.endpointDescription')}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-                <CheckList
-                  name="events"
-                  values={props.events}
-                  selected={events}
-                  onChange={setEvents}
-                  label={(e) => t(eventKey(e))}
-                />
-                <Button
-                  type="submit"
-                  disabled={!canCreateEndpoint}
-                  loading={props.creatingEndpoint}
+              {endpointFormOpen ? (
+                <form
+                  id="developer-new-endpoint"
+                  className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!canCreateEndpoint) return
+                    props.onCreateEndpoint({
+                      url: url.trim(),
+                      description: description.trim() || undefined,
+                      events,
+                    })
+                    setUrl('')
+                    setDescription('')
+                    setEvents([])
+                    setEndpointFormOpen(false)
+                  }}
                 >
-                  {t('developer.createEndpoint')}
-                </Button>
-              </form>
+                  <h3 className="font-medium text-[hsl(var(--fg-primary))]">
+                    {t('developer.newEndpoint')}
+                  </h3>
+                  <Input
+                    name="url"
+                    type="url"
+                    dir="ltr"
+                    value={url}
+                    placeholder="https://"
+                    aria-label={t('developer.endpointUrl')}
+                    onChange={(e) => setUrl(e.target.value)}
+                  />
+                  <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('developer.httpsOnly')}
+                  </p>
+                  <Input
+                    name="description"
+                    value={description}
+                    maxLength={200}
+                    placeholder={t('developer.endpointDescription')}
+                    aria-label={t('developer.endpointDescription')}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                  <CheckList
+                    name="events"
+                    values={props.events}
+                    selected={events}
+                    onChange={setEvents}
+                    label={(e) => t(eventKey(e))}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!canCreateEndpoint}
+                    loading={props.creatingEndpoint}
+                  >
+                    {t('developer.createEndpoint')}
+                  </Button>
+                </form>
+              ) : null}
             </>
           )}
         </CardContent>

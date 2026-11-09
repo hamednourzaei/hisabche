@@ -85,7 +85,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
 
   // Platform
   'data-and-sync': 'offline',
-  'data-and-sync?tab=details&view=migration': 'data-and-backup',
+  'data-and-sync?view=migration': 'data-and-backup',
   settings: 'data-and-backup',
   developers: 'developers',
   manufacturing: 'manufacturing',

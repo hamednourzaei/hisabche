@@ -15,6 +15,7 @@
 // - typed payloads without `any`
 // ============================================
 
+import type { AdvanceDocument, AdvanceDocumentInput } from '@hisabche/validation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { asList } from '../lib/as-list'
@@ -237,6 +238,8 @@ export interface CustomerDepositRecord {
   sourceType?: 'sales_order' | 'service_session' | 'pre_sale' | 'pre_purchase' | undefined
   /** advances-02: what was pre-sold / pre-bought. */
   note?: string | null | undefined
+  /** advances-03: the priced lines it was taken for; null/absent without them. */
+  document?: AdvanceDocument | null | undefined
   status: 'pending_posting' | 'posting_unknown' | 'available' | 'partially_used' | 'fully_used'
   /** True while a change to this deposit is still waiting in the device's outbox. */
   pendingSync: boolean
@@ -625,6 +628,8 @@ export function useCreateAdvance() {
       paymentMethod?: string | undefined
       date?: string | undefined
       note?: string | undefined
+      /** advances-03: the lines from the invoice builder; the server prices them. */
+      document?: AdvanceDocumentInput | undefined
     }) => {
       const { data } = await apiClient.post<{ data: OrderDepositRecord }>('/advances', input)
       return data.data
@@ -1289,58 +1294,6 @@ export function useMoveServiceSessionStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
-    },
-  })
-}
-
-// ─── Provider commission (V54, owner decision N-7) — a report ─────
-
-export interface ProviderCommissionRowView {
-  practitionerId: string
-  currency: string
-  sessions: number
-  baseMinor: number
-  rateBp: number | null
-  commissionMinor: number | null
-}
-
-export interface ProviderCommissionView {
-  rows: ProviderCommissionRowView[]
-  unpriced: number
-  unassigned: number
-  configurable: boolean
-  priceBasis: 'current_list_price'
-}
-
-export function useProviderCommission(from: string, to: string) {
-  const authReady = useAuthReady()
-  return useQuery({
-    queryKey: ['provider-commission', from, to] as const,
-    queryFn: async () => {
-      const { data } = await apiClient.get<ProviderCommissionView>('/service-delivery/commission', {
-        params: { from, to },
-      })
-      return {
-        ...data,
-        rows: asList<ProviderCommissionRowView>(data?.rows, '/service-delivery/commission'),
-      }
-    },
-    enabled: authReady && Boolean(from) && Boolean(to),
-  })
-}
-
-export function useSetProviderCommissionRate() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ employeeId, rateBp }: { employeeId: string; rateBp: number }) => {
-      const { data } = await apiClient.put<{ employeeId: string; rateBp: number }>(
-        `/service-delivery/commission-rates/${employeeId}`,
-        { rateBp },
-      )
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['provider-commission'] })
     },
   })
 }

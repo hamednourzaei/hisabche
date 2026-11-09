@@ -3,6 +3,7 @@
 import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { cn } from '../../lib/utils'
+import { useMenuOpenMark } from '../../lib/use-menu-open-mark'
 import { CheckIcon, ChevronRightIcon } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -50,7 +51,30 @@ const RadioGroupPrimitive = DropdownMenuPrimitive.RadioGroup
 
 // ─── LedgerDrop ────────────────────────────────────────────────────────────
 
-const LedgerDrop = Root
+/**
+ * The root of every dropdown menu. Same behaviour as `Select`: while open the
+ * page keeps its sticky header (no body lock), a soft blur sits behind the
+ * menu, and a scroll outside closes it (lib/use-menu-open-mark.ts).
+ */
+function LedgerDrop({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof Root>) {
+  const [innerOpen, setInnerOpen] = React.useState(defaultOpen ?? false)
+  const open = openProp ?? innerOpen
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      setInnerOpen(next)
+      onOpenChange?.(next)
+    },
+    [onOpenChange],
+  )
+  const close = React.useCallback(() => setOpen(false), [setOpen])
+  useMenuOpenMark(open, close)
+  return <Root {...props} open={open} onOpenChange={setOpen} />
+}
 LedgerDrop.displayName = 'LedgerDrop'
 
 // ─── LedgerTrigger ─────────────────────────────────────────────────────────
@@ -192,10 +216,14 @@ const LedgerContent = React.forwardRef<
         <DropdownMenuPrimitive.Content
           ref={ref}
           sideOffset={sideOffset}
+          collisionPadding={8}
+          data-menu-content=""
+          data-menu-centered=""
           className={cn(
-            // Layout
+            // Layout — never taller than the room it has (owner report, 9 Nov:
+            // a long filter menu ran off the top of the screen).
             'z-50 min-w-[180px] max-w-[320px]',
-            'overflow-hidden rounded-lg',
+            'max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto overscroll-contain rounded-lg',
             'p-1',
             // Background & text
             'bg-[hsl(var(--surface-overlay))]',

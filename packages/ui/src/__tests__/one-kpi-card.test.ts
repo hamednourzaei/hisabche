@@ -89,8 +89,11 @@ describe('no screen declares a KPI card of its own', () => {
     // Four cards, each opening the rows its figure was computed from.
     // Five since 8 Nov 2026: advances-02 added «پیش‌دریافت / پیش‌پرداخت باز»,
     // the same shared card in the same row.
-    expect((view.match(/<KpiCard/g) ?? []).length).toBe(5)
-    expect((view.match(/onOpen=\{/g) ?? []).length).toBe(5)
+    // 4 since 9 Nov 2026: the period-sales card was removed (owner request); up to
+    // four more come from <CustomKpiCards />, drawn with the same KpiCard.
+    expect((view.match(/<KpiCard/g) ?? []).length).toBe(4)
+    expect(view).toContain('<CustomKpiCards ')
+    expect((view.match(/onOpen=\{/g) ?? []).length).toBe(4)
     // ⚠️ Debt is the one where rising is bad.
     const debt = view.slice(view.indexOf('dashboard.customerDebt'))
     expect(debt.slice(0, 400)).toContain('invertDelta')

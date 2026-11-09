@@ -53,7 +53,6 @@ import { ServiceSessionCreateDialog } from '../service-session-create-dialog'
 import { ServiceSessionDeliverDialog } from '../service-session-deliver-dialog'
 import { ServiceSessionCancelDialog } from '../service-session-cancel-dialog'
 import { ServiceSessionDetails } from '../service-session-details'
-import { ProviderCommissionPanel } from '../provider-commission-panel'
 
 interface EmployeeRow {
   id?: string | null | undefined
@@ -368,20 +367,8 @@ function ServiceDeliveryContent() {
         onOpen={(row) => setDetailRow(row)}
         onMoveStatus={onMoveStatus}
         movingId={movingId}
-        {...(sync.available
-          ? { onOpenSyncCentre: () => push('/data-and-sync?tab=details&view=sync') }
-          : {})}
+        {...(sync.available ? { onOpenSyncCentre: () => push('/data-and-sync') } : {})}
       />
-
-      {/* V54 (N-7): the commission report, for whoever may read staff pay. */}
-      {capabilities.can('payroll.read') === true ? (
-        <div className="mt-6 rounded-2xl border border-[hsl(var(--border-default))] p-4">
-          <ProviderCommissionPanel
-            nameById={practitionerById}
-            mayEditRates={capabilities.can('payroll.write') === true}
-          />
-        </div>
-      ) : null}
 
       <ServiceSessionCreateDialog
         open={createOpen}
@@ -421,9 +408,7 @@ function ServiceDeliveryContent() {
         onOpenInvoice={(invoiceId) => push(`/invoices/${invoiceId}`)}
         maySuspendPackage={capabilities.can('payment.cancel') === true}
         mayTakeDeposit={mayWrite}
-        {...(sync.available
-          ? { onOpenSyncCentre: () => push('/data-and-sync?tab=details&view=sync') }
-          : {})}
+        {...(sync.available ? { onOpenSyncCentre: () => push('/data-and-sync') } : {})}
       />
     </>
   )

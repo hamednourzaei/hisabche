@@ -122,6 +122,11 @@ export interface ProductProfitRow {
   costMissing: boolean
   /** Part of the cost was estimated (stock was not there when sold). */
   costEstimated: boolean
+  /**
+   * The sale invoices that sold this product with no cost behind it (at most
+   * 100) — what «give these sales their cost» acts on (9 Nov 2026).
+   */
+  uncostedInvoiceIds?: string[] | undefined
 }
 
 export interface ProfitReport {
@@ -297,7 +302,11 @@ export function buildProfitReport(input: {
     costByLine.set(key, current)
   }
 
-  type Tally = ProductProfitRow & { costedDocuments: number; uncostedDocuments: number }
+  type Tally = ProductProfitRow & {
+    costedDocuments: number
+    uncostedDocuments: number
+    uncostedInvoices: Set<string>
+  }
   const byProduct = new Map<string, Tally>()
   const linesByInvoice = new Map<string, ProfitLine[]>()
   for (const line of input.lines) {
@@ -336,6 +345,7 @@ export function buildProfitReport(input: {
           costEstimated: false,
           costedDocuments: 0,
           uncostedDocuments: 0,
+          uncostedInvoices: new Set<string>(),
         } satisfies Tally)
       row.quantity += line.quantity
       row.revenue += revenues.get(line) ?? 0
@@ -356,10 +366,12 @@ export function buildProfitReport(input: {
             if (short > QUANTITY_EPSILON) {
               row.uncostedQuantity += short
               row.uncostedDocuments += 1
+              row.uncostedInvoices.add(invoiceId)
             }
           } else {
             row.uncostedQuantity += sold
             row.uncostedDocuments += 1
+            row.uncostedInvoices.add(invoiceId)
           }
         }
       }
@@ -368,7 +380,7 @@ export function buildProfitReport(input: {
   }
 
   const products: ProductProfitRow[] = [...byProduct.values()]
-    .map(({ costedDocuments, uncostedDocuments, ...row }) => {
+    .map(({ costedDocuments, uncostedDocuments, uncostedInvoices, ...row }) => {
       // ⚠️ THE FIGURE IS DECIDED BEFORE IT IS ROUNDED (see the file header).
       //
       // A revenue or a cost that could not be read is NOT a number: `round2`
@@ -399,6 +411,7 @@ export function buildProfitReport(input: {
         costStatus,
         uncostedQuantity: round2(row.uncostedQuantity),
         costMissing: !determinate,
+        uncostedInvoiceIds: [...uncostedInvoices].slice(0, 100),
       }
     })
     // Best profit first; a row whose profit is not known goes last, in the

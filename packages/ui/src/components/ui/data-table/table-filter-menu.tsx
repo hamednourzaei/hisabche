@@ -58,7 +58,7 @@ export function TableFilterMenu({ label, clearLabel, groups }: TableFilterMenuPr
       <DropdownMenuTrigger
         data-table-filter-menu=""
         className={cn(
-          'inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] border px-3 text-sm font-medium',
+          'inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-md)] border px-3 text-sm font-medium',
           'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]',
           'transition-colors hover:border-[hsl(var(--border-strong))]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
@@ -84,7 +84,7 @@ export function TableFilterMenu({ label, clearLabel, groups }: TableFilterMenuPr
           </span>
         ) : null}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-[70vh] w-64 overflow-y-auto">
+      <DropdownMenuContent align="end" className="w-64">
         {offered.map((group, index) => (
           <div key={group.id} data-filter-group={group.id}>
             {index > 0 ? <DropdownMenuSeparator /> : null}

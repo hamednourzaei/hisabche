@@ -14,6 +14,7 @@
 'use client'
 
 import { memo, useMemo, useState, type ReactNode } from 'react'
+import { NEW_DOCUMENT_KINDS, type NewDocumentKind } from '../../invoices/new-invoice-chooser'
 import {
   ChevronDown,
   ChevronLeft,
@@ -69,7 +70,7 @@ export interface InvoiceBuilderMobileProps {
   bookEquivalent?: string | null | undefined
 
   customers: readonly InvoiceDraftCustomer[]
-  transactionType: 'sale' | 'purchase'
+  transactionType: NewDocumentKind
   currency: CurrencyCode
   rates: Partial<Record<CurrencyCode, string>>
   date: string
@@ -81,7 +82,7 @@ export interface InvoiceBuilderMobileProps {
 
   onAddCustomer: (customer: InvoiceDraftCustomer) => void
   onRemoveCustomer: (id: string) => void
-  onTransactionTypeChange: (type: 'sale' | 'purchase') => void
+  onTransactionTypeChange: (type: NewDocumentKind) => void
   onCurrencyChange: (currency: CurrencyCode) => void
   onRateChange: (currency: CurrencyCode, value: string) => void
   onDateChange: (value: string) => void
@@ -255,7 +256,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
           aria-label={t('invoiceBuilder.customer.type', 'نوع فاکتور')}
           className="grid grid-cols-2 gap-2"
         >
-          {(['sale', 'purchase'] as const).map((type) => {
+          {NEW_DOCUMENT_KINDS.map((type) => {
             const active = transactionType === type
             return (
               <button
@@ -275,7 +276,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
                 )}
               >
                 {active ? <span aria-hidden="true">✓</span> : null}
-                {t(`invoices.type.${type}`, type === 'sale' ? 'فروش' : 'خرید')}
+                {t(`invoices.newDocument.${type}`)}
               </button>
             )
           })}
@@ -367,7 +368,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
       {/* ── Customer ─────────────────────────────────────────────────── */}
       <section className="mb-5">
         <h2 className={cn(sectionTitle, 'mb-2')}>
-          {transactionType === 'purchase'
+          {transactionType === 'purchase' || transactionType === 'pre_purchase'
             ? t('invoiceBuilder.customer.supplier', 'انتخاب تأمین‌کننده')
             : t('invoiceBuilder.mobile.customerTitle', 'اطلاعات مشتری')}
         </h2>

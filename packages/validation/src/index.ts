@@ -1452,3 +1452,5 @@ export {
 export * from './schemas/sync-identity'
 export * from './schemas/subscription-order.schema'
 export * from './schemas/operational-dna'
+export * from './schemas/advance-document'
+export * from './schemas/dashboard-kpis'

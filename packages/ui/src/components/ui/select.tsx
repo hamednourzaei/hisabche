@@ -39,6 +39,7 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
+import { useMenuOpenMark } from '../../lib/use-menu-open-mark'
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon } from 'lucide-react'
 
 /**
@@ -82,29 +83,8 @@ function Select({
     [onOpenChange],
   )
 
-  React.useEffect(() => {
-    if (!open) return
-    const root = document.documentElement
-    // Counted, not a boolean: one select can open while another is closing.
-    root.dataset.selectOpen = String(Number(root.dataset.selectOpen ?? '0') + 1)
-
-    const closeOnScroll = (event: Event) => {
-      const target = event.target
-      // Scrolling the list itself is not scrolling the page.
-      if (target instanceof Element && target.closest('[data-select-content]')) return
-      setOpen(false)
-    }
-    window.addEventListener('wheel', closeOnScroll, { capture: true, passive: true })
-    window.addEventListener('touchmove', closeOnScroll, { capture: true, passive: true })
-
-    return () => {
-      window.removeEventListener('wheel', closeOnScroll, { capture: true })
-      window.removeEventListener('touchmove', closeOnScroll, { capture: true })
-      const left = Number(root.dataset.selectOpen ?? '1') - 1
-      if (left > 0) root.dataset.selectOpen = String(left)
-      else delete root.dataset.selectOpen
-    }
-  }, [open, setOpen])
+  const close = React.useCallback(() => setOpen(false), [setOpen])
+  useMenuOpenMark(open, close)
 
   return <SelectPrimitive.Root {...props} open={open} onOpenChange={setOpen} />
 }
@@ -304,6 +284,9 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.Content
         // The mark `Select` looks for: a wheel inside the list scrolls the list.
         data-select-content=""
+        // Centred on a phone or tablet (globals.css).
+        data-menu-centered=""
+        collisionPadding={8}
         ref={ref}
         position={position}
         className={cn(

@@ -190,11 +190,11 @@ const router = createHashRouter([
       { path: 'workflow-templates', element: <Navigate to="/approvals?tab=workflows" replace /> },
       {
         path: 'conflicts',
-        element: <Navigate to="/data-and-sync?tab=details&view=conflicts" replace />,
+        element: <Navigate to="/data-and-sync?view=conflicts" replace />,
       },
       {
         path: 'data-migration',
-        element: <Navigate to="/data-and-sync?tab=details&view=migration" replace />,
+        element: <Navigate to="/data-and-sync?view=migration" replace />,
       },
       { path: 'wallet', element: <Navigate to="/billing?tab=money" replace /> },
       { path: 'referrals', element: <Navigate to="/billing?tab=money&view=referrals" replace /> },

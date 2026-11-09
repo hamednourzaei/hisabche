@@ -14,6 +14,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowDownLeft, ArrowUpRight, HandCoins, PackagePlus, Plus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type * as React from 'react'
 import { cn } from '../../../lib/utils'
 
 export type NewDocumentKind = 'sale' | 'purchase' | 'pre_sale' | 'pre_purchase'
@@ -34,6 +35,30 @@ const KIND_ICON: Record<NewDocumentKind, LucideIcon> = {
 
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] focus-visible:ring-offset-2'
+
+const MENU_WIDTH = 240 // w-60
+const EDGE = 12
+
+/**
+ * Where the column of choices goes. It hangs from the button, aligned to its
+ * start edge, but is pushed back inside the screen when the button sits near
+ * an edge (owner report, 9 Nov 2026: in Persian the column ran off the left
+ * side). Below 768px it is centred, like every other menu.
+ */
+function menuPlacement(anchor: {
+  top: number
+  left: number
+  right: number
+  rtl: boolean
+}): React.CSSProperties {
+  const width = window.innerWidth
+  if (width < 768) {
+    return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+  }
+  const room = Math.max(EDGE, width - MENU_WIDTH - EDGE)
+  const left = anchor.rtl ? anchor.right - MENU_WIDTH : anchor.left
+  return { top: anchor.top, left: Math.min(Math.max(EDGE, left), room) }
+}
 
 export function NewInvoiceChooser({
   t,
@@ -135,12 +160,8 @@ export function NewInvoiceChooser({
                 id={menuId}
                 role="menu"
                 aria-label={t('invoices.newDocument.label')}
-                className="absolute flex w-60 flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-150 motion-reduce:animate-none"
-                style={
-                  anchor.rtl
-                    ? { top: anchor.top, right: Math.max(12, window.innerWidth - anchor.right) }
-                    : { top: anchor.top, left: Math.max(12, anchor.left) }
-                }
+                className="absolute flex max-h-[calc(100dvh-2rem)] w-60 flex-col gap-2 overflow-y-auto overscroll-contain animate-in fade-in slide-in-from-top-2 duration-150 motion-reduce:animate-none"
+                style={menuPlacement(anchor)}
               >
                 {NEW_DOCUMENT_KINDS.map((kind, index) => {
                   const Icon = KIND_ICON[kind]

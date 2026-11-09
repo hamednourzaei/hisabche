@@ -20,6 +20,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { NEW_DOCUMENT_KINDS, type NewDocumentKind } from '../invoices/new-invoice-chooser'
 import { memo } from 'react'
 import { User, X } from 'lucide-react'
 import { type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
@@ -39,8 +40,8 @@ export interface CustomerPanelProps {
   customers: readonly InvoiceDraftCustomer[]
   onAddCustomer: (customer: InvoiceDraftCustomer) => void
   onRemoveCustomer: (id: string) => void
-  transactionType: 'sale' | 'purchase'
-  onTransactionTypeChange: (type: 'sale' | 'purchase') => void
+  transactionType: NewDocumentKind
+  onTransactionTypeChange: (type: NewDocumentKind) => void
   currency: CurrencyCode
   onCurrencyChange: (currency: CurrencyCode) => void
   /** The invoice-to-books rate, shown right under the currency (live audit #59). */
@@ -92,7 +93,7 @@ export const CustomerPanel = memo(function CustomerPanel({
   notes,
   onNotesChange,
 }: CustomerPanelProps) {
-  const isPurchase = transactionType === 'purchase'
+  const isPurchase = transactionType === 'purchase' || transactionType === 'pre_purchase'
 
   // A persisted draft written by an older build has no `customers` key at all,
   // and a rehydrating store can hand this component that shape for one render.
@@ -115,9 +116,9 @@ export const CustomerPanel = memo(function CustomerPanel({
         <div
           role="radiogroup"
           aria-label={t('invoiceBuilder.customer.type', 'نوع فاکتور')}
-          className="grid grid-cols-2 gap-1 rounded-[var(--radius-md)] bg-[hsl(var(--surface-muted))] p-1"
+          className="grid grid-cols-2 gap-1 rounded-[var(--radius-md)] bg-[hsl(var(--surface-muted))] p-1 sm:grid-cols-4"
         >
-          {(['sale', 'purchase'] as const).map((type) => (
+          {NEW_DOCUMENT_KINDS.map((type) => (
             <button
               key={type}
               type="button"
@@ -132,7 +133,7 @@ export const CustomerPanel = memo(function CustomerPanel({
                   : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
               )}
             >
-              {t(`invoices.type.${type}`, type === 'sale' ? 'فروش' : 'خرید')}
+              {t(`invoices.newDocument.${type}`)}
             </button>
           ))}
         </div>

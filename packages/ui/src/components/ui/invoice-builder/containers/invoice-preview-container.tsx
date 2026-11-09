@@ -10,7 +10,16 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, Pencil, Printer } from 'lucide-react'
-import { useCreateInvoice, useCreateRecurringInvoice, useWorkspaces } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useCreateAdvance,
+  useCreateInvoice,
+  useCreateRecurringInvoice,
+  useWorkspaces,
+} from '@hisabche/api'
+import { useSearchParams } from 'next/navigation'
+import { FRACTION_DIGITS, fractionDigits, type KnownCurrency } from '@hisabche/formatting'
+import { advanceKindOf } from './invoice-builder-container'
 import {
   useBackupStore,
   useInvoiceDraftStore,
@@ -76,6 +85,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const localeReplace = useLocaleReplace()
   const push = useLocalePush()
   const createInvoice = useCreateInvoice()
+  // advances-03: a pre-sale / pre-purchase from the same builder.
+  const advanceKind = advanceKindOf(useSearchParams()?.get('type'))
+  const createAdvance = useCreateAdvance()
+  const busy = createInvoice.isPending || createAdvance.isPending
+  const editHref = advanceKind ? `/invoices/new?type=${advanceKind}` : '/invoices/new'
   const createRecurring = useCreateRecurringInvoice()
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(INITIAL_RECURRENCE)
   const toast = useToast()
@@ -118,8 +132,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   // rendering an empty document.
   useEffect(() => {
     if (submittedRef.current) return
-    if (items.length === 0) localeReplace('/invoices/new')
-  }, [items.length, localeReplace])
+    if (items.length === 0) localeReplace(editHref)
+  }, [items.length, localeReplace, editHref])
 
   const { data: workspaces } = useWorkspaces()
   const workspace = Array.isArray(workspaces)
@@ -523,9 +537,92 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     setSaveStatus,
     clearDraft,
     push,
-    t,
-    toast,
+    exchangeRate,
+    foreign,
+    rateMissing,
+    submissionKey,
   ])
+
+  /**
+   * advances-03: the lines become the advance's document; the payment typed
+   * here is the advance (what was received / paid now). The server prices the
+   * lines again and refuses an advance larger than them.
+   */
+  const handleAdvanceConfirm = useCallback(async () => {
+    if (!advanceKind || issues.length || items.length === 0) return
+    if (!primaryCustomer?.id) {
+      setError(
+        t(advanceKind === 'pre_sale' ? 'advances.customerRequired' : 'advances.supplierRequired'),
+      )
+      return
+    }
+    if (!bookCurrency || bookCurrency !== currency || !(currency in FRACTION_DIGITS)) {
+      setError(t('advances.booksCurrencyOnly'))
+      return
+    }
+    const scale = 10 ** fractionDigits(currency as KnownCurrency)
+    const toMinor = (value: number) => Math.round(value * scale)
+    const amountMinor = toMinor(paidAmount)
+    if (amountMinor <= 0) {
+      setError(t('advances.receivedRequired'))
+      return
+    }
+    setError(null)
+    try {
+      const created = await createAdvance.mutateAsync({
+        id: submissionKey,
+        kind: advanceKind,
+        partyId: primaryCustomer.id,
+        amountMinor,
+        paymentMethod: paymentEntries[0]?.method ?? payment.method,
+        date: draft.date.slice(0, 10),
+        document: {
+          lines: items.map((item) => {
+            const unitPriceMinor = toMinor(item.unitPrice)
+            const gross = Math.round(item.quantity * unitPriceMinor)
+            return {
+              ...(item.productId ? { productId: item.productId } : {}),
+              name: item.productName.slice(0, 200),
+              quantity: item.quantity,
+              unit: (item.unitLabel ?? item.unit).slice(0, 32),
+              unitPriceMinor,
+              discountMinor: Math.max(0, gross - toMinor(item.totalPrice)),
+            }
+          }),
+          ...(summary.discountTotal > 0 ? { discountMinor: toMinor(summary.discountTotal) } : {}),
+          ...(Number(draft.taxRate) > 0 ? { taxRate: Number(draft.taxRate) } : {}),
+          ...(draft.dueDate ? { dueDate: draft.dueDate.slice(0, 10) } : {}),
+          ...(draft.notes.trim() ? { notes: draft.notes.trim().slice(0, 2000) } : {}),
+        },
+      })
+      submittedRef.current = true
+      clearDraft()
+      push(`/invoices?type=${advanceKind}&advance=${created.id}`)
+    } catch (err) {
+      setError(apiErrorMessage(err, t('advances.failed')))
+    }
+  }, [
+    advanceKind,
+    issues.length,
+    items,
+    primaryCustomer,
+    bookCurrency,
+    currency,
+    paidAmount,
+    createAdvance,
+    submissionKey,
+    paymentEntries,
+    payment.method,
+    draft.date,
+    draft.taxRate,
+    draft.dueDate,
+    draft.notes,
+    summary.discountTotal,
+    clearDraft,
+    push,
+    t,
+  ])
+  const onConfirm = advanceKind ? handleAdvanceConfirm : handleConfirm
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 pb-40 lg:pb-6">
@@ -659,7 +756,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             </div>
           ) : null}
 
-          {recurringAvailability.requiresOnline ? (
+          {advanceKind ? null : recurringAvailability.requiresOnline ? (
             <CloudRequiredNotice
               variant="inline"
               title={t('invoiceBuilder.recurrence.title', 'فاکتور تکراری')}
@@ -699,19 +796,21 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
           <div className="hidden flex-col gap-2 lg:flex">
             <Button
-              onClick={handleConfirm}
-              loading={createInvoice.isPending}
+              onClick={onConfirm}
+              loading={busy}
               disabled={issues.length > 0 || paymentBlocked || rateMissing}
               fullWidth
               className="gap-1.5"
             >
               <Check className="size-4" aria-hidden="true" />
-              {t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
+              {advanceKind
+                ? t(`advances.confirm.${advanceKind}`)
+                : t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
             </Button>
             <Button
               variant="outline"
-              onClick={() => push('/invoices/new')}
-              disabled={createInvoice.isPending}
+              onClick={() => push(editHref)}
+              disabled={busy}
               fullWidth
               className="gap-1.5"
             >
@@ -745,8 +844,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => push('/invoices/new')}
-            disabled={createInvoice.isPending}
+            onClick={() => push(editHref)}
+            disabled={busy}
             className="h-12 shrink-0 px-4"
           >
             <Pencil className="size-4" aria-hidden="true" />
@@ -754,14 +853,16 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
           </Button>
           <Button
             variant="success"
-            onClick={handleConfirm}
-            loading={createInvoice.isPending}
+            onClick={onConfirm}
+            loading={busy}
             disabled={issues.length > 0 || paymentBlocked || rateMissing}
             fullWidth
             className="h-12 gap-1.5 text-base"
           >
             <Check className="size-4" aria-hidden="true" />
-            {t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
+            {advanceKind
+              ? t(`advances.confirm.${advanceKind}`)
+              : t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
           </Button>
         </div>
       </div>

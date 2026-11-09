@@ -1398,19 +1398,6 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     // move may start from — two taps cannot both win; the same move again is a
     // replay read back, not a second write. No money moves on this route.
     routeFile: 'service-delivery.routes.ts',
-    route: 'PUT /api/service-delivery/commission-rates/:employeeId',
-    // One row per (workspace, employee); the newest rate is the rate. No money
-    // moves on this route and nothing is derived from the previous value.
-    mechanisms: ['last-write-wins'],
-    evidence: [
-      {
-        file: `${SVC}/service-delivery/provider-commission.service.ts`,
-        text: "{ onConflict: 'workspace_id,employee_id' }",
-      },
-    ],
-  },
-  {
-    routeFile: 'service-delivery.routes.ts',
     route: 'POST /api/service-delivery/sessions/:id/status',
     mechanisms: ['conditional-update', 'state-idempotent'],
     evidence: [

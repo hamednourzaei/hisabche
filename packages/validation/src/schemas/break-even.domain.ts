@@ -56,7 +56,10 @@ export interface BreakEvenRow {
    */
   breakEvenQuantity: number | null
   /** Why it is null, so the UI can say why rather than showing a blank. */
-  breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | null
+  breakEvenReason:
+    'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | 'NO_PRODUCT' | null
+  /** Sales of this product with no cost behind them — what «cost them» acts on. */
+  uncostedInvoiceIds: string[]
 }
 
 /**
@@ -98,6 +101,19 @@ export function breakEven(report: ProfitReport, fixedCosts: FixedCosts): BreakEv
   const isLowerBound = other === null
 
   const rows: BreakEvenRow[] = report.products.map((product) => {
+    // ⚠️ A LINE WITH NO PRODUCT HAS NO COST TO READ (owner report, 9 Nov 2026:
+    // «فروش چندبخشی ۱۰۰٪ · سربه‌سر ۰»). Free text sells nothing from stock,
+    // so nothing records its cost; treating that as cost 0 showed every such
+    // line as pure profit. Unknown is not zero.
+    if (product.productId === null) {
+      return {
+        ...base(product),
+        contribution: null,
+        contributionPercent: null,
+        breakEvenQuantity: null,
+        breakEvenReason: 'NO_PRODUCT',
+      }
+    }
     // Revenue less a cost nobody recorded is not a contribution: it would make
     // every unit look like pure profit and the break-even quantity far too low.
     if (product.costMissing) {
@@ -178,6 +194,7 @@ function base(product: ProductProfitRow) {
     quantity: product.quantity,
     revenue: product.revenue,
     cost: product.cost,
+    uncostedInvoiceIds: product.uncostedInvoiceIds ?? [],
   }
 }
 

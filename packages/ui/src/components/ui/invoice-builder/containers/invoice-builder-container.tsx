@@ -6,7 +6,7 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { AdvanceForm } from '../../invoices/advance-form'
+import type { NewDocumentKind } from '../../invoices/new-invoice-chooser'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
@@ -52,23 +52,28 @@ import {
   type RateQuote,
 } from '@hisabche/api'
 import type { Product } from '@hisabche/validation'
-import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
+/** A pre-sale / pre-purchase (advances-03) is written in this same builder. */
+export function advanceKindOf(type: string | null | undefined): 'pre_sale' | 'pre_purchase' | null {
+  return type === 'pre_sale' || type === 'pre_purchase' ? type : null
+}
+
 /**
- * /invoices/new: the line grid — or, for `?type=pre_sale | pre_purchase`
- * (advances-02), the advance form. A wrapper, so the grid's hooks are never
- * called conditionally.
+ * /invoices/new — ONE builder for every document (owner request, 9 Nov 2026):
+ * sale, purchase, pre-sale and pre-purchase. `?type=` says which; a pre-sale
+ * is written with the same customer, lines, discount and tax as a sale, and
+ * saved as an advance carrying those lines.
  */
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
-  const type = useSearchParams()?.get('type')
-  if (type === 'pre_sale' || type === 'pre_purchase') return <AdvanceForm kind={type} />
   return <InvoiceBuilderGrid />
 })
 
 const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   const push = useLocalePush()
+  const replace = useLocaleReplace()
   const searchParams = useSearchParams()
   const { setSaveStatus } = useSyncStore()
   const { t, locale, currency, ctx, summary, invalidRowIds, issues, items } = useInvoiceDraft()
@@ -123,12 +128,30 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   // form in purchase mode. Applied on change rather than as initial state,
   // because picking the other action while already here only swaps the query
   // string — the component never remounts.
+  //
+  // ⚠️ The effect depends on the stable `setField` action, NOT on the whole
+  // store object: `draft` is a new object after every write, so an effect
+  // that writes and depends on `draft` re-runs forever (React #185 on
+  // /invoices/new?type=sale, 9 Nov 2026). It also writes only on a change.
   const typeParam = searchParams?.get('type')
+  const advanceKind = advanceKindOf(typeParam)
+  const setDraftField = useInvoiceDraftStore((s) => s.setField)
   useEffect(() => {
-    if (typeParam === 'purchase' || typeParam === 'sale') {
-      draft.setField('transactionType', typeParam)
+    const wanted =
+      typeParam === 'purchase' || typeParam === 'pre_purchase'
+        ? 'purchase'
+        : typeParam === 'sale' || typeParam === 'pre_sale'
+          ? 'sale'
+          : null
+    if (wanted && useInvoiceDraftStore.getState().transactionType !== wanted) {
+      setDraftField('transactionType', wanted)
     }
-  }, [typeParam, draft])
+  }, [typeParam, setDraftField])
+  const documentKind: NewDocumentKind = advanceKind ?? draft.transactionType
+  const handleDocumentKindChange = useCallback(
+    (kind: NewDocumentKind) => replace(`/invoices/new?type=${kind}`),
+    [replace],
+  )
 
   // The layout is created once, for the user's currency, and then persists.
   // Re-running it on every currency change would throw away columns the user
@@ -382,8 +405,8 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     if (creditBreachInfo?.isBlocked) {
       return
     }
-    push('/invoices/new/preview')
-  }, [creditBreachInfo?.isBlocked, push])
+    push(advanceKind ? `/invoices/new/preview?type=${advanceKind}` : '/invoices/new/preview')
+  }, [creditBreachInfo?.isBlocked, push, advanceKind])
   const handleBackToList = useCallback(() => push('/invoices'), [push])
 
   return (
@@ -439,13 +462,16 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
         stockWarning={
           <>
             <InvoiceBranchSelect t={t} value={draft.branchId} onChange={setBranchId} />
-            <InvoiceWarehouseSelect
-              t={t}
-              transactionType={draft.transactionType}
-              branchId={draft.branchId}
-              value={draft.warehouseId}
-              onChange={setWarehouseId}
-            />
+            {/* An advance moves no stock: no warehouse to pick. */}
+            {advanceKind ? null : (
+              <InvoiceWarehouseSelect
+                t={t}
+                transactionType={draft.transactionType}
+                branchId={draft.branchId}
+                value={draft.warehouseId}
+                onChange={setWarehouseId}
+              />
+            )}
             <OversoldWarning t={t} lines={oversoldLines} />
             <CreditLimitWarning
               t={t}
@@ -455,7 +481,7 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
           </>
         }
         customers={draft.customers}
-        transactionType={draft.transactionType}
+        transactionType={documentKind}
         currency={currency}
         rates={draft.rates}
         date={draft.date}
@@ -479,7 +505,7 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
         onResetColumns={() => draft.resetColumns(currency)}
         onAddCustomer={draft.addCustomer}
         onRemoveCustomer={draft.removeCustomer}
-        onTransactionTypeChange={(type) => draft.setField('transactionType', type)}
+        onTransactionTypeChange={handleDocumentKindChange}
         onCurrencyChange={handleCurrencyChange}
         onRateChange={draft.setRate}
         onDateChange={(value) => draft.setField('date', value)}

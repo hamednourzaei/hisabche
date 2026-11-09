@@ -411,34 +411,6 @@ export function ServiceDeliveryView({
         <Loading label={t('serviceDelivery.loading', 'در حال بارگذاری…')} />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            {/* The table's own toolbar keeps «search» and «column settings», the
-              same place every other table in the product keeps them. The time
-              range and the status are filter controls, so they sit on one row
-              of their own instead of inside the icon strip. */}
-            {/* One «فیلتر» for status and date (owner request, 8 Nov 2026). */}
-            <TableFilterMenu
-              label={t('common.filter')}
-              clearLabel={t('serviceDelivery.filters.clear')}
-              groups={[
-                {
-                  id: 'status',
-                  label: t('serviceDelivery.filters.status'),
-                  value: statusFilter,
-                  options: statusOptions,
-                  onChange: onStatusFilterChange,
-                },
-                {
-                  id: 'date',
-                  label: t('serviceDelivery.filters.date'),
-                  value: dateFilter,
-                  options: dateOptions,
-                  onChange: onDateFilterChange,
-                },
-              ]}
-            />
-          </div>
-
           <DataTable<ServiceSessionRow>
             tableId="service-delivery-sessions"
             t={t}
@@ -448,6 +420,30 @@ export function ServiceDeliveryView({
             onRowClick={onOpen}
             searchValue={search}
             onSearchChange={onSearchChange}
+            // One «فیلتر» for status and date, in the table's own toolbar beside
+            // search and column settings (owner request, 9 Nov 2026).
+            actions={
+              <TableFilterMenu
+                label={t('common.filter')}
+                clearLabel={t('serviceDelivery.filters.clear')}
+                groups={[
+                  {
+                    id: 'status',
+                    label: t('serviceDelivery.filters.status'),
+                    value: statusFilter,
+                    options: statusOptions,
+                    onChange: onStatusFilterChange,
+                  },
+                  {
+                    id: 'date',
+                    label: t('serviceDelivery.filters.date'),
+                    value: dateFilter,
+                    options: dateOptions,
+                    onChange: onDateFilterChange,
+                  },
+                ]}
+              />
+            }
             cardTone={(row) =>
               row.sync === 'rejected' || row.sync === 'attention'
                 ? 'destructive'

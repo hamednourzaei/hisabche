@@ -110,11 +110,6 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   onRefresh,
 }: DataAndSyncViewProps) {
   const { dateTime } = useDateFormat()
-  const financialConflicts =
-    conflicts === null ? null : conflicts.filter((c) => c.hasFinancialDivergence).length
-  const migrationRunning =
-    lastMigration !== null &&
-    !['completed', 'completed_with_warnings', 'failed', 'cancelled'].includes(lastMigration.status)
   // The clock is read after mount (see useNow). Until then a synced workspace
   // shows a neutral dash — never «هرگز», which would be a false statement.
   const now = useNow(10_000)
@@ -142,102 +137,15 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         conflictCount={conflictCount ?? 0}
         hasError={Boolean(error)}
         isLoading={isLoading}
-        onAction={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
+        onAction={() => onNavigate('/data-and-sync?view=conflicts')}
         actionLabelKey="dataSync.open_conflicts"
       />
-
-      {/* ─── Summary — each card is a way in, and says so ────────────────── */}
-      <section
-        aria-label={t('dataSync.summary', 'خلاصه‌ی وضعیت')}
-        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-      >
-        <button
-          type="button"
-          className="text-start"
-          onClick={() => onNavigate('/data-and-sync?tab=details')}
-        >
-          <Stat
-            label={t('dataSync.sync_title', 'همگام‌سازی')}
-            value={
-              <Badge
-                tone={
-                  !isOnline ? 'neutral' : isSyncing ? 'info' : pendingCount > 0 ? 'warn' : 'good'
-                }
-              >
-                {!isOnline
-                  ? t('state.offline', 'آفلاین')
-                  : isSyncing
-                    ? t('dataSync.syncing', 'در حال همگام‌سازی')
-                    : pendingCount > 0
-                      ? t('dataSync.pending_short', 'در انتظار ارسال')
-                      : t('dataSync.synced', 'همگام')}
-              </Badge>
-            }
-            hint={
-              !isOnline
-                ? t(
-                    'dataSync.offline_hint',
-                    'تغییرات محلی ذخیره می‌شوند و پس از اتصال ارسال می‌شوند.',
-                  )
-                : undefined
-            }
-          />
-        </button>
-        <button
-          type="button"
-          className="text-start"
-          onClick={() => onNavigate('/data-and-sync?tab=details')}
-        >
-          <Stat label={t('dataSync.pending', 'در صف ارسال')} value={String(pendingCount)} />
-        </button>
-        <button
-          type="button"
-          className="text-start"
-          onClick={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
-        >
-          <Stat
-            label={t('dataSync.conflicts_title', 'تعارض‌ها')}
-            value={conflictCount === null ? '—' : String(conflictCount)}
-            hint={
-              financialConflicts
-                ? `${t('dataSync.financial_conflicts', 'مالی')}: ${financialConflicts}`
-                : undefined
-            }
-          />
-        </button>
-        <button
-          type="button"
-          className="text-start"
-          onClick={() => onNavigate('/data-and-sync?tab=details&view=migration')}
-        >
-          <Stat
-            label={t('dataSync.last_migration', 'آخرین انتقال')}
-            value={
-              isLoading ? (
-                '—'
-              ) : lastMigration ? (
-                <Badge tone={MIGRATION_TONE[lastMigration.status] ?? 'info'}>
-                  {t(`migration.status_${lastMigration.status}`, lastMigration.status)}
-                </Badge>
-              ) : (
-                t('dataSync.none', 'ندارد')
-              )
-            }
-            hint={migrationRunning ? t('dataSync.migration_running', 'در حال انجام') : undefined}
-          />
-        </button>
-      </section>
 
       {/* ─── Sync ───────────────────────────────────────────────────────── */}
 
       <Panel
         title={t('dataSync.sync_title', 'همگام‌سازی')}
         description={t('dataSync.sync_hint', 'وضعیت اتصال و تغییرهایی که هنوز نرفته‌اند.')}
-        action={
-          <ActionButton variant="quiet" onClick={() => onNavigate('/data-and-sync?tab=details')}>
-            {t('dataSync.open_sync', 'مرکز همگام‌سازی')}
-          </ActionButton>
-        }
       >
         <StatGrid>
           <Stat
@@ -274,10 +182,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           'رکوردهایی که روی دو دستگاه تغییر کرده‌اند و باید یکی انتخاب شود.',
         )}
         action={
-          <ActionButton
-            variant="quiet"
-            onClick={() => onNavigate('/data-and-sync?tab=details&view=conflicts')}
-          >
+          <ActionButton variant="quiet" onClick={() => onNavigate('/data-and-sync?view=conflicts')}>
             {t('dataSync.open_conflicts', 'بازبینی تعارض‌ها')}
           </ActionButton>
         }
@@ -331,7 +236,7 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           'مشتریان و کالاها را از فایل موجود وارد کنید — با پیش‌نمایش پیش از ثبت.',
         )}
         action={
-          <ActionButton onClick={() => onNavigate('/data-and-sync?tab=details&view=migration')}>
+          <ActionButton onClick={() => onNavigate('/data-and-sync?view=migration')}>
             {t('dataSync.open_migration', 'شروع انتقال')}
           </ActionButton>
         }

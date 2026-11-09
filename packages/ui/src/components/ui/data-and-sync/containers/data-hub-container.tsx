@@ -1,12 +1,14 @@
 'use client'
 
 // ============================================
-// «داده و همگام‌سازی» — the overview and the three screens it used to link to,
-// at one address: `/data-and-sync`.
+// «داده و همگام‌سازی» — ONE tab at one address: `/data-and-sync`
+// (owner request, 9 Nov 2026: «?tab=details کامل حذف می‌شود»).
 //
-//   overview   the status page (as it was)
-//   details    one at a time behind a switch: «همگام‌سازی» (was /sync-center),
-//              «تعارض‌ها» (was /conflicts), «انتقال داده» (was /data-migration)
+//   status     the overview, with the full-data download and the sync tools
+//              (was /sync-center) under it — backup history, recent activity
+//              and network status were removed
+//   conflicts  was /conflicts
+//   migration  was /data-migration
 //
 // They read the same records — the sync queue, the open conflicts, the
 // migrations — so they are one page (owner's standing order, 5 Oct 2026).
@@ -17,7 +19,9 @@
 
 import { lazy } from 'react'
 import { useTranslations } from 'next-intl'
-import { Activity, ListTree } from 'lucide-react'
+import { Activity } from 'lucide-react'
+import { useMyCapabilities } from '@hisabche/api'
+import { isNavLocked } from '@hisabche/ui-contract'
 
 import { PageHub } from '../../page-hub'
 import { DataAndSyncContainer } from './data-and-sync-container'
@@ -51,6 +55,8 @@ export function DataHubContainer() {
 
 function DataHub() {
   const t = useTranslations()
+  const blocked = useMyCapabilities().data?.blockedModules ?? []
+  const syncLocked = isNavLocked(DATA_HUB_SOURCES.sync, blocked)
   return (
     <PageHub
       lookId="data"
@@ -63,19 +69,16 @@ function DataHub() {
           label: t('dataHub.tabs.overview'),
           icon: Activity,
           sections: [
-            { id: 'status', label: t('nav.data_and_sync'), render: () => <DataAndSyncContainer /> },
-          ],
-        },
-        {
-          id: 'details',
-          label: t('dataHub.tabs.details'),
-          icon: ListTree,
-          sections: [
             {
-              id: 'sync',
-              label: t('nav.sync'),
-              source: DATA_HUB_SOURCES.sync,
-              render: () => <SyncCenterContainer />,
+              id: 'status',
+              label: t('nav.data_and_sync'),
+              render: () => (
+                <div className="space-y-6">
+                  <DataAndSyncContainer />
+                  {/* The old /sync-center keeps its own lock. */}
+                  {syncLocked ? null : <SyncCenterContainer />}
+                </div>
+              ),
             },
             {
               id: 'conflicts',

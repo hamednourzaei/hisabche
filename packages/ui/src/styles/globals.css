@@ -1523,3 +1523,45 @@ html[data-select-open] body[data-scroll-locked] {
   margin-right: 0 !important;
   padding-right: 0 !important;
 }
+
+/* Every open select or dropdown (selects AND menus mark <html
+   data-select-open>, lib/use-menu-open-mark.ts) gets a soft blur behind it,
+   so the eye goes to the choice (owner request, 9 Nov 2026). It catches no
+   clicks: a tap outside still closes the menu the normal way. */
+html[data-select-open] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  pointer-events: none;
+  background: hsl(var(--surface-base) / 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-select-open] body::after {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Below the desktop width a menu opens in the middle of the screen, never cut
+   by an edge: the positioning wrapper Radix draws becomes the whole screen
+   and centres the menu in it. */
+@media (max-width: 767.98px) {
+  [data-radix-popper-content-wrapper]:has(> [data-menu-centered]) {
+    position: fixed !important;
+    inset: 0 !important;
+    transform: none !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  [data-menu-centered] {
+    width: min(22rem, calc(100vw - 2rem)) !important;
+    max-width: none !important;
+    max-height: 70dvh !important;
+  }
+}

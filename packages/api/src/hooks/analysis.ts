@@ -121,7 +121,10 @@ export interface BreakEvenAnalysis {
     contribution: number | null
     contributionPercent: number | null
     breakEvenQuantity: number | null
-    breakEvenReason: 'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | null
+    breakEvenReason:
+      'NO_REVENUE' | 'NO_CONTRIBUTION' | 'NO_FIXED_COSTS' | 'COST_UNKNOWN' | 'NO_PRODUCT' | null
+    /** Sales of this product with no cost behind them (9 Nov 2026). */
+    uncostedInvoiceIds?: string[] | undefined
   }>
 }
 
