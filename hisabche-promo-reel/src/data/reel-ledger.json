@@ -366,6 +366,22 @@
       "dominantLayout": "data-flow-matrix",
       "cardQuotaPercent": 0,
       "components": ["bespoke", "bespoke", "bespoke", "bespoke", "bespoke", "bespoke"]
+    },
+    {
+      "id": "110",
+      "title": "جزء زندگی — یک روز کامل با حسابچه",
+      "theme": "midnight-gold",
+      "hookFormula": "immediate-consequence",
+      "dominantLayout": "full-bleed-kinetic",
+      "cardQuotaPercent": 0,
+      "components": [
+        "DawnScene",
+        "NoonScene",
+        "MidnightScene",
+        "ShutterScene",
+        "RestScene",
+        "CurtainScene"
+      ]
     }
   ]
 }

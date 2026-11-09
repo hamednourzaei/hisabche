@@ -94,6 +94,7 @@ import { reel106 } from './reel-106-single-thread'
 import { reel107 } from './reel-107-need-blueprint'
 import { reel108 } from './reel-108-cashflow-radar'
 import { reel109 } from './reel-109-one-map'
+import { reel110 } from './reel-110-part-of-life'
 export const REELS: Reel[] = [
   reel01,
   reel02,
@@ -204,6 +205,7 @@ export const REELS: Reel[] = [
   reel107,
   reel108,
   reel109,
+  reel110,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -281,4 +283,5 @@ export {
   reel107,
   reel108,
   reel109,
+  reel110,
 }

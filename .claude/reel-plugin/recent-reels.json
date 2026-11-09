@@ -174,5 +174,13 @@
     "primaryTemplate": "bespoke",
     "visualLanguage": "financial-intelligence",
     "hookMechanism": "visual-pattern-interrupt"
+  },
+  {
+    "id": 110,
+    "topic": "ویدیو جوری باشه که کاربرحس بکنه حسابچه جزی از زندگیشه باید داشته باشدش",
+    "creativeMechanism": "ember-day-arc",
+    "primaryTemplate": "bespoke",
+    "visualLanguage": "midnight-gold",
+    "hookMechanism": "immediate-consequence"
   }
 ]

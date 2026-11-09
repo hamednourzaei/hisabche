@@ -1,8 +1,8 @@
 {
   "summary": {
-    "assets": 752,
+    "assets": 758,
     "types": 122,
-    "reels": 109,
+    "reels": 110,
     "specKinds": 34,
     "reelsWithoutSource": [],
     "reelsWithIdCollision": ["75"],
@@ -15398,7 +15398,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 51
+        "line": 47
       },
       "params": [],
       "dependencies": [
@@ -15412,16 +15412,11 @@
         },
         {
           "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
         }
       ],
       "doc": "",
@@ -15438,7 +15433,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 156
+        "line": 200
       },
       "params": [],
       "dependencies": [
@@ -15452,19 +15447,14 @@
         },
         {
           "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
         }
       ],
-      "doc": "The five records one invoice moves — every scene downstream reuses them.",
+      "doc": "The five records one invoice moves — the documented product truth.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -15472,13 +15462,13 @@
       "example": null
     },
     {
-      "id": "scenes/one-map#NeedleScene",
-      "name": "NeedleScene",
+      "id": "scenes/one-map#FourAnswersScene",
+      "name": "FourAnswersScene",
       "type": "scene-component",
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 160
+        "line": 214
       },
       "params": [
         {
@@ -15498,41 +15488,36 @@
         },
         {
           "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
         }
       ],
-      "doc": "─── Scene 1: The Compass of Four Duties (0.00–5.50s) ───────────────────────",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
         {
           "file": "src/reels/reel-109-one-map.ts",
-          "line": 26
+          "line": 23
         }
       ],
       "themes": ["financial-intelligence"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
-        "line": 26
+        "line": 23
       }
     },
     {
-      "id": "scenes/one-map#ToolToppleScene",
-      "name": "ToolToppleScene",
+      "id": "scenes/one-map#MergeToOneScene",
+      "name": "MergeToOneScene",
       "type": "scene-component",
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 227
+        "line": 341
       },
       "params": [
         {
@@ -15552,16 +15537,109 @@
         },
         {
           "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
+        }
+      ],
+      "doc": "─── Scene 2: The Four Answers Fold Into One (5.50–12.00s) ──────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 25
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 25
+      }
+    },
+    {
+      "id": "scenes/one-map#InvoiceFanoutScene",
+      "name": "InvoiceFanoutScene",
+      "type": "scene-component",
+      "tags": ["product-demo"],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 490
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 24
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 24
+      }
+    },
+    {
+      "id": "scenes/one-map#SystemMapScene",
+      "name": "SystemMapScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 674
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
         }
       ],
       "doc": "",
@@ -15580,13 +15658,13 @@
       }
     },
     {
-      "id": "scenes/one-map#FragmentVacuumScene",
-      "name": "FragmentVacuumScene",
+      "id": "scenes/one-map#OneScreenScene",
+      "name": "OneScreenScene",
       "type": "scene-component",
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 292
+        "line": 785
       },
       "params": [
         {
@@ -15606,127 +15684,63 @@
         },
         {
           "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
-        }
-      ],
-      "doc": "─── Scene 3: The Fragment Vacuum (12.00–19.00s) ────────────────────────────",
-      "provenance": [],
-      "licence": "project source (Hisabche)",
-      "usedBy": [
-        {
-          "file": "src/reels/reel-109-one-map.ts",
-          "line": 24
-        }
-      ],
-      "themes": ["financial-intelligence"],
-      "example": {
-        "file": "src/reels/reel-109-one-map.ts",
-        "line": 24
-      }
-    },
-    {
-      "id": "scenes/one-map#InvoiceStampsScene",
-      "name": "InvoiceStampsScene",
-      "type": "scene-component",
-      "tags": ["product-demo"],
-      "source": {
-        "path": "src/scenes/one-map.tsx",
-        "line": 398
-      },
-      "params": [
-        {
-          "name": "t",
-          "type": "unknown",
-          "optional": false
-        }
-      ],
-      "dependencies": [
-        {
-          "module": "react",
-          "names": ["CSSProperties", "ReactNode"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
         },
         {
-          "module": "../engine/types",
-          "names": ["Scene"]
-        },
-        {
-          "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
-        }
-      ],
-      "doc": "─── Scene 4: One Invoice, Five Records (19.00–26.00s) ──────────────────────",
-      "provenance": [],
-      "licence": "project source (Hisabche)",
-      "usedBy": [
-        {
-          "file": "src/reels/reel-109-one-map.ts",
-          "line": 25
-        }
-      ],
-      "themes": ["financial-intelligence"],
-      "example": {
-        "file": "src/reels/reel-109-one-map.ts",
-        "line": 25
-      }
-    },
-    {
-      "id": "scenes/one-map#ConstellationMapScene",
-      "name": "ConstellationMapScene",
-      "type": "scene-component",
-      "tags": [],
-      "source": {
-        "path": "src/scenes/one-map.tsx",
-        "line": 545
-      },
-      "params": [
-        {
-          "name": "t",
-          "type": "unknown",
-          "optional": false
-        }
-      ],
-      "dependencies": [
-        {
-          "module": "react",
-          "names": ["CSSProperties", "ReactNode"]
-        },
-        {
-          "module": "../engine/types",
-          "names": ["Scene"]
-        },
-        {
-          "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
         }
       ],
       "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-109-one-map.ts",
+          "line": 26
+        }
+      ],
+      "themes": ["financial-intelligence"],
+      "example": {
+        "file": "src/reels/reel-109-one-map.ts",
+        "line": 26
+      }
+    },
+    {
+      "id": "scenes/one-map#BrandCurtainScene",
+      "name": "BrandCurtainScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 942
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber", "InteractiveCursor"]
+        }
+      ],
+      "doc": "─── Scene 6: The Quiet Brand Curtain (33.00–42.00s) ────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15739,60 +15753,6 @@
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 22
-      }
-    },
-    {
-      "id": "scenes/one-map#CurtainBrandScene",
-      "name": "CurtainBrandScene",
-      "type": "scene-component",
-      "tags": [],
-      "source": {
-        "path": "src/scenes/one-map.tsx",
-        "line": 644
-      },
-      "params": [
-        {
-          "name": "t",
-          "type": "unknown",
-          "optional": false
-        }
-      ],
-      "dependencies": [
-        {
-          "module": "react",
-          "names": ["CSSProperties", "ReactNode"]
-        },
-        {
-          "module": "../engine/types",
-          "names": ["Scene"]
-        },
-        {
-          "module": "../engine/anim",
-          "names": [
-            "clamp",
-            "deterministicHash",
-            "ease",
-            "enter",
-            "mix",
-            "progress",
-            "spring",
-            "strokeDraw"
-          ]
-        }
-      ],
-      "doc": "─── Scene 6: The Quiet Brand Curtain (33.00–42.00s) ────────────────────────",
-      "provenance": [],
-      "licence": "project source (Hisabche)",
-      "usedBy": [
-        {
-          "file": "src/reels/reel-109-one-map.ts",
-          "line": 23
-        }
-      ],
-      "themes": ["financial-intelligence"],
-      "example": {
-        "file": "src/reels/reel-109-one-map.ts",
-        "line": 23
       }
     },
     {
@@ -18298,6 +18258,276 @@
       "example": {
         "file": "src/reels/reel-84-paper-pocket.ts",
         "line": 17
+      }
+    },
+    {
+      "id": "scenes/part-of-life#DawnScene",
+      "name": "DawnScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 187
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "─── Scene 1: Dawn Chai (0.00–6.00s) — the light wakes before the phone ─────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 22
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "scenes/part-of-life#NoonScene",
+      "name": "NoonScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 270
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 24
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 24
+      }
+    },
+    {
+      "id": "scenes/part-of-life#MidnightScene",
+      "name": "MidnightScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 377
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 23
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 23
+      }
+    },
+    {
+      "id": "scenes/part-of-life#ShutterScene",
+      "name": "ShutterScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 504
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 26
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 26
+      }
+    },
+    {
+      "id": "scenes/part-of-life#RestScene",
+      "name": "RestScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 647
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "─── Scene 5: The Home Night (27.00–34.00s) — resting with a mint heart ─────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 25
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 25
+      }
+    },
+    {
+      "id": "scenes/part-of-life#CurtainScene",
+      "name": "CurtainScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/part-of-life.tsx",
+        "line": 751
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./one-map",
+          "names": ["SceneProps"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        }
+      ],
+      "doc": "─── Scene 6: The Brand Curtain (34.00–42.00s) — جزء زندگیت ─────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 21
+        }
+      ],
+      "themes": ["midnight-gold"],
+      "example": {
+        "file": "src/reels/reel-110-part-of-life.ts",
+        "line": 21
       }
     },
     {
@@ -37727,6 +37957,10 @@
           "line": 2
         },
         {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 2
+        },
+        {
           "file": "src/reels/reel-41-dread.ts",
           "line": 2
         },
@@ -38046,6 +38280,10 @@
           "line": 48
         },
         {
+          "file": "src/reels/reel-110-part-of-life.ts",
+          "line": 45
+        },
+        {
           "file": "src/reels/reel-71-full-cycle.ts",
           "line": 32
         },
@@ -38265,6 +38503,7 @@
         "107",
         "108",
         "109",
+        "110",
         "71",
         "72",
         "73",
@@ -38295,7 +38534,7 @@
         "98",
         "99"
       ],
-      "scenes": 228
+      "scenes": 234
     },
     {
       "id": "spec-kind:branch",
@@ -46539,7 +46778,7 @@
       "title": "نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه",
       "seconds": 42,
       "theme": "financial-intelligence",
-      "artDirection": "procedural-spatial",
+      "artDirection": "cinematic-obsidian",
       "layoutTopology": "data-flow-matrix",
       "viralTemplate": "infinite-spatial-board",
       "aspectRatio": "9:16 (1080x1920)",
@@ -46551,7 +46790,7 @@
           "start": 0,
           "end": 5.5,
           "theme": "financial-intelligence",
-          "component": "NeedleScene",
+          "component": "FourAnswersScene",
           "actor": null
         },
         {
@@ -46559,7 +46798,7 @@
           "start": 5.5,
           "end": 12,
           "theme": "financial-intelligence",
-          "component": "ToolToppleScene",
+          "component": "MergeToOneScene",
           "actor": null
         },
         {
@@ -46567,7 +46806,7 @@
           "start": 12,
           "end": 19,
           "theme": "financial-intelligence",
-          "component": "FragmentVacuumScene",
+          "component": "InvoiceFanoutScene",
           "actor": null
         },
         {
@@ -46575,7 +46814,7 @@
           "start": 19,
           "end": 26,
           "theme": "financial-intelligence",
-          "component": "InvoiceStampsScene",
+          "component": "SystemMapScene",
           "actor": null
         },
         {
@@ -46583,7 +46822,7 @@
           "start": 26,
           "end": 33,
           "theme": "financial-intelligence",
-          "component": "ConstellationMapScene",
+          "component": "OneScreenScene",
           "actor": null
         },
         {
@@ -46591,7 +46830,99 @@
           "start": 33,
           "end": 42,
           "theme": "financial-intelligence",
-          "component": "CurtainBrandScene",
+          "component": "BrandCurtainScene",
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "cardEnter",
+        "cardThock",
+        "chime",
+        "cinematicReveal",
+        "ctaResolution",
+        "dataFlow",
+        "financialMilestone",
+        "impact",
+        "insightReveal",
+        "majorReveal",
+        "pop",
+        "precisionSequence",
+        "softTransition",
+        "success",
+        "sync",
+        "tick",
+        "titleHit",
+        "whoosh"
+      ],
+      "assetsUsed": [
+        "scenes/one-map#FourAnswersScene",
+        "scenes/one-map#MergeToOneScene",
+        "scenes/one-map#InvoiceFanoutScene",
+        "scenes/one-map#SystemMapScene",
+        "scenes/one-map#OneScreenScene",
+        "scenes/one-map#BrandCurtainScene"
+      ],
+      "importsFrom": ["../engine/types", "./shared", "../scenes/one-map"]
+    },
+    {
+      "id": "110",
+      "title": "جزء زندگی — یک روز کامل با حسابچه",
+      "seconds": 42,
+      "theme": "midnight-gold",
+      "artDirection": "kinetic-manifesto",
+      "layoutTopology": "full-bleed-kinetic",
+      "viralTemplate": "continuous-line-traveler",
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-110-part-of-life.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 6,
+          "theme": "midnight-gold",
+          "component": "DawnScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 6,
+          "end": 13,
+          "theme": "midnight-gold",
+          "component": "NoonScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 13,
+          "end": 20,
+          "theme": "midnight-gold",
+          "component": "MidnightScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 20,
+          "end": 27,
+          "theme": "midnight-gold",
+          "component": "ShutterScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 27,
+          "end": 34,
+          "theme": "midnight-gold",
+          "component": "RestScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 34,
+          "end": 42,
+          "theme": "midnight-gold",
+          "component": "CurtainScene",
           "actor": null
         }
       ],
@@ -46599,29 +46930,25 @@
         "alert",
         "cardThock",
         "cash",
+        "chime",
         "cinematicReveal",
         "ctaResolution",
-        "dataFlow",
         "impact",
-        "insightReveal",
-        "majorReveal",
-        "precisionSequence",
+        "pop",
+        "receiptPrint",
         "softTransition",
         "success",
-        "sync",
-        "titleHit",
-        "typewriterClick",
-        "whoosh"
+        "tick"
       ],
       "assetsUsed": [
-        "scenes/one-map#NeedleScene",
-        "scenes/one-map#ToolToppleScene",
-        "scenes/one-map#FragmentVacuumScene",
-        "scenes/one-map#InvoiceStampsScene",
-        "scenes/one-map#ConstellationMapScene",
-        "scenes/one-map#CurtainBrandScene"
+        "scenes/part-of-life#DawnScene",
+        "scenes/part-of-life#NoonScene",
+        "scenes/part-of-life#MidnightScene",
+        "scenes/part-of-life#ShutterScene",
+        "scenes/part-of-life#RestScene",
+        "scenes/part-of-life#CurtainScene"
       ],
-      "importsFrom": ["../engine/types", "./shared", "../scenes/one-map"]
+      "importsFrom": ["../engine/types", "./shared", "../scenes/part-of-life"]
     }
   ],
   "sounds": {
