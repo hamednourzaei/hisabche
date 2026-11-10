@@ -31,6 +31,7 @@ import {
 import {
   inferOperationalDna,
   operatingAnswersSchema,
+  primaryIndustryKeyOf,
   suggestedOperatingAnswers,
   type OperatingAnswers,
   type OperatingQuestion,
@@ -56,7 +57,9 @@ export function OperatingProfileSettings() {
   const saveDna = useSaveOperationalDna()
   const saveProgress = useSaveOnboardingProgress()
 
-  const trade = workspace.data?.businessTypes[0]
+  // V55: the canonical primary trade, not `businessTypes[0]` — the same rule
+  // the wizard and the profile resolver apply.
+  const trade = primaryIndustryKeyOf(workspace.data?.businessTypes ?? []) ?? undefined
   const stored = operational.data?.onboarding?.answers.operating
   // The answers last saved for this business, the trade's suggestion under them.
   const base = useMemo<OperatingAnswers>(

@@ -356,6 +356,78 @@ export class TraceabilityService {
     return plan
   }
 
+  /**
+   * Which batches a recorded SALE took (V55 final completion).
+   *
+   * The offline engine runs the same claim on the device
+   * (packages/local-engine/src/routes/batches.ts, POST /operations/batches/issue)
+   * against the SAME shared `planAllocation` core. The gates here mirror the
+   * device's: a recorded non-cancelled SALE, the product actually on the
+   * invoice, and a replay that cannot take the shelf twice — the allocations
+   * already recorded for this invoice count against the sale.
+   */
+  async issueBatchesForSale(
+    ctx: TenancyContext,
+    input: {
+      invoiceId: string
+      productId: string
+      quantity: number
+      strategy?: AllocationStrategy | undefined
+      asOf?: string | undefined
+      manual?: Array<{ batchId: string; quantity: number }> | undefined
+      consumerLine?: string | undefined
+    },
+  ) {
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('type, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', input.invoiceId)
+      .maybeSingle()
+    if (invoiceError) throw new DatabaseError('Failed to read the invoice', invoiceError)
+    if (!invoice) throw new NotFoundError('Invoice')
+    if (invoice.type === 'purchase') throw new ConflictError('BATCH_SALE_ONLY')
+    if (invoice.status === 'cancelled') throw new ConflictError('BATCH_INVOICE_CANCELLED')
+
+    const { data: lines, error: linesError } = await supabase
+      .from('invoice_items')
+      .select('quantity')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('invoice_id', input.invoiceId)
+      .eq('product_id', input.productId)
+    if (linesError) throw new DatabaseError('Failed to read the invoice lines', linesError)
+    const sold = (lines ?? []).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0)
+    if (sold <= 0) throw new ConflictError('BATCH_PRODUCT_NOT_ON_INVOICE')
+
+    const { data: recorded, error: recordedError } = await supabase
+      .from('lot_allocations')
+      .select('quantity')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('consumer_type', 'invoice')
+      .eq('consumer_id', input.invoiceId)
+      .eq('product_id', input.productId)
+      .not('batch_id', 'is', null)
+    // A database before `lot_allocations` (42P01 / PGRST205) has recorded
+    // nothing — the same tolerant read the purchase binding keeps for
+    // pre-schema tables. Any other failure is real and surfaces.
+    if (recordedError && recordedError.code !== '42P01' && recordedError.code !== 'PGRST205') {
+      throw new DatabaseError('Failed to read the recorded allocations', recordedError)
+    }
+    const already = (recorded ?? []).reduce((sum, row) => sum + (Number(row.quantity) || 0), 0)
+    if (already + input.quantity > sold) throw new ConflictError('BATCH_COUNT_MISMATCH')
+
+    return this.issueFromBatches(ctx, {
+      productId: input.productId,
+      quantity: input.quantity,
+      consumerType: 'invoice',
+      consumerId: input.invoiceId,
+      ...(input.consumerLine !== undefined ? { consumerLine: input.consumerLine } : {}),
+      ...(input.strategy !== undefined ? { strategy: input.strategy } : {}),
+      ...(input.asOf !== undefined ? { asOf: input.asOf } : {}),
+      ...(input.manual !== undefined ? { manual: input.manual } : {}),
+    })
+  }
+
   // ─── Serial numbers ───────────────────────────────────────────────────────
 
   async listSerials(

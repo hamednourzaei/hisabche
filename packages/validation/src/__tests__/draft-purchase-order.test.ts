@@ -104,3 +104,46 @@ describe('a draft purchase order', () => {
     expect(parsed.status).toBe('pending')
   })
 })
+
+describe('a purchase line may name its variant (V55 P2)', () => {
+  const order = (item: Record<string, unknown>) =>
+    createPurchaseOrderSchema.parse({
+      supplierId: '11111111-1111-4111-8111-111111111111',
+      items: [
+        {
+          productId: '11111111-1111-4111-8111-111111111112',
+          quantity: 2,
+          unitPrice: 50,
+          totalPrice: 100,
+          ...item,
+        },
+      ],
+    })
+
+  it('a line carries the variant it buys', () => {
+    expect(order({ variantId: '11111111-1111-4111-8111-111111111113' }).items[0]?.variantId).toBe(
+      '11111111-1111-4111-8111-111111111113',
+    )
+  })
+
+  it('a line without a variant stays legal (legacy orders, plain products)', () => {
+    expect(order({}).items[0]?.variantId).toBeUndefined()
+  })
+
+  it('a variant id must still BE a uuid', () => {
+    expect(
+      createPurchaseOrderSchema.safeParse({
+        supplierId: '11111111-1111-4111-8111-111111111111',
+        items: [
+          {
+            productId: '11111111-1111-4111-8111-111111111112',
+            variantId: 'v-1',
+            quantity: 2,
+            unitPrice: 50,
+            totalPrice: 100,
+          },
+        ],
+      }).success,
+    ).toBe(false)
+  })
+})

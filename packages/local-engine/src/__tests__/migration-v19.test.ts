@@ -42,6 +42,13 @@ function v18Database(): DatabaseSync {
     );
     INSERT INTO invoice (id, workspace_id, status, updated_at)
       VALUES ('inv-1', 'w1', 'issued', '2026-11-01T00:00:00.000Z');
+
+    -- v20 (V55 P2) alters these three; a v18 cache has them, so the minimal
+    -- stand-in keeps the migration run from refusing a table that is missing
+    -- only in this test, never on a device.
+    CREATE TABLE invoice_item (id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL);
+    CREATE TABLE inventory_movement (id TEXT PRIMARY KEY, product_id TEXT NOT NULL);
+    CREATE TABLE purchase_order_item (id TEXT PRIMARY KEY, product_id TEXT NOT NULL);
   `)
   return db
 }

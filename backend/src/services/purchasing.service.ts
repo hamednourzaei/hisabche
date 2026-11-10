@@ -23,6 +23,7 @@ import { sourceIdOf } from '../utils/deterministic-id'
 import { IdempotencyUnavailableError } from '../utils/client-request'
 import { supabase } from '../db'
 import {
+  checkVariantBinding,
   CreatePurchaseOrder,
   UpdatePurchaseOrder,
   orderLineTotal,
@@ -42,8 +43,9 @@ const PO_LIST_COLUMNS =
   'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
 const PO_MINIMAL = 'id, supplier_id, status, order_date'
 
-const PO_ITEM_COLUMNS = 'id, purchase_order_id, product_id, quantity, unit_price, total_price'
-const PO_ITEM_MINIMAL = 'id, product_id, quantity, unit_price'
+const PO_ITEM_COLUMNS =
+  'id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price'
+const PO_ITEM_MINIMAL = 'id, product_id, variant_id, quantity, unit_price'
 
 export class PurchasingService {
   // ─── Cache ───────────────────────────────────────────────────
@@ -129,6 +131,12 @@ export class PurchasingService {
     // commit and nothing called them, so a purchase order could spend any
     // amount against a `block` budget. The server decides; the client is told.
     const target = await this.budgetTarget(ctx, items)
+
+    // V55 P2: a line of an order names its variant when the product has them —
+    // the same rule an invoice line keeps (the parent alone is never bought:
+    // that is how a parent and its variants end up counted twice). Checked
+    // before anything is written.
+    await this.assertPurchaseVariantBindings(workspaceId, items)
     const orderDate = String(data.orderDate || new Date().toISOString()).slice(0, 10)
     const control =
       target.accountId && target.totalMinor > 0
@@ -164,6 +172,8 @@ export class PurchasingService {
     const orderItems = items.map((item: any) => ({
       purchase_order_id: orderId,
       product_id: item.productId,
+      // Named only when the line carries a variant, so documents without one keep working before the migration.
+      ...(item.variantId ? { variant_id: item.variantId } : {}),
       quantity: item.quantity,
       unit_price: item.unitPrice,
       total_price: orderLineTotal(item),
@@ -356,7 +366,7 @@ export class PurchasingService {
       .select(
         `
         id, status, order_date,
-        items:purchase_order_items(id, product_id, quantity, unit_price, total_price)
+        items:purchase_order_items(id, product_id, variant_id, quantity, unit_price, total_price)
       `,
       )
       .eq('id', id)
@@ -422,6 +432,8 @@ export class PurchasingService {
     const items = ((order as any).items ?? []) as Array<{
       id: string
       product_id: string
+      /** V55 P2: named when the order line bought a variant; absent before the migration. */
+      variant_id?: string | null | undefined
       quantity: number
       unit_price: number
       total_price: number | null
@@ -468,6 +480,10 @@ export class PurchasingService {
         .filter((item) => item.product_id)
         .map((item) => ({
           product_id: item.product_id,
+          // variant-stock-01: the variant the line buys arrives onto the SAME
+          // variant. Named only when set, so legacy lines keep working before
+          // the migration.
+          ...(item.variant_id ? { variant_id: item.variant_id } : {}),
           type: 'purchase',
           quantity: Number(item.quantity) || 0,
           reference_type: 'purchase_order',
@@ -483,6 +499,55 @@ export class PurchasingService {
           throw new DatabaseError('Failed to record stock movements for receipt', movementError)
         }
       }
+    }
+  }
+
+  // ─── Variant binding (V55 P2) ────────────────────────────────
+  /**
+   * Every line that names a product is bound to a valid variant, or to none when the product has none
+   * (the SAME rule `InvoiceService.assertVariantBindings` keeps for a sale line). One read for all lines.
+   * A database without the variants table has no variants to require.
+   */
+  private async assertPurchaseVariantBindings(
+    workspaceId: string,
+    lines: Array<{ productId?: string | null | undefined; variantId?: string | null | undefined }>,
+  ): Promise<void> {
+    const productIds = [
+      ...new Set(lines.map((l) => l.productId).filter((id): id is string => !!id)),
+    ]
+    if (productIds.length === 0) return
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('id, workspace_id, template_product_id, is_active')
+      .eq('workspace_id', workspaceId)
+      .in('template_product_id', productIds)
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') {
+        // No variants table: nothing can be required — but a line that names a variant cannot be honoured.
+        if (lines.some((l) => l.variantId)) throw new ValidationError('VARIANT_NOT_FOUND')
+        return
+      }
+      throw new DatabaseError('Failed to read product variants', error)
+    }
+    const rows = ((data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+      id: String(r.id),
+      workspaceId: String(r.workspace_id),
+      templateProductId: String(r.template_product_id),
+      isActive: r.is_active !== false,
+    }))
+    for (const line of lines) {
+      if (!line.productId) {
+        if (line.variantId) throw new ValidationError('VARIANT_ON_PRODUCT_WITHOUT_VARIANTS')
+        continue
+      }
+      const verdict = checkVariantBinding({
+        workspaceId,
+        productId: line.productId,
+        variantId: line.variantId,
+        variantsOfProduct: rows.filter((r) => r.templateProductId === line.productId),
+      })
+      if (!verdict.ok) throw new ValidationError(verdict.code)
     }
   }
 

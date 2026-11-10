@@ -30,6 +30,7 @@ import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ConflictError, NotFoundError, OfflineNotAvailableError, ValidationError } from '../errors'
 import { assertPeriodOpen, reverseLedgerEntry } from './local-ledger'
+import { assertLocalVariantBindings } from './variants'
 import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
@@ -73,6 +74,8 @@ export interface InvoiceItemRow {
   workspace_id: string
   invoice_id: string
   product_id: string | null
+  /** V55 P2: the variant this line sells; NULL = no variant, or a legacy row. */
+  variant_id: string | null
   product_name: string
   quantity: number
   unit: string | null
@@ -176,6 +179,8 @@ export function mapInvoiceItem(row: InvoiceItemRow) {
     invoice_id: row.invoice_id,
     productId: row.product_id,
     product_id: row.product_id,
+    variantId: row.variant_id,
+    variant_id: row.variant_id,
     productName: row.product_name,
     product_name: row.product_name,
     quantity: Number(row.quantity),
@@ -525,6 +530,11 @@ export function registerInvoiceRoutes(router: Router): void {
     }
     const data = parsed.data
 
+    // V55 P2: a line names its variant when the product has them — the SAME
+    // rule the server keeps, checked against the device's own copy BEFORE
+    // anything is written, so an offline refusal is learned offline, not on sync.
+    assertLocalVariantBindings(db, workspaceId, data.items)
+
     const type = data.type || 'sale'
     const booksCurrency = ctx.baseCurrency
     const currency = data.currency?.trim() || booksCurrency
@@ -605,6 +615,7 @@ export function registerInvoiceRoutes(router: Router): void {
         return {
           id: item.id || generateUuid(),
           productId,
+          variantId: item.variantId ?? null,
           productName: String(item.productName || 'کالا').trim(),
           quantity: qty,
           baseQuantity,
@@ -683,15 +694,16 @@ export function registerInvoiceRoutes(router: Router): void {
       for (const item of derivedItems) {
         db.run(
           `INSERT INTO invoice_item (
-            id, workspace_id, invoice_id, product_id, product_name, quantity, unit,
+            id, workspace_id, invoice_id, product_id, variant_id, product_name, quantity, unit,
             unit_price, buy_price, discount, total_price, notes, sort_order,
             created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             item.id,
             workspaceId,
             invoiceId,
             item.productId,
+            item.variantId,
             item.productName,
             item.quantity,
             item.unit,
@@ -712,13 +724,14 @@ export function registerInvoiceRoutes(router: Router): void {
           const movType = type === 'purchase' ? 'purchase' : 'sale'
           db.run(
             `INSERT INTO inventory_movement (
-              id, workspace_id, product_id, type, quantity, reference, date,
+              id, workspace_id, product_id, variant_id, type, quantity, reference, date,
               created_at, updated_at, origin, sync_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
             [
               movId,
               workspaceId,
               item.productId,
+              item.variantId,
               movType,
               item.baseQuantity,
               invoiceNumber,
@@ -1112,6 +1125,36 @@ export function registerInvoiceRoutes(router: Router): void {
         inv.invoice_number,
         workspaceId,
       ])
+
+      // V55 P2: the sale's serial claims die with the sale — the units are
+      // back on the shelf by quantity, so they are back in stock by serial.
+      // (The server keeps the same rule in `InvoiceService.releaseClaims`.)
+      db.run(
+        `UPDATE stock_serials SET status = 'in_stock', invoice_id = NULL, sold_on = NULL, updated_at = ?
+          WHERE workspace_id = ? AND invoice_id = ? AND status = 'sold'`,
+        [now, workspaceId, id],
+      )
+
+      // V55 final completion: the sale's batch allocations die with it too.
+      // ⚠️ ONLY what this invoice's own `lot_allocations` rows recorded is
+      // given back — a cancellation can never restore a quantity that was
+      // never taken, because the restore iterates the allocation rows and
+      // nothing else.
+      const lotAllocations = db.all<{ batch_id: string; quantity: number }>(
+        "SELECT batch_id, quantity FROM lot_allocations WHERE workspace_id = ? AND consumer_type = 'invoice' AND consumer_id = ? AND batch_id IS NOT NULL",
+        [workspaceId, id],
+      )
+      for (const allocation of lotAllocations) {
+        db.run(
+          `UPDATE stock_batches SET remaining_qty = remaining_qty + ?, updated_at = ?
+            WHERE workspace_id = ? AND id = ?`,
+          [allocation.quantity, now, workspaceId, allocation.batch_id],
+        )
+      }
+      db.run(
+        "DELETE FROM lot_allocations WHERE workspace_id = ? AND consumer_type = 'invoice' AND consumer_id = ?",
+        [workspaceId, id],
+      )
 
       // 2. Release cost layers
       // Restore remaining_qty for the layers this sale consumed

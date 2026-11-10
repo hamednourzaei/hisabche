@@ -78,6 +78,12 @@ const planIssueSchema = z.object({
     .optional(),
 })
 
+/** Which batches a recorded sale took — the online twin of the device's issue claim. */
+const issueBatchesSchema = planIssueSchema.extend({
+  invoiceId: z.string().uuid(),
+  consumerLine: z.string().max(120).optional(),
+})
+
 const logTimeSchema = z.object({
   projectId: z.string().uuid(),
   taskId: z.string().uuid().nullable().optional(),
@@ -368,6 +374,35 @@ export async function operationsRoutes(fastify: FastifyInstance) {
         return reply.send(await traceabilityService.planIssue(request.tenancy, body))
       } catch (err) {
         return fail(reply, err, 'Failed to plan the issue')
+      }
+    },
+  )
+
+  // Which batches a recorded SALE took (V55 final completion). The offline
+  // engine claims the same way (local routes/batches.ts) against the SAME
+  // shared planAllocation core; the service refuses a replayed claim.
+  fastify.post(
+    '/batches/issue',
+    {
+      preHandler: stockWrite,
+      schema: { body: toJsonSchema(issueBatchesSchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = issueBatchesSchema.parse(request.body)
+        return reply.send(
+          await traceabilityService.issueBatchesForSale(request.tenancy, {
+            invoiceId: body.invoiceId,
+            productId: body.productId,
+            quantity: body.quantity,
+            ...(body.strategy !== undefined ? { strategy: body.strategy } : {}),
+            ...(body.asOf !== undefined ? { asOf: body.asOf } : {}),
+            ...(body.manual !== undefined ? { manual: body.manual } : {}),
+            ...(body.consumerLine !== undefined ? { consumerLine: body.consumerLine } : {}),
+          }),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to issue from the batches')
       }
     },
   )

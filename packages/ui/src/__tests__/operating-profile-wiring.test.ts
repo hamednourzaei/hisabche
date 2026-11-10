@@ -17,9 +17,14 @@ describe('adaptive questions are wired', () => {
     expect(page).toContain('{step === 4 && ( <OperatingStep')
     expect(page).toContain('{step === 5 && ( <CompleteStep')
     const container = flat('onboarding/containers/onboarding-container.tsx')
+    // V55 defect A: the trade handed to the DNA is the ONE canonical primary
+    // (registry order, explicit primary wins) — never `selected[0]`, which made
+    // selection order an accidental primary-industry rule.
+    expect(container).toContain('primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined')
     expect(container).toContain(
-      'inferOperationalDna({ tradeKey: selected[0], ...operatingAnswers, })',
+      'inferOperationalDna({ tradeKey: primaryTrade, ...operatingAnswers, })',
     )
+    expect(container).not.toContain('selected[0]')
     expect(container).toContain('operating: ownAnswers')
   })
 

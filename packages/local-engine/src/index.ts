@@ -40,6 +40,8 @@ import { registerTillRoutes } from './routes/till'
 import { registerTransferRoutes } from './routes/transfers'
 import { registerUnitRoutes } from './routes/units'
 import { registerVariantsRoutes } from './routes/variants'
+import { registerSerialsRoutes } from './routes/serials'
+import { registerBatchesRoutes } from './routes/batches'
 import { registerMetalRatesRoutes } from './routes/metal-rates'
 import { registerFitmentsRoutes } from './routes/fitments'
 import { registerWarrantiesRoutes } from './routes/warranties'
@@ -107,6 +109,8 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerPricingRoutes(router)
   registerTillRoutes(router)
   registerVariantsRoutes(router)
+  registerSerialsRoutes(router)
+  registerBatchesRoutes(router)
   registerMetalRatesRoutes(router)
   registerFitmentsRoutes(router)
   registerWarrantiesRoutes(router)

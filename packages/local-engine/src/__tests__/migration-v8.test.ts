@@ -53,6 +53,11 @@ function v7Synthetic(): DatabaseSync {
     CREATE TABLE product (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '', name TEXT);
     CREATE TABLE invoice (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '');
     CREATE TABLE inventory_movement (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL DEFAULT '', product_id TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT '', quantity REAL NOT NULL DEFAULT 0, reference TEXT, date TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');
+    -- v20 (V55 P2) alters invoice_item and purchase_order_item; a real cache
+    -- of this version has them, so the minimal stand-in keeps the migration run
+    -- from refusing a table missing only in this test, never on a device.
+    CREATE TABLE invoice_item (id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL);
+    CREATE TABLE purchase_order_item (id TEXT PRIMARY KEY, product_id TEXT NOT NULL);
     INSERT INTO local_workspace (id, name, base_currency) VALUES ('w1', 'Existing shop', 'AFN');
     INSERT INTO product (id, name) VALUES ('p1', 'Existing product');
     INSERT INTO invoice (id) VALUES ('i1');

@@ -43,6 +43,16 @@ describe('suggestedHiddenMenuPaths', () => {
     }
   })
 
+  it('V55: an UNRESOLVED axis hides nothing — a suggestion is never built on a guess', () => {
+    const unresolved: OperationalDna = {
+      ...preset('RETAIL_STORE'),
+      offering: ['UNRESOLVED'],
+      inventory: ['UNRESOLVED'],
+      archetypeHint: 'GENERIC_BUSINESS',
+    }
+    expect(suggestedHiddenMenuPaths(unresolved)).toEqual([])
+  })
+
   it('a growing business gets its pages back when the DNA says so', () => {
     const solo = preset('NAIL_TECH_BEAUTY')
     const salon: OperationalDna = { ...solo, workforce: ['COMMISSION_PROVIDERS'] }

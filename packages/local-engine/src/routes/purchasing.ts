@@ -31,6 +31,7 @@ import type { LocalDb } from '../db'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 import { receiveLayer } from './cost-layers'
+import { assertLocalVariantBindings } from './variants'
 
 function generateUuid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -64,6 +65,8 @@ interface LineRow {
   id: string
   purchase_order_id: string
   product_id: string
+  /** V55 P2: the variant this line buys; NULL = no variant, or a legacy row. */
+  variant_id: string | null
   quantity: number
   unit_price: number
   total_price: number | null
@@ -82,7 +85,7 @@ function supplierOf(db: LocalDb, workspaceId: string, id: string | null) {
 function linesOf(db: LocalDb, workspaceId: string, orderId: string, withTotals: boolean) {
   return db
     .all<LineRow>(
-      `SELECT id, purchase_order_id, product_id, quantity, unit_price, total_price
+      `SELECT id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price
          FROM purchase_order_item
         WHERE purchase_order_id = ? AND workspace_id = ? AND deleted_at IS NULL ORDER BY created_at, id`,
       [orderId, workspaceId],
@@ -97,6 +100,7 @@ function linesOf(db: LocalDb, workspaceId: string, orderId: string, withTotals: 
         id: line.id,
         ...(withTotals ? { purchase_order_id: line.purchase_order_id } : {}),
         product_id: line.product_id,
+        variant_id: line.variant_id,
         quantity: Number(line.quantity),
         unit_price: line.unit_price,
         ...(withTotals ? { total_price: line.total_price } : {}),
@@ -223,6 +227,9 @@ export function registerPurchasingRoutes(router: Router): void {
       )
       if (!product) throw new ValidationError(`PURCHASE_ORDER_PRODUCT_UNKNOWN: ${item.productId}`)
     }
+    // V55 P2: a line names its variant when the product has them — the SAME
+    // rule the server keeps, checked against the device's own copy.
+    assertLocalVariantBindings(db, ctx.workspaceId, data.items)
 
     const now = new Date().toISOString()
     return db.transaction(() => {
@@ -246,14 +253,15 @@ export function registerPurchasingRoutes(router: Router): void {
       for (const item of data.items) {
         db.run(
           `INSERT INTO purchase_order_item (
-            id, workspace_id, purchase_order_id, product_id, quantity, unit_price, total_price,
+            id, workspace_id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price,
             created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             generateUuid(),
             ctx.workspaceId,
             orderId,
             item.productId,
+            item.variantId ?? null,
             item.quantity,
             item.unitPrice,
             orderLineTotal(item),
@@ -296,7 +304,7 @@ export function registerPurchasingRoutes(router: Router): void {
 
       const entryDate = String(order.order_date ?? receivedAt).slice(0, 10)
       const lines = db.all<LineRow>(
-        `SELECT id, purchase_order_id, product_id, quantity, unit_price, total_price
+        `SELECT id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price
            FROM purchase_order_item
           WHERE purchase_order_id = ? AND workspace_id = ? AND deleted_at IS NULL`,
         [id, ctx.workspaceId],
@@ -319,13 +327,14 @@ export function registerPurchasingRoutes(router: Router): void {
         })
         db.run(
           `INSERT INTO inventory_movement (
-            id, workspace_id, product_id, type, quantity, reference, date,
+            id, workspace_id, product_id, variant_id, type, quantity, reference, date,
             created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, 'purchase', ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, 'purchase', ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             generateUuid(),
             ctx.workspaceId,
             line.product_id,
+            line.variant_id,
             Number(line.quantity),
             `purchase_order:${id}`,
             receivedAt.slice(0, 10),

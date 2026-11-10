@@ -439,3 +439,112 @@ export const ORDER_DEPOSIT_ALTERS: readonly string[] = [
   `ALTER TABLE order_deposits ADD COLUMN posting_status TEXT`,
   `ALTER TABLE order_deposits ADD COLUMN journal_entry_id TEXT`,
 ]
+
+// ─── 5. Unit-serial tracking (v21, V55 P2) ──────────────────────────────────
+//
+// The device's copy of the server's `stock_serials` (docs/SETUP-COMPLETE.sql).
+// A phone shop offline sells THIS unit: the rows carry the IMEI, what that
+// unit cost, and — once sold — WHICH invoice took it. Its own export (NOT
+// spread into UNIVERSAL_CORE_STATEMENTS): the base schema creates it for new
+// devices and v21 creates it for caches that already exist.
+export const SERIALS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS stock_serials (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    serial_number TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'in_stock'
+      CHECK (status IN ('in_stock', 'sold', 'returned', 'scrapped')),
+    batch_id TEXT,
+    cost_layer_id TEXT,
+    unit_cost_minor INTEGER NOT NULL DEFAULT 0,
+    warehouse_id TEXT,
+    received_on TEXT NOT NULL,
+    invoice_id TEXT,
+    sold_on TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_serials_number
+     ON stock_serials(workspace_id, product_id, serial_number)`,
+  `CREATE INDEX IF NOT EXISTS idx_stock_serials_status
+     ON stock_serials(workspace_id, product_id, status)`,
+  `CREATE INDEX IF NOT EXISTS idx_stock_serials_invoice
+     ON stock_serials(invoice_id) WHERE invoice_id IS NOT NULL`,
+]
+
+// ─── 6. Expiry batches (v22, V55 final completion) ──────────────────────────
+//
+// The device's copy of the server's `stock_batches` + `lot_allocations`
+// (docs/SETUP-COMPLETE.sql). A pharmacy offline sells FROM the batch whose
+// expiry comes first: the rows carry the batch number, the expiry, what
+// remains, and — once sold — WHICH invoice took how much. Column-for-column
+// the server's tables with TEXT ids and the sync columns every local table
+// carries. Its own export (NOT spread into UNIVERSAL_CORE_STATEMENTS): the
+// base schema creates both for new devices and v22 creates them for caches
+// that already exist.
+export const BATCHES_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS stock_batches (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    batch_number TEXT NOT NULL,
+    -- NULL means this batch does not expire. Distinct from a far-future date:
+    -- one is a fact about the goods, the other is a guess somebody typed.
+    expiry_date TEXT,
+    manufactured_date TEXT,
+    received_qty REAL NOT NULL,
+    remaining_qty REAL NOT NULL,
+    cost_layer_id TEXT,
+    warehouse_id TEXT,
+    received_on TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only',
+    -- What the server's CHECK constraint keeps: what remains can be neither
+    -- negative nor more than what arrived.
+    CHECK (received_qty > 0 AND remaining_qty >= 0 AND remaining_qty <= received_qty)
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_batches_number
+     ON stock_batches(workspace_id, product_id, batch_number)`,
+  // The FEFO queue: open batches for one product, soonest expiry first. Nulls
+  // last, because a batch that does not expire is the one that can wait.
+  `CREATE INDEX IF NOT EXISTS idx_stock_batches_fefo
+     ON stock_batches(workspace_id, product_id, expiry_date, received_on)
+     WHERE remaining_qty > 0`,
+  `CREATE INDEX IF NOT EXISTS idx_stock_batches_warehouse
+     ON stock_batches(workspace_id, product_id, warehouse_id)`,
+
+  `CREATE TABLE IF NOT EXISTS lot_allocations (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    consumer_type TEXT NOT NULL,
+    consumer_id TEXT NOT NULL,
+    consumer_line TEXT,
+    product_id TEXT NOT NULL,
+    batch_id TEXT,
+    serial_id TEXT,
+    quantity REAL NOT NULL,
+    entry_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only',
+    -- Exactly one of the two: a row names a batch or a serial, never both and
+    -- never neither.
+    CHECK (
+      (batch_id IS NOT NULL AND serial_id IS NULL) OR
+      (batch_id IS NULL AND serial_id IS NOT NULL)
+    )
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_lot_allocations_consumer
+     ON lot_allocations(workspace_id, consumer_type, consumer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_lot_allocations_batch
+     ON lot_allocations(workspace_id, batch_id)`,
+]

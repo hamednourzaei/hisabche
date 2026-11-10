@@ -106,8 +106,10 @@ describe('validateCapabilityRegistry catches every kind of fault', () => {
   })
 
   it('a planned capability that carries evidence', () => {
+    // recipe_bom is the planned fixture since V55 P1: batch_expiry became
+    // partial (the FEFO workflow exists — traceability + warehouse receive).
     const lying = registryWith({
-      batch_expiry: { evidence: { sources: ['a.ts'], tests: ['b.test.ts'] } },
+      recipe_bom: { evidence: { sources: ['a.ts'], tests: ['b.test.ts'] } },
     })
     expect(codes(lying)).toContain('EVIDENCE_MISMATCH')
   })
@@ -149,13 +151,13 @@ describe('resolveCapabilities', () => {
   })
 
   it('refuses a planned capability and names it', () => {
-    const result = resolveCapabilities(['batch_expiry', 'multi_unit'])
+    const result = resolveCapabilities(['recipe_bom', 'multi_unit'])
     expect(result.capabilities).toEqual(['multi_unit'])
-    expect(result.rejected).toEqual(['batch_expiry'])
+    expect(result.rejected).toEqual(['recipe_bom'])
     expect(result.diagnostics).toContainEqual({
       code: 'CAPABILITY_PLANNED',
-      capability: 'batch_expiry',
-      related: ['batch_expiry'],
+      capability: 'recipe_bom',
+      related: ['recipe_bom'],
     })
   })
 
@@ -236,11 +238,15 @@ describe('the effective business profile is built from the resolver', () => {
     expect(profile.notes).toContain('industry.supportNote.partial')
   })
 
-  it('reports what a trade asks for and cannot have, instead of forgetting it', () => {
+  it('a trade whose capability became real keeps it, and says it is not complete', () => {
+    // The pharmacy's batch_expiry was planned at V54 and reported as
+    // unsupported; the FEFO workflow exists since V55 P1, so the trade now
+    // KEEPS it — partial, with the support note, never silently complete.
     const profile = resolveBusinessProfile(['pharmacy'])
-    expect(profile.capabilities).toEqual(['multi_unit'])
-    expect(profile.unsupported).toEqual(['batch_expiry'])
-    expect(profile.diagnostics.map((entry) => entry.code)).toContain('CAPABILITY_PLANNED')
+    expect(profile.capabilities).toEqual(['multi_unit', 'batch_expiry'])
+    expect(profile.partialCapabilities).toEqual(['batch_expiry'])
+    expect(profile.unsupported).toEqual([])
+    expect(profile.notes).toContain('industry.supportNote.partial')
   })
 
   it('gives the same answer however the trades were clicked', () => {

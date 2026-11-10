@@ -136,6 +136,13 @@ export const localTableSchema = z.enum([
   // the pull can write what another device applied or refunded.
   'order_deposit_applications',
   'order_deposit_refunds',
+  // The device's unit serials (v21, V55 P2): the IMEI the pull writes and the
+  // claim a sale leaves on the row.
+  'stock_serials',
+  // The device's expiry batches and their allocations (v22, V55 final
+  // completion): the FEFO queue the pull writes and an offline sale consumes.
+  'stock_batches',
+  'lot_allocations',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>

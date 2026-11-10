@@ -97,3 +97,58 @@ describe('Operational DNA (8 Axes) & Resolver', () => {
     expect(genericDna.archetypeHint).not.toBe('RETAIL_STORE')
   })
 })
+
+// ─── V55 mandatory regressions (mission §15.2) — Unknown is not a guess ────
+describe('V55: unknown answers never fabricate a business', () => {
+  it('an unknown stock answer never becomes PHYSICAL_GOODS', () => {
+    const dna = inferOperationalDna({ holdsStock: 'unknown' })
+    expect(dna.offering).not.toContain('PHYSICAL_GOODS')
+    expect(dna.offering).toContain('UNRESOLVED')
+  })
+
+  it('an unknown stock answer never becomes RETAIL_STOCK', () => {
+    const dna = inferOperationalDna({ holdsStock: 'unknown' })
+    expect(dna.inventory).not.toContain('RETAIL_STOCK')
+    expect(dna.inventory).toContain('UNRESOLVED')
+  })
+
+  it('a service business with no inventory never becomes a retail shop', () => {
+    const dna = inferOperationalDna({ holdsStock: 'no', hasPointOfSale: 'no' })
+    expect(dna.inventory).toEqual(['NONE'])
+    expect(dna.offering).toEqual(['DELIVERABLE_SERVICE'])
+    expect(dna.archetypeHint).toBe('GENERIC_BUSINESS')
+  })
+
+  it('an explicit «no appointments» overrides the trade suggestion', () => {
+    const dna = inferOperationalDna({ tradeKey: 'barber', takesAppointments: 'no' })
+    expect(dna.intake).not.toContain('APPOINTMENT_BOOKING')
+    expect(dna.settlement).not.toContain('DEPOSIT_PREPAYMENT')
+  })
+
+  it('an unanswered question keeps the trade suggestion — unknown is not no', () => {
+    const dna = inferOperationalDna({ tradeKey: 'barber', takesAppointments: 'unknown' })
+    expect(dna.intake).toContain('APPOINTMENT_BOOKING')
+  })
+
+  it("an explicit «no stock» overrides a repair trade's spare-parts suggestion", () => {
+    const dna = inferOperationalDna({ tradeKey: 'repairs', holdsStock: 'no' })
+    expect(dna.inventory).toEqual(['NONE'])
+    expect(dna.offering).not.toContain('PHYSICAL_GOODS')
+  })
+
+  it('UNRESOLVED DNA activates no inventory, warehouse or products module', () => {
+    const resolved = resolveDnaCapabilities(inferOperationalDna({ holdsStock: 'unknown' }))
+    expect(resolved.activeModules).not.toContain('inventory')
+    expect(resolved.activeModules).not.toContain('warehouse')
+    expect(resolved.activeModules).not.toContain('products')
+    // Core money modules are never dropped by an unknown answer.
+    expect(resolved.activeModules).toEqual(
+      expect.arrayContaining(['accounting', 'invoices', 'customers']),
+    )
+  })
+
+  it('UNRESOLVED parses against the persisted DNA schema (backward compatible)', () => {
+    const parsed = operationalDnaSchema.safeParse(inferOperationalDna({ holdsStock: 'unknown' }))
+    expect(parsed.success).toBe(true)
+  })
+})

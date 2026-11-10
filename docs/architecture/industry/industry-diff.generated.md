@@ -15,7 +15,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | General-purpose baseline              | 44    |
 | Exact match with `JOURNEY_INDUSTRIES` | 14    |
 | Available capabilities                | 3     |
-| Partial capabilities                  | 5     |
+| Partial capabilities                  | 6     |
 
 ## Industry registry
 
@@ -65,7 +65,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | لوازم‌التحریر و کتاب       | `stationery`         | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | اسباب‌بازی                 | `toys`               | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | کادو و تزئینات             | `giftShop`           | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
-| دواخانه و داروخانه         | `pharmacy`           | بله                      | بله                              | تخصصی          | multi_unit                              | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
+| دواخانه و داروخانه         | `pharmacy`           | بله                      | بله                              | تخصصی          | batch_expiry، multi_unit                | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | لوازم آرایشی و بهداشتی     | `cosmetics`          | بله                      | بله                              | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | کلینیک و مطب               | `clinic`             | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
 | آرایشگاه و سلمانی          | `barber`             | بله                      | —                                | پایه (عمومی)   | —                                       | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing | —                                    |
@@ -104,7 +104,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `length_pricing`   | planned   | فعال نیست                    |
 | `volume_pricing`   | planned   | فعال نیست                    |
 | `multi_unit`       | available | فعال                         |
-| `batch_expiry`     | planned   | فعال نیست                    |
+| `batch_expiry`     | partial   | فعال (جزئی)                  |
 | `recipe_bom`       | planned   | فعال نیست                    |
 | `variants`         | partial   | فعال (جزئی)                  |
 | `table_service`    | planned   | فعال نیست                    |

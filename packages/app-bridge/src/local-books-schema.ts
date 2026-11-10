@@ -55,6 +55,8 @@ export const BOOKS_STOCK_STATEMENTS: readonly string[] = [
     workspace_id TEXT NOT NULL,
     purchase_order_id TEXT NOT NULL,
     product_id TEXT NOT NULL,
+    /** V55 P2: the variant this line buys; NULL = no variant (legacy rows stay unknown, never re-mapped). */
+    variant_id TEXT,
     quantity REAL NOT NULL DEFAULT 0,
     unit_price INTEGER NOT NULL DEFAULT 0,
     total_price INTEGER,

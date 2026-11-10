@@ -22,6 +22,7 @@ import {
   LEGACY_INDUSTRY_KEYS,
   PROFILES,
   canonicalIndustryTypes,
+  primaryIndustryKeyOf,
   resolveBusinessProfile,
   operatingCharacteristicsSchema,
   DEFAULT_OPERATING_CHARACTERISTICS,
@@ -230,5 +231,37 @@ describe('resolveBusinessProfile', () => {
     const p1 = resolveBusinessProfile(['jewellery', 'retail'], null, { holdsStock: 'yes' })
     const p2 = resolveBusinessProfile(['retail', 'jewellery'], null, { holdsStock: 'yes' })
     expect(p1).toEqual(p2)
+  })
+})
+
+describe('primaryIndustryKeyOf — the ONE primary decision (V55 defect A)', () => {
+  it('selection order never changes the primary: registry order wins', () => {
+    // `jewellery` precedes `pharmacy` in INDUSTRY_KEYS regardless of clicks.
+    expect(primaryIndustryKeyOf(['pharmacy', 'jewellery'])).toBe('jewellery')
+    expect(primaryIndustryKeyOf(['jewellery', 'pharmacy'])).toBe('jewellery')
+  })
+
+  it('a sales model alone becomes primary; a trade beats a sales model', () => {
+    expect(primaryIndustryKeyOf(['retail'])).toBe('retail')
+    expect(primaryIndustryKeyOf(['retail', 'grocery'])).toBe('grocery')
+    expect(primaryIndustryKeyOf(['grocery', 'retail'])).toBe('grocery')
+  })
+
+  it('an explicit primary wins over registry order', () => {
+    expect(primaryIndustryKeyOf(['pharmacy', 'jewellery'], 'jewellery')).toBe('jewellery')
+  })
+
+  it('casing and whitespace of stored rows are tolerated, legacy/unknown never win', () => {
+    expect(primaryIndustryKeyOf([' Jewellery ', 'PHARMACY'])).toBe('jewellery')
+    expect(primaryIndustryKeyOf(['service'])).toBeNull()
+    expect(primaryIndustryKeyOf(['no_such_trade'])).toBeNull()
+    expect(primaryIndustryKeyOf(null)).toBeNull()
+    expect(primaryIndustryKeyOf('')).toBeNull()
+  })
+
+  it('stays consistent with resolveBusinessProfile.primary', () => {
+    for (const types of [['jewellery', 'pharmacy'], ['retail'], ['education', 'retail']]) {
+      expect(resolveBusinessProfile(types).primary).toBe(primaryIndustryKeyOf(types))
+    }
   })
 })

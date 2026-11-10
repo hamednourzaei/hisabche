@@ -1030,6 +1030,7 @@ export {
   DASHBOARD_PART_IDS,
   PROFILES,
   canonicalIndustryTypes,
+  primaryIndustryKeyOf,
   resolveBusinessProfile,
   industryKeysWithProfiles,
   operatingCharacteristicsSchema,

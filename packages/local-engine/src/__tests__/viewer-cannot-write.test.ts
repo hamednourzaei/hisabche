@@ -34,6 +34,8 @@ const VIEWER_MAY: Readonly<Record<string, string>> = {
     'internal reconciliation after the server accepted a row; writes no document',
   'POST /migrations/inspect': 'reads a file and writes nothing (the commit is guarded)',
   'POST /operations/budgets/check': 'a calculation; writes nothing',
+  'POST /operations/batches/plan-issue':
+    'a calculation; consumes nothing — the FEFO plan only (V55 final completion)',
   'POST /tax/preview': 'a calculation; writes nothing',
 }
 

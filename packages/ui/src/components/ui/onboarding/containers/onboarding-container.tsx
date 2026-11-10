@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, memo, useRef, useState } from 'react'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 import {
   inferOperationalDna,
+  primaryIndustryKeyOf,
   suggestedOperatingAnswers,
   type OnboardingProgress,
   type OperatingAnswers,
@@ -104,12 +105,10 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const setOperationalDna = useOnboardingStore((s) => s.setOperationalDna)
   const ownAnswers = useOnboardingStore((s) => s.operatingAnswers)
   const setOperatingAnswer = useOnboardingStore((s) => s.setOperatingAnswer)
-  const primaryTrade = businessType
-    ? businessType
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean)[0]
-    : undefined
+  // V55: the ONE canonical primary-industry decision (registry order, explicit
+  // primary wins) — the same rule `resolveBusinessProfile` applies on the
+  // server. Insertion order is never an accidental primary-industry rule.
+  const primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined
   // The trade's suggestion under the person's own answers: what the wizard
   // shows AND what the DNA is inferred from.
   const operatingAnswers = useMemo<OperatingAnswers>(
@@ -202,9 +201,10 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       return
     }
 
-    // Infer DNA deterministically from the user's choices
+    // Infer DNA deterministically from the user's choices. The trade is the
+    // canonical primary — never `selected[0]` (V55 defect A).
     const inferredDna = inferOperationalDna({
-      tradeKey: selected[0],
+      tradeKey: primaryTrade,
       ...operatingAnswers,
     })
     setOperationalDna(inferredDna)
@@ -295,6 +295,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     completeOnboarding,
     operational,
     operatingAnswers,
+    primaryTrade,
     saveOperationalDna,
     saveOnboardingProgress,
     defaultCurrency,

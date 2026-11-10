@@ -4191,6 +4191,8 @@
         "holdsStock": "Do you keep goods or consumables in stock?",
         "producesGoods": "Do you produce anything yourself?",
         "hasPointOfSale": "Do you sell over a counter (till)?",
+        "tracksSerials": "Do your goods carry serial numbers (IMEI)?",
+        "hasExpiryDates": "Do your goods carry expiry dates?",
         "sellsOnCredit": "Do you sell on credit or installments?",
         "hasStaff": "Do you have staff?",
         "locations": "How many branches?"

@@ -26,6 +26,8 @@ import {
   PACKAGE_DEFERRED_REVENUE_ALTERS,
   RETURN_DEDUCTIONS_STATEMENTS,
   RETURNS_CORE_ALTERS,
+  SERIALS_STATEMENTS,
+  BATCHES_STATEMENTS,
   SERVICE_CANCELLATION_REASON_ALTERS,
   SERVICE_DELIVERY_AUDIT_ALTERS,
   SERVICE_DELIVERY_STATEMENTS,
@@ -667,6 +669,60 @@ const V19_CREDIT_STATUS: LocalMigration = {
     `CREATE INDEX IF NOT EXISTS idx_invoice_credit_status ON invoice(credit_status)`,
   ],
 }
+/**
+ * v19 -> v20: a line keeps the VARIANT it sold, bought or moved (V55 P2).
+ *
+ * The server has carried `variant_id` on invoice items, stock movements and
+ * (now) purchase-order lines; the device kept dropping it, so an offline sale
+ * of «black L» reached the server as a sale of the parent product and the
+ * variant's stock stayed on the shelf. The column is TEXT — the local tables
+ * key rows by TEXT ids (the server's uuids are read back as strings).
+ *
+ * Every row written before v20 keeps `variant_id = NULL`: UNKNOWN, never
+ * re-mapped (§12) — exactly like the server's legacy rows.
+ */
+const V20_VARIANT_IDENTITY: LocalMigration = {
+  to: 20,
+  statements: [
+    `ALTER TABLE invoice_item ADD COLUMN variant_id TEXT`,
+    `ALTER TABLE inventory_movement ADD COLUMN variant_id TEXT`,
+    `ALTER TABLE purchase_order_item ADD COLUMN variant_id TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_invoice_item_variant ON invoice_item(variant_id) WHERE variant_id IS NOT NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_movement_variant ON inventory_movement(variant_id) WHERE variant_id IS NOT NULL`,
+  ],
+}
+
+/**
+ * v20 -> v21: the device tracks its SERIALS (V55 P2, serialized_items).
+ *
+ * The server's `stock_serials` had no local copy, so a phone shop offline
+ * could sell «one of the model» but never name the IMEI that left, and the
+ * fitment join (which references this table since v9) could not run at all.
+ * Every statement is CREATE IF NOT EXISTS: a cache at v20 gains the table,
+ * a fresh device that already has it from the base schema loses nothing.
+ */
+const V21_SERIAL_IDENTITY: LocalMigration = {
+  to: 21,
+  statements: [...SERIALS_STATEMENTS],
+}
+
+/**
+ * v21 -> v22: the device tracks its EXPIRY BATCHES (V55 final completion,
+ * batch_expiry offline).
+ *
+ * The server's `stock_batches` / `lot_allocations` had no local copy, so a
+ * pharmacy offline could not receive a delivery against its batch number,
+ * could not see which carton expires first, and could not sell FROM the
+ * soonest-expiring batch (FEFO) — the offline sale consumed only the
+ * product-level quantity. Both tables mirror the server's schema with TEXT
+ * ids. Every statement is CREATE IF NOT EXISTS: a cache at v21 gains the
+ * tables, a fresh device that already has them from the base schema loses
+ * nothing.
+ */
+const V22_BATCH_IDENTITY: LocalMigration = {
+  to: 22,
+  statements: [...BATCHES_STATEMENTS],
+}
 
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
@@ -687,6 +743,9 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V17_PACKAGE_DEFERRED_REVENUE,
   V18_ORDER_DEPOSIT_MOVEMENTS,
   V19_CREDIT_STATUS,
+  V20_VARIANT_IDENTITY,
+  V21_SERIAL_IDENTITY,
+  V22_BATCH_IDENTITY,
 ]
 
 /**

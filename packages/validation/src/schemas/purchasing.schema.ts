@@ -23,6 +23,10 @@ export const purchaseOrderSchema = z.object({
   items: z.array(
     z.object({
       productId: uuidSchema,
+      // V55 P2: the line may name the variant it buys. NULL/omitted stays legal
+      // for every legacy order and every product without variants
+      // (variant-binding-01: a historical row is never re-mapped).
+      variantId: uuidSchema.optional(),
       quantity: positiveNumberSchema,
       unitPrice: positiveNumberSchema,
       totalPrice: positiveNumberSchema,

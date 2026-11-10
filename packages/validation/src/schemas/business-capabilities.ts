@@ -148,10 +148,39 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
   },
   batch_expiry: {
     key: 'batch_expiry',
-    status: 'planned',
+    status: 'partial',
+    // V55 P1: the workflow EXISTS and was audited — receive a batch with its
+    // expiry, FEFO allocation, refuse issuing expired stock, expiry report with
+    // the write-off value, and the warehouse receive screen names the batch.
+    // V55 final completion: the device has the SAME identity now (local
+    // migration v22: stock_batches + lot_allocations) and runs the SAME shared
+    // FEFO core (`planAllocation`) offline — receive, list, plan and issue are
+    // local routes; a cancelled offline sale gives back exactly what it took.
     labelKey: 'capability.batchExpiry',
-    evidence: NO_EVIDENCE,
+    evidence: {
+      sources: [
+        'packages/validation/src/schemas/universal-core/lot-allocation.domain.ts',
+        'backend/src/services/traceability/lot.domain.ts',
+        'backend/src/services/traceability/traceability.service.ts',
+        'backend/src/routes/operations.routes.ts',
+        'packages/local-engine/src/routes/batches.ts',
+        'packages/app-bridge/src/local-universal-core-schema.ts',
+        'packages/api/src/hooks/expiry.ts',
+        'packages/ui/src/components/ui/warehouse/add-to-warehouse-modal.tsx',
+      ],
+      tests: [
+        'backend/src/__tests__/traceability-rules.test.ts',
+        'packages/validation/src/__tests__/lot-allocation.test.ts',
+        'packages/local-engine/src/__tests__/migration-v22.test.ts',
+        'packages/local-engine/src/__tests__/offline-batch-identity.test.ts',
+      ],
+    },
     ...STANDALONE,
+    // What remains: correcting a batch's dates, the expiry report and the lot
+    // trail still run on the server only (their matrix rows stay
+    // online_required), and a RETURN does not restore the batch it came from —
+    // on the server either, so no policy was invented.
+    limitations: ['BATCH_RETURN_RESTORE_MISSING'],
   },
   recipe_bom: {
     key: 'recipe_bom',
@@ -168,22 +197,39 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       sources: [
         'packages/validation/src/schemas/universal-core/variants.domain.ts',
         'backend/src/services/product/variant.service.ts',
+        'backend/src/services/purchasing.service.ts',
         'backend/src/routes/variant.routes.ts',
         'packages/local-engine/src/routes/variants.ts',
+        'packages/local-engine/src/routes/invoices.ts',
         'packages/api/src/hooks/universal-core.ts',
         'packages/ui/src/components/ui/warehouse/product-variants-section.tsx',
+        'packages/ui/src/components/ui/invoice-builder/row-variant-picker.tsx',
         'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
       ],
       tests: [
         'packages/validation/src/__tests__/universal-core.test.ts',
+        'packages/validation/src/__tests__/variant-binding.test.ts',
+        'packages/validation/src/__tests__/variant-sales-availability.test.ts',
         'packages/local-engine/src/__tests__/migration-v9.test.ts',
+        'packages/local-engine/src/__tests__/offline-variant-identity.test.ts',
         'packages/local-engine/src/__tests__/universal-core-parity.test.ts',
+        'backend/src/__tests__/invoice-variant-binding.test.ts',
+        'backend/src/__tests__/purchase-variant-binding.test.ts',
+        'backend/src/__tests__/purchase-variant-binding-01.pg.test.ts',
       ],
     },
     ...STANDALONE,
-    // Audit P0 #1: a variant can be created and listed, but no invoice line and
-    // no stock movement refers to it, so it cannot be sold or counted.
-    limitations: ['NOT_BOUND_TO_INVOICE_LINE', 'NOT_BOUND_TO_STOCK_MOVEMENT'],
+    // V55 P2 vertical slice: an invoice line, a stock movement AND a purchase
+    // line carry variant_id (server + offline), a sale is refused when THAT
+    // variant has no stock (policy-gated), and a return restores the exact
+    // sold variant. V55 final completion: the MOBILE_NO_VARIANT_PICKER
+    // limitation was STALE — the mobile app hosts the shared shell
+    // (apps/mobile/src/host/shell-webview.tsx), whose invoice builder is the
+    // web builder: the row picker in the grid AND in the mobile
+    // item-editor-sheet (packages/ui/.../invoice-builder/mobile), the offline
+    // engine serves /operations/variants, and the serial picker is the
+    // invoice-detail panel. What remains:
+    limitations: ['COST_LAYERS_ARE_PRODUCT_KEYED'],
   },
   table_service: {
     key: 'table_service',
@@ -210,9 +256,13 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       ],
     },
     ...STANDALONE,
-    // A serial is registered on receipt and released on reversal, but selling
-    // an item never claims a serial (`InvoiceService` has no sale-side call).
-    limitations: ['SALE_DOES_NOT_CLAIM_SERIAL'],
+    // V55 P1 (audited): the SALE claims its units through the DESIGNED flow —
+    // the invoice records the stock and the money, then POST /operations/serials/issue
+    // (`assignSerialsToSale`, guarded per unit) names the IMEIs ON that invoice,
+    // the invoice-detail screen picks them from stock, and cancelling the
+    // invoice releases them (`releaseClaims`). Not a call inside
+    // `InvoiceService.create` — by design, not by omission. What remains:
+    limitations: ['OFFLINE_SERIAL_IDENTITY_MISSING'],
   },
   auto_fitments: {
     key: 'auto_fitments',

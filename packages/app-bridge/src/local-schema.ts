@@ -12,11 +12,15 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 19
+export const SCHEMA_VERSION = 22
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
-import { UNIVERSAL_CORE_STATEMENTS } from './local-universal-core-schema'
+import {
+  UNIVERSAL_CORE_STATEMENTS,
+  SERIALS_STATEMENTS,
+  BATCHES_STATEMENTS,
+} from './local-universal-core-schema'
 
 export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Products & Stock ─────────────────────────────────────────
@@ -131,6 +135,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     workspace_id TEXT NOT NULL DEFAULT '',
     invoice_id TEXT NOT NULL,
     product_id TEXT,
+    /** V55 P2: the variant this line sells; NULL = no variant (legacy rows stay unknown, never re-mapped). */
+    variant_id TEXT,
     product_name TEXT NOT NULL,
     quantity REAL NOT NULL DEFAULT 0,
     unit TEXT,
@@ -179,6 +185,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
     product_id TEXT NOT NULL,
+    /** V55 P2: the variant this movement moved; NULL = the product, or a legacy row. */
+    variant_id TEXT,
     type TEXT NOT NULL,
     quantity REAL NOT NULL DEFAULT 0,
     reference TEXT,
@@ -676,6 +684,12 @@ export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Universal Core: variants, pack barcodes, serials, returns, warranties, metal rates (v9) ──
   ...UNIVERSAL_CORE_STATEMENTS,
 
+  // ─── Unit-serial tracking (v21, V55 P2): the device's stock_serials ──
+  ...SERIALS_STATEMENTS,
+
+  // ─── Expiry batches (v22, V55 final completion): stock_batches + lot_allocations ──
+  ...BATCHES_STATEMENTS,
+
   // ─── Sync Plumbing & Meta ─────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS sync_queue (
     client_id TEXT PRIMARY KEY,
@@ -804,6 +818,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'workspace_id',
     'invoice_id',
     'product_id',
+    'variant_id',
     'product_name',
     'quantity',
     'unit',
@@ -846,6 +861,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'id',
     'workspace_id',
     'product_id',
+    'variant_id',
     'type',
     'quantity',
     'reference',
@@ -1202,6 +1218,65 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'sync_status',
     'last_error',
     'created_by',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  // The device's unit serials (v21, V55 P2): hydrated from the server, claimed
+  // by an offline sale, released when the sale is undone.
+  stock_serials: [
+    'id',
+    'workspace_id',
+    'product_id',
+    'serial_number',
+    'status',
+    'batch_id',
+    'cost_layer_id',
+    'unit_cost_minor',
+    'warehouse_id',
+    'received_on',
+    'invoice_id',
+    'sold_on',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  // The device's expiry batches + their allocations (v22, V55 final
+  // completion): hydrated from the server, consumed by an offline FEFO sale,
+  // restored when that sale is undone.
+  stock_batches: [
+    'id',
+    'workspace_id',
+    'product_id',
+    'batch_number',
+    'expiry_date',
+    'manufactured_date',
+    'received_qty',
+    'remaining_qty',
+    'cost_layer_id',
+    'warehouse_id',
+    'received_on',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  lot_allocations: [
+    'id',
+    'workspace_id',
+    'consumer_type',
+    'consumer_id',
+    'consumer_line',
+    'product_id',
+    'batch_id',
+    'serial_id',
+    'quantity',
+    'entry_date',
     'created_at',
     'updated_at',
     'deleted_at',

@@ -8,9 +8,59 @@ import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { checkVariantBinding, type VariantBindingRow } from '@hisabche/validation'
+import type { LocalDb } from '../db'
 
 interface RowRecord {
   [key: string]: any
+}
+
+/**
+ * Every line that names a product is bound to a valid variant, or to none when the product has none —
+ * the SAME rule the server keeps for an invoice or purchase line
+ * (`InvoiceService.assertVariantBindings` / `PurchasingService.assertPurchaseVariantBindings`),
+ * enforced offline from the device's own `product_variants` copy (V55 P2).
+ */
+export function assertLocalVariantBindings(
+  db: LocalDb,
+  workspaceId: string,
+  lines: Array<{ productId?: string | null | undefined; variantId?: string | null | undefined }>,
+): void {
+  const productIds = [...new Set(lines.map((l) => l.productId).filter((id): id is string => !!id))]
+  if (productIds.length === 0) return
+
+  const placeholders = productIds.map(() => '?').join(',')
+  const rows = db.all<{
+    id: string
+    workspace_id: string
+    template_product_id: string
+    is_active: number
+  }>(
+    `SELECT id, workspace_id, template_product_id, is_active
+       FROM product_variants
+      WHERE workspace_id = ? AND template_product_id IN (${placeholders}) AND deleted_at IS NULL`,
+    [workspaceId, ...productIds],
+  )
+  const bindingRows: VariantBindingRow[] = rows.map((r) => ({
+    id: r.id,
+    workspaceId: r.workspace_id,
+    templateProductId: r.template_product_id,
+    isActive: Number(r.is_active) !== 0,
+  }))
+
+  for (const line of lines) {
+    if (!line.productId) {
+      if (line.variantId) throw new ValidationError('VARIANT_ON_PRODUCT_WITHOUT_VARIANTS')
+      continue
+    }
+    const verdict = checkVariantBinding({
+      workspaceId,
+      productId: line.productId,
+      variantId: line.variantId,
+      variantsOfProduct: bindingRows.filter((r) => r.templateProductId === line.productId),
+    })
+    if (!verdict.ok) throw new ValidationError(verdict.code)
+  }
 }
 
 export function registerVariantsRoutes(router: Router) {
@@ -23,19 +73,19 @@ export function registerVariantsRoutes(router: Router) {
       [ctx.workspaceId, templateProductId],
     )
 
-    return {
-      status: 200,
-      data: rows.map((r: RowRecord) => ({
-        id: r.id,
-        templateProductId: r.template_product_id,
-        sku: r.sku,
-        barcode: r.barcode,
-        attributes: JSON.parse(r.attributes || '[]'),
-        priceOverrideMinor: r.price_override_minor,
-        costOverrideMinor: r.cost_override_minor,
-        isActive: Boolean(r.is_active),
-      })),
-    }
+    // The engine wraps plain returns ({status: 201 for POST}); a handler that
+    // returns `{status, data}` ITSELF had that wrapper as the payload, so a
+    // variant list reached the caller shaped wrong (V55 P2).
+    return rows.map((r: RowRecord) => ({
+      id: r.id,
+      templateProductId: r.template_product_id,
+      sku: r.sku,
+      barcode: r.barcode,
+      attributes: JSON.parse(r.attributes || '[]'),
+      priceOverrideMinor: r.price_override_minor,
+      costOverrideMinor: r.cost_override_minor,
+      isActive: Boolean(r.is_active),
+    }))
   })
 
   router.post('/products/:id/variants', async (c: RouteHandlerContext) => {
@@ -45,7 +95,18 @@ export function registerVariantsRoutes(router: Router) {
     const payload = body as any
     if (!payload?.sku) throw new ValidationError('sku is required')
 
-    const id = payload.id || `v-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    // V55 P2: the id MUST be a uuid. An invoice line's `variantId` is a uuid
+    // field (invoice.schema.ts) — the old `v-<timestamp>` id could be created
+    // offline but never sold, refused by the schema on every later sale.
+    const id =
+      payload.id ||
+      (typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch: string) => {
+            const r = (Math.random() * 16) | 0
+            const v = ch === 'x' ? r : (r & 0x3) | 0x8
+            return v.toString(16)
+          }))
     const now = new Date().toISOString()
     const attributes = JSON.stringify(payload.attributes || [])
 
@@ -67,18 +128,16 @@ export function registerVariantsRoutes(router: Router) {
       ],
     )
 
+    // The engine gives a POST 201; `{status, data}` would BE the payload.
     return {
-      status: 201,
-      data: {
-        id,
-        templateProductId,
-        sku: payload.sku,
-        barcode: payload.barcode || null,
-        attributes: payload.attributes || [],
-        priceOverrideMinor: payload.priceOverrideMinor ?? null,
-        costOverrideMinor: payload.costOverrideMinor ?? null,
-        isActive: true,
-      },
+      id,
+      templateProductId,
+      sku: payload.sku,
+      barcode: payload.barcode || null,
+      attributes: payload.attributes || [],
+      priceOverrideMinor: payload.priceOverrideMinor ?? null,
+      costOverrideMinor: payload.costOverrideMinor ?? null,
+      isActive: true,
     }
   })
 }

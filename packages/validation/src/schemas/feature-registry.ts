@@ -335,6 +335,12 @@ export const FEATURE_REGISTRY = {
   'inventory.variant_stock': { execution: 'server', plans: ALL },
   'inventory.transfer_requests': { execution: 'server', plans: ALL },
   'inventory.serial_holds': { execution: 'server', plans: ALL },
+  // The device's unit serials (v21, V55 P2): received, listed, and claimed on a
+  // recorded sale — local rows, local routes (packages/local-engine/src/routes/serials.ts).
+  'inventory.serial_items': { execution: 'local', plans: ALL },
+  // V55 final completion: the device's expiry batches (v22) — the same shared
+  // FEFO rule the server keeps, executed on the device.
+  'inventory.batch_items': { execution: 'local', plans: ALL },
   'operations.repairs': { execution: 'server', plans: ALL },
   'operations.salon_setup': { execution: 'server', plans: ALL },
   'hr.commission': { execution: 'server', plans: ALL },

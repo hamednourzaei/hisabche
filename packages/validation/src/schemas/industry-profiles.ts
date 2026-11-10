@@ -501,16 +501,35 @@ function dashboardUnion(definitions: readonly ProfileDefinition[]): DashboardPar
 }
 
 /**
- * DERIVE the profile. Pure, deterministic and free of I/O.
- *
- * PRIMARY RULE (ADR — docs/architecture/industry/ADR-001-primary-industry.md):
+ * THE ONE primary-industry decision (ADR — docs/architecture/industry/ADR-001-primary-industry.md):
  *   1. If the caller passes an explicit primary, it wins.
  *   2. Otherwise the first selected TRADE in registry order is primary.
  *   3. If only sales models were selected, the first model is primary.
- *   4. Nothing recognisable → the generic profile (primary null).
+ *   4. Nothing recognisable → null (the generic profile).
  *
- * Insertion order is deliberately ignored. Two users who selected the same
- * trades must get the same experience, however they clicked them.
+ * Insertion order is deliberately ignored. Every consumer of a trade key —
+ * the profile resolver, the onboarding wizard's question engine, the DNA
+ * inference and the settings editor — MUST read the trade through this
+ * function, never by splitting the stored list and taking its first element
+ * (V55 preflight, defect A: `selected[0]` made selection order an accidental
+ * primary-industry rule).
+ */
+export function primaryIndustryKeyOf(
+  types: readonly string[] | string | null | undefined,
+  explicitPrimary?: string | null,
+): IndustryKey | null {
+  const canonical = canonicalIndustryTypes(types)
+  const explicit = explicitPrimary ? canonicalIndustryTypes([explicitPrimary]).known[0] : undefined
+
+  const tradeKeys = canonical.known.filter((key) => !SALES_MODEL_KEYS.includes(key))
+  return explicit ?? tradeKeys[0] ?? canonical.known[0] ?? null
+}
+
+/**
+ * DERIVE the profile. Pure, deterministic and free of I/O.
+ *
+ * The primary decision is the one canonical rule above — this resolver never
+ * re-derives it.
  */
 export function resolveBusinessProfile(
   types: readonly string[] | string | null | undefined,
@@ -518,10 +537,7 @@ export function resolveBusinessProfile(
   characteristics?: Partial<OperatingCharacteristics> | null,
 ): BusinessProfile {
   const canonical = canonicalIndustryTypes(types)
-  const explicit = explicitPrimary ? canonicalIndustryTypes([explicitPrimary]).known[0] : undefined
-
-  const tradeKeys = canonical.known.filter((key) => !SALES_MODEL_KEYS.includes(key))
-  const primary = explicit ?? tradeKeys[0] ?? canonical.known[0] ?? null
+  const primary = primaryIndustryKeyOf(types, explicitPrimary)
 
   const selectedDefinitions = canonical.known.map((key) => PROFILES[key])
   const primaryDefinition = primary

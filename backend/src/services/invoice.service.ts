@@ -71,9 +71,11 @@ import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../uti
 import { assertWithinLimit } from './plan-limits.service'
 import {
   checkVariantBinding,
+  checkVariantSalesAvailability,
   countsTowardsInvoiceQuota,
   evaluateCreditLimit,
   lateCostKeyFromDigest,
+  type VariantStockRowLike,
 } from '@hisabche/validation'
 
 // ============================================
@@ -3335,58 +3337,133 @@ export class InvoiceService {
     // That is information, not corruption — and it is how someone finds out
     // their count was wrong.
 
-    return (
-      items
-        // Products outside this workspace never entered productMap, so naming
-        // another shop's product id moves nothing (lesson 17).
-        .filter((item) => item.productId && productMap.has(item.productId))
-        .map((item) => {
-          // L1 — the line's own unit, converted to the product's base.
+    const rows = items
+      // Products outside this workspace never entered productMap, so naming
+      // another shop's product id moves nothing (lesson 17).
+      .filter((item) => item.productId && productMap.has(item.productId))
+      .map((item) => {
+        // L1 — the line's own unit, converted to the product's base.
+        //
+        // ⚠️ REFUSED, not silently passed through, when the unit is not one
+        // the product declares: storing a carton count as a piece count is a
+        // wrong quantity in the source of truth that nothing would flag.
+        const converted = toBaseQuantity(
+          Number(item.quantity) || 0,
+          item.unit ?? null,
+          unitOptions.get(item.productId) ?? [],
+        )
+
+        if (!converted.ok) {
+          throw new ValidationError(`${converted.code}: product ${item.productId}`)
+        }
+
+        return {
+          product_id: item.productId,
+          // The movement must name the transaction that caused it. Hardcoding
+          // "sale" made every stock movement look like a sale in reports.
+          type: direction === 1 ? 'purchase' : 'sale',
+          quantity: direction * converted.baseQuantity,
+          // variant-stock-01: the variant the line sells or buys moves too.
+          // Named only when set, so documents without variants keep working
+          // before the migration.
+          ...(item.variantId ? { variant_id: item.variantId } : {}),
+          reference_type: 'invoice',
+          // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
+          // of document and nothing could reach the document itself.
           //
-          // ⚠️ REFUSED, not silently passed through, when the unit is not one
-          // the product declares: storing a carton count as a piece count is a
-          // wrong quantity in the source of truth that nothing would flag.
-          const converted = toBaseQuantity(
-            Number(item.quantity) || 0,
-            item.unit ?? null,
-            unitOptions.get(item.productId) ?? [],
-          )
+          // `?? null` rather than dropping the key: an explicit null records
+          // «this movement has no document» honestly, and is what the column
+          // already holds for every historical row. Guessing one would be worse
+          // (§12) — old rows stay unknown.
+          reference_id: invoiceId ?? null,
+          // A sale leaves a warehouse; a purchase arrives at one. Null when the
+          // workspace has zero or several — see soleWarehouseId().
+          ...(warehouseId
+            ? direction === 1
+              ? { to_warehouse_id: warehouseId }
+              : { from_warehouse_id: warehouseId }
+            : {}),
+          workspace_id: workspaceId,
+          user_id: userId,
+        }
+      })
 
-          if (!converted.ok) {
-            throw new ValidationError(`${converted.code}: product ${item.productId}`)
-          }
+    // ─── V55 P2 — the VARIANT must have the stock, not just the product ─────
+    //
+    // The costing core's locked consume refuses a sale the PRODUCT cannot
+    // cover; until now nothing refused a sale a VARIANT cannot cover: selling
+    // «black L» could quietly drain «white M»'s shelf. The refusal is made
+    // here, from the movements that name the variant (the same source of truth
+    // the variant stock screen reads), and only when the negative-stock policy
+    // blocks — the same policy gate `mayIssue` keeps for the product.
+    // Best-effort against a racing write by design: the locked consume remains
+    // the race-proof guard at the product level.
+    if (direction === -1) {
+      const variantRows = rows.filter((row) => row.variant_id)
+      if (variantRows.length > 0) {
+        const settings = await costing.getSettings(ctx)
+        if (settings.negativeStock === 'block') {
+          const warehouseOf = (row: Record<string, unknown>): string | null =>
+            (row['from_warehouse_id'] as string | null | undefined) ??
+            (row['to_warehouse_id'] as string | null | undefined) ??
+            null
+          const demands = variantRows.map((row) => ({
+            variantId: String(row.variant_id),
+            warehouseId: warehouseOf(row as Record<string, unknown>),
+            quantity: Math.abs(Number(row.quantity) || 0),
+          }))
+          const stock = await this.readVariantStock(workspaceId, [
+            ...new Set(variantRows.map((row) => String(row.product_id))),
+          ])
+          const refusal = checkVariantSalesAvailability({ demands, stock })
+          if (refusal) throw new ValidationError(refusal)
+        }
+      }
+    }
 
-          return {
-            product_id: item.productId,
-            // The movement must name the transaction that caused it. Hardcoding
-            // "sale" made every stock movement look like a sale in reports.
-            type: direction === 1 ? 'purchase' : 'sale',
-            quantity: direction * converted.baseQuantity,
-            // variant-stock-01: the variant the line sells or buys moves too.
-            // Named only when set, so documents without variants keep working
-            // before the migration.
-            ...(item.variantId ? { variant_id: item.variantId } : {}),
-            reference_type: 'invoice',
-            // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
-            // of document and nothing could reach the document itself.
-            //
-            // `?? null` rather than dropping the key: an explicit null records
-            // «this movement has no document» honestly, and is what the column
-            // already holds for every historical row. Guessing one would be worse
-            // (§12) — old rows stay unknown.
-            reference_id: invoiceId ?? null,
-            // A sale leaves a warehouse; a purchase arrives at one. Null when the
-            // workspace has zero or several — see soleWarehouseId().
-            ...(warehouseId
-              ? direction === 1
-                ? { to_warehouse_id: warehouseId }
-                : { from_warehouse_id: warehouseId }
-              : {}),
-            workspace_id: workspaceId,
-            user_id: userId,
-          }
+    return rows
+  }
+
+  /**
+   * What the movements say each variant of these products holds (variant ×
+   * warehouse), one read per product — the same rpc the variant stock screen
+   * uses. On a database before variant-stock-01 there is nothing to read, so
+   * nothing is checked rather than a guess: the product-level consume remains
+   * the guard, exactly as before this slice.
+   */
+  private async readVariantStock(
+    workspaceId: string,
+    productIds: string[],
+  ): Promise<VariantStockRowLike[]> {
+    const rows: VariantStockRowLike[] = []
+    for (const productId of productIds) {
+      const { data, error } = await supabase.rpc('product_variant_stock', {
+        p_workspace_id: workspaceId,
+        p_product_id: productId,
+      })
+      if (error) {
+        const code = (error as { code?: string }).code ?? ''
+        const message = (error as { message?: string }).message ?? ''
+        const notReady =
+          code === 'PGRST202' ||
+          code === '42883' ||
+          ((code === '42703' || code === 'PGRST204') && message.includes('variant_id'))
+        if (notReady) continue
+        throw new DatabaseError('Failed to read variant stock', error)
+      }
+      for (const row of (data ?? []) as Array<{
+        variant_id: string
+        warehouse_id: string | null
+        quantity: number | string
+      }>) {
+        rows.push({
+          variantId: row.variant_id,
+          warehouseId: row.warehouse_id,
+          quantity: Number(row.quantity) || 0,
         })
-    )
+      }
+    }
+    return rows
   }
 
   /**

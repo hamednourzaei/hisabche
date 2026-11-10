@@ -118,7 +118,11 @@ export const variantStockMoveSchema = z.object({
 })
 export type VariantStockMoveInput = z.infer<typeof variantStockMoveSchema>
 
-export type VariantStockRefusal = 'VARIANT_STOCK_NOT_ENOUGH_UNASSIGNED' | 'VARIANT_STOCK_NOT_ENOUGH'
+// The refusal codes are declared in variants.domain (the V55 P2 sale rule
+// shares them and that file must stay import-free); re-exported here so every
+// existing importer of this file is unchanged.
+export type { VariantStockRefusal } from './universal-core/variants.domain'
+import type { VariantStockRefusal } from './universal-core/variants.domain'
 
 /**
  * Whether a move may happen, given what the warehouse holds.

@@ -129,3 +129,68 @@ export function checkVariantBinding(input: {
   if (!found.isActive) return { ok: false, code: 'VARIANT_INACTIVE' }
   return { ok: true, variantId }
 }
+
+// ─── Selling a variant (V55 P2) ──────────────────────────────────────────────
+//
+// The product-level refusal lives in the costing core's locked consumption
+// (`mayIssue` on product-keyed layers). The VARIANT-level one is this rule: a
+// sale line that names a variant must be covered by the movements that name
+// THAT variant, not by the product's total. Two lines of one document selling
+// the same variant add up before the comparison, so «2 + 2 of the last 3» is
+// refused even though each line alone would pass.
+//
+// The caller decides the POLICY (negative stock allowed or not) and calls this
+// only in `block` mode — the same split `mayIssue` keeps between the policy
+// question and the arithmetic question.
+
+export interface VariantSaleDemand {
+  readonly variantId: string
+  readonly warehouseId: string | null
+  readonly quantity: number
+}
+
+/**
+ * Structural subset of `VariantStockRow` (variant-stock.ts), restated here so
+ * this file stays import-free — variant-stock.ts imports THIS file.
+ */
+export interface VariantStockRowLike {
+  readonly variantId: string
+  readonly warehouseId: string | null
+  readonly quantity: number
+}
+
+/**
+ * Why a stock move or a sale was refused. Declared HERE (variant-stock.ts
+ * re-exports it) because the sale rule below and the move rule there share it
+ * and this file must stay import-free.
+ */
+export type VariantStockRefusal = 'VARIANT_STOCK_NOT_ENOUGH_UNASSIGNED' | 'VARIANT_STOCK_NOT_ENOUGH'
+
+/**
+ * Refuse when a demanded sale quantity exceeds what the variant's movements
+ * say is on hand, in that warehouse (or in total when no warehouse is named).
+ * Returns the shared `VARIANT_STOCK_NOT_ENOUGH` code; null means covered.
+ */
+export function checkVariantSalesAvailability(input: {
+  readonly demands: readonly VariantSaleDemand[]
+  readonly stock: readonly VariantStockRowLike[]
+}): VariantStockRefusal | null {
+  const totals = new Map<string, number>()
+  for (const demand of input.demands) {
+    if (!(demand.quantity > 0)) continue
+    const key = `${demand.variantId}|${demand.warehouseId ?? ''}`
+    totals.set(key, (totals.get(key) ?? 0) + demand.quantity)
+  }
+
+  for (const [key, demanded] of totals) {
+    const separator = key.lastIndexOf('|')
+    const variantId = key.slice(0, separator)
+    const warehouseId = key.slice(separator + 1) || null
+    const onHand = input.stock
+      .filter((row) => row.variantId === variantId)
+      .filter((row) => (warehouseId ? row.warehouseId === warehouseId : true))
+      .reduce((sum, row) => sum + row.quantity, 0)
+    if (demanded > onHand + 1e-9) return 'VARIANT_STOCK_NOT_ENOUGH'
+  }
+  return null
+}

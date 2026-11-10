@@ -2,8 +2,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   inferOperationalDna,
+  operationalDnaSchema,
   operatingAnswersSchema,
   operatingQuestionsFor,
+  resolveDnaCapabilities,
   suggestedOperatingAnswers,
 } from '../schemas/operational-dna'
 import { INDUSTRY_KEYS } from '../schemas/industry-profiles'
@@ -76,5 +78,92 @@ describe('suggestions and the closed answer shape', () => {
     expect(operatingAnswersSchema.safeParse({ hasStaff: 'maybe' }).success).toBe(false)
     expect(operatingAnswersSchema.safeParse({ salary: 'yes' }).success).toBe(false)
     expect(operatingAnswersSchema.safeParse({ locations: 'multiple' }).success).toBe(true)
+  })
+})
+
+// ─── V55 P1: unit-level tracking questions ──────────────────────────────────
+
+describe('unit tracking questions (V55 P1)', () => {
+  it('a stock-keeping business is asked about serials and expiry dates', () => {
+    const shown = operatingQuestionsFor({ holdsStock: 'yes' })
+    expect(shown).toContain('tracksSerials')
+    expect(shown).toContain('hasExpiryDates')
+  })
+
+  it('a service with no stock is asked neither', () => {
+    const shown = operatingQuestionsFor({ holdsStock: 'no' })
+    expect(shown).not.toContain('tracksSerials')
+    expect(shown).not.toContain('hasExpiryDates')
+  })
+
+  it('a phone shop suggests serial tracking; a pharmacy suggests expiry dates', () => {
+    expect(suggestedOperatingAnswers('mobilePhones').tracksSerials).toBe('yes')
+    expect(suggestedOperatingAnswers('pharmacy').hasExpiryDates).toBe('yes')
+    // Neither trade fabricates the other answer.
+    expect(suggestedOperatingAnswers('mobilePhones').hasExpiryDates).toBeUndefined()
+  })
+
+  it('only what was SAID reaches the DNA axis — unanswered stays absent, never a fabricated tracker', () => {
+    expect(inferOperationalDna({ holdsStock: 'yes' }).unitTracking).toBeUndefined()
+    expect(
+      inferOperationalDna({
+        holdsStock: 'yes',
+        tracksSerials: 'unknown',
+        hasExpiryDates: 'unknown',
+      }).unitTracking,
+    ).toBeUndefined()
+  })
+
+  it('the answers decide the axis, not the trade', () => {
+    // A pharmacy that says no expiry tracking (and says nothing about
+    // serials) has NO resolved axis: «unknown serials» is not «no serials»,
+    // and a half-known answer never becomes a fabricated NONE.
+    expect(
+      inferOperationalDna({ tradeKey: 'pharmacy', hasExpiryDates: 'no' }).unitTracking,
+    ).toBeUndefined()
+    // Both answers explicit «no» IS a resolved «no tracking».
+    expect(
+      inferOperationalDna({ tradeKey: 'pharmacy', hasExpiryDates: 'no', tracksSerials: 'no' })
+        .unitTracking,
+    ).toBe('NONE')
+    expect(inferOperationalDna({ tradeKey: 'barber', tracksSerials: 'yes' }).unitTracking).toBe(
+      'SERIAL_NUMBERS',
+    )
+    expect(inferOperationalDna({ tracksSerials: 'yes', hasExpiryDates: 'yes' }).unitTracking).toBe(
+      'BOTH',
+    )
+  })
+
+  it('the axis requests exactly the capabilities whose workflow exists', () => {
+    // `resolveDnaCapabilities().capabilities` is the CapabilityResolution
+    // object; the list that is ON is its own `.capabilities`.
+    const serial = resolveDnaCapabilities(
+      inferOperationalDna({ holdsStock: 'yes', tracksSerials: 'yes' }),
+    ).capabilities
+    expect(serial.capabilities).toContain('serialized_items')
+    expect(serial.capabilities).not.toContain('batch_expiry')
+
+    const expiry = resolveDnaCapabilities(
+      inferOperationalDna({ holdsStock: 'yes', hasExpiryDates: 'yes' }),
+    ).capabilities
+    expect(expiry.capabilities).toContain('batch_expiry')
+    expect(expiry.capabilities).not.toContain('serialized_items')
+  })
+
+  it('a DNA saved before the axis exists parses and requests nothing', () => {
+    const legacy = {
+      version: 1,
+      offering: ['PHYSICAL_GOODS'],
+      intake: ['COUNTER_POS'],
+      inventory: ['RETAIL_STOCK'],
+      settlement: ['IMMEDIATE_SETTLEMENT'],
+      workforce: ['SOLO_OWNER'],
+      customer: ['STANDARD_PARTY'],
+      topology: ['SINGLE_LOCATION'],
+    }
+    expect(operationalDnaSchema.safeParse(legacy).success).toBe(true)
+    expect(resolveDnaCapabilities(legacy as never).capabilities.capabilities).not.toContain(
+      'serialized_items',
+    )
   })
 })

@@ -9,6 +9,7 @@ import {
   type ResolvedBusinessConfiguration,
   resolveDnaCapabilities,
   inferOperationalDna,
+  primaryIndustryKeyOf,
 } from '@hisabche/validation'
 
 export interface OperationalDnaState {
@@ -33,13 +34,11 @@ export function useOperationalDna(): OperationalDnaState {
       return resolveDnaCapabilities(localDna)
     }
 
-    // 2. Derive DNA safely from workspace or user declared business profile
+    // 2. Derive DNA safely from workspace or user declared business profile.
+    // V55: the primary trade comes from the ONE canonical decision, never
+    // `types[0]` — the user-level copy is stored in selection order.
     const types = workspace?.declared ? workspace.businessTypes : (user?.businessTypes ?? [])
-    const primaryTrade = Array.isArray(types)
-      ? types[0]
-      : typeof types === 'string'
-        ? types
-        : undefined
+    const primaryTrade = primaryIndustryKeyOf(types) ?? undefined
 
     const inferred = inferOperationalDna({
       tradeKey: primaryTrade,

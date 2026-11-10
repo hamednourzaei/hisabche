@@ -39,8 +39,15 @@ const SUGGESTIBLE: ReadonlyArray<{
   { path: '/market-seller', keep: (m) => m.has('products') },
 ]
 
-/** The menu paths this business's DNA suggests hiding, in menu order. */
+/**
+ * The menu paths this business's DNA suggests hiding, in menu order.
+ *
+ * ⚠️ V55: an UNRESOLVED axis (the business did not say, and no trade carries
+ * the evidence) hides NOTHING. A suggestion built on a guess is exactly the
+ * fabrication the DNA exists to prevent.
+ */
 export function suggestedHiddenMenuPaths(dna: OperationalDna): string[] {
+  if (dna.offering.includes('UNRESOLVED') || dna.inventory.includes('UNRESOLVED')) return []
   const modules = new Set(resolveDnaCapabilities(dna).activeModules)
   return SUGGESTIBLE.filter((item) => !item.keep(modules, dna)).map((item) => item.path)
 }

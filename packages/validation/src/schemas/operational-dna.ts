@@ -21,6 +21,10 @@ export const offeringModelEnum = z.enum([
   'PACKAGE_SESSION',
   'DELIVERABLE_SERVICE',
   'MIXED_OFFERING',
+  // V55: the axis could not be resolved from the answers. NOT a business model:
+  // it activates nothing in `resolveDnaCapabilities` and must never be presented
+  // as one. Backward-compatible — consumers match specific values by inclusion.
+  'UNRESOLVED',
 ])
 export type OfferingModel = z.infer<typeof offeringModelEnum>
 
@@ -45,8 +49,28 @@ export const inventoryBehaviorEnum = z.enum([
   'RAW_MATERIALS',
   'FINISHED_GOODS',
   'HYBRID_INVENTORY',
+  // V55: stock behaviour is genuinely unknown (no answer, no trade evidence).
+  // Activates no inventory module and never becomes a guessed retail shop.
+  'UNRESOLVED',
 ])
 export type InventoryBehavior = z.infer<typeof inventoryBehaviorEnum>
+
+// ─── AXIS 9: Unit-level tracking (V55 P1) ─────────────────────────────
+//
+// «Is one unit distinguishable from the next?» — IMEI/serial numbers
+// (phones, electronics, vehicles) and expiry dates (pharmacy, food).
+// Optional: every DNA written before V55 has no axis, which reads as NONE —
+// nothing activates for it and no historical profile is re-interpreted.
+// Requests `serialized_items` / `batch_expiry` in `resolveDnaCapabilities`.
+export const unitTrackingEnum = z.enum([
+  'NONE',
+  'SERIAL_NUMBERS',
+  'EXPIRY_DATES',
+  'BOTH',
+  // V55: neither answer given and the trade suggests nothing — activates nothing.
+  'UNRESOLVED',
+])
+export type UnitTracking = z.infer<typeof unitTrackingEnum>
 
 // ─── AXIS 4: Billing & Settlement ────────────────────────────────────
 export const billingSettlementEnum = z.enum([
@@ -112,6 +136,9 @@ export const operationalDnaSchema = z.object({
   workforce: z.array(workforceModelEnum).min(1),
   customer: z.array(customerProfileEnum).min(1),
   topology: z.array(operationalTopologyEnum).min(1),
+  // V55 P1: optional — a DNA saved before this axis exists stays valid, and
+  // `resolveDnaCapabilities` reads a missing axis as NONE.
+  unitTracking: unitTrackingEnum.optional(),
   terminology: terminologyProfileSchema.optional(),
   archetypeHint: z.string().optional(),
 })
@@ -249,6 +276,16 @@ export function resolveDnaCapabilities(dna: OperationalDna): ResolvedBusinessCon
   if (dna.inventory.includes('RAW_MATERIALS')) {
     requestedCapabilities.push('recipe_bom', 'batch_expiry')
   }
+
+  // Axis 9 (V55 P1): what the person SAID about unit-level tracking requests
+  // these — no trade guess and no inventory-axis guess stands in for it. A
+  // missing axis (every DNA saved before V55) requests nothing.
+  if (dna.unitTracking === 'SERIAL_NUMBERS' || dna.unitTracking === 'BOTH') {
+    requestedCapabilities.push('serialized_items')
+  }
+  if (dna.unitTracking === 'EXPIRY_DATES' || dna.unitTracking === 'BOTH') {
+    requestedCapabilities.push('batch_expiry')
+  }
   if (dna.inventory.includes('SERVICE_CONSUMABLES')) {
     activeModules.add('consumables')
   }
@@ -301,6 +338,8 @@ export interface OperationalInferenceInput {
   readonly takesAppointments?: 'yes' | 'no' | 'unknown' | undefined
   readonly deliversCoursesOrPackages?: 'yes' | 'no' | 'unknown' | undefined
   readonly takesJobTicketsOrRepairs?: 'yes' | 'no' | 'unknown' | undefined
+  readonly tracksSerials?: 'yes' | 'no' | 'unknown' | undefined
+  readonly hasExpiryDates?: 'yes' | 'no' | 'unknown' | undefined
 }
 
 /**
@@ -330,7 +369,9 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     hasStaff: said('hasStaff'),
   }
 
-  // 1. Offering
+  // 1. Offering — an explicit «no stock» is a service; an UNKNOWN stock answer
+  // never fabricates a goods business (V55: was the `else` fall-through that
+  // turned every unanswered questionnaire into PHYSICAL_GOODS).
   const offering: OfferingModel[] = []
   if (isPackageDriven) {
     offering.push('PACKAGE_SESSION')
@@ -339,9 +380,14 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     if (input.holdsStock === 'yes') offering.push('PHYSICAL_GOODS')
   } else if (isRepairDriven) {
     offering.push('DELIVERABLE_SERVICE')
+    // Spare parts ARE physical goods: the repair trade itself carries this
+    // suggestion, so an unknown stock answer follows the trade — an explicit
+    // «no» still wins.
     if (input.holdsStock !== 'no') offering.push('PHYSICAL_GOODS')
   } else if (input.holdsStock === 'no') {
     offering.push('DELIVERABLE_SERVICE')
+  } else if (input.holdsStock === 'unknown') {
+    offering.push('UNRESOLVED')
   } else {
     offering.push('PHYSICAL_GOODS')
   }
@@ -354,19 +400,24 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
   if (input.hasPointOfSale === 'yes' || isRetailTrade) intake.push('COUNTER_POS')
   if (intake.length === 0) intake.push('WALK_IN')
 
-  // 3. Inventory
+  // 3. Inventory — precedence: an explicit «no» beats every trade suggestion;
+  // a suggestion only fills a question the person left unanswered; an unknown
+  // answer with no trade evidence stays UNRESOLVED (V55: was the `else`
+  // fall-through that turned every unanswered questionnaire into RETAIL_STOCK).
   const inventory: InventoryBehavior[] = []
-  if (isProducer) {
+  if (input.holdsStock === 'no') {
+    inventory.push('NONE')
+  } else if (isProducer) {
     inventory.push('RAW_MATERIALS', 'FINISHED_GOODS')
   } else if (isRepairDriven) {
     inventory.push('SPARE_PARTS')
   } else if (isAppointmentDriven) {
     inventory.push('SERVICE_CONSUMABLES')
     if (input.holdsStock === 'yes') inventory.push('RETAIL_STOCK')
-  } else if (input.holdsStock === 'no') {
-    inventory.push('NONE')
-  } else {
+  } else if (input.holdsStock === 'yes') {
     inventory.push('RETAIL_STOCK')
+  } else {
+    inventory.push('UNRESOLVED')
   }
 
   // 4. Settlement
@@ -437,6 +488,22 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
         : 'common.stock',
   }
 
+  // 9. Unit tracking (V55 P1) — only what a person SAID, or the trade's own
+  // suggestion. Left OUT when neither was answered: absent is «no axis was
+  // resolved», which activates nothing — never a fabricated tracker.
+  const serialAnswer = said('tracksSerials')
+  const expiryAnswer = said('hasExpiryDates')
+  const unitTracking: UnitTracking | undefined =
+    serialAnswer === 'yes' && expiryAnswer === 'yes'
+      ? 'BOTH'
+      : serialAnswer === 'yes'
+        ? 'SERIAL_NUMBERS'
+        : expiryAnswer === 'yes'
+          ? 'EXPIRY_DATES'
+          : serialAnswer === 'no' && expiryAnswer === 'no'
+            ? 'NONE'
+            : undefined
+
   return {
     version: 1,
     offering,
@@ -447,6 +514,7 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     customer,
     topology,
     terminology,
+    ...(unitTracking ? { unitTracking } : {}),
     archetypeHint: isAppointmentDriven
       ? 'NAIL_TECH_BEAUTY'
       : isPackageDriven
@@ -474,6 +542,8 @@ export const YES_NO_QUESTIONS = [
   'holdsStock',
   'producesGoods',
   'hasPointOfSale',
+  'tracksSerials',
+  'hasExpiryDates',
   'sellsOnCredit',
   'hasStaff',
 ] as const
@@ -493,6 +563,8 @@ export const operatingAnswersSchema = z
     holdsStock: yesNo.optional(),
     producesGoods: yesNo.optional(),
     hasPointOfSale: yesNo.optional(),
+    tracksSerials: yesNo.optional(),
+    hasExpiryDates: yesNo.optional(),
     sellsOnCredit: yesNo.optional(),
     hasStaff: yesNo.optional(),
     locations: z.enum(['single', 'multiple', 'unknown']).optional(),
@@ -505,6 +577,10 @@ const PACKAGE_TRADES = new Set(['education'])
 const REPAIR_TRADES = new Set(['repairs', 'mechanic'])
 const PRODUCER_TRADES = new Set(['manufacturing', 'bakery'])
 const COUNTER_TRADES = new Set(['retail', 'grocery'])
+// V55 P1: the unit-tracking trades. A phone shop sells THIS unit (IMEI);
+// a pharmacy sells the batch that expires first (FEFO).
+const SERIAL_TRADES = new Set(['mobilePhones', 'repairs', 'mechanic'])
+const EXPIRY_TRADES = new Set(['pharmacy', 'grocery'])
 
 /**
  * What the trade suggests for each question — the wizard's pre-filled answer.
@@ -524,6 +600,8 @@ export function suggestedOperatingAnswers(tradeKey: string | undefined): Operati
     out.hasPointOfSale = 'yes'
     out.holdsStock = 'yes'
   }
+  if (SERIAL_TRADES.has(tradeKey)) out.tracksSerials = 'yes'
+  if (EXPIRY_TRADES.has(tradeKey)) out.hasExpiryDates = 'yes'
   return out
 }
 
@@ -540,6 +618,9 @@ export function operatingQuestionsFor(answers: OperatingAnswers): OperatingQuest
     'takesJobTicketsOrRepairs',
     'holdsStock',
     ...(keepsStock ? (['producesGoods', 'hasPointOfSale'] as const) : []),
+    // V55 P1: unit-level tracking is only asked of a business that keeps
+    // stock — a serial number or an expiry date lives on a unit on a shelf.
+    ...(keepsStock ? (['tracksSerials', 'hasExpiryDates'] as const) : []),
     'sellsOnCredit',
     'hasStaff',
     'locations',
