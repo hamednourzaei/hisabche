@@ -95,7 +95,15 @@ function useInvoiceFigure(
   field: 'totalAmount' | 'pendingAmount' | 'paidAmount' | 'count',
   locale: string,
 ): Figure {
-  const query = useInvoices({ page: 1, limit: 1, sortDirection: 'desc', type })
+  // The list's figures are computed by the server only when asked for (QA-KPI-001:
+  // without this the card stayed blank — the reply had no `summary`).
+  const query = useInvoices({
+    page: 1,
+    limit: 1,
+    sortDirection: 'desc',
+    type,
+    includeSummary: true,
+  })
   const summary = query.data?.summary
   if (!summary) return { value: query.isError ? '—' : '', loading: query.isLoading }
   return {

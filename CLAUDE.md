@@ -59,7 +59,7 @@ Rollback/Mitigation؛ (۲) Verification Query جدا. **انسان** آن‌ها
 - **route ای که با صفحه‌ای داده‌ی مشترک دارد، تب یا بخشِ همان صفحه می‌شود** — نه route تازه، نه مورد منو.
 - **نشانی قدیمی نمی‌میرد:** صفحه‌ای که بخش شد، یک جفت در `moved` (`apps/web/next.config.js`) و همان
   جفت به‌صورت `<Navigate>` در `packages/app-shell/src/app/app.tsx` می‌گیرد. دو فهرست باید یکی باشند
-  (گارد: `route-parity.test.ts`). ۲۸ جفت داریم؛ ۱۹ پوشه‌ی صفحه‌ی وب حذف شد.
+  (گارد: `route-parity.test.ts`). ۳۱ جفت داریم؛ ۱۹ پوشه‌ی صفحه‌ی وب حذف شد.
 - **قفل بخش = قفل صفحه‌ی قدیمی‌اش.** کلیدهایی مثل `/bank` و `/expiry` در `NAV_MODULE` می‌مانند با اینکه
   دیگر در منو نیستند — `isNavLocked(source)` بخش را با همان‌ها پنهان می‌کند. حذفشان = نمایش بخش به کسی که
   ماژولش قفل است. فهرست بسته در `nav-module-locks.test.ts`.
@@ -190,8 +190,9 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **V54 دور سوم: پیش‌فروش/پیش‌خرید، OTP، کمیسیون، مواد، بیعانه‌ی نوبت (۸ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور سوم — **session-deposit-01، advances-02، email-otp-01، provider-commission-01 منتظر اجرا و VERIFY** |
 | **راهنمای یک‌باره (سرور)، اسپات‌لایت، فیلتر واحد، fit-row، پیش‌فروش در نوع فاکتور (۸ نوامبر)** | `.claude/lessons-learned.md` درس ۲۵۱–۲۵۲ — user-guide-progress-01 اجرا و VERIFY شد (۸ نوامبر، همه true) |
 | **ممیزی معماری ۸ نوامبر (۱۲ سند) و اصلاح یافته‌ها؛ گام‌های مالک**       | `docs/audit/HISABCHE-MASTER-AUDIT-INDEX.md` · `docs/audit/HISABCHE-FIXES-2026-11-08.md` — **۳ migration اجرا و VERIFY شد (۹ نوامبر)؛ `offline-licence-keys-02` rev2 منتظر اجرای دوباره و VERIFY (۸ سطر)** |
-| **دور UX ۹ نوامبر: پیش‌فروش در سازنده‌ی فاکتور، منوها، داشبورد دلخواه، سربه‌سر** | `.claude/lessons-learned.md` درس ۲۵۵ — **advances-03 و user-dashboard-kpis-01 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۵۵)**                                     | `.claude/lessons-learned.md`                                                |
+| **دور UX ۹ نوامبر: پیش‌فروش در سازنده‌ی فاکتور، منوها، داشبورد دلخواه، سربه‌سر** | `.claude/lessons-learned.md` درس ۲۵۵ — advances-03 و user-dashboard-kpis-01 اجرا و VERIFY شد (۹ نوامبر، ۵ از ۵ و ۵ از ۵ true) |
+| **گزارش QA ۹ نوامبر: پیش‌نویس در دیتابیس، تم، ضایعات، واحد بسته↔فله، سریال/IMEI روی فروش، ۶ مقاله، راهنمای ۵۵ گامی** | `docs/product/QA-2026-11-09-RESPONSE.md` · درس ۲۵۶ — **user-state-01 و dashboard-stock-value-01 منتظر اجرا و VERIFY** |
+| **همه‌ی درس‌ها با شماره (۱–۲۵۶)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

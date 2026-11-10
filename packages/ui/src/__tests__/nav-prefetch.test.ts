@@ -47,7 +47,9 @@ describe('menu destinations are warmed', () => {
     // Re-warming on each pathname change turns a one-off cost into a
     // per-route one, which is the opposite of the fix.
     const deps = hook.slice(hook.lastIndexOf('}, ['))
-    expect(deps).toContain('[router, locale]')
+    // The skip lists joined the deps on 10 Nov 2026 (exhaustive-deps): they
+    // are strings that change only when access does, never per page.
+    expect(deps).toContain('[router, locale, deniedKey, hiddenPathsKey]')
     expect(deps).not.toContain('pathname')
   })
 

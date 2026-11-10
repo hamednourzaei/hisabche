@@ -108,7 +108,12 @@ function AiAssistantContent({ tr }: { tr: (key: string, fallback?: string) => st
   // (#16). Same provider, same allowance.
   const [mode, setMode] = React.useState<AssistantMode>('ask')
 
-  const { data: availability, isLoading } = useAiAvailability()
+  const {
+    data: availability,
+    isLoading,
+    isError: availabilityFailed,
+    refetch,
+  } = useAiAvailability()
   const ask = useAskAi()
   // «انجام کار» is offered when the business turned it on — or to the owner,
   // who is the one person that can. Nobody else is shown a mode that can only
@@ -159,6 +164,36 @@ function AiAssistantContent({ tr }: { tr: (key: string, fallback?: string) => st
           <span className="text-sm text-[hsl(var(--fg-tertiary))]">
             {tr('common.loading', 'در حال بارگذاری…')}
           </span>
+        </div>
+      </Shell>
+    )
+  }
+
+  // ─── The server did not answer ───
+  // ⚠️ Not «not configured» (QA-AI-DOWN): a server that is down and a provider
+  // nobody set up are two different messages for two different people.
+  if (availabilityFailed) {
+    return (
+      <Shell t={tr}>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="max-w-md space-y-3 text-center">
+            <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+              {tr('ai.serverDownTitle', 'دستیار در دسترس نیست')}
+            </h2>
+            <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
+              {tr(
+                'ai.serverDown',
+                'سرور دستیار همین حالا در دسترس نیست. اتصال را بررسی کنید و کمی بعد دوباره بپرسید.',
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-3 py-1.5 text-sm text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              {tr('common.retry', 'تلاش دوباره')}
+            </button>
+          </div>
         </div>
       </Shell>
     )

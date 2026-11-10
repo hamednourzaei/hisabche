@@ -24,6 +24,9 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
+import { ProductWastePanel } from '../product-waste-panel'
+import { ProductUnitsPanel } from '../product-units-panel'
+import { ProductSerialsPanel } from '../product-serials-panel'
 import { ProductVariantsSection } from '../../warehouse/product-variants-section'
 import { ProductFitmentsSection } from '../../warehouse/product-fitments-section'
 import { WarrantiesSection } from '../../invoices/warranties-section'
@@ -130,6 +133,13 @@ export function ProductDetailContainer() {
   const toast = useToast()
 
   const [editing, setEditing] = useState(false)
+  // Waste and pack units are about goods on a shelf (offeringType 'goods').
+  const offering = product
+    ? ((product as { offeringType?: string | null; offering_type?: string | null }).offeringType ??
+      (product as { offering_type?: string | null }).offering_type ??
+      'goods')
+    : 'goods'
+  const isStocked = offering === 'goods'
 
   const getProduct = useCallback(
     (p: RawProduct) => ({
@@ -166,7 +176,9 @@ export function ProductDetailContainer() {
         barcode: values.barcode,
         sellPrice: num(values.sellPrice),
         buyPrice: num(values.buyPrice),
-        quantity: Math.floor(num(values.quantity)),
+        // ⚠️ Not floored (QA report, weighted retail): 2.5 kg of stock was
+        // saved as 2. Quantities are numeric(18,4) end to end.
+        quantity: Math.round(num(values.quantity) * 10_000) / 10_000,
         // No field edits it any more: what the product had is sent back as it
         // was (it used to be forced to 5 whenever it was 0).
         minStockLevel: Math.max(0, Math.floor(num(values.minStockLevel))),
@@ -261,7 +273,7 @@ ${t('warehouse.deactivateInstead')}`)
         )
       })
     },
-    [handleSave],
+    [handleSave, t, toast],
   )
 
   return (
@@ -321,6 +333,30 @@ ${t('warehouse.deactivateInstead')}`)
       specialties={
         id ? (
           <>
+            {/* Goods only: a service or a package has nothing on a shelf. */}
+            {isStocked ? (
+              <ProductWastePanel
+                t={safeT}
+                productId={id}
+                unitLabel={product ? String((product as RawProduct).unit ?? '') : ''}
+                warehouses={(breakdown.data?.warehouses ?? []).map((w) => ({
+                  id: w.id,
+                  name: w.name,
+                }))}
+              />
+            ) : null}
+            {isStocked ? <ProductUnitsPanel t={safeT} productId={id} /> : null}
+            {profile.capabilities.includes('serialized_items') ? (
+              <ProductSerialsPanel
+                t={safeT}
+                productId={id}
+                defaultUnitCost={
+                  product
+                    ? num((product as RawProduct).buy_price ?? (product as RawProduct).buyPrice)
+                    : 0
+                }
+              />
+            ) : null}
             {profile.capabilities.includes('variants') ? (
               <ProductVariantsSection t={safeT} productId={id} />
             ) : null}

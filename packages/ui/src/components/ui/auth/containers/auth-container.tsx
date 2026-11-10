@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { z } from 'zod'
-import { useAuthStore, type User } from '@hisabche/store'
+import { useAuthStore } from '@hisabche/store'
 import { loginSchema, type LoginInput } from '@hisabche/validation'
 // ⚠️ RELATIVE, NOT THE PACKAGE BARREL.
 //
@@ -108,13 +108,13 @@ export function AuthContainer({ initialMode = 'login' }: { initialMode?: 'login'
     serverError: loginStore.error,
     isLoading: loginStore.isLoading,
     errors: loginForm.formState.errors as Record<string, { message?: string } | undefined>,
-    register: loginForm.register as any,
-    watch: loginForm.watch as any,
-    handleSubmit: loginForm.handleSubmit as any,
+    register: loginForm.register,
+    watch: loginForm.watch,
+    handleSubmit: loginForm.handleSubmit,
     showPassword: loginShowPassword,
     togglePassword: () => setLoginShowPassword(!loginShowPassword),
     onSwitchMode: handleSwitch,
-    onSubmit: onLoginSubmit as any,
+    onSubmit: onLoginSubmit,
     onDemoLogin,
   }
 
@@ -147,20 +147,22 @@ export function AuthContainer({ initialMode = 'login' }: { initialMode?: 'login'
     }
   })
 
-  const translateError = (k?: string) => (k ? t(k) : undefined)
+  // The one rule left with a placeholder here is the password's 128 limit;
+  // its values travel with it so no key is ever shown raw (QA-001).
+  const translateError = (k?: string) => (k ? t(k, { min: 8, max: 128 }) : undefined)
 
   const signupProps = {
     st,
     serverError: signupStore.error,
     isLoading: signupStore.isLoading,
     errors: signupForm.formState.errors as Record<string, { message?: string } | undefined>,
-    register: signupForm.register as any,
-    watch: signupForm.watch as any,
-    handleSubmit: signupForm.handleSubmit as any,
+    register: signupForm.register,
+    watch: signupForm.watch,
+    handleSubmit: signupForm.handleSubmit,
     showPassword: signupShowPassword,
     togglePassword: () => setSignupShowPassword(!signupShowPassword),
     onSwitchMode: handleSwitch,
-    onSubmit: onSignupSubmit as any,
+    onSubmit: onSignupSubmit,
     translateError,
   }
 

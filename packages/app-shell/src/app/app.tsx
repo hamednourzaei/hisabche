@@ -166,6 +166,10 @@ const router = createHashRouter([
       // A second invoice form beside /invoices/new — removed (live audit #67).
       { path: 'quick-invoice', element: <Navigate to="/invoices/new" replace /> },
       { path: 'orders', element: <Navigate to="/settings" replace /> },
+      // Addresses people type and got a 404 for (QA session, 9 Nov 2026).
+      { path: 'cash', element: <Navigate to="/till" replace /> },
+      { path: 'reports', element: <Navigate to="/accounting?tab=reports" replace /> },
+      { path: 'team', element: <Navigate to="/team-and-payroll" replace /> },
       { path: 'crm', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'sales-followup', element: <Navigate to="/customers?tab=outreach" replace /> },
       { path: 'tasks', element: <Navigate to="/customers?tab=outreach" replace /> },

@@ -324,6 +324,11 @@ export const FEATURE_REGISTRY = {
   'ui.guide_progress': { execution: 'server', plans: ALL },
   // 9 Nov 2026: the KPIs a person adds to their dashboard live on the server.
   'ui.dashboard_kpis': { execution: 'server', plans: ALL },
+  // 9 Nov 2026 (user-state-01): a person's saved invoice drafts and theme live
+  // on the server; offline the device copy answers alone.
+  'ui.personal_state': { execution: 'server', plans: ALL },
+  // 10 Nov 2026: «ثبت ضایعات» — a stock movement out with its reason.
+  'inventory.waste': { execution: 'server', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
   'operations.service_delivery': { execution: 'local', plans: ALL },
   // Suspending ONE package GRANT is a manager's decision recorded on the server (append-only events): online only.

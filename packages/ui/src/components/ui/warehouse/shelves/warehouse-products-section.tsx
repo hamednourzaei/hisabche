@@ -146,6 +146,22 @@ export function WarehouseShelfMapSection() {
       />
     )
   }
+  // ⚠️ A failed read is not «no warehouse» (QA-SHELF-EMPTY, §7.3): the map
+  // said there was nothing to show while the list of warehouses never arrived.
+  if (placement.isError) {
+    return (
+      <div className="space-y-3 rounded-2xl bg-[hsl(var(--surface-muted))] p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
+        <p>{t('warehouseShelves.map.loadFailed')}</p>
+        <button
+          type="button"
+          onClick={() => void placement.refetch()}
+          className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-3 py-1.5 text-[hsl(var(--fg-primary))]"
+        >
+          {t('common.retry')}
+        </button>
+      </div>
+    )
+  }
   if (!active) {
     return (
       <p className="rounded-2xl bg-[hsl(var(--surface-muted))] p-6 text-center text-sm text-[hsl(var(--fg-secondary))]">

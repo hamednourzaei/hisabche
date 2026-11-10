@@ -3,7 +3,7 @@
 // FIXED: Removed supabase.raw(), use JavaScript filter
 // ============================================
 
-import { movesStock } from '@hisabche/validation'
+import { movesStock, wasteMovementNote, type StockWasteInput } from '@hisabche/validation'
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import {
@@ -280,8 +280,8 @@ export class ProductService {
     let products = (items || []).map(mapProduct)
     if (lowStock !== undefined) {
       products = lowStock
-        ? products.filter((product: any) => product.quantity <= product.minStockLevel)
-        : products.filter((product: any) => product.quantity > product.minStockLevel)
+        ? products.filter((product) => product.quantity <= product.minStockLevel)
+        : products.filter((product) => product.quantity > product.minStockLevel)
     }
 
     const result = {
@@ -381,7 +381,7 @@ export class ProductService {
     const clientRequestId = options.clientRequestId ?? null
     const split = (options.openingStock ?? []).filter((entry) => entry.quantity !== 0)
     if (split.length > 0) return this.createWithOpeningStock(ctx, data, clientRequestId, split)
-    const offeringType = (data as any).offeringType || 'goods'
+    const offeringType = (data as { offeringType?: string | null }).offeringType || 'goods'
     const isService = offeringType === 'service'
     const packageTermMonths =
       (data as { packageTermMonths?: number | null }).packageTermMonths ?? null
@@ -1085,6 +1085,68 @@ export class ProductService {
   }
 
   /** Where a product-page stock change lands — the rule is stockEditWarehouse. */
+  /**
+   * «ثبت ضایعات» — goods that left without a sale (spoiled, damaged, expired,
+   * lost). One stock movement OUT of one warehouse, its reason in the note,
+   * `reference_type: 'waste'` so the stock history and reports can tell it
+   * from a sale or a count. Refused for a service or a package (nothing on a
+   * shelf) and for more than the warehouse holds — a waste record must not be
+   * the thing that drives stock negative.
+   */
+  async recordWaste(
+    id: string,
+    ctx: TenancyContext,
+    input: StockWasteInput,
+  ): Promise<{ productId: string; quantity: number; warehouseId: string | null }> {
+    const { workspaceId } = ctx
+    const { data: current, error: readError } = await supabase
+      .from('products')
+      .select('id, quantity, offering_type')
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (readError) throw new DatabaseError('Failed to read the product', readError)
+    if (!current) throw new NotFoundError('Product')
+    const row = current as { quantity: unknown; offering_type?: string | null }
+    if (!movesStock(row.offering_type ?? 'goods')) throw new ValidationError('WASTE_NOT_STOCKED')
+
+    const warehouseId = await this.stockWarehouse(workspaceId, input.warehouseId, 'edit')
+    const onHand = warehouseId
+      ? await this.warehouseQuantity(id, warehouseId)
+      : Number(row.quantity) || 0
+    if (input.quantity > onHand) throw new ValidationError('WASTE_MORE_THAN_STOCK')
+
+    const { error } = await supabase.from('stock_movements').insert({
+      product_id: id,
+      type: 'adjustment',
+      quantity: -input.quantity,
+      reference_type: 'waste',
+      reference_id: id,
+      ...(warehouseId ? { to_warehouse_id: warehouseId } : {}),
+      workspace_id: workspaceId,
+      user_id: ctx.userId,
+      notes: wasteMovementNote(input),
+    })
+    if (error) throw new DatabaseError('Failed to record the waste', error)
+    await this.invalidateWorkspaceCache(workspaceId)
+    return { productId: id, quantity: input.quantity, warehouseId }
+  }
+
+  /** What one warehouse holds of one product (warehouse_stock, the trigger's figure). */
+  private async warehouseQuantity(productId: string, warehouseId: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('warehouse_stock')
+      .select('quantity')
+      // By warehouse, not workspace_id: that column was added later and older
+      // rows may lack it. The warehouse was already checked to be this
+      // workspace's (stockWarehouse), which is what scopes the read.
+      .eq('warehouse_id', warehouseId)
+      .eq('product_id', productId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read the warehouse stock', error)
+    return Number((data as { quantity?: unknown } | null)?.quantity) || 0
+  }
+
   private async stockWarehouse(
     workspaceId: string,
     requested: string | null | undefined,

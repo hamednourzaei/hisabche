@@ -96,6 +96,7 @@ export {
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,
+  useRecordWaste,
   productKeys,
   lookupProductByBarcode,
   useProductBarcodes,
@@ -1008,6 +1009,7 @@ export {
   useReceiveBatch,
   useUpdateBatchDates,
   useReceiveSerials,
+  useAssignSerialsToSale,
   type StockBatch,
   type SerialUnit,
   type SerialStatus,
@@ -1395,3 +1397,4 @@ export { useCmsRemoteContent, type CmsGlobals } from './hooks/cms/remote-content
 export * from './hooks/universal-core'
 export * from './hooks/guide-progress'
 export * from './hooks/dashboard-kpis'
+export * from './hooks/user-state'

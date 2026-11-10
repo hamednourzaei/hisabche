@@ -1258,6 +1258,20 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     ],
   },
   {
+    // «ثبت ضایعات» (10 Nov 2026): the warehouse's stock is read, then one
+    // movement is appended. Two records at the same instant could both pass
+    // the read — the second is then visible as stock below zero, never lost.
+    routeFile: 'product.routes.ts',
+    route: 'POST /api/products/:id/waste',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      {
+        file: `${SVC}/product.service.ts`,
+        text: 'async recordWaste',
+      },
+    ],
+  },
+  {
     routeFile: 'product.routes.ts',
     route: 'DELETE /api/products/:id/barcodes/:barcodeId',
     mechanisms: ['state-idempotent'],

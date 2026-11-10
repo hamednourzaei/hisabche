@@ -120,6 +120,10 @@ const nextConfig = {
       // The orders list was never wired to a storefront anyone used (owner,
       // 18 Oct 2026: «پیاده سازی نشده حذف بشه»). The storefront is in settings.
       ['orders', 'settings'],
+      // Addresses people type and got a 404 for (QA session, 9 Nov 2026).
+      ['cash', 'till'],
+      ['reports', 'accounting?tab=reports'],
+      ['team', 'team-and-payroll'],
     ]
     return moved.map(([from, to]) => ({
       source: '/:lang(fa|af|en)/' + from,

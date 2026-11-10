@@ -79,6 +79,9 @@ export interface SerialUnit {
   unitCostMinor: number
   warehouseId?: string | null
   receivedOn: string
+  /** The invoice that sold it; null while in stock. */
+  invoiceId?: string | null
+  soldOn?: string | null
 }
 
 // ─── Expiry ──────────────────────────────────────────────────────────────────

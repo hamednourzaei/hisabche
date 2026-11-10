@@ -34,7 +34,9 @@ type ExtendedCustomer = CustomerWithDebt & {
 
 /** درصد تغییر؛ null یعنی داده‌ای برای مقایسه وجود ندارد */
 function percentChange(current: number, previous: number): number | null {
-  if (previous === 0) return current === 0 ? null : 100
+  // Nothing last month is not «+100%»: there is no base to compare against,
+  // so the badge is absent (QA-PCT-001).
+  if (previous === 0) return null
   return ((current - previous) / Math.abs(previous)) * 100
 }
 
@@ -225,8 +227,8 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
       return {
         ...customer,
         id: customer.id,
-        fullName: customer.fullName || (customer as any).full_name || '',
-        name: customer.fullName || (customer as any).full_name || '',
+        fullName: customer.fullName || (customer as { full_name?: string | null }).full_name || '',
+        name: customer.fullName || (customer as { full_name?: string | null }).full_name || '',
         phone: customer.phone || '',
         totalDebt,
         creditBalance,

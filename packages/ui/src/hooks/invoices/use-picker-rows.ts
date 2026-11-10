@@ -90,10 +90,13 @@ export function usePickerRows(search: string, pickAs: PickAs = 'sale') {
   const pick = (row: PickerRow): PickedProduct | null => {
     if (row.exhausted) return null
     if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
+    const price = priceOf(row.product).price
     return {
       id: row.product.id,
       name: row.product.name,
-      price: String(priceOf(row.product).price),
+      // ⚠️ A product with no price leaves the cell EMPTY, never «0» (QA-006):
+      // the line then asks for its price instead of selling the goods free.
+      price: price > 0 ? String(price) : '',
       unit: row.product.unit ?? 'piece',
     }
   }

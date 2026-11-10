@@ -75,8 +75,10 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 63 since 9 Nov 2026: operations.provider_commission removed (owner: «the commission
     // section must go»; the report, its rates route and its panel were deleted).
     // 64 again since 9 Nov 2026: ui.dashboard_kpis — the person's added dashboard cards.
-    it('has exactly 64 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(64)
+    // 65 since 10 Nov 2026: ui.personal_state — saved invoice drafts and the theme.
+    // 66 the same day: inventory.waste — «ثبت ضایعات».
+    it('has exactly 66 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(66)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

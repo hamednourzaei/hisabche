@@ -16,6 +16,7 @@ import {
   useCreateInvoice,
   useCreateRecurringInvoice,
   useWorkspaces,
+  useDeleteInvoiceDraft,
 } from '@hisabche/api'
 import { useSearchParams } from 'next/navigation'
 import { FRACTION_DIGITS, fractionDigits, type KnownCurrency } from '@hisabche/formatting'
@@ -101,7 +102,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const { t, locale, currency, ctx, summary, issues, items } = useInvoiceDraft()
   const recurringAvailability = useActionAvailability('invoice.recurring')
   const draft = useInvoiceDraftStore()
-  const clearDraft = useInvoiceDraftStore((s) => s.clearDraft)
+  const clearLocalDraft = useInvoiceDraftStore((s) => s.clearDraft)
 
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_DISPLAY)
   const [error, setError] = useState<string | null>(null)
@@ -281,6 +282,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
   // Shared with the form (/invoices/new) — see use-oversold-lines.ts.
   const oversoldLines = useOversoldLines(items, draft.transactionType)
+
+  // A draft saved on the server is thrown away once it became a document
+  // (user-state-01) — it would otherwise stay in «پیش‌نویس‌ها» for ever.
+  const { mutate: deleteServerDraft } = useDeleteInvoiceDraft()
+  const clearDraft = useCallback(() => {
+    const serverDraftId = useInvoiceDraftStore.getState().serverDraftId
+    clearLocalDraft()
+    if (serverDraftId) deleteServerDraft(serverDraftId)
+  }, [clearLocalDraft, deleteServerDraft])
 
   const handleConfirm = useCallback(async () => {
     if (issues.length || items.length === 0 || paymentBlocked || rateMissing) return

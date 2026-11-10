@@ -279,20 +279,42 @@ export async function submitInvoice({
     return (await writeLocally()) ?? queueIt()
   }
 
+  const post = (timeout?: number) =>
+    apiClient.post<Invoice>('/invoices', input, {
+      ...(idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : {}),
+      ...(timeout ? { timeout } : {}),
+    })
+
+  let failure: unknown
   try {
-    const { data } = await apiClient.post<Invoice>(
-      '/invoices',
-      input,
-      idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
-    )
+    const { data } = await post()
     return data
   } catch (error) {
+    failure = error
+  }
+  {
+    const noAnswer = (failure as Partial<ApiError>)?.code === 'NETWORK_ERROR'
+    // ⚠️ QA-FINAL-FLAKY (INV-000110): «ثبت نهایی» failed once and worked on the
+    // second click. The 15 s client timeout ran out while the server — a
+    // region away from its database — was still finishing the sale; the
+    // second click was a replay of the SAME key. With a key, sending it again
+    // can never make a second invoice, so it is resent once, with room to
+    // finish, before anyone is told it failed.
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false
+    if (noAnswer && idempotencyKey && online && !offline?.isOffline()) {
+      try {
+        const { data } = await post(45_000)
+        return data
+      } catch (retryError) {
+        failure = retryError
+      }
+    }
     // Only when the request never got an answer. A refusal from the server
     // (stock, validation, 5xx) is an answer and is shown, not queued.
-    if (offline && idempotencyKey && (error as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
+    if (offline && idempotencyKey && (failure as Partial<ApiError>)?.code === 'NETWORK_ERROR') {
       return (await writeLocally()) ?? queueIt()
     }
-    throw error
+    throw failure
   }
 }
 

@@ -20,7 +20,13 @@ import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
 import { useRealtime } from './useRealtime'
-import type { Product, CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
+import type {
+  Product,
+  CreateProduct,
+  UpdateProduct,
+  ProductFilters,
+  StockWasteInput,
+} from '@hisabche/validation'
 import { normalizeBarcode } from '@hisabche/validation'
 
 // ============================================
@@ -609,6 +615,32 @@ export function useDeleteProduct() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productKeys.lists() })
+    },
+  })
+}
+
+/**
+ * «ثبت ضایعات» — goods that left without a sale (POST /products/:id/waste).
+ * The stock, the warehouse figures and the product's history all move, so all
+ * of them are read again.
+ */
+export function useRecordWaste(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: StockWasteInput) => {
+      const { data } = await apiClient.post<{
+        productId: string
+        quantity: number
+        warehouseId: string | null
+      }>(`/products/${encodeURIComponent(productId)}/waste`, input)
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: productKeys.detail(productId) })
+      void queryClient.invalidateQueries({ queryKey: productKeys.lists() })
+      // By value, as above: warehouses.ts and stock-history.ts import this module.
+      void queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+      void queryClient.invalidateQueries({ queryKey: ['stock-history', productId] })
     },
   })
 }

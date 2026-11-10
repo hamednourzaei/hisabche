@@ -51,7 +51,6 @@ import {
 } from './stat-surface'
 import { cn } from '../../lib/utils'
 import { useIntlLocale } from '../../hooks/use-intl-locale'
-import { formatCompactValue } from '@hisabche/formatting'
 
 function localeNumber(value: number, locale: string, decimals = 0): string {
   try {
@@ -124,9 +123,10 @@ export function formatPercent(delta: number, locale: string): string {
   const abs = Math.abs(delta)
   // «٪» is the Persian sign; English reads «%» (live audit #76).
   const sign = /^en/i.test(locale) ? '%' : '٪'
-  // From a thousand percent on, k / M: «۲,۶۲۴,۲۲۳٪» pushed the chip out of its
-  // card. A change that large is read as «huge», not to the unit.
-  if (abs >= 1000) return `${formatCompactValue(abs, locale)}${sign}`
+  // ⚠️ From a thousand percent on, the chip says «more than 999%» (QA-PCT-001).
+  // «۷۶٫۸k٪» was the compact form of a change measured against a near-empty
+  // month: true arithmetic, meaningless to a person, and it read as a bug.
+  if (abs >= 1000) return `>${localeNumber(999, locale, 0)}${sign}`
   return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}${sign}`
 }
 

@@ -12,7 +12,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
-import { useRealtime } from './useRealtime'
+import { useActiveWorkspaceId, useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,6 +72,10 @@ export const notificationKeys = {
  */
 export function useNotifications() {
   const authReady = useAuthReady()
+  // ⚠️ QA-NOTIF-API: the bell asked before the active workspace was known, and
+  // a member of two workspaces got 403 (the server needs x-workspace-id). It
+  // waits for the workspace now.
+  const workspaceId = useActiveWorkspaceId()
 
   // ✅ FIX: به‌جای refetchInterval، subscribe مستقیم به جدول
   // notifications — با هر تغییر، لیست بلافاصله invalidate می‌شود.
@@ -99,7 +103,7 @@ export function useNotifications() {
         return []
       }
     },
-    enabled: authReady,
+    enabled: authReady && workspaceId !== null,
     staleTime: 60_000,
     // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: [],
@@ -116,6 +120,7 @@ export function useNotifications() {
  */
 export function useUnreadCount() {
   const authReady = useAuthReady()
+  const workspaceId = useActiveWorkspaceId()
 
   // ✅ FIX: همان جدول notifications، همان منطق —
   // یک تغییر (مثلاً mark-as-read) هم شمارش را بلافاصله به‌روز می‌کند.
@@ -141,7 +146,7 @@ export function useUnreadCount() {
         return 0
       }
     },
-    enabled: authReady,
+    enabled: authReady && workspaceId !== null,
     staleTime: 60_000,
     // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: 0,

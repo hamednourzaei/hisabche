@@ -19,6 +19,7 @@ import {
 } from '@hisabche/ui-contract'
 import { InvoiceRowActions } from './invoice-row-actions'
 import { NewInvoiceChooser, type NewDocumentKind } from './new-invoice-chooser'
+import { InvoiceDraftsButton } from './invoice-drafts-button'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import type { InvoiceListSummary } from '@hisabche/api'
 import {
@@ -114,7 +115,9 @@ const statusBadgeStyles: Record<string, string> = {
 
 /** درصد تغییر؛ null یعنی داده‌ای برای مقایسه نیست */
 function percentChange(current: number, previous: number): number | null {
-  if (previous === 0) return current === 0 ? null : 100
+  // Nothing last month is not «+100%»: there is no base to compare against,
+  // so the badge is absent (QA-PCT-001).
+  if (previous === 0) return null
   return ((current - previous) / Math.abs(previous)) * 100
 }
 
@@ -291,7 +294,10 @@ const InvoicesHeader = memo(function InvoicesHeader({
         </p>
       </div>
 
-      <NewInvoiceChooser t={t} onChoose={onNewDocument} />
+      <div className="flex shrink-0 items-center gap-2">
+        <InvoiceDraftsButton t={t} />
+        <NewInvoiceChooser t={t} onChoose={onNewDocument} />
+      </div>
     </div>
   )
 })

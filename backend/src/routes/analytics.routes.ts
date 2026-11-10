@@ -20,8 +20,14 @@ import {
   maskDashboardKpis,
 } from '../services/analytics/dashboard-visibility.domain'
 
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+// A type boundary only — the same call and output as before, without `any`
+// (the generic signature trips TS2589 on deep schemas; see conflict.routes.ts).
+const toJsonSchema = (schema: unknown): Record<string, unknown> => {
+  const convert = zodToJsonSchema as unknown as (
+    schema: unknown,
+    options: { target: 'jsonSchema7' },
+  ) => Record<string, unknown>
+  const result = convert(schema, { target: 'jsonSchema7' })
   delete result.$schema
   return result
 }
@@ -83,6 +89,9 @@ const DashboardKPIsSchema = z.object({
   totalSales: z.number().default(0),
   customerDebt: z.number().default(0),
   warehouseValue: z.number().default(0),
+  // How many products are below zero — not subtracted from the value above,
+  // named instead (QA-DASH-NEG). null = the database cannot say yet.
+  negativeStockProducts: z.number().nullable().default(null),
 
   // The KPIs above sum invoice totals without regard to the currency each
   // invoice is denominated in. That is right for a single-currency workspace

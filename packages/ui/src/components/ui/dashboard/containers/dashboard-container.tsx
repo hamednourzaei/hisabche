@@ -6,8 +6,7 @@ import { useCallback, useState } from 'react'
 
 import { DashboardView } from '../dashboard-view'
 import { WorkQueueContainer } from '../../work-queue/containers/work-queue-container'
-import { DateRangePicker, type DateRange, type PresetKey } from '../date-range-picker'
-import { isNavLocked } from '@hisabche/ui-contract'
+import { type DateRange, type PresetKey } from '../date-range-picker'
 import {
   apiErrorMessage,
   useDeleteCustomUnit,
@@ -39,8 +38,6 @@ import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-da
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
-
-type Translate = (key: string) => string
 
 // ─── Main Container ──────────────────────────────────────────────────────
 
@@ -93,9 +90,7 @@ export function DashboardContainer() {
   // one does the selected industry decide which section comes first.
   const { profile } = useBusinessProfile()
   const sectionOrder = look.customized ? DASHBOARD_PARTS : profile.dashboard
-  // const menuLook = usePageLook('menu')
   const access = useMyCapabilities().data
-  const hiddenByRole = access?.hiddenModules ?? []
   const may = (capability: string) =>
     access === undefined || access.capabilities.includes(capability)
   const mayInsights = may('invoice.read') && may('customer.read') && may('product.read')
@@ -373,6 +368,7 @@ export function DashboardContainer() {
         customerDebt={kpis?.customerDebt ?? 0}
         openAdvancesText={advancesTextOf(kpis, intlLocale, t('dashboard.openAdvancesNone', 'هیچ'))}
         warehouseValue={kpis?.warehouseValue ?? 0}
+        negativeStockProducts={kpis?.negativeStockProducts ?? null}
         monthlyGrowth={kpis?.monthlyGrowth ?? null}
         kpiLoading={kpiLoading}
         insights={Array.isArray(insights) ? insights : []}

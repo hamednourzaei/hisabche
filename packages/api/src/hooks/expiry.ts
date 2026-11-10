@@ -43,6 +43,9 @@ export interface SerialUnit {
   unitCostMinor: number
   warehouseId?: string | null
   receivedOn: string
+  /** The invoice that sold it; null while in stock. */
+  invoiceId?: string | null
+  soldOn?: string | null
 }
 
 export interface ExpiryBucket {
@@ -96,14 +99,18 @@ export function useBatches(productId?: string) {
   })
 }
 
-export function useSerials(productId?: string, status?: SerialStatus) {
+export function useSerials(productId?: string, status?: SerialStatus | 'all', invoiceId?: string) {
   const ready = useAuthReady()
 
   return useQuery({
-    queryKey: expiryKeys.serials(productId, status),
+    queryKey: [...expiryKeys.serials(productId, status), invoiceId ?? 'any'] as const,
     queryFn: async () => {
       const { data } = await apiClient.get('/operations/serials', {
-        params: { ...(productId ? { productId } : {}), ...(status ? { status } : {}) },
+        params: {
+          ...(productId ? { productId } : {}),
+          ...(status ? { status } : {}),
+          ...(invoiceId ? { invoiceId } : {}),
+        },
       })
       return asList<SerialUnit>(data)
     },
@@ -217,5 +224,32 @@ export function useUpdateBatchDates() {
     },
     retry: false,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: expiryKeys.all }),
+  })
+}
+
+/**
+ * Name the serials / IMEIs a recorded sale handed over
+ * (POST /operations/serials/issue). The invoice moved the stock and the
+ * money already; this marks those exact units «sold» on it.
+ */
+export function useAssignSerialsToSale() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      invoiceId: string
+      productId: string
+      serialNumbers: string[]
+    }) => {
+      const { data } = await apiClient.post<{ issued: number; costMinor: number }>(
+        '/operations/serials/issue',
+        input,
+      )
+      return data
+    },
+    // A unit is sold once: a refused number must be seen, not retried.
+    retry: false,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: expiryKeys.all })
+    },
   })
 }

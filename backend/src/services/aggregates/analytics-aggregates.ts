@@ -58,6 +58,8 @@ const dashboardSchema = z.object({
   active_customers: z.number(),
   low_stock_alerts: z.number(),
   warehouse_value: z.number(),
+  // dashboard-stock-value-01: products sold below zero (absent before it runs).
+  negative_stock_products: z.number().optional(),
 })
 
 export type DashboardAggregate = z.infer<typeof dashboardSchema>
@@ -127,6 +129,7 @@ export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrenc
       totalSales: round2(books.total_sales),
       customerDebt: round2(books.customer_debt),
       warehouseValue: round2(agg.warehouse_value),
+      negativeStockProducts: agg.negative_stock_products ?? null,
       todaySales: round2(books.today_sales),
       todayInvoices: books.today_invoices,
       totalPurchases: round2(books.total_purchases),
@@ -155,6 +158,7 @@ export function dashboardKpisFromAggregate(agg: DashboardAggregate, booksCurrenc
     totalSales: round2(sum((r) => r.total_sales)),
     customerDebt: round2(sum((r) => r.customer_debt)),
     warehouseValue: round2(agg.warehouse_value),
+    negativeStockProducts: agg.negative_stock_products ?? null,
     todaySales: round2(sum((r) => r.today_sales)),
     todayInvoices: sum((r) => r.today_invoices),
     totalPurchases: round2(sum((r) => r.total_purchases)),

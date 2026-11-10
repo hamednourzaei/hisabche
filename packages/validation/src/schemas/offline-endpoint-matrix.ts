@@ -339,6 +339,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'PATCH /pos/sessions/:x/label': ['till.labels', 'available'],
   'PATCH /price-lists/:x/active': ['pricing.price_lists', 'available'],
   'PATCH /products/:x': ['product.upsert', 'available'],
+  // «ثبت ضایعات» (10 Nov 2026): recorded on the server only.
+  'POST /products/:x/waste': ['inventory.waste', 'online_required'],
   'PATCH /products/:x/images/:x': ['product.images', 'online_required'],
   'PATCH /projects/:x': ['project.manage', 'online_required'],
   'PATCH /promotions/:x/active': ['pricing.promotions', 'available'],
@@ -462,6 +464,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /operations/budgets/:x/submit': ['budget.manage', 'available'],
   'POST /operations/budgets/check': ['budget.manage', 'available'],
   'POST /operations/serials': ['expiry.batches', 'online_required'],
+  // The IMEIs / serials a recorded sale handed over (assignSerialsToSale).
+  'POST /operations/serials/issue': ['expiry.batches', 'online_required'],
   'POST /operations/timesheets': ['timesheet.manage', 'online_required'],
   'POST /opportunities': ['customer.crm', 'online_required'],
   'POST /orders/:x/deposits': ['order.deposits', 'available'],
@@ -524,6 +528,13 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   // dashboard shows its fixed cards only.
   'GET /me/dashboard-kpis': ['ui.dashboard_kpis', 'online_required'],
   'PUT /me/dashboard-kpis': ['ui.dashboard_kpis', 'online_required'],
+  // user-state-01: saved invoice drafts and the theme. Offline the builder
+  // keeps its draft on the device and the theme stays the device's.
+  'GET /me/invoice-drafts': ['ui.personal_state', 'online_required'],
+  'PUT /me/invoice-drafts': ['ui.personal_state', 'online_required'],
+  'DELETE /me/invoice-drafts/:x': ['ui.personal_state', 'online_required'],
+  'GET /me/preferences': ['ui.personal_state', 'online_required'],
+  'PUT /me/preferences': ['ui.personal_state', 'online_required'],
   'POST /me/guide-progress': ['ui.guide_progress', 'online_required'],
   'POST /shift-assignments': ['hr.shifts', 'available'],
   'POST /shift-assignments/:x/cancel': ['hr.shifts', 'available'],

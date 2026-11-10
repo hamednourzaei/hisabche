@@ -23,6 +23,8 @@ import { useActionAvailability } from '../../../../lib/capability/use-action-ava
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceEvidencePanel } from '../invoice-evidence-panel'
+import { InvoiceSerialsPanel, type InvoiceSerialLine } from '../invoice-serials-panel'
+import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { InvoiceInstallmentsPanel } from '../invoice-installments-panel'
 import { InvoiceLateFeePanel } from '../invoice-late-fee-panel'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
@@ -138,6 +140,8 @@ interface RawInvoiceItemDetail {
 }
 interface RawInvoiceItem {
   id?: string
+  productId?: string | null
+  product_id?: string | null
   productName?: string
   product_name?: string
   quantity?: number
@@ -331,6 +335,31 @@ export function InvoiceDetailContainer() {
     }
   }, [invoice, currentWorkspace])
 
+  // Lines with a product, one per product, for naming the IMEIs a sale handed
+  // over — only where the business tracks serialized goods.
+  const { profile } = useBusinessProfile()
+  const serialLines = useMemo<InvoiceSerialLine[]>(() => {
+    if (!invoice || !profile.capabilities.includes('serialized_items')) return []
+    const inv = invoice as unknown as Record<string, unknown>
+    const raw = ((inv.items as unknown[]) ??
+      (inv.invoiceItems as unknown[]) ??
+      (inv.invoice_items as unknown[]) ??
+      []) as RawInvoiceItem[]
+    const byProduct = new Map<string, InvoiceSerialLine>()
+    for (const item of raw) {
+      const productId = item.productId ?? item.product_id
+      if (!productId) continue
+      const current = byProduct.get(productId)
+      const quantity = Number(item.quantity) || 0
+      byProduct.set(productId, {
+        productId,
+        name: current?.name ?? item.productName ?? item.product_name ?? '',
+        quantity: (current?.quantity ?? 0) + quantity,
+      })
+    }
+    return [...byProduct.values()]
+  }, [invoice, profile.capabilities])
+
   const safeT = useCallback(
     (key: string, fallback?: string) => {
       const v = t(key)
@@ -505,6 +534,9 @@ export function InvoiceDetailContainer() {
               {/* What a late payment costs, and charging it (#124). Sales only. */}
               {display.type === 'sale' ? <InvoiceLateFeePanel invoiceId={id} /> : null}
               <InvoiceEvidencePanel invoiceId={id} />
+              {display.type === 'sale' ? (
+                <InvoiceSerialsPanel t={safeT} invoiceId={id} lines={serialLines} />
+              ) : null}
             </div>
           ) : null
         }

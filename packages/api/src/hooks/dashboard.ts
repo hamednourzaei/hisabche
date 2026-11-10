@@ -39,6 +39,8 @@ export interface DashboardKPIs {
   totalSales: number
   customerDebt: number
   warehouseValue: number
+  /** Products sold below zero; not subtracted from warehouseValue. null = unknown. */
+  negativeStockProducts?: number | null | undefined
   /**
    * Figure groups the server did not tell this person (their fields are zero).
    * The card is left out — a zero would read as a measurement.

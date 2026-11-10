@@ -28,8 +28,14 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+// A type boundary only — the same call and output as before, without `any`
+// (the generic signature trips TS2589 on deep schemas; see conflict.routes.ts).
+const toJsonSchema = (schema: unknown): Record<string, unknown> => {
+  const convert = zodToJsonSchema as unknown as (
+    schema: unknown,
+    options: { target: 'jsonSchema7' },
+  ) => Record<string, unknown>
+  const result = convert(schema, { target: 'jsonSchema7' })
   delete result.$schema
   return result
 }
@@ -52,6 +58,13 @@ const receiveSerialsSchema = z.object({
   batchId: z.string().uuid().nullable().optional(),
   costLayerId: z.string().uuid().nullable().optional(),
   warehouseId: z.string().uuid().nullable().optional(),
+})
+
+/** The units a recorded sale handed over (see TraceabilityService#assignSerialsToSale). */
+const assignSerialsSchema = z.object({
+  invoiceId: z.string().uuid(),
+  productId: z.string().uuid(),
+  serialNumbers: z.array(z.string().trim().min(1).max(120)).min(1).max(500),
 })
 
 const planIssueSchema = z.object({
@@ -377,16 +390,40 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  fastify.post(
+    '/serials/issue',
+    {
+      preHandler: stockWrite,
+      schema: {
+        body: toJsonSchema(assignSerialsSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = assignSerialsSchema.parse(request.body)
+        return reply.send(await traceabilityService.assignSerialsToSale(request.tenancy, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to assign the serial numbers')
+      }
+    },
+  )
+
   fastify.get(
     '/serials',
     { preHandler: stockRead, schema: { response: { 200: toJsonSchema(z.any()) } } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { productId, status } = request.query as { productId?: string; status?: string }
+        const { productId, status, invoiceId } = request.query as {
+          productId?: string
+          status?: string
+          invoiceId?: string
+        }
         return reply.send(
           await traceabilityService.listSerials(request.tenancy, {
             ...(productId ? { productId } : {}),
             ...(status ? { status } : {}),
+            ...(invoiceId ? { invoiceId } : {}),
           }),
         )
       } catch (err) {

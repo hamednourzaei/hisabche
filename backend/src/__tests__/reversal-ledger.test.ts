@@ -122,6 +122,9 @@ const LEDGER: Record<string, Record<string, Way>> = {
   'product.routes.ts': {
     '/api/products': proven('DELETE /api/products/:id', 'reverse-guards.test.ts'),
     '/api/products/:id/barcodes': inert,
+    // A waste record is a stock movement; a mistaken one is corrected by
+    // counting the shelf, which records the difference back.
+    '/api/products/:id/waste': unproven('POST /api/cycle-counts'),
   },
   'human-resources.routes.ts': {
     '/api/departments': inert,
@@ -216,6 +219,7 @@ describe('every way forward has a decided way back', () => {
       for (const way of Object.values(ways)) counts[way.kind]++
     }
     // Written down so a change to the register is a change someone reads.
-    expect(counts).toEqual({ proven: 9, unproven: 15, none: 17, inert: 14 })
+    // unproven 16 since 10 Nov 2026: «ثبت ضایعات» (corrected by a stock count).
+    expect(counts).toEqual({ proven: 9, unproven: 16, none: 17, inert: 14 })
   })
 })

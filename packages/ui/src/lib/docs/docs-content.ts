@@ -86,7 +86,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'setup', bodyCount: 2, stepCount: 4 },
       { id: 'existing', bodyCount: 1 },
     ],
-    related: ['invoices', 'inventory', 'data-and-backup'],
+    related: ['dashboard-overview', 'invoices', 'inventory', 'data-and-backup'],
     outbound: [{ href: '/features/offline', labelKey: 'landing.featurePage.offline.h1' }],
   },
   {
@@ -98,6 +98,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'payment', bodyCount: 3 },
     ],
     related: [
+      'returns-and-advances',
       'customers',
       'inventory',
       'accounting',
@@ -197,8 +198,79 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'transfer', bodyCount: 2, stepCount: 3 },
       { id: 'insights', bodyCount: 2 },
     ],
-    related: ['invoices', 'pos', 'accounting', 'barcodes', 'manufacturing'],
+    related: [
+      'warehouse-locations',
+      'stock-count-and-waste',
+      'units-and-weighed-goods',
+      'serial-numbers-and-variants',
+      'invoices',
+      'pos',
+      'accounting',
+      'barcodes',
+      'manufacturing',
+    ],
     outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
+  },
+  {
+    slug: 'dashboard-overview',
+    group: 'start',
+    sections: [
+      { id: 'cards', bodyCount: 3 },
+      { id: 'custom', bodyCount: 2, stepCount: 4 },
+      { id: 'warnings', bodyCount: 3 },
+    ],
+    related: ['getting-started', 'invoices', 'inventory', 'business-analysis'],
+  },
+  {
+    slug: 'returns-and-advances',
+    group: 'sell',
+    sections: [
+      { id: 'drafts', bodyCount: 2, stepCount: 3 },
+      { id: 'advances', bodyCount: 3, stepCount: 4 },
+      { id: 'returns', bodyCount: 3 },
+    ],
+    related: ['invoices', 'customers', 'accounting', 'pos'],
+  },
+  {
+    slug: 'warehouse-locations',
+    group: 'stock',
+    sections: [
+      { id: 'warehouses', bodyCount: 2, stepCount: 3 },
+      { id: 'shelves', bodyCount: 3, stepCount: 4 },
+      { id: 'transfer', bodyCount: 2, stepCount: 3 },
+    ],
+    related: ['inventory', 'stock-count-and-waste', 'branches', 'barcodes'],
+  },
+  {
+    slug: 'stock-count-and-waste',
+    group: 'stock',
+    sections: [
+      { id: 'count', bodyCount: 3, stepCount: 4 },
+      { id: 'waste', bodyCount: 2, stepCount: 4 },
+      { id: 'history', bodyCount: 2 },
+    ],
+    related: ['inventory', 'warehouse-locations', 'accounting', 'units-and-weighed-goods'],
+  },
+  {
+    slug: 'units-and-weighed-goods',
+    group: 'stock',
+    sections: [
+      { id: 'decimals', bodyCount: 2 },
+      { id: 'packs', bodyCount: 3, stepCount: 4 },
+      { id: 'scale', bodyCount: 2 },
+    ],
+    related: ['inventory', 'barcodes', 'invoices', 'stock-count-and-waste'],
+  },
+  {
+    slug: 'serial-numbers-and-variants',
+    group: 'stock',
+    sections: [
+      { id: 'variants', bodyCount: 2, stepCount: 3 },
+      { id: 'serials', bodyCount: 3, stepCount: 3 },
+      { id: 'sale', bodyCount: 2, stepCount: 3 },
+      { id: 'warranty', bodyCount: 2 },
+    ],
+    related: ['inventory', 'invoices', 'barcodes', 'warehouse-locations'],
   },
   {
     slug: 'barcodes',

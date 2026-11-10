@@ -28,7 +28,7 @@
 // that till's transactions and ledger.
 // ============================================
 
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Skeleton } from '../skeleton'
 import { FRACTION_DIGITS } from '@hisabche/formatting'
 import { CURRENCY_CODES } from '@hisabche/validation'
@@ -76,6 +76,9 @@ import {
   Stat,
 } from '../capability/capability-kit'
 import { nameOfCurrency } from '../../../lib/currency-name'
+
+/** A till open longer than one day is a shift nobody closed (QA-TILL-STALE). */
+const STALE_TILL_HOURS = 24
 
 export interface TillViewProps {
   t: (key: string, fallback?: string) => string
@@ -244,14 +247,11 @@ export const TillView = memo(function TillView({
 
   const [floatMinor, setFloatMinor] = useState(0)
   const [labelDraft, setLabelDraft] = useState('')
-  const [currencyDraft, setCurrencyDraft] = useState<string>(bookCurrency ?? '')
+  // The person's pick, else the books currency once it is known — derived,
+  // not copied in by an effect.
+  const [pickedCurrency, setCurrencyDraft] = useState<string>('')
+  const currencyDraft = pickedCurrency || bookCurrency || ''
   const [addTillOpen, setAddTillOpen] = useState(false)
-
-  useEffect(() => {
-    if (bookCurrency && !currencyDraft) {
-      setCurrencyDraft(bookCurrency)
-    }
-  }, [bookCurrency, currencyDraft])
 
   // ⚠️ MINOR UNITS BELONG TO A CURRENCY. 100.00 afghani is 10000 minor; kept
   // across a switch to a currency with no decimals it would open the till with
@@ -323,12 +323,16 @@ export const TillView = memo(function TillView({
   const [ledgerFilter, setLedgerFilter] = useState<LedgerFilter>('all')
   const [ledgerPage, setLedgerPage] = useState(0)
 
-  // Another till → its own first page, filter and search.
-  useEffect(() => {
+  // Another till → its own first page, filter and search. Adjusted while
+  // rendering (React's pattern for state that follows a prop), not by an
+  // effect that renders twice.
+  const [ledgerTill, setLedgerTill] = useState(selectedTillId)
+  if (ledgerTill !== selectedTillId) {
+    setLedgerTill(selectedTillId)
     setLedgerPage(0)
     setLedgerSearch('')
     setLedgerFilter('all')
-  }, [selectedTillId])
+  }
 
   // Today and yesterday from the server's daily aggregate (last two days of
   // the window). Missing days are real zeros there, never gaps.
@@ -548,19 +552,33 @@ export const TillView = memo(function TillView({
         labelFallback: 'وضعیت',
         align: 'start',
         sortValue: (item) => item.status ?? 'open',
-        render: (item) => (
-          <span
-            className={
-              item.status === 'suspended'
-                ? 'rounded-full bg-[hsl(var(--color-warning)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-warning))]'
-                : 'rounded-full bg-[hsl(var(--color-success)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-success))]'
-            }
-          >
-            {item.status === 'suspended'
-              ? t('till.status_suspended', 'معلق')
-              : t('till.status_open', 'باز')}
-          </span>
-        ),
+        // ⚠️ A till is a shift (QA-TILL-STALE): one open for days was never
+        // counted and closed, and its «expected cash» mixes many shifts. It is
+        // marked here — on mobile too, where the hours column is hidden —
+        // never closed for the person.
+        render: (item) => {
+          const stale = item.status !== 'suspended' && item.hoursOpen >= STALE_TILL_HOURS
+          return (
+            <span
+              title={
+                stale
+                  ? t('till.staleHint', 'بیش از یک روز باز مانده؛ موجودی را بشمارید و ببندید.')
+                  : undefined
+              }
+              className={
+                item.status === 'suspended' || stale
+                  ? 'rounded-full bg-[hsl(var(--color-warning)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-warning))]'
+                  : 'rounded-full bg-[hsl(var(--color-success)/0.12)] px-2 py-0.5 text-xs text-[hsl(var(--color-success))]'
+              }
+            >
+              {item.status === 'suspended'
+                ? t('till.status_suspended', 'معلق')
+                : stale
+                  ? t('till.status_stale', 'باز از روزهای قبل')
+                  : t('till.status_open', 'باز')}
+            </span>
+          )
+        },
       },
       {
         id: 'openedAt',
@@ -579,11 +597,17 @@ export const TillView = memo(function TillView({
         align: 'end',
         showFrom: 'md',
         sortValue: (item) => item.hoursOpen,
-        render: (item) => (
-          <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-            {Math.round(item.hoursOpen)} {t('till.hours_short', 'ساعت')}
-          </span>
-        ),
+        // «۴۱۲ ساعت» reads as a glitch; past a day it is said in days.
+        render: (item) =>
+          item.hoursOpen >= STALE_TILL_HOURS ? (
+            <span className="tabular-nums text-[hsl(var(--color-warning))]">
+              {Math.floor(item.hoursOpen / 24)} {t('till.days_short', 'روز')}
+            </span>
+          ) : (
+            <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+              {Math.round(item.hoursOpen)} {t('till.hours_short', 'ساعت')}
+            </span>
+          ),
       },
       {
         id: 'transactionCount',

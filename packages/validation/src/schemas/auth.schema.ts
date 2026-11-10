@@ -11,7 +11,7 @@ import { emailSchema, nonEmptyStringSchema } from './common.schema'
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(8, 'validation.minLength'),
+  password: z.string().min(8, 'signup.errors.passwordMin'),
 })
 
 export type LoginInput = z.infer<typeof loginSchema>
@@ -24,7 +24,7 @@ export const signUpSchema = z.object({
   email: emailSchema,
   password: z
     .string()
-    .min(8, 'validation.minLength')
+    .min(8, 'signup.errors.passwordMin')
     .max(128, 'validation.maxLength')
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
@@ -52,7 +52,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(8, 'validation.minLength'),
+  password: z.string().min(8, 'signup.errors.passwordMin'),
   confirmPassword: z.string().optional(),
 })
 

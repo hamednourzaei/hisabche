@@ -95,6 +95,11 @@ export interface InvoiceDraftState {
    * invoice. With the key in the draft, any resubmission of it is a replay.
    */
   submissionKey: string
+  /**
+   * The id of the copy saved on the server (user-state-01), so «save draft»
+   * again updates that row instead of adding another. null = never saved.
+   */
+  serverDraftId: string | null
 
   // ---- rows ----
   setRows: (rows: InvoiceGridRow[]) => void
@@ -129,6 +134,61 @@ export interface InvoiceDraftState {
 
   /** Wipes the draft but keeps the column layout. */
   clearDraft: () => void
+  /** Puts a draft saved on the server back into the builder. */
+  loadDraft: (id: string, payload: Record<string, unknown>) => void
+}
+
+/** The fields a draft carries — what is saved locally and on the server. */
+export type InvoiceDraftSnapshot = Pick<
+  InvoiceDraftState,
+  | 'columns'
+  | 'columnsInitialised'
+  | 'rows'
+  | 'customers'
+  | 'transactionType'
+  | 'date'
+  | 'dueDate'
+  | 'warehouseId'
+  | 'branchId'
+  | 'notes'
+  | 'paymentMethod'
+  | 'isPaid'
+  | 'paidNow'
+  | 'discountValue'
+  | 'discountType'
+  | 'taxRate'
+  | 'rates'
+  | 'exchangeRateFrom'
+  | 'exchangeRateTo'
+  | 'submissionKey'
+  | 'serverDraftId'
+>
+
+/** One function for both copies of a draft: the device's and the server's. */
+export function invoiceDraftSnapshot(state: InvoiceDraftState): InvoiceDraftSnapshot {
+  return {
+    columns: state.columns,
+    columnsInitialised: state.columnsInitialised,
+    rows: state.rows,
+    customers: state.customers,
+    transactionType: state.transactionType,
+    date: state.date,
+    dueDate: state.dueDate,
+    warehouseId: state.warehouseId,
+    branchId: state.branchId,
+    notes: state.notes,
+    paymentMethod: state.paymentMethod,
+    isPaid: state.isPaid,
+    paidNow: state.paidNow,
+    discountValue: state.discountValue,
+    discountType: state.discountType,
+    taxRate: state.taxRate,
+    rates: state.rates,
+    exchangeRateFrom: state.exchangeRateFrom,
+    exchangeRateTo: state.exchangeRateTo,
+    submissionKey: state.submissionKey,
+    serverDraftId: state.serverDraftId,
+  }
 }
 
 /** A new row id that is stable across a refresh and cannot collide. */
@@ -176,6 +236,7 @@ function blankDraft(columns: InvoiceColumn[]) {
     exchangeRateFrom: '1',
     exchangeRateTo: '',
     submissionKey: newSubmissionKey(),
+    serverDraftId: null,
   }
 }
 
@@ -357,6 +418,46 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         set((state) => ({ rates: { ...state.rates, [currency]: value } })),
 
       clearDraft: () => set(blankDraft(get().columns)),
+
+      // A draft from the server was written by this same store, but perhaps
+      // by an older build: every array and object the UI indexes into is
+      // checked, as `merge` does for the device copy.
+      loadDraft: (id, payload) => {
+        const saved = payload as Partial<InvoiceDraftSnapshot>
+        const current = get()
+        const columns =
+          Array.isArray(saved.columns) && saved.columns.length ? saved.columns : current.columns
+        const text = (value: unknown, fallback: string) =>
+          typeof value === 'string' ? value : fallback
+        set({
+          ...blankDraft(columns),
+          columns,
+          columnsInitialised: true,
+          rows: withTrailingBlank(
+            Array.isArray(saved.rows) && saved.rows.length ? saved.rows : [],
+            columns,
+          ),
+          customers: Array.isArray(saved.customers) ? saved.customers : [],
+          transactionType: saved.transactionType === 'purchase' ? 'purchase' : 'sale',
+          date: text(saved.date, new Date().toISOString()),
+          dueDate: typeof saved.dueDate === 'string' ? saved.dueDate : null,
+          warehouseId: typeof saved.warehouseId === 'string' ? saved.warehouseId : null,
+          branchId: typeof saved.branchId === 'string' ? saved.branchId : null,
+          notes: text(saved.notes, ''),
+          paymentMethod: saved.paymentMethod === 'credit' ? 'credit' : 'cash',
+          isPaid: saved.isPaid !== false,
+          paidNow: text(saved.paidNow, ''),
+          discountValue: text(saved.discountValue, ''),
+          discountType: saved.discountType === 'percentage' ? 'percentage' : 'fixed',
+          taxRate: text(saved.taxRate, ''),
+          rates: saved.rates && typeof saved.rates === 'object' ? saved.rates : {},
+          exchangeRateFrom: text(saved.exchangeRateFrom, '1'),
+          exchangeRateTo: text(saved.exchangeRateTo, ''),
+          // The same draft keeps its key: submitting it after a resume is a replay.
+          submissionKey: text(saved.submissionKey, newSubmissionKey()),
+          serverDraftId: id,
+        })
+      },
     }),
     {
       name: 'hisabche-invoice-draft',
@@ -428,28 +529,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           return localStorage
         return { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       }),
-      partialize: (state) => ({
-        columns: state.columns,
-        columnsInitialised: state.columnsInitialised,
-        rows: state.rows,
-        customers: state.customers,
-        transactionType: state.transactionType,
-        date: state.date,
-        dueDate: state.dueDate,
-        warehouseId: state.warehouseId,
-        branchId: state.branchId,
-        notes: state.notes,
-        paymentMethod: state.paymentMethod,
-        isPaid: state.isPaid,
-        paidNow: state.paidNow,
-        discountValue: state.discountValue,
-        discountType: state.discountType,
-        taxRate: state.taxRate,
-        rates: state.rates,
-        exchangeRateFrom: state.exchangeRateFrom,
-        exchangeRateTo: state.exchangeRateTo,
-        submissionKey: state.submissionKey,
-      }),
+      partialize: invoiceDraftSnapshot,
     },
   ),
 )

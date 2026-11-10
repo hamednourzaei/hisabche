@@ -10,6 +10,7 @@ import type { NewDocumentKind } from '../../invoices/new-invoice-chooser'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
+  invoiceDraftSnapshot,
   useCurrencyStore,
   useInvoiceDraftStore,
   useSyncStore,
@@ -45,12 +46,15 @@ import {
 import { useBarcodeScanner } from '../../../../hooks/use-barcode-scanner'
 import { planScan } from '../../../../lib/barcode/scan-into-invoice'
 import {
+  apiErrorMessage,
   asList,
   lookupProductByBarcode,
   rateOn,
   useExchangeRates,
+  useSaveInvoiceDraft,
   type RateQuote,
 } from '@hisabche/api'
+import { useToast } from '../../toast-provider'
 import type { Product } from '@hisabche/validation'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
@@ -167,12 +171,18 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     (rowId: string, product: { id: string; name: string; price: string; unit: string }) => {
       const before = useInvoiceDraftStore.getState().rows.find((row) => row.id === rowId)
       const price = priceForInvoice(product.price, currency, bookCurrency, lineRate)
+      // ⚠️ Picking ANOTHER product on a line whose price the app had filled
+      // replaces that price (QA-006). It used to stay: product B was sold at
+      // product A's price. A price the person typed is still never touched.
+      const typedPrice = before?.values[COLUMN.unitPrice]?.trim() ?? ''
+      const ours = typedPrice !== '' && autoPriced.get(rowId)?.filled === typedPrice
+      if (ours && before?.productId !== product.id) draft.setCell(rowId, COLUMN.unitPrice, '')
       draft.setRowProduct(rowId, product.id, product.name, price, product.unit || 'piece')
       // setRowProduct seeds the unit and price only where they are empty — only
       // then are they ours.
-      if (!before?.values[COLUMN.unitPrice]?.trim()) rememberAutoPrice(rowId, product.price, price)
+      if (!typedPrice || ours) rememberAutoPrice(rowId, product.price, price)
     },
-    [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
+    [draft, currency, bookCurrency, lineRate, rememberAutoPrice, autoPriced],
   )
 
   // ─── Barcode scanner → invoice line ──────────────────────────────────────
@@ -332,17 +342,46 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     }
   }, [bookCurrency, currency, draft, draft.customers.length, draft.rows, handleCurrencyChange])
 
+  // ⚠️ «ذخیره پیش‌نویس» WRITES (QA-005). It used to only say «saved» while the
+  // draft stayed in this browser's storage: nothing reached the invoice list,
+  // and another device never saw it. Now the draft is a row on the server
+  // (user-state-01), listed under «پیش‌نویس‌ها» on the invoices page, and
+  // saving again updates the same row.
+  const saveDraftOnServer = useSaveInvoiceDraft()
+  const toast = useToast()
   const handleSaveDraft = useCallback(() => {
-    // The draft store is already persisted on every keystroke, so "save" is
-    // an acknowledgement, not a write. Saying so beats faking a request.
+    const state = useInvoiceDraftStore.getState()
+    const names = state.customers.map((customer) => customer.name).filter(Boolean)
+    const firstLine = state.rows
+      .map((row) => (row.values[COLUMN.description] ?? '').trim())
+      .find(Boolean)
+    const title = [names.join('، '), firstLine].filter(Boolean).join(' · ').slice(0, 200)
     setSavingDraft(true)
     setSaveStatus('saving')
-    setTimeout(() => {
-      setSaveStatus('saved')
-      setSavingDraft(false)
-      setTimeout(() => setSaveStatus('idle'), 1500)
-    }, 300)
-  }, [setSaveStatus])
+    saveDraftOnServer.mutate(
+      {
+        ...(state.serverDraftId ? { id: state.serverDraftId } : {}),
+        kind: documentKind,
+        title,
+        payload: { ...invoiceDraftSnapshot(state) },
+      },
+      {
+        onSuccess: (saved) => {
+          if (saved?.id) state.setField('serverDraftId', saved.id)
+          setSaveStatus('saved')
+          toast.success(t('invoiceBuilder.draftSaved', 'پیش‌نویس ذخیره شد'))
+          setTimeout(() => setSaveStatus('idle'), 1500)
+        },
+        onError: (error) => {
+          setSaveStatus('idle')
+          toast.error(
+            apiErrorMessage(error, t('invoiceBuilder.draftSaveFailed', 'پیش‌نویس ذخیره نشد')),
+          )
+        },
+        onSettled: () => setSavingDraft(false),
+      },
+    )
+  }, [documentKind, saveDraftOnServer, setSaveStatus, t, toast])
 
   // Warn while the quantity is typed, not only on the preview (see the hook).
   const oversoldLines = useOversoldLines(items, draft.transactionType)

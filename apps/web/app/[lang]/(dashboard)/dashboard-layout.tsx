@@ -26,13 +26,23 @@ import {
   SubscriptionLockDialog,
   SandboxNotice,
   BookCurrencySync,
+  ThemePreferenceSync,
   InteractiveGuide,
   useSubscriptionLocked,
   isRouteAllowedWhenExpired,
   useHeaderPeople,
   useToast,
 } from '@hisabche/ui'
-import { Fragment, useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  memo,
+} from 'react'
 import {
   NAV_ITEMS,
   PRIMARY_ITEMS,
@@ -43,6 +53,35 @@ import {
 } from '@hisabche/ui/menu'
 import { cn } from '@/lib/utils'
 import '@hisabche/ui/globals.css'
+
+// ─── The sidebar's collapsed state, kept in this browser ───────────────────
+// A device preference (how wide the menu is on THIS screen), read through
+// useSyncExternalStore. Storage can be unavailable (private mode): the value
+// then lives in memory for this tab.
+let sidebarInMemory = false
+const sidebarListeners = new Set<() => void>()
+function subscribeSidebar(listener: () => void): () => void {
+  sidebarListeners.add(listener)
+  return () => {
+    sidebarListeners.delete(listener)
+  }
+}
+function readSidebar(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_KEY) === '1'
+  } catch {
+    return sidebarInMemory
+  }
+}
+function writeSidebar(next: boolean): void {
+  sidebarInMemory = next
+  try {
+    window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
+  } catch {
+    // Private mode: the in-memory value above stands in.
+  }
+  for (const listener of sidebarListeners) listener()
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardLayout v2 — Memoized · Performance Optimized · SaaS-Level
@@ -132,9 +171,10 @@ function usePrefetchRoutes(locale: string, deniedKey: string, hiddenPathsKey: st
     return () => {
       cancelled = true
     }
-    // Locale only: the set of destinations does not change with the page, and
+    // Not the page: the set of destinations does not change with it, and
     // re-running this on every navigation is what made it a per-route cost.
-  }, [router, locale])
+    // The skip lists are strings, so they change only when access does.
+  }, [router, locale, deniedKey, hiddenPathsKey])
 }
 
 // ─── Hook: Redirect Guard ──────────────────────────────────────────────────
@@ -290,7 +330,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const isDark = useThemeStore((s) => s.isDark)
   const toggle = useThemeStore((s) => s.toggle)
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
-  const lastSyncedAt = useRef(Date.now())
+  // The moment this layout mounted, read once (an initializer, not a ref read
+  // during render).
+  const [lastSyncedAt] = useState(() => Date.now())
 
   // Expired subscription: only dashboard, invoices (view) and billing open.
   // The server's verdict, not a browser flag — and the server refuses writes
@@ -302,11 +344,14 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
   const activeNav = optimisticPath ?? pathname
 
-  useEffect(() => {
-    if (optimisticPath) {
-      setOptimisticPath(null)
-    }
-  }, [pathname])
+  // The real path arrived: the optimistic one is done. Adjusted while
+  // rendering when the path changes — React's pattern for state that follows
+  // a value — not by an effect that renders twice.
+  const [settledPath, setSettledPath] = useState(pathname)
+  if (settledPath !== pathname) {
+    setSettledPath(pathname)
+    if (optimisticPath) setOptimisticPath(null)
+  }
 
   const currentLang = locale
 
@@ -469,28 +514,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   // makes the server's HTML and the first client render disagree, and React 19
   // throws the whole tree away on a hydration mismatch — the dashboard would
   // flash empty. So it starts expanded and corrects itself once.
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // useSyncExternalStore: the server snapshot (expanded) is used while
+  // hydrating, so the HTML matches; the stored value follows straight after.
+  const sidebarCollapsed = useSyncExternalStore(subscribeSidebar, readSidebar, () => false)
+  const setSidebarCollapsed = writeSidebar
 
-  useEffect(() => {
-    try {
-      setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === '1')
-    } catch {
-      // Private mode, or storage disabled. An unremembered preference is not
-      // worth an error boundary.
-    }
-  }, [])
-
-  const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev
-      try {
-        window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
-      } catch {
-        /* see above */
-      }
-      return next
-    })
-  }, [])
+  const toggleSidebar = useCallback(() => writeSidebar(!readSidebar()), [])
 
   const openSettings = useCallback(() => {
     const localizedPath = withLocale('/settings')
@@ -577,7 +606,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           people={people}
           canSeePeople={canSeePeople}
           isLoadingPeople={isLoadingPeople}
-          lastSyncedAt={lastSyncedAt.current}
+          lastSyncedAt={lastSyncedAt}
           isOnline={true}
           isSyncing={false}
           pendingCount={0}
@@ -595,6 +624,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
           <BookCurrencySync />
+          <ThemePreferenceSync />
           <InteractiveGuide currentRoute={pathname || '/dashboard'} t={t} />
           <Breadcrumb className="mb-4" />
           {routeLocked ? (

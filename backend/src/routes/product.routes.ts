@@ -5,12 +5,12 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
-  createProductSchema,
   flagFilter,
+  type CreateProduct,
+  type UpdateProduct,
+  stockWasteSchema,
   unitSchema,
-  updateProductSchema,
 } from '@hisabche/validation'
 import { ProductService } from '../services/product.service'
 import {
@@ -27,13 +27,6 @@ import { ValidationError } from '../errors/validation.error'
 import { ForbiddenError } from '../errors/auth.error'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
-
-// ✅ تنظیمات برای حذف $schema از خروجی
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -70,13 +63,13 @@ export async function productRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const query = request.query as any
+        const query = request.query as Record<string, string | undefined>
 
         const page = query.page ? parseInt(query.page, 10) : 1
         const limit = query.limit ? parseInt(query.limit, 10) : 20
         const search = query.search || ''
         const sortBy = query.sortBy || 'created_at'
-        const sortDirection = query.sortDirection || 'desc'
+        const sortDirection = query.sortDirection === 'asc' ? 'asc' : 'desc'
 
         // requireWorkspaceContext has already answered 401/403 for a caller
         // without an authorized workspace, so `tenancy` is present.
@@ -278,7 +271,7 @@ export async function productRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const body = request.body as any
+        const body = request.body as CreateProduct
         const { workspaceId } = request.tenancy
         const product = await productService.create(request.tenancy, body, {
           clientRequestId: readClientRequestId(request),
@@ -319,7 +312,7 @@ export async function productRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const body = request.body as any
+        const body = request.body as UpdateProduct
         const { workspaceId } = request.tenancy
         const product = await productService.update(id, request.tenancy, body)
 
@@ -349,6 +342,34 @@ export async function productRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to update product' })
+      }
+    },
+  )
+
+  // ─── POST /api/products/:id/waste ───────────────────────
+  // «ثبت ضایعات»: goods that left without a sale, with their reason
+  // (ProductService#recordWaste). Same permission as editing the stock.
+  fastify.post(
+    '/api/products/:id/waste',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        if (!UUID.test(id)) return reply.code(400).send({ error: 'Invalid product id' })
+        const body = stockWasteSchema.parse(request.body)
+        const result = await productService.recordWaste(id, request.tenancy, body)
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        if (err instanceof ValidationError) return sendRefusal(reply, err)
+        if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message })
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to record the waste' })
       }
     },
   )

@@ -2093,6 +2093,21 @@
       "pre_saleHint": "The customer pays before delivery",
       "pre_purchase": "Pre-purchase",
       "pre_purchaseHint": "You pay the supplier before delivery"
+    },
+    "drafts": {
+      "open": "Drafts",
+      "title": "Saved drafts",
+      "description": "A draft is not an invoice: it has no number and moved nothing. Continue it to record it.",
+      "untitled": "Untitled",
+      "resume": "Continue",
+      "delete": "Delete draft",
+      "deleteFailed": "The draft was not deleted",
+      "kind": {
+        "sale": "Sales invoice",
+        "purchase": "Purchase invoice",
+        "pre_sale": "Pre-sale",
+        "pre_purchase": "Pre-purchase"
+      }
     }
   },
   "warehouse": {
@@ -3059,7 +3074,8 @@
         "people": "People",
         "stock": "Stock"
       }
-    }
+    },
+    "negativeStockHint": "products below zero — not counted in the value"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -5170,7 +5186,9 @@
       "limit": "Credit limit",
       "exposure": "Currently owed",
       "projected": "After this sale"
-    }
+    },
+    "draftSaved": "Draft saved",
+    "draftSaveFailed": "The draft was not saved"
   },
   "admin": {
     "cms": {
@@ -6314,7 +6332,10 @@
     "transactions_column": "Transactions",
     "opening_capital": "Opening capital",
     "opening_capital_hint": "The cash the business started with, held in this till. It is booked to the owner’s capital, not to sales.",
-    "kind_opening_capital": "Opening capital"
+    "kind_opening_capital": "Opening capital",
+    "staleHint": "Open for more than a day; count the cash and close it.",
+    "status_stale": "Open since an earlier day",
+    "days_short": "d"
   },
   "assets": {
     "title": "Fixed assets",
@@ -7789,6 +7810,187 @@
         "heading": "Opting out",
         "body1": "Every email carries an “I do not want these messages” link. A customer who uses it is left out of later campaigns, and that shows in the campaign’s report."
       }
+    },
+    "returns-and-advances": {
+      "title": "Drafts, advances and returns",
+      "summary": "An invoice not finished yet, a deposit before delivery, and goods coming back.",
+      "seoTitle": "Invoice drafts, pre-sales and returns — Hisabche guide",
+      "seoDescription": "In Hisabche, save an invoice draft and continue it on any device, record pre-sales and pre-purchases with their lines, and take multi-line returns with refunds.",
+      "drafts": {
+        "heading": "Invoice drafts",
+        "body1": "In the invoice builder, «Save draft» keeps an unfinished invoice on the server. A draft has no number, moves no stock and books nothing.",
+        "body2": "Once a draft is recorded as an invoice, it leaves the drafts list on its own.",
+        "step1": "Press «Save draft» in the invoice builder.",
+        "step2": "On the invoices page, press «Drafts».",
+        "step3": "«Continue» opens the draft in the builder with all its lines."
+      },
+      "advances": {
+        "heading": "Pre-sales and pre-purchases",
+        "body1": "A pre-sale is a customer paying part before delivery; a pre-purchase is you paying a supplier ahead. Both are made in the same invoice builder, with the same lines.",
+        "body2": "The server works out the document total from its lines and refuses a deposit larger than that total.",
+        "body3": "A pre-sale moves no stock and books no revenue; it is only the money received or paid until the real invoice is issued.",
+        "step1": "On the invoices page, press «New invoice».",
+        "step2": "Choose «Pre-sale» or «Pre-purchase» as the document type.",
+        "step3": "Enter the lines and the deposit.",
+        "step4": "Confirm on the preview; the document appears under the pre-sale or pre-purchase tab."
+      },
+      "returns": {
+        "heading": "Returns",
+        "body1": "From any sales invoice you can return one or more lines. The goods go back into stock and the customer's debt goes down.",
+        "body2": "If the customer takes cash back, the refund is recorded separately so the till and the books know where the money went.",
+        "body3": "An invoice that is deleted or cancelled undoes all its effects: its journal entry, its stock and its own payments."
+      }
+    },
+    "warehouse-locations": {
+      "title": "Warehouses, shelves and transfers",
+      "summary": "Where each product is: which warehouse, which shelf, and moving stock between warehouses.",
+      "seoTitle": "Warehouses, shelves and stock transfers — Hisabche guide",
+      "seoDescription": "In Hisabche, create several warehouses, give each shelves with a capacity, see the shelf map, and move goods between warehouses and shelves.",
+      "warehouses": {
+        "heading": "Several warehouses",
+        "body1": "Each warehouse holds its own stock. An invoice says which warehouse the goods left or entered; with one warehouse, it is that one.",
+        "body2": "A warehouse belongs to a branch, and each colleague sees only the warehouses of their branch.",
+        "step1": "Go to «Stock» and press «Add warehouse».",
+        "step2": "Enter the warehouse name and branch.",
+        "step3": "On an invoice, choose the warehouse the goods leave or enter."
+      },
+      "shelves": {
+        "heading": "Shelves and the shelf map",
+        "body1": "Turn on «Manage shelves» for a warehouse and you define its shelves with a code and a capacity. The aisle and side are read from the code.",
+        "body2": "The shelf map shows how full each shelf is; click a shelf to list the goods on it.",
+        "body3": "«On no shelf» is warehouse stock not yet placed on a shelf. Placing it changes no stock; it only says where it is.",
+        "step1": "In Stock, open «Shelf map» and pick the warehouse.",
+        "step2": "Press «Add shelf» and enter its code and capacity.",
+        "step3": "Open the shelf and place goods on it.",
+        "step4": "To move goods between shelves, use the row's menu."
+      },
+      "transfer": {
+        "heading": "Transfers between warehouses",
+        "body1": "A transfer takes goods out of one warehouse and into another, and shows in the product's history with its origin and destination. The business's total stock does not change.",
+        "body2": "You can transfer from a shelf as well; the shelf quantity goes down at once.",
+        "step1": "In Stock, press «Transfer».",
+        "step2": "Choose the product, the origin and destination, and the quantity.",
+        "step3": "Save; both warehouses update."
+      }
+    },
+    "stock-count-and-waste": {
+      "title": "Stock counts and waste",
+      "summary": "When the system figure and the shelf disagree, and goods lost without a sale.",
+      "seoTitle": "Stock counts and recording waste — Hisabche guide",
+      "seoDescription": "Physical stock counts in Hisabche: start a count, enter what you counted and settle the difference; and record waste with its reason, from a named warehouse, without overwriting the stock figure.",
+      "count": {
+        "heading": "Stock count",
+        "body1": "A count is opened for one warehouse and shows, for each product, the system's «expected» beside what you «counted».",
+        "body2": "A product you did not count is left out of the adjustment; it is not taken as zero.",
+        "body3": "Completing the count records the differences as stock adjustments, and a shortage goes into the books at cost. It cannot be undone.",
+        "step1": "Go to «Stock count» and press «Start count».",
+        "step2": "Choose the warehouse.",
+        "step3": "Enter the counted quantity for each product.",
+        "step4": "Review the differences and press «Complete count»."
+      },
+      "waste": {
+        "heading": "Waste",
+        "body1": "Goods spoiled, damaged, expired or lost leave the stock through «Record waste» on the product's page; the reason stays with the stock movement.",
+        "body2": "You cannot write off more than the warehouse holds, and a service or package has no waste.",
+        "step1": "Open the product's page.",
+        "step2": "In «Waste», press «Record waste».",
+        "step3": "Enter the quantity and reason, and the warehouse if you have several.",
+        "step4": "Press «Take out of stock»."
+      },
+      "history": {
+        "heading": "Stock history",
+        "body1": "Every rise and fall in stock — sale, purchase, count, transfer, waste — shows in the product's «stock in and out» with its date and warehouse.",
+        "body2": "You can also change the stock figure on the product form, but that change carries no reason; for a loss without a sale, waste or a count is the right way."
+      }
+    },
+    "units-and-weighed-goods": {
+      "title": "Units and weighed goods",
+      "summary": "Selling by the kilo or gram, decimal quantities, and buying a sack to sell by the kilo.",
+      "seoTitle": "Selling by weight and product units (kg, g, pack) — Hisabche guide",
+      "seoDescription": "In Hisabche, sell by the kilo, gram or metre, record decimal quantities such as 0.25 kg, and give each product separate buying and selling units with a conversion.",
+      "decimals": {
+        "heading": "Decimal quantities",
+        "body1": "Quantities on invoices, in stock and in stock movements take decimals: half a kilo of nuts is recorded as 0.5, not as zero or one.",
+        "body2": "A counted product starts at 1; for a weighed product you enter the amount yourself, so «1 gram» is never recorded by mistake."
+      },
+      "packs": {
+        "heading": "Packs and bulk",
+        "body1": "On the product page, «Buying and selling units» says how many base units each unit holds; for example sack = 10 kg.",
+        "body2": "One unit is always the base, at 1. Each side — buying or selling — has at most one default unit.",
+        "body3": "The units are saved together; if a rule is broken, the form says which one before saving.",
+        "step1": "Open the product's page.",
+        "step2": "In «Buying and selling units», press «Add unit».",
+        "step3": "Choose the unit and how many base units it holds.",
+        "step4": "Tick the buying or selling default and save."
+      },
+      "scale": {
+        "heading": "Scale labels",
+        "body1": "A scale label's barcode carries the weight or the price; scanning it fills the line's quantity on the invoice.",
+        "body2": "Hisabche does not connect to a scale directly; the scale prints the label and Hisabche reads it."
+      }
+    },
+    "serial-numbers-and-variants": {
+      "title": "Serials, IMEIs and product variants",
+      "summary": "Each device by its own number, and one product in several colours and sizes.",
+      "seoTitle": "Serial and IMEI tracking and product variants — Hisabche guide",
+      "seoDescription": "For phone shops and serialized goods: register each device's serial or IMEI, sell a specific unit on the invoice, warranties, and colour and size variants with their own SKU and barcode.",
+      "variants": {
+        "heading": "Variants",
+        "body1": "One product such as «T-shirt» can have several variants — colour, size, capacity — each with its own SKU and barcode.",
+        "body2": "The variants section shows only for businesses whose type includes it.",
+        "step1": "Open the product's page.",
+        "step2": "In variants, enter the SKU, barcode and an attribute (for example colour: blue).",
+        "step3": "Press «Add»."
+      },
+      "serials": {
+        "heading": "Serials and IMEIs",
+        "body1": "For a serialized product, each device's number is registered with its own cost. Each number once; a repeated number is refused.",
+        "body2": "The list shows whether each device is in stock, sold or returned; search to find one IMEI.",
+        "body3": "Registering numbers changes no stock; the purchase invoice added it.",
+        "step1": "Open the product's page and go to «Serial / IMEI numbers».",
+        "step2": "Press «Register arrived numbers» and enter one number per line.",
+        "step3": "Enter the cost of each device and register."
+      },
+      "sale": {
+        "heading": "Selling a specific unit",
+        "body1": "After the sales invoice is recorded, its page lets you name exactly which numbers left. You cannot pick more than the line sold.",
+        "body2": "If the invoice is deleted or cancelled, those devices go back to «in stock» on their own.",
+        "step1": "Open the sales invoice.",
+        "step2": "In «Serials / IMEIs sold», pick the numbers of the devices that left.",
+        "step3": "Press «Record on this sale»."
+      },
+      "warranty": {
+        "heading": "Warranty",
+        "body1": "For a serialized product you can register a warranty, so it is clear until when each device is covered.",
+        "body2": "Repair tickets are not in Hisabche yet; until then, note repairs on the customer's notes."
+      }
+    },
+    "dashboard-overview": {
+      "title": "Dashboard",
+      "summary": "Today's figures, your own cards and the warnings worth seeing.",
+      "seoTitle": "Hisabche dashboard guide — sales, debts and stock cards",
+      "seoDescription": "What the Hisabche dashboard shows: sales, customer debt, stock value, up to four cards of your own, and warnings such as products below zero.",
+      "cards": {
+        "heading": "The fixed cards",
+        "body1": "The top of the dashboard shows sales, customer debt, open pre-sales and stock value. Each card opens the page behind its figure.",
+        "body2": "Figures are in the business's books currency. An invoice in another currency without a rate is not added in; it is named separately.",
+        "body3": "If your role may not see a figure, its card is left out rather than shown as zero."
+      },
+      "custom": {
+        "heading": "Your own cards",
+        "body1": "Beside the fixed cards is a «+» card. Add up to four more from figures other pages already show; the dashboard holds eight cards at most.",
+        "body2": "Your choice is saved on the server under your name, so every device you sign in on shows the same cards.",
+        "step1": "Press the «+» card.",
+        "step2": "Pick a category or search for the figure.",
+        "step3": "Pick the figure; the card appears at once.",
+        "step4": "To remove or swap a card, open its menu."
+      },
+      "warnings": {
+        "heading": "Warnings",
+        "body1": "Stock value counts only goods actually on hand. If a product was sold past its stock, the card says how many products are below zero so you can fix it with a stock count.",
+        "body2": "The change against last month is shown only when last month has a figure to compare with. Very large changes read «more than 999%».",
+        "body3": "The light or dark theme is saved under your name too, and follows you to another device."
+      }
     }
   },
   "ai": {
@@ -7811,7 +8013,9 @@
     "modeAsk": "Ask the books",
     "modeTranslate": "Translate a document",
     "modeRead": "Read a document",
-    "modeDo": "Do something"
+    "modeDo": "Do something",
+    "serverDown": "The assistant server is not reachable right now. Check the connection and ask again shortly.",
+    "serverDownTitle": "The assistant is unavailable"
   },
   "display": {
     "basis": "Show amounts in",
@@ -7956,18 +8160,35 @@
     "neverSold": "Never sold"
   },
   "productUnits": {
-    "add": "Add a unit",
+    "add": "Add unit",
     "empty": "This product is single-unit — quantities are recorded exactly as entered.",
-    "factor": "How many base units?",
+    "factor": "Base units in one",
     "factorBase": "Factor (base unit = 1)",
     "factorHint": "e.g. 24",
-    "hint": "If you sell this in more than one unit, define them here. Leaving it empty means single-unit.",
+    "hint": "Buy a 10 kg sack, sell by the kilo: each unit says how many base units it holds.",
     "isBase": "Base unit",
-    "pickUnit": "Choose a unit",
+    "pickUnit": "Pick a unit",
     "purchaseDefault": "Default for purchases",
     "saleDefault": "Default for sales",
-    "title": "Units for this product",
-    "unit": "Unit"
+    "title": "Buying and selling units",
+    "unit": "Unit",
+    "remove": "Remove unit",
+    "base": "Base unit",
+    "buyDefault": "Default for buying",
+    "sellDefault": "Default for selling",
+    "saved": "Units saved",
+    "failed": "The units were not saved",
+    "loadFailed": "This product's units could not be read.",
+    "seeded": "The unit list is not set up on the server yet; saving is not possible.",
+    "problems": {
+      "pickUnit": "Pick a unit on every row.",
+      "duplicate": "Each unit only once.",
+      "oneBase": "Exactly one base unit is needed.",
+      "factor": "Each unit's size must be above zero.",
+      "baseIsOne": "The base unit is always 1.",
+      "oneBuy": "Only one default for buying.",
+      "oneSell": "Only one default for selling."
+    }
   },
   "team": {
     "hasAccessTitle": "Should this person be able to sign in?",
@@ -11463,7 +11684,8 @@
         "over": "Over capacity",
         "none": "No capacity set"
       },
-      "unshelvedButton": "{count} products on no shelf — put on a shelf"
+      "unshelvedButton": "{count} products on no shelf — put on a shelf",
+      "loadFailed": "The warehouse list could not be read; the shelf map needs it."
     },
     "table": {
       "product": "Product",
@@ -11612,65 +11834,141 @@
     "dashboard": {
       "overview": {
         "title": "Your dashboard",
-        "desc": "The whole business at a glance: sales, customer debt and stock value. Every card opens the rows it was calculated from."
+        "desc": "The whole business at a glance: sales, customer debt, open pre-sales and stock value. Press a card to open the page behind it."
       },
       "kpis": {
-        "title": "Key figures",
-        "desc": "The four numbers that matter: total sales, sales in the selected range, customer debt and stock value. A green figure is growth on the previous period; a figure that could not be read stays blank instead of showing zero."
+        "title": "The main cards",
+        "desc": "Figures are in the books currency. A figure your role may not see is left out, and one that could not be read stays empty rather than showing zero."
       },
       "chart": {
         "title": "Sales chart",
-        "desc": "Sales over any range. Change the dates on this card, or switch to the funnel view to see how the same range converted, step by step."
+        "desc": "Sales of recent days. Hover a bar to see that day's amount."
+      },
+      "custom": {
+        "title": "Your own cards",
+        "desc": "The «+» card adds up to four more figures; each added card can be removed or swapped. Your choice follows you to every device."
+      },
+      "warnings": {
+        "title": "Warnings",
+        "desc": "Under «Stock value», products sold past their stock are counted; fix them with a stock count. The change against last month shows only when last month had a figure."
       }
     },
     "invoices": {
       "list": {
-        "title": "All invoices",
-        "desc": "Sales and purchases in one table. Use the filter above the table to see only one kind, and open a row for its details and payments."
+        "title": "Invoice list",
+        "desc": "Sales, purchases, pre-sales and pre-purchases on one page; switch with the tabs and press a row to open its details and payments."
       },
       "new": {
-        "title": "New invoice",
-        "desc": "Create an invoice from here: customer, lines and amount. The server calculates the total and the profit, and an invoice made offline is saved and synced later."
+        "title": "New document",
+        "desc": "Make a sale, a purchase, a pre-sale or a pre-purchase from here. The server works out the total from the lines, and an invoice saved offline syncs later."
       },
       "filters": {
-        "title": "Filters and status",
-        "desc": "Narrow the table by payment status, branch and warehouse, then export it as CSV. These filters change the view, never the data."
+        "title": "Search and filter",
+        "desc": "One «Filter» picks status, branch and warehouse; search finds a number or a customer. The figures above the table always cover every invoice in the filter."
+      },
+      "drafts": {
+        "title": "Drafts",
+        "desc": "«Save draft» in the builder keeps an unfinished invoice on the server. Continue or delete it here; a draft has no number and no effect on money or stock."
+      },
+      "returns": {
+        "title": "Returns and deleting",
+        "desc": "On a sales invoice's page you can return one or more lines. Deleting or cancelling an invoice undoes its journal entry, stock and own payments too."
+      },
+      "pricing": {
+        "title": "Prices and discounts",
+        "desc": "The «Prices and discounts» tab keeps price lists and active discounts; the invoice builder applies them on its own."
       }
     },
     "customers": {
       "overview": {
-        "title": "Customers",
-        "desc": "Everyone you trade with, with their phone number and balance. Search, or open a name to see the whole customer file."
+        "title": "Customers and suppliers",
+        "desc": "Every party with their number and balance. Use the switch to see only customers or only suppliers, and press a name to open the file."
       },
       "ledger": {
-        "title": "Balance and account history",
-        "desc": "A customer's debt comes from their unpaid invoices. Their file keeps invoices and payments apart, and that is where you record a payment."
+        "title": "Debt and statement",
+        "desc": "A party's balance is per currency. In the file you see invoices, payments, credit limit and statement, and record a payment from there."
+      },
+      "sessions": {
+        "title": "Sessions and appointments",
+        "desc": "For a service business (a barber, say), each customer's session is booked with its time and service and marked «attended / no-show»."
+      },
+      "campaigns": {
+        "title": "Campaigns and follow-up",
+        "desc": "In «Outreach», send a message or a debt reminder to a group of customers and see who received it."
       }
     },
     "warehouse": {
       "stock": {
-        "title": "Stock on hand",
-        "desc": "How much of each product sits in each warehouse. The products tab manages buying and selling prices; stock follows invoices and stock counts."
+        "title": "Stock",
+        "desc": "Each product's stock in each warehouse. The «Warehouses» tab lists them with their value; stock moves with invoices, transfers, counts and waste."
       },
       "costing": {
-        "title": "Value and cost of goods",
-        "desc": "The warehouse value is shown here. The cost of goods sold comes from your cost layers (FIFO or average), never from a product's current buy price."
+        "title": "Value and cost",
+        "desc": "Stock is valued at buying price. Pick the costing method (FIFO or average) on the warehouse list; a sale's cost comes from the purchase layers, not today's price."
+      },
+      "products": {
+        "title": "Products",
+        "desc": "In the Products tab add a product, see buying and selling prices, and press one to open its page with stock history, barcodes and photos."
+      },
+      "shelves": {
+        "title": "Shelf map",
+        "desc": "For a warehouse with «Manage shelves», add shelves with a code and capacity and see how full each is. «On no shelf» is stock not yet placed."
+      },
+      "transfer": {
+        "title": "Transfers",
+        "desc": "«Transfer» takes goods out of one warehouse and into another; the business total does not change, and it shows in the product's history."
+      },
+      "reorder": {
+        "title": "Reorder and dead stock",
+        "desc": "«Reorder suggestions» lists products running out, based on your real sales; «Dead stock» lists those that have not sold for a while."
+      },
+      "expiry": {
+        "title": "Expiry",
+        "desc": "Dated goods are recorded in batches with an expiry date; the Expiry tab shows expired and soon-to-expire stock with its value."
+      },
+      "waste": {
+        "title": "Waste",
+        "desc": "On a product's page, take spoiled, damaged, expired or lost goods out of stock with their reason, instead of overwriting the stock figure."
+      },
+      "units": {
+        "title": "Buying and selling units",
+        "desc": "Buy a 10 kg sack and sell by the kilo: on the product page say how many base units each unit holds. Decimals such as 0.25 kg are accepted."
+      },
+      "serials": {
+        "title": "Serials and IMEIs",
+        "desc": "For serialized goods, register each device's number with its cost and see which is in stock and which invoice sold it."
       }
     },
     "accounting": {
       "trial": {
         "title": "Trial balance",
-        "desc": "Debits and credits per account. If the two sides differ, one entry is out of balance — find it in the entries tab."
+        "desc": "Debit and credit totals per account. If the sides differ, an entry is unbalanced; a balance on the unusual side is flagged, never corrected for you."
       },
       "journal": {
-        "title": "Entries and ledger",
-        "desc": "Post a manual entry, or read the ones sales and purchases created. Every posted entry can be reversed, and its history stays."
+        "title": "Journal",
+        "desc": "Record a manual entry or read the automatic ones from sales and purchases. A posted entry is undone by a reversing entry; its history is never erased."
+      },
+      "reports": {
+        "title": "Reports",
+        "desc": "Balance sheet and profit and loss are in the Reports tab. Profit whose cost was never recorded reads «unknown», not zero."
+      },
+      "monthEnd": {
+        "title": "Month end",
+        "desc": "«Month end» closes a period so no entry is added or changed in it; closing can be scheduled."
+      },
+      "treasury": {
+        "title": "Bank and assets",
+        "desc": "The «Assets and bank» tab holds bank accounts, statement matching and fixed assets. A match happens only when you confirm it."
       }
     },
     "billing": {
       "plans": {
-        "title": "Subscription and wallet",
-        "desc": "Your current plan, renewal date and wallet balance. Referrals top up the wallet, and the wallet pays this bill."
+        "title": "Subscription",
+        "desc": "Your plan, its renewal date and what each plan includes. Reading, printing, export and backup stay open in every state."
+      },
+      "wallet": {
+        "title": "Wallet",
+        "desc": "The wallet pays the subscription bill and is topped up by inviting friends."
       }
     },
     "close": "Close this page’s guide",
@@ -11679,7 +11977,115 @@
     "allDoneTitle": "You’ve seen every guide",
     "allDoneBody": "Whenever you need it, the «Guide» button at the bottom shows that page again.",
     "later": "Later",
-    "goTo": "Go to"
+    "goTo": "Go to",
+    "till": {
+      "open": {
+        "title": "Opening a till",
+        "desc": "Each shift is a till: open it with the starting cash. Each person has one open till per branch at a time."
+      },
+      "cash": {
+        "title": "Cash in and out",
+        "desc": "Record money added or taken with its reason. Cash payments on invoices appear on their own in the till they name."
+      },
+      "close": {
+        "title": "Closing a till",
+        "desc": "Enter the cash you counted; the difference from the expected cash shows before you confirm, and needs an explanation."
+      },
+      "stale": {
+        "title": "A till left open",
+        "desc": "A till open more than a day is marked «Open since an earlier day»: count and close it so shifts do not mix."
+      }
+    },
+    "stockCount": {
+      "start": {
+        "title": "Start a count",
+        "desc": "When the system figure and the shelf disagree, open a count for one warehouse."
+      },
+      "enter": {
+        "title": "Enter what you counted",
+        "desc": "Beside each product's «expected», write what you counted. A product you skip is left out of the adjustment."
+      },
+      "complete": {
+        "title": "Complete",
+        "desc": "«Complete count» turns the differences into stock adjustments and books a shortage at cost. It cannot be undone."
+      }
+    },
+    "teamAndPayroll": {
+      "employees": {
+        "title": "Colleagues",
+        "desc": "Add colleagues with their role and branch. The role says what each person sees and may do."
+      },
+      "payroll": {
+        "title": "Payroll",
+        "desc": "Each month's pay is recorded and marked «paid» or «not paid»; paid books an entry and is final."
+      },
+      "leave": {
+        "title": "Leave and attendance",
+        "desc": "Approve or refuse leave and read the month's attendance sheet. «Not recorded» is not «absent»."
+      },
+      "branches": {
+        "title": "Branches",
+        "desc": "Create branches and each branch's warehouse here; a colleague limited to a branch sees only its data."
+      }
+    },
+    "analysis": {
+      "overview": {
+        "title": "Business analysis",
+        "desc": "Profit per product, risky customers and working capital are read from your invoices and books; no new figure is made up."
+      },
+      "breakEven": {
+        "title": "Break-even",
+        "desc": "Break-even says how much you must sell to cover costs. A sale with no recorded cost is fixed with «Cost from buying price», never on its own."
+      }
+    },
+    "dataAndSync": {
+      "status": {
+        "title": "Sync status",
+        "desc": "See what is waiting on this device to be sent and when the last sync ran."
+      },
+      "conflicts": {
+        "title": "Conflicts",
+        "desc": "When two devices change the same thing differently, it lands here for you to decide; neither silently wins."
+      },
+      "import": {
+        "title": "Import from a file",
+        "desc": "Give an Excel or CSV file of customers, products or invoices; a preview and a reconciliation show before anything is recorded."
+      }
+    },
+    "settings": {
+      "business": {
+        "title": "Business",
+        "desc": "Name, books currency, time zone and business type. The books currency can change only until a financial document exists."
+      },
+      "pages": {
+        "title": "Pages and tabs",
+        "desc": "Hide pages and tabs you do not need from your own menu; access is set by role, this is only your view."
+      },
+      "integrations": {
+        "title": "Keys and webhooks",
+        "desc": "Create an API key or add a webhook address to connect another program. A key is shown only once."
+      }
+    },
+    "manufacturing": {
+      "formula": {
+        "title": "Formula",
+        "desc": "For a made product, say what it is made of. A formula already used is not edited; it gets a new version."
+      },
+      "produce": {
+        "title": "Record production",
+        "desc": "«Produce» takes the parts out of stock, adds the made product, and works out its cost from those parts."
+      }
+    },
+    "assistant": {
+      "ask": {
+        "title": "Ask your books",
+        "desc": "Ask in your own words — «how much did we sell this month?» — the answer comes from this business's reports."
+      },
+      "modes": {
+        "title": "Translate, read and act",
+        "desc": "Translate a document or read a photo of an invoice. «Do» proposes, and runs only once a person approves."
+      }
+    }
   },
   "advances": {
     "label": "Pre-sales and pre-purchases",
@@ -11733,6 +12139,69 @@
       "count": "Documents",
       "remaining": "Not yet applied",
       "used": "Applied or refunded"
+    }
+  },
+  "productWaste": {
+    "title": "Waste",
+    "hint": "Goods lost without a sale (spoiled, damaged, expired, lost) leave the stock with their reason.",
+    "open": "Record waste",
+    "quantity": "Quantity",
+    "reason": "Reason",
+    "warehouse": "From warehouse",
+    "pickWarehouse": "Pick the warehouse",
+    "note": "Note (optional)",
+    "submit": "Take out of stock",
+    "saved": "Waste recorded and taken out of stock",
+    "failed": "The waste was not recorded",
+    "reasons": {
+      "spoiled": "Spoiled",
+      "damaged": "Damaged",
+      "expired": "Expired",
+      "lost": "Lost",
+      "other": "Other"
+    },
+    "errors": {
+      "WASTE_MORE_THAN_STOCK": "More than this warehouse holds.",
+      "WASTE_NOT_STOCKED": "A service or a package has no stock."
+    }
+  },
+  "productSerials": {
+    "title": "Serial / IMEI numbers",
+    "hint": "Each device by its own number: which is in stock and which invoice sold it.",
+    "add": "Register arrived numbers",
+    "numbers": "Numbers (one per line)",
+    "unitCost": "Cost of each unit",
+    "submit": "Register",
+    "saved": "Numbers registered",
+    "failed": "The numbers were not registered",
+    "loadFailed": "The numbers could not be read.",
+    "empty": "No number registered yet.",
+    "number": "Number",
+    "statusLabel": "Status",
+    "received": "Received",
+    "status": {
+      "in_stock": "In stock",
+      "sold": "Sold",
+      "returned": "Returned",
+      "scrapped": "Scrapped"
+    },
+    "errors": {
+      "SERIAL_DUPLICATE": "One of the numbers is already registered."
+    }
+  },
+  "invoiceSerials": {
+    "title": "Serials / IMEIs sold",
+    "hint": "Name exactly which devices left with this invoice; the invoice already took them out of stock.",
+    "named": "named",
+    "noneInStock": "No registered number of this product is in stock.",
+    "submit": "Record on this sale",
+    "saved": "Numbers recorded on this sale",
+    "failed": "The numbers were not recorded",
+    "errors": {
+      "SERIAL_COUNT_MISMATCH": "More than this line sold.",
+      "SERIAL_NOT_IN_STOCK": "One of the numbers is no longer in stock.",
+      "SERIAL_UNKNOWN": "One of the numbers is not registered.",
+      "SERIAL_SALE_ONLY": "Only on a sales invoice."
     }
   }
 }

@@ -15,8 +15,10 @@ export const uuidSchema = z.string().uuid()
 export const emailSchema = z
   .string()
   .email('validation.email')
-  .min(5, 'validation.minLength')
-  .max(255, 'validation.maxLength')
+  // A complete message, not «minLength» with a {min} the form cannot fill
+  // (QA-001): an address this short or long is simply not an address.
+  .min(5, 'validation.email')
+  .max(255, 'validation.email')
 
 /**
  * Valid phone number (international, loose format) — اختیاری و رشته خالی هم قبول می‌شود

@@ -8,6 +8,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAuthStore, useGuideStore } from '@hisabche/store'
+import { GUIDE_CATALOG } from '@hisabche/ui-contract'
 import { placeGuideCard, spotlightHole } from '../components/ui/guide/guide-placement'
 
 const remote = vi.hoisted(() => ({
@@ -133,7 +134,7 @@ describe('InteractiveGuide', () => {
   })
 
   it('⚠️ a step the server already has is never shown again', async () => {
-    const all = ['dashboard-overview', 'dashboard-kpis', 'dashboard-sales-chart']
+    const all = (GUIDE_CATALOG.dashboard ?? []).map((step) => step.id)
     remote.state = {
       isSuccess: true,
       isError: false,
@@ -182,7 +183,9 @@ describe('InteractiveGuide', () => {
   })
 
   it('the last step leads to the next page that still has something to teach', async () => {
-    const steps = ['dashboard-overview', 'dashboard-kpis']
+    // Every dashboard step but the last (the guide was rewritten with more
+    // steps on 10 Nov 2026 — read from the catalog, not counted by hand).
+    const steps = (GUIDE_CATALOG.dashboard ?? []).slice(0, -1).map((step) => step.id)
     useGuideStore
       .getState()
       .markStepsSeen(steps.map((stepId) => ({ stepId, routeId: 'dashboard' })))

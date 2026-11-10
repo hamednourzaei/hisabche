@@ -111,7 +111,12 @@ describe('an address that was only a redirect still leads somewhere — on every
     // The exact count stays pinned — it is the guard that proves this test can
     // read the list at all — and the duplicate check below is what keeps the
     // number honest rather than merely current.
-    expect(moved).toHaveLength(28)
+    // 31 on 10 Nov 2026: `cash`, `reports` and `team` — addresses people typed
+    // in the QA session and got a 404 for.
+    expect(moved).toHaveLength(31)
+    expect(moved).toContainEqual(['cash', 'till'])
+    expect(moved).toContainEqual(['reports', 'accounting?tab=reports'])
+    expect(moved).toContainEqual(['team', 'team-and-payroll'])
     expect(moved).toContainEqual(['product-list', 'warehouse?tab=products'])
     const froms = moved.map(([from]) => from)
     expect(froms.filter((from, index) => froms.indexOf(from) !== index)).toEqual([])

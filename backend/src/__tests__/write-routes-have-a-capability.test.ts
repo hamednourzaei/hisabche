@@ -51,6 +51,9 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'saved-views.routes.ts DELETE /api/saved-views/:id': 'OWN_STATE',
   // 9 Nov 2026: the cards a person added to their own dashboard (keyed by userId).
   'dashboard-kpis.routes.ts PUT /api/me/dashboard-kpis': 'OWN_STATE',
+  // 10 Nov 2026 (user-state-01): a person's own invoice drafts and theme.
+  'user-state.routes.ts PUT /api/me/invoice-drafts': 'OWN_STATE',
+  'user-state.routes.ts DELETE /api/me/invoice-drafts/:id': 'OWN_STATE',
   'ai-chat.routes.ts POST /api/ai/ask': 'MEMBER_USE',
   'ai.routes.ts POST /api/ai/query': 'MEMBER_USE',
   'marketplace.routes.ts POST /api/marketplace/apps/:app/report': 'MEMBER_USE',

@@ -124,6 +124,31 @@ export function bucketKpisByCurrency(
   return byCurrency
 }
 
+/** One day of the sales chart while it is being summed. */
+interface ChartDay {
+  label: string
+  value: number
+  date: string
+  invoiceCount: number
+  customerIds: Set<string>
+}
+
+/** The columns the inventory summary reads from `products`. */
+interface InventoryProductRow {
+  quantity: number | string | null
+  buy_price: number | string | null
+  min_stock_level: number | string | null
+  category: string | null
+}
+
+/** The columns the recent-movements read selects. */
+interface MovementRow {
+  product_id: string
+  type: string
+  quantity: number | string
+  created_at: string
+}
+
 export class AnalyticsService {
   // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
   /**
@@ -187,10 +212,15 @@ export class AnalyticsService {
       const lowStockAlerts = (productsResult.data || []).filter(
         (p) => Number(p.quantity) <= Number(p.min_stock_level),
       ).length
+      // Stock on hand only: a product sold below zero has nothing to value,
+      // and is counted instead of subtracted (QA-DASH-NEG).
       const warehouseValue = (productsResult.data || []).reduce(
-        (sum, p) => sum + Number(p.quantity || 0) * Number(p.buy_price || 0),
+        (sum, p) => sum + Math.max(0, Number(p.quantity || 0)) * Number(p.buy_price || 0),
         0,
       )
+      const negativeStockProducts = (productsResult.data || []).filter(
+        (p) => Number(p.quantity || 0) < 0,
+      ).length
 
       // ✅ کارت «فروش کل» و «بدهی مشتریان» — مستقل از RPC/fallback، همیشه از داده‌ی واقعی فاکتورها
       //
@@ -247,6 +277,7 @@ export class AnalyticsService {
         totalSales: Math.round(totalSales * 100) / 100,
         customerDebt: Math.round(customerDebt * 100) / 100,
         warehouseValue: Math.round(warehouseValue * 100) / 100,
+        negativeStockProducts,
         todaySales: Math.round(todaySales * 100) / 100,
         todayInvoices: todayInvoicesList.length,
         // خرید دیگر داخل فروش پنهان نیست — به‌صورت متریک مستقل برمی‌گردد.
@@ -536,7 +567,7 @@ export class AnalyticsService {
 
       const chartData = invoices
         .filter((inv) => new Date(inv.date) >= fourteenDaysAgo)
-        .reduce((acc: any[], inv) => {
+        .reduce((acc: ChartDay[], inv) => {
           const date = inv.date?.split('T')[0] || ''
           let existing = acc.find((d) => d.label === date)
           if (!existing) {
@@ -554,7 +585,7 @@ export class AnalyticsService {
           if (inv.customer_id) existing.customerIds.add(inv.customer_id)
           return acc
         }, [])
-        .map((d: any) => ({
+        .map((d) => ({
           label: d.label,
           value: d.value,
           date: d.date,
@@ -620,25 +651,24 @@ export class AnalyticsService {
         return this.emptyInventorySummary()
       }
 
-      const totalStockValue = products.reduce(
-        (sum: number, p: any) => sum + Number(p.quantity) * Number(p.buy_price),
+      const rows = products as InventoryProductRow[]
+      const totalStockValue = rows.reduce(
+        (sum, p) => sum + Number(p.quantity) * Number(p.buy_price),
         0,
       )
 
-      const lowStockProducts = products.filter(
-        (p: any) => Number(p.quantity) <= Number(p.min_stock_level),
+      const lowStockProducts = rows.filter(
+        (p) => Number(p.quantity) <= Number(p.min_stock_level),
       ).length
 
-      const outOfStockProducts = products.filter((p: any) => Number(p.quantity) === 0).length
+      const outOfStockProducts = rows.filter((p) => Number(p.quantity) === 0).length
 
       const byCategoryMap: Record<string, { count: number; totalValue: number }> = {}
-      for (const p of products) {
-        const cat = (p as any).category || 'general'
-        if (!byCategoryMap[cat]) {
-          byCategoryMap[cat] = { count: 0, totalValue: 0 }
-        }
-        byCategoryMap[cat].count++
-        byCategoryMap[cat].totalValue += Number((p as any).quantity) * Number((p as any).buy_price)
+      for (const p of rows) {
+        const cat = p.category || 'general'
+        const bucket = (byCategoryMap[cat] ??= { count: 0, totalValue: 0 })
+        bucket.count++
+        bucket.totalValue += Number(p.quantity) * Number(p.buy_price)
       }
 
       return {
@@ -665,7 +695,7 @@ export class AnalyticsService {
       .order('created_at', { ascending: false })
       .limit(10)
 
-    return (topMovements || []).map((m: any) => ({
+    return ((topMovements || []) as MovementRow[]).map((m) => ({
       productId: m.product_id,
       productName: '',
       movementType: m.type,

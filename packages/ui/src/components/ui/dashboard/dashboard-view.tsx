@@ -48,6 +48,8 @@ interface DashboardViewProps {
   rangeLoading: boolean
   customerDebt: number
   warehouseValue: number
+  /** Products below zero — named on the stock card, never subtracted (QA-DASH-NEG). */
+  negativeStockProducts?: number | null | undefined
   monthlyGrowth?: number | null | undefined
   /** advances-02: «held for customers · paid to suppliers», already formatted; null = unreadable. */
   openAdvancesText?: string | null | undefined
@@ -488,6 +490,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     previousRangeSalesTotal,
     customerDebt,
     warehouseValue,
+    negativeStockProducts,
     monthlyGrowth,
     openAdvancesText,
     kpiLoading,
@@ -585,6 +588,16 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   value={fmt(warehouseValue)}
                   delta={null}
                   showEmptyDelta
+                  {...(negativeStockProducts
+                    ? {
+                        // The count leads; the message has no ICU placeholder
+                        // (a bare t() on one returns the raw key).
+                        hint: `${formatNumber(negativeStockProducts, locale, 0)} ${t(
+                          'dashboard.negativeStockHint',
+                          'کالا زیر صفر — در ارزش شمرده نشد',
+                        )}`,
+                      }
+                    : {})}
                   isLoading={kpiLoading}
                   onOpen={() => onNavigate('/warehouse')}
                   openLabel={t('dashboard.openWarehouse', 'انبار')}

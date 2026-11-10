@@ -67,7 +67,8 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
 
   // Stock
   warehouse: 'inventory',
-  'stock-count': 'inventory',
+  'stock-count': 'stock-count-and-waste',
+  'warehouse?view=shelfMap': 'warehouse-locations',
   operations: 'inventory',
 
   // Money
@@ -93,7 +94,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   'invoices?tab=pricing': 'promotions',
   'customers?tab=outreach&view=campaigns': 'campaigns',
   'billing?tab=money': 'wallet',
-  dashboard: 'getting-started',
+  dashboard: 'dashboard-overview',
 }
 
 /** The article for a pathname, or null when the route has no documentation. */

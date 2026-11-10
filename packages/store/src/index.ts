@@ -32,8 +32,10 @@ export type { BusinessType, StoreSize, Currency, Language } from './slices/onboa
 export { usePreferencesStore } from './slices/preferences.slice'
 export {
   useInvoiceDraftStore,
+  invoiceDraftSnapshot,
   type InvoiceDraftState,
   type InvoiceDraftCustomer,
+  type InvoiceDraftSnapshot,
 } from './slices/invoice-draft.slice'
 export { useSyncStore } from './slices/sync.slice'
 export {

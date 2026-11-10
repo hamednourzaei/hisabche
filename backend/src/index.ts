@@ -50,6 +50,7 @@ import { authRoutes } from './routes/auth.routes'
 import { emailOtpRoutes } from './routes/email-otp.routes'
 import { guideProgressRoutes } from './routes/guide-progress.routes'
 import { dashboardKpisRoutes } from './routes/dashboard-kpis.routes'
+import { userStateRoutes } from './routes/user-state.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { syncStreamRoutes } from './routes/sync-stream.routes'
 import cmsRoutes from './routes/cms.routes'
@@ -745,6 +746,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(emailOtpRoutes)
   await server.register(guideProgressRoutes)
   await server.register(dashboardKpisRoutes)
+  await server.register(userStateRoutes)
   await server.register(syncRoutes)
   await server.register(syncStreamRoutes)
   await server.register(cmsRoutes)

@@ -27,9 +27,38 @@ const BATCH_COLUMNS =
   'id, product_id, batch_number, expiry_date, manufactured_date, received_qty, remaining_qty, cost_layer_id, warehouse_id, received_on'
 
 const SERIAL_COLUMNS =
-  'id, product_id, serial_number, status, batch_id, cost_layer_id, unit_cost_minor, warehouse_id, received_on'
+  'id, product_id, serial_number, status, batch_id, cost_layer_id, unit_cost_minor, warehouse_id, received_on, invoice_id, sold_on'
 
-function mapBatch(raw: Record<string, any>): StockBatch {
+/** A `stock_batches` row as PostgREST returns it. */
+interface BatchRow {
+  id: string
+  product_id: string
+  batch_number: string
+  expiry_date: string | null
+  manufactured_date: string | null
+  received_qty: number | string | null
+  remaining_qty: number | string | null
+  cost_layer_id: string | null
+  warehouse_id: string | null
+  received_on: string | null
+}
+
+/** A `stock_serials` row as PostgREST returns it. */
+interface SerialRow {
+  id: string
+  product_id: string
+  serial_number: string
+  status: SerialUnit['status']
+  batch_id: string | null
+  cost_layer_id: string | null
+  unit_cost_minor: number | string | null
+  warehouse_id: string | null
+  received_on: string | null
+  invoice_id?: string | null
+  sold_on?: string | null
+}
+
+function mapBatch(raw: BatchRow): StockBatch {
   return {
     id: raw.id,
     productId: raw.product_id,
@@ -44,7 +73,7 @@ function mapBatch(raw: Record<string, any>): StockBatch {
   }
 }
 
-function mapSerial(raw: Record<string, any>): SerialUnit {
+function mapSerial(raw: SerialRow): SerialUnit {
   return {
     id: raw.id,
     productId: raw.product_id,
@@ -55,6 +84,9 @@ function mapSerial(raw: Record<string, any>): SerialUnit {
     unitCostMinor: Number(raw.unit_cost_minor) || 0,
     warehouseId: raw.warehouse_id ?? null,
     receivedOn: String(raw.received_on ?? '').slice(0, 10),
+    // Where a sold unit went — the invoice that handed it over.
+    invoiceId: raw.invoice_id ?? null,
+    soldOn: raw.sold_on ? String(raw.sold_on).slice(0, 10) : null,
   }
 }
 
@@ -328,7 +360,7 @@ export class TraceabilityService {
 
   async listSerials(
     ctx: TenancyContext,
-    filters: { productId?: string; status?: string } = {},
+    filters: { productId?: string; status?: string; invoiceId?: string } = {},
   ): Promise<SerialUnit[]> {
     // Every serial (27 Sep 2026): a unit beyond PostgREST's 1000 rows could
     // not be picked — nor would anyone know it existed.
@@ -338,7 +370,9 @@ export class TraceabilityService {
         .select(SERIAL_COLUMNS)
         .eq('workspace_id', ctx.workspaceId)
       if (filters.productId) query = query.eq('product_id', filters.productId)
-      query = query.eq('status', filters.status ?? 'in_stock')
+      if (filters.invoiceId) query = query.eq('invoice_id', filters.invoiceId)
+      // 'all' = every status (the product page's look-up); default in stock.
+      if (filters.status !== 'all') query = query.eq('status', filters.status ?? 'in_stock')
       return query.order('received_on').order('id', { ascending: true }).range(lo, hi)
     })
     if (error) throw new DatabaseError('Failed to fetch serial numbers', error)
@@ -449,6 +483,68 @@ export class TraceabilityService {
 
     await this.invalidate(ctx.workspaceId)
     return { issued: input.serialNumbers.length, costMinor }
+  }
+
+  /**
+   * Name the exact units a SALE handed over (QA report, Mobile Retail DNA:
+   * «فروش = انتخاب IMEI مشخص، نه یک عدد از مدل»).
+   *
+   * `issueSerials` was written and tested and had no caller: a phone sold on
+   * an invoice stayed «in stock» by serial for ever. The invoice is recorded
+   * first (stock and money move there, as for any product); this then marks
+   * the named units sold ON that invoice. It never moves stock or cost a
+   * second time. Deleting the invoice frees them again (`releaseClaims`).
+   *
+   * Refused when the invoice is not this workspace's sale, does not carry the
+   * product, or would end up with more serials than units sold.
+   */
+  async assignSerialsToSale(
+    ctx: TenancyContext,
+    input: { invoiceId: string; productId: string; serialNumbers: string[] },
+  ) {
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('id, type, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', input.invoiceId)
+      .maybeSingle()
+    if (invoiceError) throw new DatabaseError('Failed to read the invoice', invoiceError)
+    if (!invoice) throw new NotFoundError('INVOICE_NOT_FOUND')
+    const row = invoice as { type?: string | null; status?: string | null }
+    if (row.type === 'purchase') throw new ValidationError('SERIAL_SALE_ONLY')
+    if (row.status === 'cancelled') throw new ValidationError('SERIAL_INVOICE_CANCELLED')
+
+    const { data: lines, error: linesError } = await supabase
+      .from('invoice_items')
+      .select('quantity')
+      .eq('invoice_id', input.invoiceId)
+      .eq('product_id', input.productId)
+    if (linesError) throw new DatabaseError('Failed to read the invoice lines', linesError)
+    const sold = (lines ?? []).reduce(
+      (sum, line) => sum + (Number((line as { quantity?: unknown }).quantity) || 0),
+      0,
+    )
+    if (sold <= 0) throw new ValidationError('SERIAL_PRODUCT_NOT_ON_INVOICE')
+
+    const { count, error: countError } = await supabase
+      .from('stock_serials')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('invoice_id', input.invoiceId)
+      .eq('product_id', input.productId)
+      .eq('status', 'sold')
+    if (countError) throw new DatabaseError('Failed to count the sold serials', countError)
+    if ((count ?? 0) + input.serialNumbers.length > sold) {
+      throw new ValidationError('SERIAL_COUNT_MISMATCH')
+    }
+
+    return this.issueSerials(ctx, {
+      productId: input.productId,
+      serialNumbers: input.serialNumbers,
+      quantity: input.serialNumbers.length,
+      consumerType: 'invoice',
+      consumerId: input.invoiceId,
+    })
   }
 
   // ─── Expiry ───────────────────────────────────────────────────────────────
