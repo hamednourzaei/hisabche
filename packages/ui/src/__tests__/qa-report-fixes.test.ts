@@ -152,3 +152,20 @@ describe('serial numbers — one per line', () => {
     ])
   })
 })
+
+describe('owner, 10 Nov 2026 — menu triggers and the guide', () => {
+  it('a menu trigger keeps its icon and label on one line', () => {
+    const src = code('components/ui/dropdown-menu.tsx')
+    expect(src).not.toContain('<span className="flex-1">{children}</span>')
+    expect(
+      src.split(
+        '<span className="inline-flex min-w-0 flex-1 items-center gap-1.5 whitespace-nowrap">',
+      ).length - 1,
+    ).toBe(2)
+  })
+  it('the guide walks a page from its first step and scrolls a late section into view', () => {
+    const src = code('components/ui/guide/interactive-guide.tsx')
+    expect(src).toContain('return routeSteps.find((step) => !walkedIds.includes(step.id)) ?? null')
+    expect(src).toContain('if (target) bringIntoView(target)')
+  })
+})

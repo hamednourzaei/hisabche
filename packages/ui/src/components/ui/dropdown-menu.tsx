@@ -126,7 +126,13 @@ const LedgerTrigger = React.forwardRef<
       )}
       {...props}
     >
-      <span className="flex-1">{children}</span>
+      {/* ⚠️ A ROW, NOT A PLAIN SPAN (owner, 10 Nov 2026). Preflight makes an
+          <svg> a block, so an icon child took its own line and the label
+          wrapped under it — «فیلتر» below its funnel on every table, at every
+          width. Icon and label stay on one line. */}
+      <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 whitespace-nowrap">
+        {children}
+      </span>
       {/* Caret */}
       <svg
         width="12"
@@ -460,7 +466,13 @@ const LedgerSubTrigger = React.forwardRef<
       )}
       {...props}
     >
-      <span className="flex-1">{children}</span>
+      {/* ⚠️ A ROW, NOT A PLAIN SPAN (owner, 10 Nov 2026). Preflight makes an
+          <svg> a block, so an icon child took its own line and the label
+          wrapped under it — «فیلتر» below its funnel on every table, at every
+          width. Icon and label stay on one line. */}
+      <span className="inline-flex min-w-0 flex-1 items-center gap-1.5 whitespace-nowrap">
+        {children}
+      </span>
       <ChevronRightIcon
         className={cn('size-4 shrink-0', 'text-[hsl(var(--fg-tertiary))]', 'rtl:rotate-180')}
         aria-hidden="true"

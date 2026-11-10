@@ -142,11 +142,24 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     [completedSteps],
   )
 
+  // ⚠️ THE WALK STARTS AT STEP ONE (owner, 10 Nov 2026). It used to open at
+  // the first step not yet seen — after the guide gained steps, a reader who
+  // had seen two of them was dropped into «۳ / ۵» with no context. A page with
+  // anything unseen is now walked from its first step; what this visit walked
+  // is kept here, and the server record still decides whether the page is done.
+  const [walked, setWalked] = useState<{ route: string; ids: readonly string[] }>({
+    route: '',
+    ids: [],
+  })
+  const pageDone = routeSteps.length > 0 && routeSteps.every((step) => isSeen(step.id))
+
   const currentStep = useMemo<GuideStepDefinition | null>(() => {
     if (!recordReady || routeSteps.length === 0) return null
     if (replaying) return routeSteps.find((step) => !replaySeen.includes(step.id)) ?? null
-    return routeSteps.find((step) => !isSeen(step.id)) ?? null
-  }, [recordReady, routeSteps, replaying, replaySeen, isSeen])
+    if (pageDone) return null
+    const walkedIds = walked.route === cleanRoute ? walked.ids : []
+    return routeSteps.find((step) => !walkedIds.includes(step.id)) ?? null
+  }, [recordReady, routeSteps, replaying, replaySeen, pageDone, walked, cleanRoute])
 
   // A replay that ran out ends itself.
   useEffect(() => {
@@ -161,7 +174,6 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
   const currentStepIndex = currentStep
     ? routeSteps.findIndex((s) => s.id === currentStep.id) + 1
     : 0
-  const allSeen = routeSteps.length > 0 && routeSteps.every((step) => isSeen(step.id))
   const nextStop = useMemo(() => nextGuideRoute(cleanRoute, isSeen), [cleanRoute, isSeen])
   const showFinished = finishedRoute === cleanRoute && !currentStep
   const active = Boolean(currentStep) || showFinished
@@ -192,8 +204,24 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
       )
 
     let last = ''
+    let broughtIntoView: HTMLElement | null = null
+    const bringIntoView = (target: HTMLElement) => {
+      if (broughtIntoView === target) return
+      broughtIntoView = target
+      const rect = target.getBoundingClientRect()
+      const offscreen = rect.top < 72 || rect.bottom > window.innerHeight - 12
+      if (!offscreen || typeof target.scrollIntoView !== 'function') return
+      const reduceMotion =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      target.scrollIntoView({
+        block: rect.height > window.innerHeight * 0.6 ? 'start' : 'center',
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      })
+    }
     const measure = () => {
       const target = findTarget()
+      if (target) bringIntoView(target)
       if (!target) {
         if (last !== 'none') {
           last = 'none'
@@ -211,21 +239,9 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     }
 
     // The page is locked while the guide is open, so the guide brings each
-    // section into view itself.
+    // section into view itself — in `measure`, which runs again whenever the
+    // page grows, so a section that renders late is still scrolled to.
     const target = findTarget()
-    if (target) {
-      const rect = target.getBoundingClientRect()
-      const offscreen = rect.top < 72 || rect.bottom > window.innerHeight - 12
-      if (offscreen && typeof target.scrollIntoView === 'function') {
-        const reduceMotion =
-          typeof window.matchMedia === 'function' &&
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        target.scrollIntoView({
-          block: rect.height > window.innerHeight * 0.6 ? 'start' : 'center',
-          behavior: reduceMotion ? 'auto' : 'smooth',
-        })
-      }
-    }
     measure()
 
     // `capture`: the page scrolls inside `<main>`, whose scroll does not bubble.
@@ -275,9 +291,19 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
       advanceReplay(currentStep.id)
       return
     }
-    record([{ stepId: currentStep.id, routeId: cleanRoute }])
-    if (isLast) setFinishedRoute(cleanRoute)
-  }, [currentStep, routeSteps, replaying, advanceReplay, record, cleanRoute])
+    setWalked((prev) => ({
+      route: cleanRoute,
+      ids: [...(prev.route === cleanRoute ? prev.ids : []), currentStep.id],
+    }))
+    if (isLast) {
+      // The page is done: every step is recorded, including ones seen on an
+      // earlier visit and walked again now.
+      record(routeSteps.map((step) => ({ stepId: step.id, routeId: cleanRoute })))
+      setFinishedRoute(cleanRoute)
+    } else if (!isSeen(currentStep.id)) {
+      record([{ stepId: currentStep.id, routeId: cleanRoute }])
+    }
+  }, [currentStep, routeSteps, replaying, advanceReplay, record, cleanRoute, isSeen])
 
   const handleClose = useCallback(() => {
     setFinishedRoute(null)
@@ -355,7 +381,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
 
   // ─── Nothing open: the way back in ─────────────────────────────────────
   if (!active) {
-    if (!recordReady || !allSeen || replaying) return null
+    if (!recordReady || !pageDone || replaying) return null
     return (
       <button
         type="button"

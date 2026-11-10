@@ -182,14 +182,29 @@ describe('InteractiveGuide', () => {
     expect(document.querySelector('[data-guide-card]')).toBeNull()
   })
 
-  it('the last step leads to the next page that still has something to teach', async () => {
-    // Every dashboard step but the last (the guide was rewritten with more
-    // steps on 10 Nov 2026 — read from the catalog, not counted by hand).
-    const steps = (GUIDE_CATALOG.dashboard ?? []).slice(0, -1).map((step) => step.id)
+  it('⚠️ starts at step one even when later steps were seen before (owner, 10 Nov 2026)', () => {
+    const steps = GUIDE_CATALOG.dashboard ?? []
+    // Seen on an earlier visit: the first two. The walk still opens at «1 / n».
     useGuideStore
       .getState()
-      .markStepsSeen(steps.map((stepId) => ({ stepId, routeId: 'dashboard' })))
+      .markStepsSeen(steps.slice(0, 2).map((step) => ({ stepId: step.id, routeId: 'dashboard' })))
     render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    expect(screen.getByText(steps[0]!.titleKey)).toBeTruthy()
+  })
+
+  it('the last step leads to the next page that still has something to teach', async () => {
+    // Every dashboard step but the last was seen before; the walk still goes
+    // from step one (read from the catalog, not counted by hand).
+    const steps = GUIDE_CATALOG.dashboard ?? []
+    useGuideStore
+      .getState()
+      .markStepsSeen(steps.slice(0, -1).map((step) => ({ stepId: step.id, routeId: 'dashboard' })))
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    for (let index = 0; index < steps.length - 1; index++) {
+      await act(async () => {
+        fireEvent.click(screen.getByText('guide.next'))
+      })
+    }
     await act(async () => {
       fireEvent.click(screen.getByText('guide.finish'))
     })
