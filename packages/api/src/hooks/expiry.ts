@@ -15,7 +15,7 @@ import { localDay } from '../lib/local-day'
 // ═══ Types ═══
 
 export type ExpiryState = 'no_expiry' | 'fresh' | 'near_expiry' | 'expired'
-export type SerialStatus = 'in_stock' | 'sold' | 'returned' | 'scrapped'
+export type SerialStatus = 'in_stock' | 'reserved' | 'sold' | 'returned' | 'scrapped'
 
 export interface StockBatch {
   id: string

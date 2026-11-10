@@ -382,6 +382,22 @@
         "RestScene",
         "CurtainScene"
       ]
+    },
+    {
+      "id": "111",
+      "title": "درمان نرم‌افزارهای سطحی — چرا حسابچه؟",
+      "theme": "dark-neon",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "single-focal-stage",
+      "cardQuotaPercent": 0,
+      "components": [
+        "ShallowTrapScene",
+        "FourFlawsScene",
+        "OfflineFirstScene",
+        "MultiDeviceScene",
+        "DeepCustomScene",
+        "CureCurtainScene"
+      ]
     }
   ]
 }

@@ -535,6 +535,7 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
         onDuplicateRow={draft.duplicateRow}
         onRemoveLastRow={draft.removeLastRow}
         onPickProduct={handlePickProduct}
+        onPickVariant={draft.setRowVariant}
         onAddColumn={draft.addColumn}
         onUpdateColumn={draft.updateColumn}
         onSetColumnMultiplier={draft.setColumnMultiplier}

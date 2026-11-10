@@ -10,9 +10,9 @@
 // this panel never changes stock: the purchase invoice did that.
 // ============================================
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { useReceiveSerials, useSerials, type SerialStatus } from '@hisabche/api'
+import { useHoldSerial, useReceiveSerials, useSerials, type SerialStatus } from '@hisabche/api'
 import { FRACTION_DIGITS } from '@hisabche/formatting'
 
 import { Button } from '../button'
@@ -23,6 +23,8 @@ import { typedNumber } from '../../../lib/typed-number'
 import { refusalText } from '../../../lib/refusal-text'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { SelectField } from '../select-field'
+import { useCustomerOptions } from '../business-packs/pack-shared'
 
 type Translate = (key: string, fallback?: string) => string
 
@@ -43,6 +45,7 @@ export function serialLines(text: string): string[] {
 
 const STATUS_KEY: Record<SerialStatus, string> = {
   in_stock: 'productSerials.status.in_stock',
+  reserved: 'productSerials.status.reserved',
   sold: 'productSerials.status.sold',
   returned: 'productSerials.status.returned',
   scrapped: 'productSerials.status.scrapped',
@@ -74,6 +77,24 @@ export function ProductSerialsPanel({
   const [text, setText] = useState('')
   const [cost, setCost] = useState(defaultUnitCost > 0 ? String(defaultUnitCost) : '')
   const [search, setSearch] = useState('')
+  // Mobile Retail DNA (10 Nov 2026): hold one phone for one customer.
+  const hold = useHoldSerial(productId)
+  const customers = useCustomerOptions()
+  const [holding, setHolding] = useState<string | null>(null)
+  const [holdFor, setHoldFor] = useState('')
+  const holdFailed = useCallback(
+    (error: unknown) =>
+      toast.error(
+        refusalText(
+          error,
+          t,
+          'productSerials',
+          ['SERIAL_NOT_IN_STOCK', 'SERIAL_NOT_HELD', 'SERIAL_HOLD_NOT_READY'],
+          t('productSerials.holdFailed', 'انجام نشد'),
+        ),
+      ),
+    [toast, t],
+  )
 
   const numbers = serialLines(text)
   const unitCost = typedNumber(cost)
@@ -115,8 +136,60 @@ export function ProductSerialsPanel({
         labelFallback: 'تاریخ ورود',
         render: (row) => date(row.receivedOn),
       },
+      {
+        id: 'hold',
+        labelKey: 'productSerials.hold',
+        labelFallback: 'رزرو',
+        locked: true,
+        render: (row) =>
+          row.status === 'reserved' ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={hold.isPending}
+              onClick={() =>
+                hold.mutate({ serialId: row.id, customerId: null }, { onError: holdFailed })
+              }
+            >
+              {t('productSerials.release', 'آزاد کردن')}
+            </Button>
+          ) : row.status !== 'in_stock' ? null : holding === row.id ? (
+            <div className="flex items-center gap-1">
+              <SelectField
+                name="customerId"
+                value={holdFor}
+                placeholder={t('productSerials.holdFor', 'برای کدام مشتری')}
+                onChange={setHoldFor}
+                options={customers}
+                searchable
+              />
+              <Button
+                size="sm"
+                disabled={!holdFor || hold.isPending}
+                onClick={() =>
+                  hold.mutate(
+                    { serialId: row.id, customerId: holdFor },
+                    {
+                      onSuccess: () => {
+                        setHolding(null)
+                        setHoldFor('')
+                      },
+                      onError: holdFailed,
+                    },
+                  )
+                }
+              >
+                {t('productSerials.holdSave', 'رزرو')}
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => setHolding(row.id)}>
+              {t('productSerials.holdAction', 'رزرو برای مشتری')}
+            </Button>
+          ),
+      },
     ],
-    [date, t],
+    [date, t, hold, holding, holdFor, customers, holdFailed],
   )
 
   const submit = () => {

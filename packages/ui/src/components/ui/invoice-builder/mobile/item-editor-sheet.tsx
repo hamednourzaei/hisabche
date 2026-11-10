@@ -34,6 +34,7 @@ import { Switch } from '../../switch'
 import { cn } from '../../../../lib/utils'
 import { UNIT_CHOICES } from '../grid/grid-cell'
 import { ProductSearchSheet } from './product-search-sheet'
+import { RowVariantPicker } from '../row-variant-picker'
 
 export interface ItemEditorSheetProps {
   open: boolean
@@ -48,6 +49,8 @@ export interface ItemEditorSheetProps {
     rowId: string,
     product: { id: string; name: string; price: string; unit: string },
   ) => void
+  /** The size / colour of a line whose product has variants. */
+  onPickVariant: (rowId: string, variantId: string | undefined) => void
 }
 
 const PRIMARY_IDS: readonly string[] = [
@@ -74,6 +77,7 @@ export const ItemEditorSheet = memo(function ItemEditorSheet({
   ctx,
   onCellChange,
   onPickProduct,
+  onPickVariant,
 }: ItemEditorSheetProps) {
   if (!row) return null
 
@@ -91,13 +95,23 @@ export const ItemEditorSheet = memo(function ItemEditorSheet({
 
     if (column.id === COLUMN.description) {
       return (
-        <ProductSearchSheet
-          t={t}
-          locale={locale}
-          value={value}
-          onChangeText={set}
-          onPick={(product) => onPickProduct(row.id, product)}
-        />
+        <div className="space-y-1">
+          <ProductSearchSheet
+            t={t}
+            locale={locale}
+            value={value}
+            onChangeText={set}
+            onPick={(product) => onPickProduct(row.id, product)}
+          />
+          {row.productId ? (
+            <RowVariantPicker
+              t={t}
+              productId={row.productId}
+              variantId={row.variantId}
+              onChange={(variantId) => onPickVariant(row.id, variantId)}
+            />
+          ) : null}
+        </div>
       )
     }
 

@@ -223,6 +223,11 @@ export interface InvoiceGridRow {
   /** Present when the description was picked from the warehouse. */
   productId?: string
   /**
+   * The size / colour the line sells, when the product has variants
+   * (variant-stock-01). Dropped when the product changes.
+   */
+  variantId?: string
+  /**
    * The unit the picked product is stocked and priced in.
    *
    * Kept beside the editable line unit so a mismatch can be SHOWN instead of
@@ -900,6 +905,8 @@ export function summarize(input: InvoiceSummaryInput): InvoiceSummary {
 
 export interface MappedInvoiceItem {
   productId?: string
+  /** variant-binding-01: required by the server when the product has variants. */
+  variantId?: string
   productName: string
   quantity: number
   unit: InvoiceUnit
@@ -1019,6 +1026,7 @@ export function rowToInvoiceItem(
 
   return {
     ...(row.productId ? { productId: row.productId } : {}),
+    ...(row.productId && row.variantId ? { variantId: row.variantId } : {}),
     productName,
     quantity: rowQuantity(row),
     unit,

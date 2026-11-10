@@ -379,6 +379,64 @@ export class TraceabilityService {
     return (data ?? []).map(mapSerial)
   }
 
+  /**
+   * Hold a unit for one customer, or release the hold (retail-ops-01). The
+   * status is in the WHERE: only an in-stock unit can be held, only a held one
+   * released, and two people holding the same phone cannot both succeed.
+   */
+  async holdSerial(ctx: TenancyContext, serialId: string, customerId: string | null) {
+    if (customerId) {
+      const { data: customer, error } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', customerId)
+        .maybeSingle()
+      if (error) throw new DatabaseError('Failed to read the customer', error)
+      if (!customer) throw new ValidationError('SERIAL_HOLD_CUSTOMER_NOT_FOUND')
+    }
+    const { data, error } = await supabase
+      .from('stock_serials')
+      .update(
+        customerId
+          ? { status: 'reserved', reserved_for_customer_id: customerId }
+          : { status: 'in_stock', reserved_for_customer_id: null },
+      )
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', serialId)
+      .eq('status', customerId ? 'in_stock' : 'reserved')
+      .select('id, status, reserved_for_customer_id')
+      .maybeSingle()
+    if (error && (error.code === '42703' || error.code === '23514' || error.code === 'PGRST204')) {
+      // retail-ops-01 not run: no column / the old status CHECK.
+      throw new ValidationError('SERIAL_HOLD_NOT_READY')
+    }
+    if (error) throw new DatabaseError('Failed to hold the unit', error)
+    if (!data) throw new ValidationError(customerId ? 'SERIAL_NOT_IN_STOCK' : 'SERIAL_NOT_HELD')
+    await this.invalidate(ctx.workspaceId)
+    return {
+      id: data.id as string,
+      status: data.status as string,
+      heldForCustomerId: (data.reserved_for_customer_id as string | null) ?? null,
+    }
+  }
+
+  /** Who each held unit of a product is held for. Empty before retail-ops-01. */
+  async serialHolds(ctx: TenancyContext, productId: string) {
+    const { data, error } = await supabase
+      .from('stock_serials')
+      .select('id, reserved_for_customer_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', productId)
+      .eq('status', 'reserved')
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) return []
+    if (error) throw new DatabaseError('Failed to read the held units', error)
+    return (data ?? []).map((row) => ({
+      serialId: row.id as string,
+      customerId: row.reserved_for_customer_id as string,
+    }))
+  }
+
   async receiveSerials(
     ctx: TenancyContext,
     input: {

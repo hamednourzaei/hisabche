@@ -2072,6 +2072,29 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'یک روز کامل از زندگی کاسب با یک قوس نور گرم: چای صبح، رسیدهای ظهر، طلب‌های نیمه‌شب که در گوشی مرتب می‌شوند، قفل برنجی کرکره و شبی که چیزی پشت سرت باقی نمی‌ماند.',
   },
+  {
+    id: '111',
+    title: 'درمان نرم‌افزارهای سطحی — چرا حسابچه؟',
+    artDirection: 'procedural-spatial',
+    layoutTopology: 'single-focal-stage',
+    operators: [
+      'ShallowWebTrap',
+      'FourFlawsDiagnostic',
+      'LocalFirstZeroLatency',
+      'MultiPlatformSync',
+      'ModularBusinessFit',
+      'CureResolutionCurtain',
+    ],
+    themeName: 'dark-neon',
+    cardQuotaMax: 0,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'uncomfortable-discovery',
+    merchantPainCategory: 'offline-pos-paralysis',
+    audioStrategy: 'high-contrast-impact',
+    viralTemplate: 'swiss-financial-terminal',
+    description:
+      'نرم‌افزارهای سطحی با قطعی اینترنت قفل می‌کنند و روی گوشی نصب نمی‌شوند؛ حسابچه با موتور آفلاین‌اول، مولتی‌پلتفرم واقعی و انعطاف عمیق، درمان قطعی این آشفتگی است.',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

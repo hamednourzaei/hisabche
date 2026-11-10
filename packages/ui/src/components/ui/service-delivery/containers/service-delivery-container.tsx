@@ -32,6 +32,7 @@ import {
   asList,
   useBranches,
   useCustomers,
+  useServiceResources,
   useEmployees,
   useEntitySyncStates,
   useMoveServiceSessionStatus,
@@ -118,6 +119,8 @@ function ServiceDeliveryContent() {
   // The list endpoints cap at 100 rows. A session naming an id beyond that is
   // still listed — its NAME is unknown, which is what the cell says.
   const customers = useCustomers({ page: 1, limit: 100, sortDirection: 'desc' })
+  // salon-01: the chairs / rooms a session can hold (none = no field).
+  const resources = useServiceResources()
   const products = useProducts({ limit: 100 })
   const employees = useEmployees({ page: 1, limit: 100 })
   const branches = useBranches()
@@ -377,6 +380,9 @@ function ServiceDeliveryContent() {
         serviceOptions={serviceOptions}
         practitionerOptions={practitionerOptions}
         branchOptions={branchOptions}
+        resourceOptions={(resources.data?.resources ?? [])
+          .filter((r) => r.isActive)
+          .map((r) => ({ value: r.id, label: r.name }))}
         hasBranches={hasBranches}
         customerHint={customerHint}
         serviceHint={serviceHint}

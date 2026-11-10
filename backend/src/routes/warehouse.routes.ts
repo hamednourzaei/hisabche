@@ -15,6 +15,7 @@ import {
   stockTransferSchema,
 } from '@hisabche/validation'
 import { WarehouseService } from '../services/warehouse.service'
+import { TransferService } from '../services/warehouse/transfer.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -178,6 +179,102 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
         // «Not enough stock» is a 409 and a bad warehouse a 400 — they were
         // all answered as a bare 500.
         return sendFailure(reply, fastify.log, err, 'Failed to transfer stock')
+      }
+    },
+  )
+
+  // ─── Transfer requests — «Pick Request + Task انباردار» (10 Nov 2026) ──
+  // The K2 transfer document (phase-k-01), wired: the shop asks, the store
+  // approves, picks, ships; the stock moves once, on receive, through the
+  // same engine as POST /api/stock-transfers (TransferService header).
+  const transferService = new TransferService()
+  const transferCreateSchema = z.object({
+    fromWarehouseId: z.string().uuid(),
+    toWarehouseId: z.string().uuid(),
+    notes: z.string().trim().max(500).optional(),
+    lines: z
+      .array(z.object({ productId: z.string().uuid(), quantity: z.number().positive().max(1e9) }))
+      .min(1)
+      .max(100),
+  })
+  const transferActionSchema = z.object({
+    action: z.enum(['approve', 'pick', 'ship', 'mark_in_transit', 'receive', 'cancel']),
+    reason: z.string().trim().max(300).optional(),
+  })
+  const TRANSFER_STATUSES = [
+    'requested',
+    'approved',
+    'picking',
+    'shipped',
+    'in_transit',
+    'received',
+    'cancelled',
+  ] as const
+
+  fastify.get(
+    '/api/transfer-requests',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { status } = request.query as { status?: string }
+        const wanted = TRANSFER_STATUSES.find((s) => s === status)
+        const data = await transferService.list(request.tenancy, wanted)
+        return reply.send({ data })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list the transfer requests')
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/transfer-requests/:id',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        if (!z.string().uuid().safeParse(id).success)
+          return reply.code(400).send({ error: 'Invalid id' })
+        return reply.send({ data: await transferService.get(request.tenancy, id) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to load the transfer request')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/transfer-requests',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = transferCreateSchema.parse(request.body)
+        const data = await transferService.create(request.tenancy, body)
+        return reply.code(201).send({ data })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to raise the transfer request')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/transfer-requests/:id/action',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        if (!z.string().uuid().safeParse(id).success)
+          return reply.code(400).send({ error: 'Invalid id' })
+        const body = transferActionSchema.parse(request.body)
+        const data = await transferService.advance(request.tenancy, id, body.action, {
+          reason: body.reason,
+        })
+        if (body.action === 'receive') {
+          await clearCache('warehouses:*')
+          await clearCache('stock:*')
+          await invalidateMoneyCaches(request.tenancy.workspaceId)
+        }
+        return reply.send({ data })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to move the transfer request')
       }
     },
   )

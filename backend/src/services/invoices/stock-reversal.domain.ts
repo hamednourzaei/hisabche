@@ -18,6 +18,8 @@
 
 export interface MovementRow {
   product_id: string
+  /** variant-stock-01: the variant the movement moved; absent before the migration. */
+  variant_id?: string | null | undefined
   quantity: number | string
   from_warehouse_id: string | null
   to_warehouse_id: string | null
@@ -25,6 +27,8 @@ export interface MovementRow {
 
 export interface ReversalMovement {
   product_id: string
+  /** Named only when the original movement named a variant (pre-migration inserts keep working). */
+  variant_id?: string
   type: 'purchase' | 'sale'
   quantity: number
   from_warehouse_id: string | null
@@ -35,20 +39,27 @@ export interface ReversalMovement {
 const round = (n: number) => Math.round(n * 1000) / 1000
 
 export function netReversal(recorded: readonly MovementRow[]): ReversalMovement[] {
-  const net = new Map<string, { productId: string; warehouseId: string | null; qty: number }>()
+  const net = new Map<
+    string,
+    { productId: string; variantId: string | null; warehouseId: string | null; qty: number }
+  >()
   for (const row of recorded) {
     const warehouseId = row.from_warehouse_id ?? row.to_warehouse_id ?? null
-    const key = `${row.product_id}|${warehouseId ?? ''}`
-    const entry = net.get(key) ?? { productId: row.product_id, warehouseId, qty: 0 }
+    // The variant is part of the key: giving back «2 black L» as «2 of the
+    // product» would leave the variant sold forever (variant-stock-01).
+    const variantId = row.variant_id ?? null
+    const key = `${row.product_id}|${variantId ?? ''}|${warehouseId ?? ''}`
+    const entry = net.get(key) ?? { productId: row.product_id, variantId, warehouseId, qty: 0 }
     entry.qty = round(entry.qty + (Number(row.quantity) || 0))
     net.set(key, entry)
   }
 
   const out: ReversalMovement[] = []
-  for (const { productId, warehouseId, qty } of net.values()) {
+  for (const { productId, variantId, warehouseId, qty } of net.values()) {
     if (qty === 0) continue
     out.push({
       product_id: productId,
+      ...(variantId ? { variant_id: variantId } : {}),
       // A net outflow (a sale) comes back as an inflow, and the other way round.
       type: qty < 0 ? 'purchase' : 'sale',
       quantity: -qty,

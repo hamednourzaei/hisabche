@@ -37,6 +37,7 @@ import { cn } from '../../../../lib/utils'
 import { DescriptionCell } from './description-cell'
 import { GridCell } from './grid-cell'
 import { nameOfCurrency } from '../../../../lib/currency-name'
+import { RowVariantPicker } from '../row-variant-picker'
 
 export interface InvoiceItemsGridProps {
   t: (key: string, fallback?: string) => string
@@ -51,6 +52,8 @@ export interface InvoiceItemsGridProps {
     rowId: string,
     product: { id: string; name: string; price: string; unit: string },
   ) => void
+  /** The size / colour of a line whose product has variants. Absent where lines are not sold (a recipe). */
+  onPickVariant?: ((rowId: string, variantId: string | undefined) => void) | undefined
   onMoveColumn: (id: string, direction: -1 | 1) => void
   onRemoveRow: (rowId: string) => void
   onDuplicateRow: (rowId: string) => void
@@ -112,6 +115,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   onSelectColumn,
   onCellChange,
   onPickProduct,
+  onPickVariant,
   onMoveColumn,
   onRemoveRow,
   onDuplicateRow,
@@ -326,20 +330,30 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                         {...(column.id === COLUMN.description
                           ? {
                               slot: (
-                                <DescriptionCell
-                                  t={t}
-                                  locale={locale}
-                                  value={value}
-                                  productId={row.productId}
-                                  rowIndex={rowIndex}
-                                  columnIndex={columnIndex}
-                                  onChange={(next) =>
-                                    onCellChange(row.id, COLUMN.description, next)
-                                  }
-                                  onPickProduct={(product) => onPickProduct(row.id, product)}
-                                  pickAs={pickAs}
-                                  onKeyDown={handleKeyDown}
-                                />
+                                <div className="space-y-1">
+                                  <DescriptionCell
+                                    t={t}
+                                    locale={locale}
+                                    value={value}
+                                    productId={row.productId}
+                                    rowIndex={rowIndex}
+                                    columnIndex={columnIndex}
+                                    onChange={(next) =>
+                                      onCellChange(row.id, COLUMN.description, next)
+                                    }
+                                    onPickProduct={(product) => onPickProduct(row.id, product)}
+                                    pickAs={pickAs}
+                                    onKeyDown={handleKeyDown}
+                                  />
+                                  {row.productId && onPickVariant ? (
+                                    <RowVariantPicker
+                                      t={t}
+                                      productId={row.productId}
+                                      variantId={row.variantId}
+                                      onChange={(variantId) => onPickVariant(row.id, variantId)}
+                                    />
+                                  ) : null}
+                                </div>
                               ),
                             }
                           : {})}

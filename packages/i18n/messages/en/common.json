@@ -7963,6 +7963,16 @@
         "heading": "Warranty",
         "body1": "For a serialized product you can register a warranty, so it is clear until when each device is covered.",
         "body2": "Repair tickets are not in Hisabche yet; until then, note repairs on the customer's notes."
+      },
+      "variantStock": {
+        "heading": "Size × colour grid and stock per variant",
+        "body1": "«Build a size × colour grid» creates every combination at once, each with its own code; existing variants are not repeated.",
+        "body2": "Each variant has its own stock; «From the product’s stock» splits stock already counted among the variants without changing the product total.",
+        "body3": "On an invoice, a product with variants asks for its size/colour under its name, and that variant’s stock goes down.",
+        "step1": "Open the product page → «Variants and the stock of each».",
+        "step2": "Write the sizes and colours and press «Create variants».",
+        "step3": "Press «Stock» on each variant and record the quantity.",
+        "step4": "On an invoice, choose the variant after picking the product."
       }
     },
     "dashboard-overview": {
@@ -7990,6 +8000,130 @@
         "body1": "Stock value counts only goods actually on hand. If a product was sold past its stock, the card says how many products are below zero so you can fix it with a stock count.",
         "body2": "The change against last month is shown only when last month has a figure to compare with. Very large changes read «more than 999%».",
         "body3": "The light or dark theme is saved under your name too, and follows you to another device."
+      }
+    },
+    "transfer-requests": {
+      "title": "Transfer requests between warehouses",
+      "summary": "The shop asks the store for goods; the storekeeper picks and ships them.",
+      "seoTitle": "Transfer requests and picking guide — Hisabche",
+      "seoDescription": "In Hisabche the shop requests goods from a warehouse; the storekeeper approves, picks and ships, and stock moves only when it is received.",
+      "ask": {
+        "heading": "Asking",
+        "body1": "A transfer request is a document: from which warehouse, to which, which products and how many.",
+        "body2": "Open requests are the storekeeper’s task list; until shipped, a request can be cancelled with a reason.",
+        "step1": "Go to «Warehouse» → «Transfer requests».",
+        "step2": "Press «New request» and choose the source and destination.",
+        "step3": "Enter the products and quantities.",
+        "step4": "Press «Send request»."
+      },
+      "move": {
+        "heading": "When stock moves",
+        "body1": "Approve, pick and ship only change the document’s status; stock leaves the source and arrives at the destination only on «Receive».",
+        "body2": "If receiving stops half-way, pressing «Receive» again moves only the remaining lines; no line ever moves twice."
+      }
+    },
+    "repairs-and-warranty": {
+      "title": "Repairs, warranty and holding a phone",
+      "summary": "Repair slips, the warranty of each device, and holding one phone for one customer.",
+      "seoTitle": "Repair slips and warranty for phone shops — Hisabche",
+      "seoDescription": "In Hisabche a repair slip moves from received to delivered, warranty is read from the serial/IMEI, and the charge is an ordinary sale invoice.",
+      "slip": {
+        "heading": "Repair slip",
+        "body1": "Every device brought in for repair has a slip: customer, device, problem, estimate, technician and promised date.",
+        "body2": "A slip moves no money; the repair is charged with an ordinary sale invoice linked when it is delivered.",
+        "step1": "Go to «People» → «Sessions» → «Repairs».",
+        "step2": "Press «New repair slip».",
+        "step3": "Enter the customer, device and problem (serial/IMEI optional).",
+        "step4": "Move it forward with each row’s buttons until «Delivered»."
+      },
+      "warranty": {
+        "heading": "Warranty",
+        "body1": "When the device is a serial/IMEI the shop registered, the program reads that unit’s warranty record and says whether it is under warranty.",
+        "body2": "No warranty record means «unknown», not «under warranty»."
+      },
+      "hold": {
+        "heading": "Holding for a customer",
+        "body1": "A specific phone can be held for one customer; until released it is not sold to anyone else.",
+        "body2": "Holding does not reduce stock; it only sets that unit aside.",
+        "step1": "Open the product page → «Serial numbers».",
+        "step2": "Press «Hold for a customer» beside the unit.",
+        "step3": "Choose the customer and press «Hold»."
+      }
+    },
+    "currency-exchange": {
+      "title": "Money changer: rates, buying and selling currency, hawala",
+      "summary": "The exchange desk beside the till: rates, trades, holdings of each currency and remittances.",
+      "seoTitle": "Money changer guide: buy and sell rates, currency holdings and hawala — Hisabche",
+      "seoDescription": "In Hisabche a money changer sets buy and sell rates, records trades at a locked rate, sees holdings and profit per currency, and pays remittances against a code.",
+      "rates": {
+        "heading": "Rates",
+        "body1": "Each currency gets a buy rate and a sell rate; a sell rate below the buy rate is refused.",
+        "body2": "Every new rate is a new row; the history is kept.",
+        "step1": "Go to «Till» → «Exchange» → «Rates».",
+        "step2": "Enter the currency, buy rate and sell rate.",
+        "step3": "Press «Set rate»."
+      },
+      "trades": {
+        "heading": "Buying and selling currency",
+        "body1": "«Buy currency» means the shop takes foreign currency and pays book currency; «Sell currency» is the reverse.",
+        "body2": "The rate is recorded on the trade itself and never changes afterwards.",
+        "body3": "You cannot sell more of a currency than is held, and two sales at the same moment cannot both pass the holding.",
+        "step1": "Go to «Exchange» → «Trades».",
+        "step2": "Choose the type and currency.",
+        "step3": "Enter the amount; the rate is suggested from the board.",
+        "step4": "Press «Record trade»."
+      },
+      "positions": {
+        "heading": "Holdings and profit",
+        "body1": "For each currency: the holding, its average cost and the profit realised by sales.",
+        "body2": "Currency trades are not yet posted to the general ledger or the till, because the ledger is not multi-currency yet; these figures are read from the trades themselves."
+      },
+      "hawala": {
+        "heading": "Hawala (remittance)",
+        "body1": "Outgoing: the customer pays here and the partner pays out at the destination. Incoming: the partner tells us and we pay out here.",
+        "body2": "An outgoing code is shown only once; an incoming one is paid only against the right code.",
+        "body3": "«Balance with partners» shows, from paid remittances, how much each partner owes or is owed.",
+        "step1": "Go to «Exchange» → «Hawala».",
+        "step2": "Choose outgoing or incoming and enter the partner, sender and receiver.",
+        "step3": "Enter the amount and fee and press «Record remittance».",
+        "step4": "Move it to «Paid out» with the row’s buttons."
+      },
+      "identity": {
+        "heading": "Identity details",
+        "body1": "Each business may set an amount above which the customer’s name and document number are required.",
+        "body2": "The default is «never»; the law differs by country and the program assumes no limit of its own."
+      }
+    },
+    "salon-chairs-and-commission": {
+      "title": "Salon: chairs and rooms, service catalogue, commission",
+      "summary": "For multi-department salons and barbers: each booking holds its own chair and each provider earns their own commission.",
+      "seoTitle": "Beauty salon and barber shop guide: chairs, services and commission — Hisabche",
+      "seoDescription": "In Hisabche a salon records its chairs and rooms, each service’s duration and materials, and each provider’s commission from delivered sessions.",
+      "resources": {
+        "heading": "Chairs and rooms",
+        "body1": "Every chair, room or bed is a resource; two bookings at the same time never hold the same one.",
+        "body2": "A small barber shop can leave this part unused.",
+        "step1": "Go to «People» → «Sessions» → «Chairs and services».",
+        "step2": "Enter the resource’s name and kind.",
+        "step3": "Press «Add»."
+      },
+      "catalog": {
+        "heading": "Service catalogue",
+        "body1": "Each service records its duration, department, the kind of resource it needs and the materials one delivery uses.",
+        "body2": "When a session is recorded as delivered and no materials are entered by hand, these materials leave the warehouse and their cost is booked.",
+        "step1": "In the same part, choose the service.",
+        "step2": "Enter the duration and department.",
+        "step3": "Add the materials and the quantity per service.",
+        "step4": "Press «Save»."
+      },
+      "commission": {
+        "heading": "Commission",
+        "body1": "Each provider gets a percentage, and the report totals the delivered sessions of a period.",
+        "body2": "Each session’s amount is read from its invoice; a free session is zero.",
+        "body3": "A session taken from a package has no separate price; it is counted but never valued as zero.",
+        "step1": "Go to «Sessions» → «Commission».",
+        "step2": "Enter the provider and percentage and press «Set rate».",
+        "step3": "Choose the period to see each person’s commission."
       }
     }
   },
@@ -10942,7 +11076,8 @@
       "products": "Products",
       "reorder": "Reorder suggestions",
       "deadStock": "Dead stock",
-      "shelfMap": "Shelf map"
+      "shelfMap": "Shelf map",
+      "transfers": "Transfer requests"
     }
   },
   "accountingHub": {
@@ -10968,6 +11103,13 @@
       "followUp": "Follow Up",
       "campaigns": "Campaigns",
       "stale": "Stale opportunities"
+    },
+    "sessionSectionsLabel": "Session sections",
+    "sessionSections": {
+      "sessions": "Sessions",
+      "repairs": "Repairs",
+      "salonSetup": "Chairs and services",
+      "commission": "Commission"
     }
   },
   "serviceDelivery": {
@@ -11072,7 +11214,9 @@
       "search": "Search…",
       "noResults": "Nothing found",
       "pickCustomer": "Choose a customer",
-      "pickService": "Choose a service"
+      "pickService": "Choose a service",
+      "resource": "Chair / room",
+      "noResource": "No specific chair/room"
     },
     "create": {
       "title": "New session",
@@ -11180,7 +11324,8 @@
       "INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT": "No usable credit covers this delivery: the customer's package term has ended or the package is suspended.",
       "PACKAGE_INVOICE_NOT_BOOKED": "The invoice that sold this package is not in the books yet; book it first.",
       "DEFERRED_REVENUE_ACCOUNT_MISSING": "Your books have no «deferred revenue» account.",
-      "ACCOUNTING_PERIOD_LOCKED": "The session date is in a closed accounting period."
+      "ACCOUNTING_PERIOD_LOCKED": "The session date is in a closed accounting period.",
+      "SERVICE_RESOURCE_BUSY": "This chair/room is booked at that time."
     },
     "moveFailed": "The session status was not changed",
     "materials": {
@@ -12183,11 +12328,21 @@
       "in_stock": "In stock",
       "sold": "Sold",
       "returned": "Returned",
-      "scrapped": "Scrapped"
+      "scrapped": "Scrapped",
+      "reserved": "Held"
     },
     "errors": {
-      "SERIAL_DUPLICATE": "One of the numbers is already registered."
-    }
+      "SERIAL_DUPLICATE": "One of the numbers is already registered.",
+      "SERIAL_NOT_IN_STOCK": "This unit is not in stock.",
+      "SERIAL_NOT_HELD": "This unit is not held.",
+      "SERIAL_HOLD_NOT_READY": "Holding is not set up yet (retail-ops-01)."
+    },
+    "holdFailed": "Not done",
+    "release": "Release",
+    "holdFor": "For which customer",
+    "holdSave": "Hold",
+    "holdAction": "Hold for a customer",
+    "hold": "Hold"
   },
   "invoiceSerials": {
     "title": "Serials / IMEIs sold",
@@ -12202,6 +12357,350 @@
       "SERIAL_NOT_IN_STOCK": "One of the numbers is no longer in stock.",
       "SERIAL_UNKNOWN": "One of the numbers is not registered.",
       "SERIAL_SALE_ONLY": "Only on a sales invoice."
+    }
+  },
+  "businessPacks": {
+    "notReady": "This part is not set up yet (its database script has not been run)."
+  },
+  "variantStock": {
+    "size": "Size",
+    "colour": "Colour",
+    "gridDone": "Variants created",
+    "gridFailed": "The variants were not created",
+    "moved": "Variant stock recorded",
+    "moveFailed": "Variant stock was not recorded",
+    "noWarehouse": "No warehouse",
+    "move": "Stock",
+    "title": "Variants (size and colour) and the stock of each",
+    "total": "Product total",
+    "unassigned": "On no variant",
+    "grid": "Build a size × colour grid",
+    "axisName": "Attribute name",
+    "colourExample": "black white",
+    "axisValues": "Values (separated by spaces or commas)",
+    "gridHint": "Each combination becomes a variant with its own code; variants that already exist are not repeated.",
+    "createGrid": "Create variants",
+    "loadFailed": "Variant stock could not be read; this is not «zero».",
+    "totalsBy": "Totals by",
+    "onHand": "On hand",
+    "sold": "Sold",
+    "none": "This product has no variants yet. Start with «Build a size × colour grid».",
+    "quantity": "Quantity",
+    "pickWarehouse": "Warehouse",
+    "save": "Save",
+    "cancel": "Cancel",
+    "variant": "Variant",
+    "byWarehouse": "In warehouses",
+    "actions": "Action",
+    "modes": {
+      "assign": "From the product’s stock",
+      "receive": "New arrival",
+      "remove": "Remove"
+    },
+    "modeHint": {
+      "assign": "Stock already on the product is put on this variant; the product total does not change.",
+      "receive": "New stock arrived for this variant; the product total goes up too.",
+      "remove": "Count correction: taken off this variant."
+    },
+    "errors": {
+      "VARIANT_MATRIX_TOO_LARGE": "The grid has more than 300 variants.",
+      "VARIANT_MATRIX_DUPLICATE_VALUE": "A value is repeated.",
+      "CAPABILITY_NOT_ENABLED": "Variants are not switched on for this business.",
+      "VARIANT_STOCK_NOT_ENOUGH_UNASSIGNED": "That much is not on the product outside its variants.",
+      "VARIANT_STOCK_NOT_ENOUGH": "This variant does not hold that much.",
+      "VARIANT_STOCK_NOT_READY": "Variant stock is not set up yet (variant-stock-01).",
+      "PRODUCT_WAREHOUSE_REQUIRED": "Choose the warehouse."
+    }
+  },
+  "transferRequests": {
+    "created": "Request recorded",
+    "createFailed": "The request was not recorded",
+    "received": "Received; the stock is now in the destination warehouse",
+    "moved": "Status changed",
+    "moveFailed": "Not done",
+    "actionsLabel": {
+      "cancel": "Cancel",
+      "approve": "Approve",
+      "pick": "Start picking",
+      "ship": "Ship",
+      "mark_in_transit": "In transit",
+      "receive": "Receive"
+    },
+    "hint": "The shop asks the store for goods; the storekeeper approves, picks and ships. Stock moves only on «Receive», and until then it is counted in the source warehouse.",
+    "from": "From warehouse",
+    "to": "To warehouse",
+    "product": "Product",
+    "quantity": "Quantity",
+    "removeLine": "Remove line",
+    "addLine": "Another product",
+    "notes": "Note (optional)",
+    "submit": "Send request",
+    "close": "Cancel",
+    "cancelReason": "Reason for cancelling?",
+    "loadFailed": "The requests could not be read; this is not «empty».",
+    "filter": "Status",
+    "open": "Open",
+    "new": "New request",
+    "empty": "No request in this status.",
+    "number": "Number",
+    "route": "From → to",
+    "statusLabel": "Status",
+    "requestedAt": "Requested",
+    "actions": "Action",
+    "status": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "picking": "Picking",
+      "shipped": "Shipped",
+      "in_transit": "In transit",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    },
+    "errors": {
+      "TRANSFER_SAME_WAREHOUSE": "Source and destination are the same.",
+      "TRANSFER_DUPLICATE_PRODUCT": "A product is listed twice.",
+      "TRANSFER_CANCEL_REASON_REQUIRED": "A reason is required to cancel.",
+      "TRANSFER_CONCURRENT_UPDATE": "Someone else just changed it; look again.",
+      "TRANSFER_UNIT_NOT_SUPPORTED": "This request uses a non-base unit and cannot move yet.",
+      "WAREHOUSE_INSUFFICIENT_STOCK": "The source warehouse does not hold that much."
+    }
+  },
+  "repairs": {
+    "invoice": "Sale invoice for this repair (optional)",
+    "noInvoiceWarranty": "Warranty — no invoice",
+    "pickInvoice": "Choose invoice",
+    "status": {
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "received": "Received",
+      "diagnosing": "Diagnosing",
+      "waiting_parts": "Waiting for parts",
+      "repairing": "Repairing",
+      "ready": "Ready"
+    },
+    "createdWarranty": "Repair slip recorded — the device is under warranty",
+    "created": "Repair slip recorded",
+    "createFailed": "The repair slip was not recorded",
+    "moved": "Status changed",
+    "moveFailed": "Not done",
+    "underWarranty": "Warranty",
+    "customer": "Customer",
+    "devicePlaceholder": "e.g. Samsung A54, blue",
+    "problemPlaceholder": "The problem, as the customer describes it",
+    "registeredModel": "Model registered in the shop (optional)",
+    "serial": "Serial / IMEI",
+    "estimate": "Estimate",
+    "technician": "Technician",
+    "promisedOn": "Promised for",
+    "submit": "Record repair slip",
+    "close": "Cancel",
+    "cancelNote": "Why is it cancelled?",
+    "loadFailed": "Repair slips could not be read; this is not «empty».",
+    "filter": "Status",
+    "open": "Open",
+    "new": "New repair slip",
+    "empty": "No repair slip in this status.",
+    "number": "Number",
+    "device": "Device",
+    "problem": "Problem",
+    "statusLabel": "Status",
+    "actions": "Action",
+    "errors": {
+      "REPAIR_MOVE_NOT_ALLOWED": "That move is not allowed from this status.",
+      "REPAIR_CANCEL_NOTE_REQUIRED": "A reason is required to cancel.",
+      "REPAIR_INVOICE_ONLY_ON_DELIVERY": "An invoice is linked only on delivery.",
+      "REPAIR_INVOICE_NOT_THIS_CUSTOMER": "That invoice is not a sale to this customer.",
+      "REPAIR_ESTIMATE_CURRENCY_REQUIRED": "An estimate needs its currency.",
+      "REPAIR_TICKET_CHANGED": "Someone else just changed it; look again.",
+      "REPAIR_CUSTOMER_NOT_FOUND": "Customer not found.",
+      "REPAIR_SERIAL_NOT_FOUND": "That serial was not found.",
+      "REPAIR_NOT_READY": "Repairs are not set up yet (retail-ops-01)."
+    }
+  },
+  "salon": {
+    "resourceAdded": "Added",
+    "failed": "Not done",
+    "retire": "Retire",
+    "reactivate": "Reactivate",
+    "resources": "Chairs, rooms and beds",
+    "resourcesHint": "Two bookings can never hold the same chair or room at the same time.",
+    "resourcePlaceholder": "e.g. Chair 1 or Skin room",
+    "department": "Department",
+    "add": "Add",
+    "catalogSaved": "Service saved",
+    "catalog": "Service catalogue: duration, department and materials",
+    "service": "Service",
+    "duration": "Duration (minutes)",
+    "needs": "Needs",
+    "material": "Material",
+    "perService": "Per service",
+    "remove": "Remove",
+    "materialsFrom": "Take materials from warehouse",
+    "addMaterial": "Material",
+    "update": "Save changes",
+    "save": "Save",
+    "catalogHint": "When a session is recorded as delivered and no materials are entered by hand, these materials leave the warehouse and their cost is booked.",
+    "resourceName": "Name",
+    "kind": "Kind",
+    "active": "Active",
+    "kinds": {
+      "chair": "Chair",
+      "room": "Room",
+      "bed": "Bed",
+      "station": "Station",
+      "equipment": "Equipment"
+    },
+    "errors": {
+      "SERVICE_CATALOG_NOT_A_SERVICE": "That item is not a service.",
+      "SERVICE_CONSUMABLE_DUPLICATE": "A material is listed twice.",
+      "SERVICE_CONSUMABLE_IS_A_SERVICE": "A material must be goods, not a service.",
+      "SERVICE_CONSUMABLE_NOT_FOUND": "Material not found.",
+      "SERVICE_CONSUMABLE_WAREHOUSE_REQUIRED": "Choose the warehouse the materials leave from.",
+      "RESOURCE_DEPARTMENT_NOT_FOUND": "Department not found.",
+      "SALON_NOT_READY": "Salon set-up is not ready yet (salon-01)."
+    }
+  },
+  "commission": {
+    "saved": "Rate saved",
+    "failed": "Not done",
+    "noRate": "Not set",
+    "provider": "Provider",
+    "percent": "Percent",
+    "setRate": "Set rate",
+    "from": "From",
+    "to": "To",
+    "loadFailed": "The commission report could not be read.",
+    "empty": "No delivered session with a provider in this period.",
+    "hint": "Each session’s amount is read from its invoice; a free session is zero, and a session taken from a package has no separate price — it is counted under «No known amount», never as zero.",
+    "sessions": "Sessions",
+    "base": "Services amount",
+    "rate": "Rate",
+    "amount": "Commission",
+    "unknown": "No known amount",
+    "errors": {
+      "COMMISSION_NOT_READY": "Commission is not set up yet (provider-commission-01)."
+    }
+  },
+  "exchange": {
+    "kycNeeded": "This amount is above the set limit; identity details are required.",
+    "fullName": "Full name",
+    "idNumber": "Document number",
+    "tradeSaved": "Trade recorded",
+    "failed": "Not done",
+    "voided": "Voided",
+    "void": "Void",
+    "side": "Type",
+    "amount": "Amount",
+    "rate": "Rate",
+    "customerOptional": "Customer (optional)",
+    "equals": "Equals",
+    "typeAmount": "Enter the amount and the rate",
+    "record": "Record trade",
+    "voidReason": "Why is it voided?",
+    "close": "Cancel",
+    "noTrades": "No trade recorded yet.",
+    "buyRate": "Buy",
+    "sellRate": "Sell",
+    "setRate": "Set rate",
+    "noRates": "No rate set.",
+    "kycLimit": "Amount above which identity details are required (empty = never)",
+    "settingsSaved": "Saved",
+    "saveLimit": "Save limit",
+    "currentLimit": "Current limit",
+    "noPositions": "No currency held yet.",
+    "bookCash": "Effect of trades on cash in the book currency",
+    "remittanceSaved": "Remittance recorded",
+    "direction": "Type",
+    "counterparty": "Counterparty (office / agent)",
+    "sender": "Sender",
+    "receiver": "Receiver",
+    "receiverPhone": "Receiver’s phone",
+    "destination": "City / destination",
+    "fee": "Fee",
+    "partnerCode": "Remittance code given by the partner",
+    "recordIdentity": "Record identity details",
+    "recordRemittance": "Record remittance",
+    "codeOnce": "Remittance code — shown only this once; give it to the sender:",
+    "receiverCode": "Code the receiver shows",
+    "cancelReason": "Reason for cancelling",
+    "noRemittances": "No remittance recorded.",
+    "partnerBalances": "Balance with partners",
+    "theyOwe": "(they owe us)",
+    "weOwe": "(we owe them)",
+    "notInLedger": "Currency trades and remittances are not yet posted to the general ledger or the till (the ledger is not multi-currency yet). Each currency’s holding and profit are read from these trades.",
+    "loadFailed": "Exchange settings could not be read.",
+    "number": "Number",
+    "bookAmount": "Equivalent",
+    "customer": "Customer",
+    "date": "Date",
+    "status": "Status",
+    "currency": "Currency",
+    "setAt": "Updated",
+    "held": "Held",
+    "averageRate": "Average cost",
+    "cost": "Cost of holding",
+    "realized": "Realised profit",
+    "short": "Shortfall",
+    "people": "Sender → receiver",
+    "sides": {
+      "buy": "Buy currency",
+      "sell": "Sell currency",
+      "opening": "Opening holding"
+    },
+    "idTypes": {
+      "national_id": "National ID",
+      "passport": "Passport",
+      "driving_licence": "Driving licence",
+      "other": "Other"
+    },
+    "directions": {
+      "outgoing": "Outgoing",
+      "incoming": "Incoming"
+    },
+    "remittanceStatus": {
+      "created": "Recorded",
+      "sent": "Sent to partner",
+      "paid": "Paid out",
+      "cancelled": "Cancelled"
+    },
+    "remittanceMove": {
+      "sent": "Notified partner",
+      "paid": "Paid out",
+      "cancelled": "Cancel"
+    },
+    "errors": {
+      "FX_POSITION_SHORT": "That much of this currency is not held.",
+      "FX_KYC_REQUIRED": "Identity details are required.",
+      "FX_SAME_AS_BOOK_CURRENCY": "The book currency cannot be traded.",
+      "FX_RATE_SPREAD_NEGATIVE": "The sell rate is below the buy rate.",
+      "FX_RATE_INVALID": "The rate is not a valid number.",
+      "FX_VOID_WOULD_GO_SHORT": "This purchase has been sold; voiding it would make the holding negative.",
+      "FX_ALREADY_VOIDED": "Already voided.",
+      "FX_NOT_READY": "The exchange is not set up yet (exchange-01).",
+      "REMITTANCE_CODE_REQUIRED": "The remittance code is required.",
+      "REMITTANCE_CODE_WRONG": "The remittance code is wrong.",
+      "REMITTANCE_CANCEL_REASON_REQUIRED": "A reason is required to cancel.",
+      "REMITTANCE_CHANGED": "Someone else just changed it.",
+      "REMITTANCE_MOVE_NOT_ALLOWED": "That move is not allowed from this status."
+    }
+  },
+  "variantPicker": {
+    "pick": "Choose size / colour",
+    "required": "This product has several variants; it cannot be recorded without choosing one."
+  },
+  "tillHub": {
+    "label": "Till",
+    "sectionsLabel": "Sections",
+    "loading": "Loading…",
+    "tabs": {
+      "till": "Till",
+      "exchange": "Exchange"
+    },
+    "exchange": {
+      "trades": "Trades",
+      "rates": "Rates",
+      "positions": "Holdings",
+      "remittances": "Hawala"
     }
   }
 }

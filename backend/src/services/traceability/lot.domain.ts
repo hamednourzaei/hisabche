@@ -66,7 +66,8 @@ export interface StockBatch {
   receivedOn: string
 }
 
-export type SerialStatus = 'in_stock' | 'sold' | 'returned' | 'scrapped'
+/** «reserved» = held for one customer (retail-ops-01); it is not sellable to anyone else. */
+export type SerialStatus = 'in_stock' | 'reserved' | 'sold' | 'returned' | 'scrapped'
 
 export interface SerialUnit {
   id: string

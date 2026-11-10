@@ -59,6 +59,10 @@ export interface ServiceDeliverySession {
   readonly serviceOfferingId: string
   readonly practitionerId?: string | null | undefined
   readonly branchId?: string | null | undefined
+  /** salon-01: the chair/room it occupies. */
+  readonly resourceId?: string | null | undefined
+  /** salon-01: its department (HR departments). */
+  readonly departmentId?: string | null | undefined
   readonly sessionDate: string // YYYY-MM-DD
   readonly startTime: string // HH:mm
   readonly endTime: string // HH:mm

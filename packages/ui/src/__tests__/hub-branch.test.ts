@@ -138,7 +138,9 @@ describe('every hub, with one word', () => {
     ['promotions/promotions-container.tsx', 1],
     ['page-hub.tsx', 1],
     ['warehouse/containers/warehouse-tabs-container.tsx', 1],
-    ['customers/containers/customers-hub-container.tsx', 2],
+    // Three tabs, one switch each (customers' roles, outreach, and since 10 Nov
+    // 2026 the sessions tab: sessions | repairs | salon | commission).
+    ['customers/containers/customers-hub-container.tsx', 3],
     ['customers/customer-detail-view.tsx', 1],
     ['team-and-payroll/containers/team-and-payroll-container.tsx', 2],
     ['manufacturing/manufacturing-view.tsx', 1],

@@ -1425,6 +1425,149 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+
+  // ─── QA document business packs (10 Nov 2026) ──────────────────────────
+  {
+    // The grid is one insert; cells are identified by their attributes, so a
+    // retry after success creates nothing (they are all «already there»).
+    routeFile: 'variant.routes.ts',
+    route: 'POST /api/products/:id/variants/matrix',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${SVC}/product/variant.service.ts`, text: 'expandVariantMatrix(' }],
+  },
+  {
+    // Stock is read, then one insert (assign = both rows in ONE insert).
+    // Two moves at the same instant can both pass the read; the second then
+    // shows as a negative variant, never lost — same rule as waste.
+    routeFile: 'variant.routes.ts',
+    route: 'POST /api/products/:id/variants/:variantId/stock',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/product/variant.service.ts`, text: 'checkVariantStockMove(' }],
+  },
+  {
+    routeFile: 'variant.routes.ts',
+    route: 'POST /api/products/:id/variants',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/product/variant.service.ts`, text: 'async createVariant' }],
+  },
+  {
+    routeFile: 'warehouse.routes.ts',
+    route: 'POST /api/transfer-requests',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/warehouse/transfer.service.ts`, text: "status: 'requested'" }],
+  },
+  {
+    // Status in the WHERE; the stock leg at receive is one KEYED transfer per
+    // line (transfer-<id>-<line>), so a retried receive moves nothing twice.
+    routeFile: 'warehouse.routes.ts',
+    route: 'POST /api/transfer-requests/:id/action',
+    mechanisms: ['conditional-update', 'idempotency-key'],
+    evidence: [
+      { file: `${SVC}/warehouse/transfer.service.ts`, text: ".eq('status', current.status)" },
+      {
+        file: `${SVC}/warehouse/transfer.service.ts`,
+        text: 'idempotencyKey: `transfer-${id}-${line.id}`',
+      },
+    ],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/repair/repair-ticket.service.ts`, text: "from('repair_tickets')" }],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/status',
+    mechanisms: ['db-function', 'conditional-update'],
+    evidence: [
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: "rpc('repair_ticket_move'" },
+      { file: 'docs/retail-ops-01-migration.sql', text: 'AND status = p_from;' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'PUT /api/fx/settings',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/exchange/exchange.service.ts`, text: "onConflict: 'workspace_id'" }],
+  },
+  {
+    // The board is history: each rate is a new row; the latest wins by time.
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/rates',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/exchange/exchange.service.ts`, text: "from('fx_rate_board').insert(" },
+    ],
+  },
+  {
+    // «Not more than is held» under a lock per workspace and currency, and
+    // the Idempotency-Key is a unique index the function checks first.
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/trades',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${RT}/exchange.routes.ts`, text: 'readClientRequestId(r)' },
+      { file: 'docs/exchange-01-migration.sql', text: 'pg_advisory_xact_lock' },
+      { file: 'docs/exchange-01-migration.sql', text: 'fx_trades_request_key' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/trades/:id/void',
+    mechanisms: ['db-function', 'conditional-update'],
+    evidence: [
+      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('fx_trade_void'" },
+      { file: 'docs/exchange-01-migration.sql', text: "AND status = 'posted';" },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/remittances',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${RT}/exchange.routes.ts`, text: 'service.createRemittance(r.tenancy' },
+      { file: 'docs/exchange-01-migration.sql', text: 'remittances_request_key' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/remittances/:id/status',
+    mechanisms: ['db-function', 'conditional-update'],
+    evidence: [
+      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('remittance_move'" },
+      { file: 'docs/exchange-01-migration.sql', text: 'FOR UPDATE;' },
+    ],
+  },
+  {
+    routeFile: 'salon.routes.ts',
+    route: 'POST /api/service-resources',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/salon/salon.service.ts`, text: "from('service_resources')" }],
+  },
+  {
+    routeFile: 'salon.routes.ts',
+    route: 'PATCH /api/service-resources/:id',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/salon/salon.service.ts`, text: 'async updateResource' }],
+  },
+  {
+    // The catalog row and its recipe are ONE upsert (the recipe is a column).
+    routeFile: 'salon.routes.ts',
+    route: 'PUT /api/service-catalog/:id',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/salon/salon.service.ts`, text: "onConflict: 'workspace_id,product_id'" },
+    ],
+  },
+  {
+    routeFile: 'salon.routes.ts',
+    route: 'PUT /api/provider-commissions/rates',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/salon/salon.service.ts`, text: "onConflict: 'workspace_id,employee_id'" },
+    ],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

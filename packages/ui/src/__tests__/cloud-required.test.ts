@@ -77,8 +77,11 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 64 again since 9 Nov 2026: ui.dashboard_kpis — the person's added dashboard cards.
     // 65 since 10 Nov 2026: ui.personal_state — saved invoice drafts and the theme.
     // 66 the same day: inventory.waste — «ثبت ضایعات».
-    it('has exactly 66 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(66)
+    // 73 on 10 Nov 2026: the QA document's seven business packs (variant stock,
+    // transfer requests, serial holds, repairs, salon set-up, commission,
+    // currency exchange) — all server tables.
+    it('has exactly 73 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(73)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

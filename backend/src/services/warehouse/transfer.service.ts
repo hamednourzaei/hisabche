@@ -46,15 +46,27 @@
 //      arrived, and the two disagree.
 //
 // This is a product and accounting decision, not a technical one, and getting
-// it wrong writes wrong quantities into the source of truth. So `ship` and
-// `receive` are implemented as far as the DOCUMENT goes, and the stock leg is
-// refused with an explicit code rather than guessed (§21, G4).
+// it wrong writes wrong quantities into the source of truth.
+//
+// ---------------------------------------------------------------------------
+// ✅ DECIDED 10 Nov 2026 (QA document §6 «Pick Request + Task انباردار»):
+// the stock moves ONCE, AT RECEIVE, by the instantaneous engine — one keyed
+// call per line (`transfer-<id>-<line>`), so a retried receive never moves a
+// line twice and a receive that failed half-way finishes on the next try.
+// Until then the goods are counted at the SOURCE: `ship` records who sent
+// them and when, and `stock_in_transit` lists what was sent and not yet
+// received. None of the three options above changes the projection trigger
+// or invents a warehouse; this is option 3 moved to the end of the road,
+// where a shop that sends goods across the street actually counts them.
+// A line in a non-base unit is refused (TRANSFER_UNIT_NOT_SUPPORTED) until
+// the unit conversion is done here too.
 // ============================================
 
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
+import { WarehouseService } from '../warehouse.service'
 
 import {
   canTransition,
@@ -201,17 +213,10 @@ export class TransferService {
       throw new ValidationError('TRANSFER_CANCEL_REASON_REQUIRED')
     }
 
-    // ⚠️ STOP CONDITION — see the header. The stock leg of ship/receive is not
-    // implemented, because where the goods live while in transit is an
-    // undecided product question and guessing writes wrong quantities into the
-    // source of truth for every product in the business.
-    //
-    // Refused with a code the client can show, rather than silently advancing
-    // the document and leaving the stock unmoved — which would be the same
-    // teleporting-stock defect one level up.
-    if (action === 'ship' || action === 'receive') {
-      throw new ConflictError('TRANSFER_STOCK_LEG_NOT_IMPLEMENTED')
-    }
+    // Decided 10 Nov 2026 — see the header: the stock moves at RECEIVE, line
+    // by line, BEFORE the document says «received». A receive that fails
+    // half-way leaves the document «shipped» and the next try finishes it.
+    if (action === 'receive') await this.moveLines(ctx, id)
 
     const now = new Date().toISOString()
     const updates: Record<string, unknown> = { status: verdict.next, updated_at: now }
@@ -222,6 +227,14 @@ export class TransferService {
     if (action === 'approve') {
       updates.approved_by = ctx.userId
       updates.approved_at = now
+    }
+    if (action === 'ship') {
+      updates.shipped_by = ctx.userId
+      updates.shipped_at = now
+    }
+    if (action === 'receive') {
+      updates.received_by = ctx.userId
+      updates.received_at = now
     }
     if (action === 'cancel') {
       updates.cancelled_at = now
@@ -244,6 +257,53 @@ export class TransferService {
     if (!updated) throw new ConflictError('TRANSFER_CONCURRENT_UPDATE')
 
     return this.get(ctx, id)
+  }
+
+  /**
+   * The stock leg of «receive»: each line not yet received is moved by the one
+   * transfer engine with its own key, then marked received. Re-running it
+   * skips what already arrived; the engine's key stops a line moving twice
+   * even when the mark was lost.
+   */
+  private async moveLines(ctx: TenancyContext, id: string): Promise<void> {
+    const transfer = (await this.get(ctx, id)) as unknown as {
+      transfer_number: string | null
+      from_warehouse_id: string
+      to_warehouse_id: string
+      lines: Array<{
+        id: string
+        product_id: string
+        quantity: number | string
+        unit_id: string | null
+        received_quantity: number | string | null
+      }>
+    }
+    if (transfer.lines.some((line) => line.unit_id)) {
+      throw new ValidationError('TRANSFER_UNIT_NOT_SUPPORTED')
+    }
+    const engine = new WarehouseService()
+    for (const line of transfer.lines) {
+      if (line.received_quantity !== null && line.received_quantity !== undefined) continue
+      const quantity = Number(line.quantity)
+      await engine.transferStock(
+        ctx,
+        {
+          productId: line.product_id,
+          fromWarehouseId: transfer.from_warehouse_id,
+          toWarehouseId: transfer.to_warehouse_id,
+          quantity,
+          notes: `transfer ${transfer.transfer_number ?? id}`,
+        },
+        { idempotencyKey: `transfer-${id}-${line.id}` },
+      )
+      const { error } = await supabase
+        .from('stock_transfer_lines')
+        .update({ received_quantity: quantity })
+        .eq('id', line.id)
+        .eq('workspace_id', ctx.workspaceId)
+        .is('received_quantity', null)
+      if (error) throw new DatabaseError('Failed to mark the line received', error)
+    }
   }
 
   /** K3 — what has left a warehouse and not yet arrived. Derived, never stored. */

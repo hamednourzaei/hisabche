@@ -19,6 +19,7 @@ import {
   budgetReportQuerySchema,
   checkBudgetSpendBodySchema,
   reviseBudgetBodySchema,
+  serialHoldSchema,
 } from '@hisabche/validation'
 import { BudgetService } from '../services/budgeting'
 import { TraceabilityService } from '../services/traceability'
@@ -405,6 +406,41 @@ export async function operationsRoutes(fastify: FastifyInstance) {
         return reply.send(await traceabilityService.assignSerialsToSale(request.tenancy, body))
       } catch (err) {
         return fail(reply, err, 'Failed to assign the serial numbers')
+      }
+    },
+  )
+
+  // Hold a unit for a customer / release it (retail-ops-01, 10 Nov 2026).
+  fastify.post(
+    '/serials/:id/hold',
+    { preHandler: stockWrite, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        if (!z.string().uuid().safeParse(id).success)
+          return reply.code(400).send({ error: 'Invalid id' })
+        const body = serialHoldSchema.parse(request.body)
+        return reply.send(
+          await traceabilityService.holdSerial(request.tenancy, id, body.customerId),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to hold the unit')
+      }
+    },
+  )
+
+  fastify.get(
+    '/serials/holds',
+    { preHandler: stockRead, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { productId } = request.query as { productId?: string }
+        if (!productId || !z.string().uuid().safeParse(productId).success) {
+          return reply.code(400).send({ error: 'productId is required' })
+        }
+        return reply.send(await traceabilityService.serialHolds(request.tenancy, productId))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read the held units')
       }
     },
   )

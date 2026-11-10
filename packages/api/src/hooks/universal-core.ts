@@ -1188,6 +1188,8 @@ export interface ServiceDeliverySessionItem {
   settlementReason?: string | null | undefined
   /** Why the session was cancelled. */
   cancellationReason?: string | null | undefined
+  resourceId?: string | null | undefined
+  departmentId?: string | null | undefined
   clientNotes?: string | null | undefined
   internalNotes?: string | null | undefined
   createdAt?: string | undefined
@@ -1222,6 +1224,9 @@ export function useCreateServiceDeliverySession() {
       serviceOfferingId: string
       practitionerId?: string | null | undefined
       branchId?: string | null | undefined
+      /** salon-01: the chair/room; the server refuses a double booking (SERVICE_RESOURCE_BUSY). */
+      resourceId?: string | null | undefined
+      departmentId?: string | null | undefined
       sessionDate: string
       startTime: string
       endTime: string

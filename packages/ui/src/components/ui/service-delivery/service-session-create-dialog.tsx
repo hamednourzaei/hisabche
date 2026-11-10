@@ -52,6 +52,8 @@ export interface ServiceSessionCreateDialogProps {
   serviceOptions: readonly SelectFieldOption[]
   practitionerOptions: readonly SelectFieldOption[]
   branchOptions: readonly SelectFieldOption[]
+  /** salon-01: chairs / rooms; empty = the business tracks none and no field shows. */
+  resourceOptions?: readonly SelectFieldOption[] | undefined
   hasBranches: boolean
   /**
    * What the picker must SAY when it is empty — from the container, because it
@@ -85,6 +87,7 @@ const FIELD_BY_CODE: Record<string, keyof FieldErrors> = {
   PRACTITIONER_ON_LEAVE_ON_SESSION_DATE: 'startTime',
   ATTENDANCE_RECORD_DATE_MISMATCH: 'startTime',
   INVALID_SERVICE_DELIVERY_PAYLOAD: 'sessionDate',
+  SERVICE_RESOURCE_BUSY: 'startTime',
 }
 
 const DEFAULT_DURATION = 30
@@ -109,6 +112,7 @@ function CreateBody({
   serviceOptions,
   practitionerOptions,
   branchOptions,
+  resourceOptions = [],
   hasBranches,
   customerHint,
   serviceHint,
@@ -131,6 +135,7 @@ function CreateBody({
   const [serviceOfferingId, setServiceOfferingId] = useState('')
   const [practitionerId, setPractitionerId] = useState('')
   const [branchId, setBranchId] = useState('')
+  const [resourceId, setResourceId] = useState('')
   const [sessionDate, setSessionDate] = useState(() => toIsoDay(new Date()))
   const [startTime, setStartTime] = useState('09:00')
   const [durationMinutes, setDurationMinutes] = useState(DEFAULT_DURATION)
@@ -189,6 +194,7 @@ function CreateBody({
         settlementMethod,
         practitionerId: practitionerId || null,
         branchId: branchId || null,
+        ...(resourceId ? { resourceId } : {}),
         clientNotes: clientNotes.trim() || null,
       },
       {
@@ -346,6 +352,16 @@ function CreateBody({
                 searchable
                 {...(practitionerHint ? { hint: practitionerHint } : {})}
               />
+              {resourceOptions.length > 0 ? (
+                <SelectInput
+                  label={tr('serviceDelivery.fields.resource', 'صندلی / اتاق')}
+                  name="resourceId"
+                  value={resourceId}
+                  onChange={setResourceId}
+                  options={resourceOptions}
+                  placeholder={tr('serviceDelivery.fields.noResource', 'بدون صندلی/اتاق مشخص')}
+                />
+              ) : null}
               {hasBranches ? (
                 <SelectInput
                   label={tr('serviceDelivery.fields.branch', 'شعبه')}

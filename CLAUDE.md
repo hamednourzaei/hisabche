@@ -192,7 +192,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ممیزی معماری ۸ نوامبر (۱۲ سند) و اصلاح یافته‌ها؛ گام‌های مالک**       | `docs/audit/HISABCHE-MASTER-AUDIT-INDEX.md` · `docs/audit/HISABCHE-FIXES-2026-11-08.md` — **۳ migration اجرا و VERIFY شد (۹ نوامبر)؛ `offline-licence-keys-02` rev2 منتظر اجرای دوباره و VERIFY (۸ سطر)** |
 | **دور UX ۹ نوامبر: پیش‌فروش در سازنده‌ی فاکتور، منوها، داشبورد دلخواه، سربه‌سر** | `.claude/lessons-learned.md` درس ۲۵۵ — advances-03 و user-dashboard-kpis-01 اجرا و VERIFY شد (۹ نوامبر، ۵ از ۵ و ۵ از ۵ true) |
 | **گزارش QA ۹ نوامبر: پیش‌نویس در دیتابیس، تم، ضایعات، واحد بسته↔فله، سریال/IMEI روی فروش، ۶ مقاله، راهنمای ۵۵ گامی** | `docs/product/QA-2026-11-09-RESPONSE.md` · درس ۲۵۶ — user-state-01 (۷/۷) و dashboard-stock-value-01 (۴/۴) اجرا و VERIFY شد، ۱۰ نوامبر |
-| **همه‌ی درس‌ها با شماره (۱–۲۵۶)**                                     | `.claude/lessons-learned.md`                                                |
+| **بسته‌های صنفی سند QA روی هسته‌ی عمومی: لباس (موجودی هر واریانت، جدول سایز×رنگ، واریانت در فاکتور)، درخواست انتقال، تعمیرات/رزرو، صرافی/حواله، سالن/کمیسیون (۱۰ نوامبر)** | `docs/product/QA-2026-11-09-RESPONSE.md` § دور دوم · درس ۲۵۷ — variant-stock-01 (۵/۵)، retail-ops-01 (۸/۸)، exchange-01 (۱۰/۱۰)، salon-01 (۹/۹) اجرا و VERIFY شد، ۱۰ نوامبر |
+| **همه‌ی درس‌ها با شماره (۱–۲۵۷)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

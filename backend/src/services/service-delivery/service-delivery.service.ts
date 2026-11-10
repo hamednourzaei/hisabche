@@ -32,6 +32,10 @@ export interface CreateSessionInput {
   serviceOfferingId: string
   practitionerId?: string | null | undefined
   branchId?: string | null | undefined
+  /** salon-01: the chair/room the session occupies; two sessions never hold one at once. */
+  resourceId?: string | null | undefined
+  /** salon-01: the department (HR departments) the session belongs to. */
+  departmentId?: string | null | undefined
   sessionDate: string
   startTime: string
   endTime: string
@@ -69,6 +73,8 @@ interface ServiceDeliveryDbRow {
   service_offering_id: string
   practitioner_id: string | null
   branch_id: string | null
+  resource_id?: string | null
+  department_id?: string | null
   session_date: string
   start_time: string
   end_time: string
@@ -94,6 +100,8 @@ function mapDbRowToSession(row: ServiceDeliveryDbRow): ServiceDeliverySession {
     serviceOfferingId: row.service_offering_id,
     practitionerId: row.practitioner_id,
     branchId: row.branch_id,
+    resourceId: row.resource_id ?? null,
+    departmentId: row.department_id ?? null,
     sessionDate: row.session_date,
     startTime: row.start_time,
     endTime: row.end_time,
@@ -194,6 +202,10 @@ export class ServiceDeliveryService {
       service_offering_id: input.serviceOfferingId,
       practitioner_id: input.practitionerId ?? null,
       branch_id: input.branchId ?? null,
+      // salon-01: named only when set, so a session without them is written
+      // the same way before the migration.
+      ...(input.resourceId ? { resource_id: input.resourceId } : {}),
+      ...(input.departmentId ? { department_id: input.departmentId } : {}),
       session_date: input.sessionDate,
       start_time: input.startTime,
       end_time: input.endTime,
@@ -213,6 +225,10 @@ export class ServiceDeliveryService {
       .single()
 
     if (error) {
+      // salon-01's guard: the chair/room is taken at that time.
+      if ((error.message ?? '').includes('SERVICE_RESOURCE_BUSY')) {
+        throw new ConflictError('SERVICE_RESOURCE_BUSY')
+      }
       // A twin request committed first: answer with the session it made.
       if (error.code === '23505') {
         const winner = await this.findForReplay(ctx, newId, input)
@@ -309,8 +325,11 @@ export class ServiceDeliveryService {
     if (error) throw this.failureOf(error, 'Failed to deliver service session')
 
     const result = (data ?? {}) as { package_credit_id?: string | null }
-    if (input.consumables && input.consumables.length > 0) {
-      await this.consumeMaterials(ctx, session, input.consumables)
+    // The screen's list when it sent one; otherwise the service's recipe
+    // (salon-01 service_catalog). An explicit empty list means «none used».
+    const materials = input.consumables ?? (await this.recipeOf(ctx, session.serviceOfferingId))
+    if (materials.length > 0) {
+      await this.consumeMaterials(ctx, session, materials)
     }
 
     const delivered = await this.getById(ctx, id)
@@ -480,6 +499,40 @@ export class ServiceDeliveryService {
         `[ServiceDelivery] materials of session ${session.id} not booked: ${outcome.missing.join(', ')}`,
       )
     }
+  }
+
+  /**
+   * The materials one delivery of a service uses, from its catalog row, each
+   * from the warehouse the catalog names. None when the service has no
+   * recipe or salon-01 has not been run.
+   */
+  private async recipeOf(
+    ctx: TenancyContext,
+    serviceProductId: string,
+  ): Promise<NonNullable<DeliverSessionInput['consumables']>> {
+    const { data, error } = await this.db
+      .from('service_catalog')
+      .select('consumables, warehouse_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('product_id', serviceProductId)
+      .maybeSingle()
+    if (error && (error.code === '42P01' || error.code === 'PGRST205')) return []
+    if (error) throw new DatabaseError('Failed to read the service recipe', error)
+    if (!data) return []
+    const list = Array.isArray(data.consumables) ? (data.consumables as unknown[]) : []
+    return list.flatMap((entry) => {
+      const item = entry as { productId?: unknown; quantity?: unknown }
+      const quantity = Number(item.quantity)
+      return typeof item.productId === 'string' && quantity > 0
+        ? [
+            {
+              productId: item.productId,
+              quantity,
+              warehouseId: (data.warehouse_id as string | null) ?? null,
+            },
+          ]
+        : []
+    })
   }
 
   private async ledgerRow(ctx: TenancyContext, entryId: string): Promise<unknown | null> {

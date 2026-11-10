@@ -1133,7 +1133,7 @@ export class ProductService {
   }
 
   /** What one warehouse holds of one product (warehouse_stock, the trigger's figure). */
-  private async warehouseQuantity(productId: string, warehouseId: string): Promise<number> {
+  async warehouseQuantity(productId: string, warehouseId: string): Promise<number> {
     const { data, error } = await supabase
       .from('warehouse_stock')
       .select('quantity')
@@ -1147,7 +1147,8 @@ export class ProductService {
     return Number((data as { quantity?: unknown } | null)?.quantity) || 0
   }
 
-  private async stockWarehouse(
+  /** The warehouse a stock edit names, by the one rule (stockEditWarehouse). Also used by variants. */
+  async stockWarehouse(
     workspaceId: string,
     requested: string | null | undefined,
     mode: 'edit' | 'create',

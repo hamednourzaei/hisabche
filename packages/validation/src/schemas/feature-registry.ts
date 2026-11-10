@@ -329,6 +329,16 @@ export const FEATURE_REGISTRY = {
   'ui.personal_state': { execution: 'server', plans: ALL },
   // 10 Nov 2026: «ثبت ضایعات» — a stock movement out with its reason.
   'inventory.waste': { execution: 'server', plans: ALL },
+  // 10 Nov 2026 — the QA document's business packs. Each is a part of the one
+  // core a kind of business uses; all live on the server (their migrations
+  // are server tables), so offline they say «needs the online edition».
+  'inventory.variant_stock': { execution: 'server', plans: ALL },
+  'inventory.transfer_requests': { execution: 'server', plans: ALL },
+  'inventory.serial_holds': { execution: 'server', plans: ALL },
+  'operations.repairs': { execution: 'server', plans: ALL },
+  'operations.salon_setup': { execution: 'server', plans: ALL },
+  'hr.commission': { execution: 'server', plans: ALL },
+  'finance.currency_exchange': { execution: 'server', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
   'operations.service_delivery': { execution: 'local', plans: ALL },
   // Suspending ONE package GRANT is a manager's decision recorded on the server (append-only events): online only.

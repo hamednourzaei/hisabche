@@ -52,6 +52,7 @@ import { usePageLook } from '../../../../lib/page-look'
 import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
 import { SegmentedControl } from '../../segmented-control'
+import { TransferRequestsSection } from '../../business-packs/transfer-requests-section'
 
 // «پیشنهاد سفارش» and «کالای راکد» (were on /operations): the same products.
 const OpsSectionContainer = lazy(() =>
@@ -101,6 +102,8 @@ export const STOCK_SECTIONS = [
   'warehouses',
   'products',
   'shelfMap',
+  // Smart Location «Pick Request» (10 Nov 2026): the transfer document, wired.
+  'transfers',
   'reorder',
   'deadStock',
 ] as const
@@ -191,7 +194,7 @@ function WarehouseHub() {
       <RegisterCustomizer
         groups={[
           {
-            title: t('pageLook.hubSections' as any),
+            title: t('pageLook.hubSections' as never),
             look,
             keepOne: true,
             items: [
@@ -257,6 +260,8 @@ function WarehouseHub() {
               <WarehouseProductsSection />
             ) : section === 'shelfMap' ? (
               <WarehouseShelfMapSection />
+            ) : section === 'transfers' ? (
+              <TransferRequestsSection />
             ) : (
               <WarehouseStockTab />
             )}

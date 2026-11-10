@@ -83,6 +83,8 @@ export interface InvoiceBuilderPageProps {
     rowId: string,
     product: { id: string; name: string; price: string; unit: string },
   ) => void
+  /** The size / colour of a line whose product has variants. */
+  onPickVariant: (rowId: string, variantId: string | undefined) => void
   onAddColumn: (column: InvoiceColumn) => void
   onUpdateColumn: (id: string, patch: Partial<InvoiceColumn>) => void
   onSetColumnMultiplier: (id: string, sourceId: string | null) => void
@@ -138,6 +140,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   onDuplicateRow,
   onRemoveLastRow: _onRemoveLastRow,
   onPickProduct,
+  onPickVariant,
   onAddColumn,
   onUpdateColumn,
   onSetColumnMultiplier,
@@ -287,6 +290,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           ctx={ctx}
           onCellChange={onCellChange}
           onPickProduct={onPickProduct}
+          onPickVariant={onPickVariant}
         />
 
         <ColumnsSheet
@@ -408,6 +412,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
               onSelectColumn={setSelectedColumnId}
               onCellChange={onCellChange}
               onPickProduct={onPickProduct}
+              onPickVariant={onPickVariant}
               onMoveColumn={onMoveColumn}
               onRemoveRow={onRemoveRow}
               onDuplicateRow={onDuplicateRow}

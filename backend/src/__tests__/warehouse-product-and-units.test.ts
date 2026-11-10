@@ -29,7 +29,9 @@ describe('opening stock into a warehouse', () => {
     // The opening warehouse is chosen by stockEditWarehouse (BUG-080) over
     // this workspace's live warehouses only.
     expect(body).toContain('await this.stockWarehouse(')
-    const assert = product.slice(product.indexOf('private async stockWarehouse'))
+    // Shared with VariantService since 10 Nov 2026 (variant stock edits use the
+    // same rule), so found by name, not by its old `private`.
+    const assert = product.slice(product.indexOf('async stockWarehouse('))
     expect(assert.slice(0, 500)).toContain(".eq('workspace_id', workspaceId)")
     expect(assert.slice(0, 500)).toContain(".is('deleted_at', null)")
   })

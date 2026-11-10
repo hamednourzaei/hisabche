@@ -81,13 +81,16 @@ describe('L5 — the pooled-FIFO invariant', () => {
     expect(warehouse).not.toContain('receiveLayer')
   })
 
-  it('K2’s transfer document does not move layers either, yet', () => {
-    // `ship`/`receive` are refused with TRANSFER_STOCK_LEG_NOT_IMPLEMENTED
-    // (the K2 stop condition). When that is resolved, the layer has to move
-    // with the goods in the same change — the goods and their cost cannot be
-    // in two different places.
+  it('K2’s transfer document moves stock through the SAME engine, so no layers either', () => {
+    // 10 Nov 2026: the K2 stop condition was resolved — «receive» moves each
+    // line through WarehouseService.transferStock (the instantaneous engine),
+    // keyed per line. Cost is not kept per warehouse, so that engine has never
+    // moved layers (test above); the document inherits exactly that. A second
+    // stock path here would be a parallel engine — refused.
     const transfer = code(read('warehouse/transfer.service.ts'))
-    expect(transfer).toContain('TRANSFER_STOCK_LEG_NOT_IMPLEMENTED')
+    expect(transfer).toContain('engine.transferStock(')
+    expect(transfer).toContain('idempotencyKey: `transfer-${id}-${line.id}`')
+    expect(transfer).not.toContain("from('stock_movements')")
     expect(transfer).not.toContain('consumeLayers')
   })
 })

@@ -115,6 +115,42 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/warehouses': proven('DELETE /api/warehouses/:id', 'reverse-guards.test.ts'),
     '/api/stock-transfers': none('corrected by the opposite transfer, not by removal'),
     '/api/warehouses/:id/assign': inert,
+    // 10 Nov 2026: a transfer request is cancelled before it ships; once
+    // received, it is corrected like a direct transfer — by the opposite one.
+    '/api/transfer-requests': unproven('POST /api/transfer-requests/:id/action'),
+    '/api/transfer-requests/:id/action': none(
+      'a received transfer is corrected by the opposite transfer request',
+    ),
+  },
+  // QA document business packs (10 Nov 2026).
+  'variant.routes.ts': {
+    '/api/products/:id/variants': none(
+      'no route retires a variant yet; past invoice lines name it',
+    ),
+    '/api/products/:id/variants/matrix': none(
+      'no route retires a variant yet; past invoice lines name it',
+    ),
+    '/api/products/:id/variants/:variantId/stock': unproven(
+      'POST /api/products/:id/variants/:variantId/stock',
+    ),
+  },
+  'repair.routes.ts': {
+    '/api/repair-tickets': unproven('POST /api/repair-tickets/:id/status'),
+    '/api/repair-tickets/:id/status': none(
+      'the slip history is append-only; a wrong move is followed by the move back where REPAIR_MOVES allows it',
+    ),
+  },
+  'exchange.routes.ts': {
+    '/api/fx/rates': inert,
+    '/api/fx/trades': unproven('POST /api/fx/trades/:id/void'),
+    '/api/fx/trades/:id/void': none('a void is final; a wrongly voided trade is recorded again'),
+    '/api/fx/remittances': unproven('POST /api/fx/remittances/:id/status'),
+    '/api/fx/remittances/:id/status': none(
+      'a payout is money that left; cancel is possible only before it',
+    ),
+  },
+  'salon.routes.ts': {
+    '/api/service-resources': unproven('PATCH /api/service-resources/:id'),
   },
   'customer.routes.ts': {
     '/api/customers': proven('DELETE /api/customers/:id', 'reverse-guards.test.ts'),
@@ -220,6 +256,8 @@ describe('every way forward has a decided way back', () => {
     }
     // Written down so a change to the register is a change someone reads.
     // unproven 16 since 10 Nov 2026: «ثبت ضایعات» (corrected by a stock count).
-    expect(counts).toEqual({ proven: 9, unproven: 16, none: 17, inert: 14 })
+    // 10 Nov 2026 (business packs): +6 unproven (each undone by its own status
+    // or retire route), +6 none (final states), +1 inert (rate board is history).
+    expect(counts).toEqual({ proven: 9, unproven: 22, none: 23, inert: 15 })
   })
 })

@@ -56,6 +56,19 @@ const ServiceDeliveryContainer = lazy(() =>
   })),
 )
 
+// QA document packs (10 Nov 2026) — loaded only when their section opens.
+const RepairTicketsSection = lazy(() =>
+  import('../../business-packs/repair-tickets-section').then((m) => ({
+    default: m.RepairTicketsSection,
+  })),
+)
+const SalonSetupSection = lazy(() =>
+  import('../../business-packs/salon-sections').then((m) => ({ default: m.SalonSetupSection })),
+)
+const CommissionSection = lazy(() =>
+  import('../../business-packs/salon-sections').then((m) => ({ default: m.CommissionSection })),
+)
+
 export const CUSTOMERS_HUB_TABS = ['customers', 'sessions', 'outreach'] as const
 export type CustomersHubTab = (typeof CUSTOMERS_HUB_TABS)[number]
 
@@ -63,6 +76,15 @@ export const CUSTOMER_ROLES = ['all', 'buyer', 'seller'] as const
 export type CustomerRole = (typeof CUSTOMER_ROLES)[number]
 
 export const OUTREACH_SECTIONS = ['followUp', 'campaigns', 'stale'] as const
+
+/**
+ * The «جلسه‌ها» tab's parts (10 Nov 2026, QA document §8–§9): the sessions
+ * themselves, repair slips (mobile shop), the salon's chairs/rooms and
+ * service catalog, and provider commission. One service core — a barber hides
+ * what he does not use with the wrench.
+ */
+export const SESSION_SECTIONS = ['sessions', 'repairs', 'salonSetup', 'commission'] as const
+export type SessionSection = (typeof SESSION_SECTIONS)[number]
 export type OutreachSection = (typeof OUTREACH_SECTIONS)[number]
 
 /** The address each section used to live at — the key of its lock in `NAV_MODULE`. */
@@ -104,12 +126,19 @@ function CustomersHub() {
   const sections = allowedSections.filter((sec) => look.shows(hubLookId('outreach', sec)))
   const offered = allowedTabs.filter((tab) => {
     if (tab === 'outreach') return sections.length > 0
+    if (tab === 'sessions')
+      return SESSION_SECTIONS.some((sec) => look.shows(hubLookId('sessions', sec)))
     return look.shows(hubLookId(tab, tab))
   })
 
   const [active, select] = useHubTab(offered)
   const [role, selectRole] = useHubSection(CUSTOMER_ROLES)
   const [section, selectSection] = useHubSection(sections)
+  const mayReadPay = capabilities.can('payroll.read') !== false
+  const sessionSections = SESSION_SECTIONS.filter(
+    (sec) => look.shows(hubLookId('sessions', sec)) && (sec !== 'commission' || mayReadPay),
+  )
+  const [sessionSection, selectSessionSection] = useHubSection(sessionSections)
 
   return (
     <div className="relative space-y-4" data-guide="customers-page">
@@ -121,11 +150,17 @@ function CustomersHub() {
             keepOne: true,
             items: [
               ...allowedTabs
-                .filter((tab) => tab !== 'outreach')
+                .filter((tab) => tab !== 'outreach' && tab !== 'sessions')
                 .map((tab) => ({
                   id: hubLookId(tab, tab),
                   label: t(`customersHub.tabs.${tab}`),
                 })),
+              ...(allowedTabs.includes('sessions')
+                ? SESSION_SECTIONS.map((sec) => ({
+                    id: hubLookId('sessions', sec),
+                    label: t(`customersHub.sessionSections.${sec}`),
+                  }))
+                : []),
               ...allowedSections.map((sec) => ({
                 id: hubLookId('outreach', sec),
                 label: t(`customersHub.sections.${sec}`),
@@ -175,15 +210,35 @@ function CustomersHub() {
             </Suspense>
           </>
         ) : active === 'sessions' ? (
-          <Suspense
-            fallback={
-              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
-                {t('customersHub.loading')}
-              </p>
-            }
-          >
-            <ServiceDeliveryContainer />
-          </Suspense>
+          <>
+            <SegmentedControl
+              branch
+              label={t('customersHub.sessionSectionsLabel')}
+              options={sessionSections.map((value) => ({
+                value,
+                label: t(`customersHub.sessionSections.${value}`),
+              }))}
+              value={sessionSection}
+              onChange={selectSessionSection}
+            />
+            <Suspense
+              fallback={
+                <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                  {t('customersHub.loading')}
+                </p>
+              }
+            >
+              {sessionSection === 'repairs' ? (
+                <RepairTicketsSection />
+              ) : sessionSection === 'salonSetup' ? (
+                <SalonSetupSection />
+              ) : sessionSection === 'commission' ? (
+                <CommissionSection />
+              ) : (
+                <ServiceDeliveryContainer />
+              )}
+            </Suspense>
+          </>
         ) : (
           <>
             <SegmentedControl

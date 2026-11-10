@@ -46,6 +46,8 @@ describe('two tabs, built from shared parts', () => {
       'warehouses',
       'products',
       'shelfMap',
+      // 10 Nov 2026: Smart Location «Pick Request» — the transfer document.
+      'transfers',
       'reorder',
       'deadStock',
     ])

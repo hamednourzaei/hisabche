@@ -424,20 +424,7 @@ const REGISTER: Capability[] = [
       'The approval ROUTES go through workflow.service and do not use this file.',
     status: 'WRITTEN_NOT_WIRED',
   },
-  {
-    id: 'Warehouse transfer (domain)',
-    file: 'services/warehouse/transfer.domain.ts',
-    symbols: [],
-    note: 'Transfers run through the `warehouse_transfer_stock_keyed` function; this is unused.',
-    status: 'WRITTEN_NOT_WIRED',
-  },
-  {
-    id: 'Warehouse transfer (service)',
-    file: 'services/warehouse/transfer.service.ts',
-    symbols: [],
-    note: 'No route imports it. See the row above.',
-    status: 'WRITTEN_NOT_WIRED',
-  },
+
   {
     id: 'Costing transfer (domain)',
     file: 'services/inventory-costing/transfer.domain.ts',

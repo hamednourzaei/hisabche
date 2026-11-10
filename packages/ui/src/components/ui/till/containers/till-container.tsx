@@ -33,15 +33,26 @@ import {
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { TillView } from '../till-view'
+import { ArrowLeftRight, Wallet } from 'lucide-react'
+import { PageHub } from '../../page-hub'
+import {
+  EXCHANGE_VIEWS,
+  ExchangeSection,
+  type ExchangeView,
+} from '../../business-packs/exchange-section'
 import { CloudRequiredNotice } from '../../cloud-required-notice'
 import { isOfflineNotAvailableError } from '../../../../lib/capability/use-action-availability'
 
-export const TillContainer = memo(function TillContainer() {
+const TillDrawer = memo(function TillDrawer() {
   const translate = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const value = translate(key as Parameters<typeof translate>[0])
-    return value && value !== key ? value : (fallback ?? key)
-  }
+  // Stable across renders: the callbacks below list it as a dependency.
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = translate(key as Parameters<typeof translate>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [translate],
+  )
 
   const [actionError, setActionError] = useState<string | null>(null)
   const [closeNotice, setCloseNotice] = useState<string | null>(null)
@@ -327,4 +338,46 @@ export const TillContainer = memo(function TillContainer() {
   )
 })
 
-TillContainer.displayName = 'TillContainer'
+TillDrawer.displayName = 'TillDrawer'
+
+const EXCHANGE_LABEL: Record<ExchangeView, string> = {
+  trades: 'tillHub.exchange.trades',
+  rates: 'tillHub.exchange.rates',
+  positions: 'tillHub.exchange.positions',
+  remittances: 'tillHub.exchange.remittances',
+}
+
+/**
+ * «صندوق» — the till, and (10 Nov 2026, QA document §10) the money changer's
+ * desk beside it: the same cash counter, a second tab. A shop that does not
+ * change money hides the tab with the wrench (`hub:till`).
+ */
+export function TillContainer() {
+  const t = useTranslations()
+  return (
+    <PageHub
+      label={t('tillHub.label')}
+      sectionsLabel={t('tillHub.sectionsLabel')}
+      loadingLabel={t('tillHub.loading')}
+      lookId="till"
+      tabs={[
+        {
+          id: 'till',
+          label: t('tillHub.tabs.till'),
+          icon: Wallet,
+          sections: [{ id: 'till', label: t('tillHub.tabs.till'), render: () => <TillDrawer /> }],
+        },
+        {
+          id: 'exchange',
+          label: t('tillHub.tabs.exchange'),
+          icon: ArrowLeftRight,
+          sections: EXCHANGE_VIEWS.map((view) => ({
+            id: view,
+            label: t(EXCHANGE_LABEL[view]),
+            render: () => <ExchangeSection view={view} />,
+          })),
+        },
+      ]}
+    />
+  )
+}

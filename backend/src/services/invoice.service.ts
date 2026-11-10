@@ -29,7 +29,7 @@ import { toBaseQuantity, type ProductUnitOption } from './inventory/unit-convers
 import { conflicts } from './conflict'
 import { detectBreaches } from './pos/negative-stock.domain'
 import { netReversal, type MovementRow } from './invoices/stock-reversal.domain'
-import { fetchAllPages } from '../utils/fetch-all-pages'
+import { fetchAllPages, selectAllPages } from '../utils/fetch-all-pages'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {
@@ -2822,18 +2822,37 @@ export class InvoiceService {
     ctx: TenancyContext,
     invoiceId: string,
   ): Promise<Array<Record<string, unknown>>> {
-    const recorded = await fetchAllPages(
-      (from, to) =>
-        supabase
-          .from('stock_movements')
-          .select('id, product_id, quantity, from_warehouse_id, to_warehouse_id')
-          .eq('workspace_id', ctx.workspaceId)
-          .eq('reference_type', 'invoice')
-          .eq('reference_id', invoiceId)
-          .order('id', { ascending: true })
-          .range(from, to),
-      'Failed to read the invoice stock movements',
-    )
+    // variant-stock-01: the variant each movement moved is read too, so it is
+    // given back to the same variant. Before the migration the column does not
+    // exist (42703) and the movements are read without it.
+    const readMovements = (columns: string) =>
+      selectAllPages<MovementRow, { message: string; code?: string }>(
+        (from, to) =>
+          supabase
+            .from('stock_movements')
+            .select(columns)
+            .eq('workspace_id', ctx.workspaceId)
+            .eq('reference_type', 'invoice')
+            .eq('reference_id', invoiceId)
+            .order('id', { ascending: true })
+            .range(from, to) as unknown as PromiseLike<{
+            data: MovementRow[] | null
+            error: { message: string; code?: string } | null
+          }>,
+      )
+    const base = 'id, product_id, quantity, from_warehouse_id, to_warehouse_id'
+    let movements = await readMovements(`${base}, variant_id`)
+    if (
+      movements.error &&
+      (movements.error.code === '42703' || movements.error.code === 'PGRST204') &&
+      (movements.error.message ?? '').includes('variant_id')
+    ) {
+      movements = await readMovements(base)
+    }
+    if (movements.error) {
+      throw new DatabaseError('Failed to read the invoice stock movements', movements.error)
+    }
+    const recorded = movements.data ?? []
     return netReversal(recorded as MovementRow[]).map((m) => ({
       ...m,
       reference_type: 'invoice',
@@ -3343,6 +3362,10 @@ export class InvoiceService {
             // "sale" made every stock movement look like a sale in reports.
             type: direction === 1 ? 'purchase' : 'sale',
             quantity: direction * converted.baseQuantity,
+            // variant-stock-01: the variant the line sells or buys moves too.
+            // Named only when set, so documents without variants keep working
+            // before the migration.
+            ...(item.variantId ? { variant_id: item.variantId } : {}),
             reference_type: 'invoice',
             // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
             // of document and nothing could reach the document itself.

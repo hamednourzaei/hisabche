@@ -1,8 +1,8 @@
 {
   "summary": {
-    "assets": 758,
-    "types": 122,
-    "reels": 110,
+    "assets": 764,
+    "types": 123,
+    "reels": 111,
     "specKinds": 34,
     "reelsWithoutSource": [],
     "reelsWithIdCollision": ["75"],
@@ -15398,7 +15398,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 47
+        "line": 54
       },
       "params": [],
       "dependencies": [
@@ -15433,7 +15433,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 200
+        "line": 206
       },
       "params": [],
       "dependencies": [
@@ -15454,7 +15454,7 @@
           "names": ["faNumber", "InteractiveCursor"]
         }
       ],
-      "doc": "The five records one invoice moves — the documented product truth.",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -15468,7 +15468,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 214
+        "line": 226
       },
       "params": [
         {
@@ -15517,7 +15517,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 341
+        "line": 400
       },
       "params": [
         {
@@ -15544,7 +15544,7 @@
           "names": ["faNumber", "InteractiveCursor"]
         }
       ],
-      "doc": "─── Scene 2: The Four Answers Fold Into One (5.50–12.00s) ──────────────────",
+      "doc": "─── Scene 2: Four Answers Fold Into One (5.50–12.00s) ──────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15566,7 +15566,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 490
+        "line": 570
       },
       "params": [
         {
@@ -15615,7 +15615,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 674
+        "line": 757
       },
       "params": [
         {
@@ -15664,7 +15664,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 785
+        "line": 906
       },
       "params": [
         {
@@ -15713,7 +15713,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 942
+        "line": 1073
       },
       "params": [
         {
@@ -15740,7 +15740,7 @@
           "names": ["faNumber", "InteractiveCursor"]
         }
       ],
-      "doc": "─── Scene 6: The Quiet Brand Curtain (33.00–42.00s) ────────────────────────",
+      "doc": "─── Scene 6: Brand Curtain (33.00–42.00s) — «از جامع، به حسابچه» ────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -18267,7 +18267,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 187
+        "line": 219
       },
       "params": [
         {
@@ -18290,7 +18290,7 @@
           "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
         }
       ],
-      "doc": "─── Scene 1: Dawn Chai (0.00–6.00s) — the light wakes before the phone ─────",
+      "doc": "─── Scene 1: Dawn Chai (0.00–6.00s) — Morning Ritual ───────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -18312,7 +18312,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 270
+        "line": 469
       },
       "params": [
         {
@@ -18357,7 +18357,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 377
+        "line": 713
       },
       "params": [
         {
@@ -18402,7 +18402,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 504
+        "line": 993
       },
       "params": [
         {
@@ -18447,7 +18447,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 647
+        "line": 1202
       },
       "params": [
         {
@@ -18470,7 +18470,7 @@
           "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
         }
       ],
-      "doc": "─── Scene 5: The Home Night (27.00–34.00s) — resting with a mint heart ─────",
+      "doc": "─── Scene 5: The Home Night (27.00–34.00s) — Peaceful Bedside ──────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -18492,7 +18492,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 751
+        "line": 1374
       },
       "params": [
         {
@@ -18515,7 +18515,7 @@
           "names": ["clamp", "ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
         }
       ],
-      "doc": "─── Scene 6: The Brand Curtain (34.00–42.00s) — جزء زندگیت ─────────────────",
+      "doc": "─── Scene 6: Brand Curtain (34.00–42.00s) — «جزء زندگیت» ──────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -19895,6 +19895,335 @@
       "example": {
         "file": "src/reels/reel-104-return-flow.ts",
         "line": 26
+      }
+    },
+    {
+      "id": "scenes/shallow-software#SceneProps",
+      "name": "SceneProps",
+      "type": "type",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 52
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "scenes/shallow-software#ShallowTrapScene",
+      "name": "ShallowTrapScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 154
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "─── Scene 1: Shallow Trap (0.00–6.00s) — Freezing on Web/Server Drops ───────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 25
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 25
+      }
+    },
+    {
+      "id": "scenes/shallow-software#FourFlawsScene",
+      "name": "FourFlawsScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 379
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 22
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "scenes/shallow-software#OfflineFirstScene",
+      "name": "OfflineFirstScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 498
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "─── Scene 3: Offline-First Engine (13.00–20.00s) — Local-First Reliability ──",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 24
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 24
+      }
+    },
+    {
+      "id": "scenes/shallow-software#MultiDeviceScene",
+      "name": "MultiDeviceScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 717
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "─── Scene 4: True Multi-Device (20.00–27.00s) — Phone, Tablet, POS ─────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 23
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 23
+      }
+    },
+    {
+      "id": "scenes/shallow-software#DeepCustomScene",
+      "name": "DeepCustomScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 881
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 21
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 21
+      }
+    },
+    {
+      "id": "scenes/shallow-software#CureCurtainScene",
+      "name": "CureCurtainScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/shallow-software.tsx",
+        "line": 973
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "─── Scene 6: Brand Cure Curtain (34.00–42.00s) — The Final Resolution ───────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 20
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-111-shallow-software.ts",
+        "line": 20
       }
     },
     {
@@ -37961,6 +38290,10 @@
           "line": 2
         },
         {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 2
+        },
+        {
           "file": "src/reels/reel-41-dread.ts",
           "line": 2
         },
@@ -38284,6 +38617,10 @@
           "line": 45
         },
         {
+          "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 44
+        },
+        {
           "file": "src/reels/reel-71-full-cycle.ts",
           "line": 32
         },
@@ -38504,6 +38841,7 @@
         "108",
         "109",
         "110",
+        "111",
         "71",
         "72",
         "73",
@@ -38534,7 +38872,7 @@
         "98",
         "99"
       ],
-      "scenes": 234
+      "scenes": 240
     },
     {
       "id": "spec-kind:branch",
@@ -46949,6 +47287,93 @@
         "scenes/part-of-life#CurtainScene"
       ],
       "importsFrom": ["../engine/types", "./shared", "../scenes/part-of-life"]
+    },
+    {
+      "id": "111",
+      "title": "درمان نرم‌افزارهای سطحی — چرا حسابچه؟",
+      "seconds": 42,
+      "theme": "dark-neon",
+      "artDirection": "procedural-spatial",
+      "layoutTopology": "single-focal-stage",
+      "viralTemplate": "swiss-financial-terminal",
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-111-shallow-software.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 6,
+          "theme": "dark-neon",
+          "component": "ShallowTrapScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 6,
+          "end": 13,
+          "theme": "dark-neon",
+          "component": "FourFlawsScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 13,
+          "end": 20,
+          "theme": "dark-neon",
+          "component": "OfflineFirstScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 20,
+          "end": 27,
+          "theme": "dark-neon",
+          "component": "MultiDeviceScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 27,
+          "end": 34,
+          "theme": "dark-neon",
+          "component": "DeepCustomScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 34,
+          "end": 42,
+          "theme": "dark-neon",
+          "component": "CureCurtainScene",
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "cardEnter",
+        "cardThock",
+        "chime",
+        "cinematicReveal",
+        "ctaResolution",
+        "dataFlow",
+        "impact",
+        "pop",
+        "softTransition",
+        "success",
+        "sync",
+        "tick",
+        "titleHit"
+      ],
+      "assetsUsed": [
+        "scenes/shallow-software#ShallowTrapScene",
+        "scenes/shallow-software#FourFlawsScene",
+        "scenes/shallow-software#OfflineFirstScene",
+        "scenes/shallow-software#MultiDeviceScene",
+        "scenes/shallow-software#DeepCustomScene",
+        "scenes/shallow-software#CureCurtainScene"
+      ],
+      "importsFrom": ["../engine/types", "./shared", "../scenes/shallow-software"]
     }
   ],
   "sounds": {

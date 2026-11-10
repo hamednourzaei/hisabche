@@ -187,7 +187,13 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'settle', bodyCount: 2 },
       { id: 'sync', bodyCount: 2 },
     ],
-    related: ['customers', 'invoices', 'offline'],
+    related: [
+      'salon-chairs-and-commission',
+      'repairs-and-warranty',
+      'customers',
+      'invoices',
+      'offline',
+    ],
   },
   {
     slug: 'inventory',
@@ -199,6 +205,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'insights', bodyCount: 2 },
     ],
     related: [
+      'transfer-requests',
       'warehouse-locations',
       'stock-count-and-waste',
       'units-and-weighed-goods',
@@ -262,15 +269,57 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     related: ['inventory', 'barcodes', 'invoices', 'stock-count-and-waste'],
   },
   {
+    slug: 'transfer-requests',
+    group: 'stock',
+    sections: [
+      { id: 'ask', bodyCount: 2, stepCount: 4 },
+      { id: 'move', bodyCount: 2 },
+    ],
+    related: ['warehouse-locations', 'inventory', 'stock-count-and-waste'],
+  },
+  {
+    slug: 'repairs-and-warranty',
+    group: 'sell',
+    sections: [
+      { id: 'slip', bodyCount: 2, stepCount: 4 },
+      { id: 'warranty', bodyCount: 2 },
+      { id: 'hold', bodyCount: 2, stepCount: 3 },
+    ],
+    related: ['serial-numbers-and-variants', 'invoices', 'customers'],
+  },
+  {
+    slug: 'currency-exchange',
+    group: 'money',
+    sections: [
+      { id: 'rates', bodyCount: 2, stepCount: 3 },
+      { id: 'trades', bodyCount: 3, stepCount: 4 },
+      { id: 'positions', bodyCount: 2 },
+      { id: 'hawala', bodyCount: 3, stepCount: 4 },
+      { id: 'identity', bodyCount: 2 },
+    ],
+    related: ['pos', 'accounting', 'customers'],
+  },
+  {
+    slug: 'salon-chairs-and-commission',
+    group: 'sell',
+    sections: [
+      { id: 'resources', bodyCount: 2, stepCount: 3 },
+      { id: 'catalog', bodyCount: 2, stepCount: 4 },
+      { id: 'commission', bodyCount: 3, stepCount: 3 },
+    ],
+    related: ['service-delivery', 'customers', 'inventory'],
+  },
+  {
     slug: 'serial-numbers-and-variants',
     group: 'stock',
     sections: [
       { id: 'variants', bodyCount: 2, stepCount: 3 },
+      { id: 'variantStock', bodyCount: 3, stepCount: 4 },
       { id: 'serials', bodyCount: 3, stepCount: 3 },
       { id: 'sale', bodyCount: 2, stepCount: 3 },
       { id: 'warranty', bodyCount: 2 },
     ],
-    related: ['inventory', 'invoices', 'barcodes', 'warehouse-locations'],
+    related: ['repairs-and-warranty', 'inventory', 'invoices', 'barcodes', 'warehouse-locations'],
   },
   {
     slug: 'barcodes',
@@ -326,7 +375,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'cash', bodyCount: 3 },
       { id: 'closing', bodyCount: 3 },
     ],
-    related: ['inventory', 'customers', 'permissions', 'barcodes'],
+    related: ['currency-exchange', 'inventory', 'customers', 'permissions', 'barcodes'],
     outbound: [{ href: '/features/offline', labelKey: 'landing.featurePage.offline.h1' }],
   },
   {

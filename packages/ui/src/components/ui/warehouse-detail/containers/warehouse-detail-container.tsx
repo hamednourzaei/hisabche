@@ -28,6 +28,7 @@ import { ProductWastePanel } from '../product-waste-panel'
 import { ProductUnitsPanel } from '../product-units-panel'
 import { ProductSerialsPanel } from '../product-serials-panel'
 import { ProductVariantsSection } from '../../warehouse/product-variants-section'
+import { VariantStockPanel } from '../../business-packs/variant-stock-panel'
 import { ProductFitmentsSection } from '../../warehouse/product-fitments-section'
 import { WarrantiesSection } from '../../invoices/warranties-section'
 import { useBusinessProfile } from '../../../../hooks/use-business-profile'
@@ -358,7 +359,17 @@ ${t('warehouse.deactivateInstead')}`)
               />
             ) : null}
             {profile.capabilities.includes('variants') ? (
-              <ProductVariantsSection t={safeT} productId={id} />
+              <>
+                <ProductVariantsSection t={safeT} productId={id} />
+                {/* Clothing (10 Nov 2026): the size × colour grid and stock per variant. */}
+                <VariantStockPanel
+                  productId={id}
+                  skuPrefix={
+                    (product ? String((product as RawProduct).barcode ?? '') : '') ||
+                    id.slice(0, 6).toUpperCase()
+                  }
+                />
+              </>
             ) : null}
             {profile.capabilities.includes('auto_fitments') ? (
               <ProductFitmentsSection t={safeT} productId={id} />

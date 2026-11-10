@@ -115,6 +115,8 @@ export interface InvoiceDraftState {
     price: string,
     productUnit?: string,
   ) => void
+  /** The size / colour of a line whose product has variants (clothing, 10 Nov 2026). */
+  setRowVariant: (rowId: string, variantId: string | undefined) => void
 
   // ---- columns ----
   initColumns: (currency: CurrencyCode, defaults?: InvoiceDefaultSelection) => void
@@ -269,6 +271,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           const copy: InvoiceGridRow = {
             id: nextRowId(),
             ...(source.productId ? { productId: source.productId } : {}),
+            ...(source.variantId ? { variantId: source.variantId } : {}),
             ...(source.productUnit ? { productUnit: source.productUnit } : {}),
             values: { ...source.values },
           }
@@ -299,6 +302,17 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           )
           return { rows: withTrailingBlank(rows, state.columns) }
         }),
+
+      setRowVariant: (rowId, variantId) =>
+        set((state) => ({
+          rows: state.rows.map((row) => {
+            if (row.id !== rowId) return row
+            const next: InvoiceGridRow = { ...row }
+            if (variantId) next.variantId = variantId
+            else delete next.variantId
+            return next
+          }),
+        })),
 
       setRowProduct: (rowId, productId, name, price, productUnit) =>
         set((state) => {

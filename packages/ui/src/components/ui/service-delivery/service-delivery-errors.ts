@@ -43,6 +43,8 @@ export const SERVICE_DELIVERY_ERROR_CODES = [
   'CONSUMPTION_QUANTITY_MUST_BE_POSITIVE',
   'SERVICE_DELIVERY_MIGRATION_REQUIRED',
   'WORKSPACE_REQUIRED',
+  // salon-01: the chair / room is taken at that time.
+  'SERVICE_RESOURCE_BUSY',
 ] as const
 
 /**
