@@ -70,6 +70,13 @@ export const accountRoles = [
   // asset. Payment Dr supplier_advances / Cr cash|bank; applying it to the
   // purchase invoice Dr payable / Cr supplier_advances.
   'supplier_advances',
+  // V58: production absorbs labor and other (overhead) costs into the goods it
+  // makes. The completion entry credits this account for the «other» costs the
+  // production run carried, mirroring salary_expense for labor. A workspace
+  // that never debits it (no overhead purchases booked) shows a credit
+  // balance — the absorbed-but-never-expensed overhead. Flagged in
+  // V58-OWNER-DECISIONS.
+  'manufacturing_overhead',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

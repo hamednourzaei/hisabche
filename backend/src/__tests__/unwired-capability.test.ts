@@ -450,8 +450,8 @@ const REGISTER: Capability[] = [
     id: 'Webhook service (legacy)',
     file: 'services/webhook.service.ts',
     symbols: [],
-    note: 'No importer. Webhooks are delivered by services/developer.',
-    status: 'WRITTEN_NOT_WIRED',
+    note: 'V58 wired it: it is the inbound subscription processor behind POST /api/webhooks/stripe (routes/payment-webhook.routes.ts).',
+    status: 'WIRED',
   },
   {
     id: 'Attendance domain',

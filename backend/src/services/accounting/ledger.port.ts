@@ -45,6 +45,12 @@ export type LedgerSourceType =
   // once however many warehouses it sits in.
   | 'opening_capital'
   | 'opening_stock'
+  // V58: one production run. Keyed by the work-order id, so a retried
+  // completion (or a replay after a lost response) books the run's value
+  // transfer once. Materials and finished goods move inside the inventory
+  // account, so the entry nets to «inventory up by the labor and overhead
+  // the run absorbed».
+  | 'manufacturing'
   // P1 (V53): money received before the sale. Keyed by the deposit id, so a
   // retried deposit posts one entry, and the deposit is never booked as revenue.
   | 'order_deposit'

@@ -53,6 +53,8 @@ import {
   type SaveProductionDefinition,
 } from '@hisabche/validation'
 import { supabase } from '../db'
+import { ledger } from './accounting'
+import { round2 } from '../utils/money'
 import { domainErrorCode } from './inventory-costing/costing.repository'
 import { stockEditWarehouse, type WarehouseRow } from './inventory/warehouse-summary.domain'
 import { BaseError } from '../errors/base.error'
@@ -824,6 +826,15 @@ export class ManufacturingService {
       .maybeSingle()
     if (existingError) throw this.readFailure('Failed to check the production run', existingError)
     if (existing) {
+      // V58: a retry after a lost response must still be able to close the
+      // ledger gap the first attempt left. `postProductionLedgerEntry` is
+      // idempotent (keyed by the work-order id), so this either posts what is
+      // missing or confirms what is already booked — never a second entry.
+      await this.postProductionLedgerEntry(ctx, {
+        workOrderId: existing.id as string,
+        producedOn: null,
+        breakdown: null,
+      })
       return {
         status: 'already_completed' as const,
         workOrderId: existing.id as string,
@@ -913,6 +924,21 @@ export class ManufacturingService {
     const result = (data ?? {}) as Record<string, unknown>
     const workOrderId = String(result.work_order_id)
 
+    // V58 — the run's value transfer reaches the general ledger. The costing
+    // core moved the stock (components out at actual cost, finished goods in
+    // at total cost); until now the ledger never saw any of it, so inventory
+    // on the books drifted from inventory in stock by the value of every run.
+    await this.postProductionLedgerEntry(ctx, {
+      workOrderId,
+      producedOn: (input.producedOn ?? businessDayOf(new Date(), ctx.timeZone)) as string,
+      breakdown: {
+        total: cost.total,
+        components: round2(cost.componentsCost * cost.quantity),
+        labor: round2(cost.laborCost * cost.quantity),
+        other: round2(cost.otherCost * cost.quantity),
+      },
+    })
+
     await this.invalidate(workspaceId)
     // Stock and stock value changed: the same caches a sale or a purchase clears.
     if (input.addToInventory) await invalidateMoneyCaches(workspaceId)
@@ -962,6 +988,140 @@ export class ManufacturingService {
       actualMaterialCost: numberOrNull(result.actual_material_cost),
       bomId,
       bomVersion,
+    }
+  }
+
+  // ─── V58 — the production run's ledger entry ─────────────────
+
+  /**
+   * Book one completed run's value transfer to the general ledger.
+   *
+   * ECONOMICS. The costing core already moved the stock: components out at
+   * actual cost, finished goods in at the run's total. Both legs touch the
+   * same `inventory` account, so the entry nets to «inventory up by what the
+   * run ADDED» — the labor and the other (overhead) costs:
+   *
+   *   Dr inventory            total_cost
+   *   Cr inventory            components_cost   (materials consumed, actual)
+   *   Cr salary_expense       labor_cost        (wages absorbed into the goods)
+   *   Cr manufacturing_overhead other_cost      (overhead absorbed)
+   *
+   * A cost override changes what the goods are RECEIVED at, not what the run
+   * actually consumed, so the difference — override vs calculated — has no
+   * economic counterpart and is booked to the count accounts the ledger
+   * already uses for value adjustments: a gain credits `inventory_gain`, a
+   * loss debits `inventory_loss`. Flagged in V58-OWNER-DECISIONS.
+   *
+   * ⚠️ IDEMPOTENT — keyed by the work-order id, like every other automatic
+   * posting. Called again from the `already_completed` retry path, so a run
+   * whose first attempt failed to post is picked up instead of lost.
+   *
+   * ⚠️ NEVER throws after the run is recorded. The stock movement is done and
+   * real; a failed posting is logged as its own auditable business event and
+   * retried on the next call for this run. Swallowing it silently would be a
+   * financial loss; throwing would tell the operator the run failed when it
+   * completed.
+   */
+  private async postProductionLedgerEntry(
+    ctx: TenancyContext,
+    run: {
+      workOrderId: string
+      producedOn: string | null
+      breakdown: { total: number; components: number; labor: number; other: number } | null
+    },
+  ): Promise<void> {
+    try {
+      let breakdown = run.breakdown
+      let producedOn = run.producedOn
+
+      if (!breakdown) {
+        // Retry path: read what the run actually recorded. A run that never
+        // entered inventory has no stock value to book.
+        const { data, error } = await supabase
+          .from('work_orders')
+          .select(
+            'total_cost, components_cost, labor_cost, other_cost, add_to_inventory, produced_on, status',
+          )
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('id', run.workOrderId)
+          .maybeSingle()
+        if (error) throw new DatabaseError('Failed to read the production run', error)
+        if (!data || data.status !== 'completed' || !data.add_to_inventory) return
+        const total = round2(Number(data.total_cost) || 0)
+        breakdown = {
+          total,
+          components: round2(Number(data.components_cost) || 0),
+          labor: round2(Number(data.labor_cost) || 0),
+          other: round2(Number(data.other_cost) || 0),
+        }
+        producedOn = String(data.produced_on ?? '').slice(0, 10) || null
+      } else if (breakdown.total <= 0) {
+        return
+      }
+
+      const { accounts } = await ledger.ensureAccountsForRoles(ctx, [
+        'inventory',
+        'salary_expense',
+        'manufacturing_overhead',
+        'inventory_gain',
+        'inventory_loss',
+      ])
+      const inventory = accounts.inventory
+      if (!inventory) {
+        // No chart of accounts at all — reported through the audit log, and
+        // the retry path picks it up once accounts exist.
+        console.error(
+          `[ManufacturingService] work order ${run.workOrderId}: no inventory account, ledger entry deferred`,
+        )
+        return
+      }
+
+      const b = breakdown as { total: number; components: number; labor: number; other: number }
+      const lines: Array<{ accountId: string; debit: number; credit: number }> = [
+        { accountId: inventory, debit: b.total, credit: 0 },
+      ]
+      if (b.components > 0) lines.push({ accountId: inventory, debit: 0, credit: b.components })
+      if (b.labor > 0 && accounts.salary_expense)
+        lines.push({ accountId: accounts.salary_expense, debit: 0, credit: b.labor })
+      if (b.other > 0 && accounts.manufacturing_overhead)
+        lines.push({ accountId: accounts.manufacturing_overhead, debit: 0, credit: b.other })
+
+      // The override (or rounding) difference: what was received minus what
+      // was consumed. Booked where the ledger already books value surprises.
+      const diff = round2(b.total - b.components - b.labor - b.other)
+      if (diff > 0 && accounts.inventory_gain)
+        lines.push({ accountId: accounts.inventory_gain, debit: 0, credit: diff })
+      if (diff < 0 && accounts.inventory_loss)
+        lines.push({ accountId: accounts.inventory_loss, debit: round2(-diff), credit: 0 })
+
+      const outcome = await ledger.postDocument(ctx, {
+        sourceType: 'manufacturing',
+        sourceId: run.workOrderId,
+        date: producedOn ?? businessDayOf(new Date(), ctx.timeZone),
+        description: 'ثبت بهای تولید',
+        reference: run.workOrderId,
+        lines,
+      })
+      if (outcome.status === 'skipped') {
+        console.error(
+          `[ManufacturingService] work order ${run.workOrderId}: ledger entry skipped, missing accounts: ${outcome.missing.join(', ')}`,
+        )
+      }
+    } catch (err) {
+      console.error(
+        `[ManufacturingService] work order ${run.workOrderId}: ledger posting failed — will retry on next call for this run:`,
+        err,
+      )
+      logBusinessEvent({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        entityType: 'work_order',
+        entityId: run.workOrderId,
+        action: 'ledger_posting_failed',
+        title: 'ثبت حسابداری تولید ناموفق بود',
+        metadata: { reason: err instanceof Error ? err.message : String(err) },
+        notify: false,
+      }).catch(() => undefined)
     }
   }
 

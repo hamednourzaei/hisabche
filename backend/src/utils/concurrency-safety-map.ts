@@ -1526,7 +1526,7 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'POST /api/fx/remittances',
     mechanisms: ['idempotency-key', 'unique-constraint'],
     evidence: [
-      { file: `${RT}/exchange.routes.ts`, text: 'service.createRemittance(r.tenancy' },
+      { file: `${RT}/exchange.routes.ts`, text: 'service.createRemittance(' },
       { file: 'docs/exchange-01-migration.sql', text: 'remittances_request_key' },
     ],
   },
