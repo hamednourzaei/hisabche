@@ -86,6 +86,11 @@ export interface TimesheetsViewProps {
     billable: boolean
     description: string
   }) => void
+  members?: Array<Record<string, unknown>> | undefined
+  timeEntries?: Array<Record<string, unknown>> | undefined
+  onAddMember?: ((employeeId: string, role: string) => void) | undefined
+  onRemoveMember?: ((memberId: string) => void) | undefined
+  onBillMilestone?: (() => void) | undefined
   onRefresh: () => void
 }
 
@@ -106,6 +111,11 @@ export const TimesheetsView = memo(function TimesheetsView({
   isBusy,
   onSelectProject,
   onLogTime,
+  members = [],
+  timeEntries = [],
+  onAddMember,
+  onRemoveMember,
+  onBillMilestone,
   onRefresh,
 }: TimesheetsViewProps) {
   const [employeeId, setEmployeeId] = useState('')
@@ -393,6 +403,45 @@ export const TimesheetsView = memo(function TimesheetsView({
               {formatMinutes(profitability.unbillableMinutes)}
             </p>
           ) : null}
+          {onBillMilestone ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <ActionButton disabled={isBusy} onClick={onBillMilestone}>
+                {t('timesheets.billMilestone', 'صدور فاکتور ساعات / مرحله')}
+              </ActionButton>
+            </div>
+          ) : null}
+        </Panel>
+      ) : null}
+
+      {selectedProjectId ? (
+        <Panel title={t('timesheets.members', 'اعضای پروژه')}>
+          <div className="space-y-2 text-xs">
+            <p className="text-[hsl(var(--fg-secondary))]">
+              {members.length} {t('common.member', 'عضو')} · {timeEntries.length}{' '}
+              {t('timesheets.entries', 'ثبت زمان')}
+            </p>
+            {onAddMember ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <ActionButton
+                  disabled={isBusy || employeeId.trim() === ''}
+                  onClick={() => onAddMember(employeeId.trim(), 'member')}
+                >
+                  {t('timesheets.addMember', 'افزودن به پروژه')}
+                </ActionButton>
+                {members.length > 0 && onRemoveMember ? (
+                  <ActionButton
+                    disabled={isBusy}
+                    onClick={() => {
+                      const firstId = String(members[0]?.id ?? '')
+                      if (firstId) onRemoveMember(firstId)
+                    }}
+                  >
+                    {t('timesheets.removeMember', 'حذف عضو')}
+                  </ActionButton>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </Panel>
       ) : null}
     </CapabilityPage>

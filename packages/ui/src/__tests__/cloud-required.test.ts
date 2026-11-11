@@ -80,8 +80,15 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 73 on 10 Nov 2026: the QA document's seven business packs (variant stock,
     // transfer requests, serial holds, repairs, salon set-up, commission,
     // currency exchange) — all server tables.
-    it('has exactly 73 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(73)
+    // 77 on 11 Nov 2026: V58's four server-only features (reservations, bin move,
+    // leave policy, payslip) — Postgres functions / server PDF, no device engine.
+    // 83 on 11 Nov 2026 (V60 Slice 6): +6 server-only features (`sales.orders`,
+    // `operations.package_grants`, and the 4 unsplit server-only extensions
+    // `accounting.variant_report`, `invoice.exchange`, `trade.gold_ledger`, `inventory.serial_returns`).
+    // 86 on 11 Nov 2026 (V60 Slices 9–11): +3 server-only features (`commerce.contracts`,
+    // `purchase.three_way_match`, `operations.quality`).
+    it('has exactly 86 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(86)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

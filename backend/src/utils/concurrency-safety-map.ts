@@ -782,6 +782,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       { file: SQL, text: 'cost_layers_source_key' },
     ],
   },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/purchase-orders/from-suggestions',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${SVC}/purchasing.service.ts`, text: 'createDraftPurchaseOrdersFromSuggestions' },
+      {
+        file: `${SVC}/purchasing.service.ts`,
+        text: "sourceIdOf(workspaceId, 'purchase_order', key)",
+      },
+    ],
+  },
 
   // ─── Accounting (prefix /api/accounting) ─────────────────────────────────
   {
@@ -1022,6 +1034,21 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       {
         file: 'docs/invoice-return-05-core-migration.sql',
         text: 'invoice_return_refunds_request_idx',
+      },
+    ],
+  },
+  {
+    routeFile: 'invoice-return.routes.ts',
+    route: 'POST /api/invoices/:id/exchange',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      {
+        file: `${RT}/invoice-return.routes.ts`,
+        text: "'/api/invoices/:id/exchange'",
+      },
+      {
+        file: `${SVC}/sales/invoice-return.service.ts`,
+        text: "rpc('invoice_return_create'",
       },
     ],
   },
@@ -1509,6 +1536,45 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     ],
   },
   {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/approve',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/repair/repair-ticket.service.ts`, text: 'async approve' }],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/parts',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: 'reservations.reserve(' },
+      { file: 'docs/stock-reservations-01-migration.sql', text: 'stock_reserve' },
+    ],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/parts/:partId/consume',
+    mechanisms: ['conditional-update', 'idempotency-key'],
+    evidence: [
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: "eq('status', 'reserved')" },
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: 'costing.recordIssue' },
+    ],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/parts/:partId/release',
+    mechanisms: ['conditional-update'],
+    evidence: [{ file: `${SVC}/repair/repair-ticket.service.ts`, text: 'reservations.release(' }],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/bill',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: 'repair-bill-' },
+      { file: `${RT}/repair.routes.ts`, text: 'readClientRequestId(request)' },
+    ],
+  },
+  {
     routeFile: 'exchange.routes.ts',
     route: 'PUT /api/fx/settings',
     mechanisms: ['last-write-wins'],
@@ -1531,8 +1597,20 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     mechanisms: ['idempotency-key', 'db-function'],
     evidence: [
       { file: `${RT}/exchange.routes.ts`, text: 'readClientRequestId(r)' },
-      { file: 'docs/exchange-01-migration.sql', text: 'pg_advisory_xact_lock' },
+      { file: 'docs/exchange-03-migration.sql', text: 'pg_advisory_xact_lock' },
       { file: 'docs/exchange-01-migration.sql', text: 'fx_trades_request_key' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/trades/:id/resolve-review',
+    mechanisms: ['db-function', 'conditional-update'],
+    evidence: [
+      {
+        file: `${SVC}/exchange/exchange.service.ts`,
+        text: "rpc('fx_trade_resolve_pending_review'",
+      },
+      { file: 'docs/exchange-03-migration.sql', text: 'FOR UPDATE;' },
     ],
   },
   {
@@ -1540,8 +1618,8 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'POST /api/fx/trades/:id/void',
     mechanisms: ['db-function', 'conditional-update'],
     evidence: [
-      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('fx_trade_void'" },
-      { file: 'docs/exchange-01-migration.sql', text: "AND status = 'posted';" },
+      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('fx_trade_void_with_ledger'" },
+      { file: 'docs/exchange-03-migration.sql', text: 'FOR UPDATE;' },
     ],
   },
   {
@@ -1558,8 +1636,27 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'POST /api/fx/remittances/:id/status',
     mechanisms: ['db-function', 'conditional-update'],
     evidence: [
-      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('remittance_move'" },
-      { file: 'docs/exchange-01-migration.sql', text: 'FOR UPDATE;' },
+      { file: `${SVC}/exchange/exchange.service.ts`, text: "rpc('remittance_payout_with_ledger'" },
+      { file: 'docs/exchange-03-migration.sql', text: 'FOR UPDATE;' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/remittances/settle',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${RT}/exchange.routes.ts`, text: 'readClientRequestId(r)' },
+      { file: 'docs/exchange-03-migration.sql', text: 'fx_agent_settlements_request_key' },
+    ],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/reconciliations',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: `${RT}/exchange.routes.ts`, text: 'readClientRequestId(r)' },
+      { file: 'docs/exchange-02-migration.sql', text: 'pg_advisory_xact_lock' },
+      { file: 'docs/exchange-02-migration.sql', text: 'fx_cashbox_reconciliations_request_key' },
     ],
   },
   {
@@ -1590,6 +1687,35 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [
       { file: `${SVC}/salon/salon.service.ts`, text: "onConflict: 'workspace_id,employee_id'" },
     ],
+  },
+  {
+    routeFile: 'salon.routes.ts',
+    route: 'POST /api/resource-bookings',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      { file: 'docs/resource-capacity-01-migration.sql', text: 'resource_bookings_no_overlap' },
+    ],
+  },
+  {
+    routeFile: 'salon.routes.ts',
+    route: 'POST /api/resource-bookings/:id/release',
+    mechanisms: ['conditional-update'],
+    evidence: [{ file: `${SVC}/salon/salon.service.ts`, text: 'async releaseResourceBooking' }],
+  },
+  {
+    routeFile: 'quality.routes.ts',
+    route: 'POST /api/quality-events',
+    mechanisms: ['idempotency-key', 'db-function'],
+    evidence: [
+      { file: 'docs/quality-events-01-migration.sql', text: 'quality_events_no_update_delete' },
+      { file: `${SVC}/quality/quality.service.ts`, text: 'async recordQualityEvent' },
+    ],
+  },
+  {
+    routeFile: 'quality.routes.ts',
+    route: 'POST /api/warranty-claims',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/quality/quality.service.ts`, text: 'async submitWarrantyClaim' }],
   },
 ]
 

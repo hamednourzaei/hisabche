@@ -873,6 +873,51 @@ export class AccountingRepository {
     }
   }
 
+  /** V60 Slice 8: maps sale invoice ids to their primary cost object (project or branch). */
+  async costObjectTagsForInvoices(
+    workspaceId: string,
+    invoiceIds: readonly string[],
+  ): Promise<
+    Map<
+      string,
+      { costObjectId: string; costObjectType: 'project' | 'branch'; costObjectLabel: string }
+    >
+  > {
+    const out = new Map<
+      string,
+      { costObjectId: string; costObjectType: 'project' | 'branch'; costObjectLabel: string }
+    >()
+    if (invoiceIds.length === 0) return out
+
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id, project_id, branch_id')
+      .eq('workspace_id', workspaceId)
+      .in('id', [...invoiceIds])
+
+    if (error || !data) return out
+    for (const row of data as Array<{
+      id: string
+      project_id?: string | null
+      branch_id?: string | null
+    }>) {
+      if (row.project_id) {
+        out.set(String(row.id), {
+          costObjectId: String(row.project_id),
+          costObjectType: 'project',
+          costObjectLabel: `Project ${String(row.project_id).slice(0, 8)}`,
+        })
+      } else if (row.branch_id) {
+        out.set(String(row.id), {
+          costObjectId: String(row.branch_id),
+          costObjectType: 'branch',
+          costObjectLabel: `Branch ${String(row.branch_id).slice(0, 8)}`,
+        })
+      }
+    }
+    return out
+  }
+
   /**
    * The ledger's own sums for the window by account role (revenue, cost of sales, inventory loss), books currency.
    * null when the function is not installed (the report then simply has no ledger block - never a made-up zero).
@@ -1116,5 +1161,59 @@ export class AccountingRepository {
         amount: Number(row.amount) || 0,
       })),
     }
+  }
+
+  async listVariantRows(workspaceId: string): Promise<
+    Array<{
+      id: string
+      sku: string
+      attributes: Array<{ name: string; value: string }>
+      revenueMinor: number | null
+      costMinor: number | null
+    }>
+  > {
+    const variants = await this.pages<Record<string, any>>('product variants', (a, b) =>
+      supabase
+        .from('product_variants')
+        .select('id, sku, attributes')
+        .eq('workspace_id', workspaceId)
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .range(a, b),
+    )
+    return variants.map((v) => ({
+      id: String(v.id),
+      sku: String(v.sku ?? ''),
+      attributes: Array.isArray(v.attributes)
+        ? (v.attributes as Array<{ name: string; value: string }>)
+        : [],
+      // Variant-level cost allocation is not split on cost_layers (V55 Decision A),
+      // so unknown variant margin remains strictly null (never zero).
+      revenueMinor: null,
+      costMinor: null,
+    }))
+  }
+
+  async listVariantStockMovements(workspaceId: string): Promise<
+    Array<{
+      variantId: string
+      quantity: number
+      referenceType: string | null
+    }>
+  > {
+    const moves = await this.pages<Record<string, any>>('variant stock movements', (a, b) =>
+      supabase
+        .from('stock_movements')
+        .select('variant_id, quantity, reference_type')
+        .eq('workspace_id', workspaceId)
+        .not('variant_id', 'is', null)
+        .order('id', { ascending: true })
+        .range(a, b),
+    )
+    return moves.map((m) => ({
+      variantId: String(m.variant_id),
+      quantity: Number(m.quantity) || 0,
+      referenceType: (m.reference_type as string | null) ?? null,
+    }))
   }
 }

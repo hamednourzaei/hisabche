@@ -28,3 +28,10 @@
 | MIXED_BUSINESS         | هسته‌های مشترک                                    | DNA چندمحوری سروری                                                                | `PARTIALLY_IMPLEMENTED`                |
 
 «پشتیبانی همگانی» ادعا نمی‌شود. جزئیات: بخش G و H ممیزی در `UNIVERSAL-BUSINESS-ARCHITECTURE.md`.
+
+---
+
+## بازبینی V59 — 11 نوامبر 2026
+
+- قوانین خالص، APIها، گاردهای هم‌زمانی/برگشت، تست‌های واحد و تست PostgreSQL برای ۶ صنف کلیدی (`Clothing`, `Salon`, `Mobile Shop`, `Repair Shop`, `Gold & Jewellery`, `Currency Exchange`) در گزارش پذیرش [V59-TRADE-ACCEPTANCE-MATRIX.md](V59-TRADE-ACCEPTANCE-MATRIX.md) مستند شده‌اند.
+- وضعیت قابلیت‌های وابسته به ستون اسنپ‌شات فاکتور در صنف طلا (`goldPurity`, `makingCharges`) به‌صورت صادقانه `PARTIALLY_SUPPORTED` نگه داشته شده است (`scripts/industry/coverage-data.mjs`).

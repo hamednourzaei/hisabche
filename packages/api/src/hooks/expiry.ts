@@ -46,6 +46,8 @@ export interface SerialUnit {
   /** The invoice that sold it; null while in stock. */
   invoiceId?: string | null
   soldOn?: string | null
+  reservedForCustomerId?: string | null
+  reservedUntil?: string | null
 }
 
 export interface ExpiryBucket {

@@ -74,3 +74,10 @@ sequenceDiagram
 - تأیید ایمیل/OTP وجود ندارد (`auth.routes.ts:360`)؛ گام «اتصال اشتراک به حساب تأییدشده» ممکن نیست.
 - Trial: ۷ روز ثابت، تنبل در اولین خواندن (`billing.service.ts:126,300`).
 - ساخت workspace اتمیک شد در همین شاخه (`docs/workspace-create-01-migration.sql`، منتظر اجرا).
+
+---
+
+## بازبینی V59.1 — ۱۱ نوامبر ۲۰۲۶
+
+- **وضعیت واقعی کد:** جریان ارتقاء فعال داشبورد همچنان از `subscription-upgrade.service.ts` (`/billing`) استفاده می‌کند و `subscription-order.service.ts` بدون فراخوان UI باقی مانده است (حفظ شفافیت مستندسازی بر اساس واقعیت کد).
+- **مهاجرت‌های جدید V59.1 (PENDING HUMAN CONFIRMATION):** `docs/exchange-03-migration.sql`، `docs/gold-01-migration.sql`، `docs/salon-02-migration.sql`، `docs/mobile-serial-01-migration.sql`، `docs/repair-parts-01-migration.sql`. هیچ DDL علیه دیتابیس زنده اجرا نشده است.

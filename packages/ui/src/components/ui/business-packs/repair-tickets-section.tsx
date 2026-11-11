@@ -19,7 +19,12 @@ import {
   useSerials,
   type RepairTicket,
 } from '@hisabche/api'
-import { REPAIR_MOVES, REPAIR_STATUSES, type RepairStatus } from '@hisabche/validation'
+import {
+  REPAIR_MOVES,
+  REPAIR_STATUSES,
+  summarizeRepairMetrics,
+  type RepairStatus,
+} from '@hisabche/validation'
 
 import { Button } from '../button'
 import { Input } from '../input'
@@ -29,6 +34,7 @@ import { useToast } from '../toast-provider'
 import { refusalText } from '../../../lib/refusal-text'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { RepairTicketWorkPanel } from './repair-ticket-work-panel'
 import {
   labelOf,
   NotReady,
@@ -140,6 +146,7 @@ export function RepairTicketsSection() {
     setForm((f) => ({ ...f, [key]: value }))
 
   const [delivering, setDelivering] = useState<string | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [noteFor, setNoteFor] = useState<{ id: string; status: RepairStatus } | null>(null)
   const [note, setNote] = useState('')
 
@@ -291,6 +298,13 @@ export function RepairTicketsSection() {
                 {t(`repairs.status.${to}`, to)}
               </Button>
             ))}
+            <Button
+              size="sm"
+              variant={selectedTicketId === row.id ? 'default' : 'ghost'}
+              onClick={() => setSelectedTicketId((cur) => (cur === row.id ? null : row.id))}
+            >
+              {t('repairs.partsAndBill', 'قطعات و فاکتور')}
+            </Button>
           </div>
         ),
     },
@@ -396,46 +410,81 @@ export function RepairTicketsSection() {
         </div>
       ) : null}
 
+      {selectedTicketId ? (
+        <RepairTicketWorkPanel
+          ticketId={selectedTicketId}
+          onClose={() => setSelectedTicketId(null)}
+        />
+      ) : null}
+
       {list.isError ? (
         <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
           {t('repairs.loadFailed', 'رسیدهای تعمیر خوانده نشد؛ این «خالی» نیست.')}
         </p>
       ) : (
-        <DataTable
-          tableId="repair-tickets"
-          t={t}
-          rows={list.data?.tickets ?? []}
-          columns={columns}
-          rowKey={(row) => row.id}
-          actions={
-            <div className="flex items-center gap-2">
-              <TableFilterSelect
-                label={t('repairs.filter', 'وضعیت')}
-                value={filter}
-                allValue="open"
-                onChange={(v) => setFilter(v as RepairStatus | 'open')}
-                options={[
-                  { value: 'open', label: t('repairs.open', 'باز') },
-                  ...REPAIR_STATUSES.map((value) => ({
-                    value,
-                    label: t(`repairs.status.${value}`, value),
+        <div className="space-y-2">
+          {(list.data?.tickets.length ?? 0) > 0
+            ? (() => {
+                const metrics = summarizeRepairMetrics(
+                  (list.data?.tickets ?? []).map((ticket) => ({
+                    status: ticket.status,
+                    underWarranty: ticket.underWarranty,
+                    createdAt: ticket.createdAt,
+                    closedAt: ticket.closedAt,
                   })),
-                ]}
-              />
-              {open ? null : (
-                <Button size="sm" onClick={() => setOpen(true)}>
-                  <Plus className="h-4 w-4" aria-hidden />
-                  {t('repairs.new', 'رسید تعمیر تازه')}
-                </Button>
-              )}
-            </div>
-          }
-          emptyState={
-            <p className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
-              {t('repairs.empty', 'رسید تعمیری در این وضعیت نیست.')}
-            </p>
-          }
-        />
+                )
+                return (
+                  <div className="flex flex-wrap gap-3 rounded-xl bg-[hsl(var(--surface-muted))] px-3 py-2 text-xs text-[hsl(var(--fg-secondary))]">
+                    <span>
+                      {t('repairs.open', 'باز')}: <b>{metrics.openTickets}</b>
+                    </span>
+                    <span>
+                      {t('repairs.status.waiting_parts', 'منتظر قطعه')}:{' '}
+                      <b>{metrics.waitingPartsTickets}</b>
+                    </span>
+                    <span>
+                      {t('repairs.status.delivered', 'تحویل شد')}: <b>{metrics.deliveredTickets}</b>
+                    </span>
+                  </div>
+                )
+              })()
+            : null}
+          <DataTable
+            tableId="repair-tickets"
+            t={t}
+            rows={list.data?.tickets ?? []}
+            columns={columns}
+            rowKey={(row) => row.id}
+            actions={
+              <div className="flex items-center gap-2">
+                <TableFilterSelect
+                  label={t('repairs.filter', 'وضعیت')}
+                  value={filter}
+                  allValue="open"
+                  onChange={(v) => setFilter(v as RepairStatus | 'open')}
+                  options={[
+                    { value: 'open', label: t('repairs.open', 'باز') },
+                    ...REPAIR_STATUSES.map((value) => ({
+                      value,
+                      label: t(`repairs.status.${value}`, value),
+                    })),
+                  ]}
+                />
+                {open ? null : (
+                  <Button size="sm" onClick={() => setOpen(true)}>
+                    <Plus className="h-4 w-4" aria-hidden />
+                    {t('repairs.new', 'رسید تعمیر تازه')}
+                  </Button>
+                )}
+              </div>
+            }
+            emptyState={
+              <p className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('repairs.empty', 'رسید تعمیری در این وضعیت نیست.')}
+              </p>
+            }
+          />
+        </div>
       )}
     </section>
   )

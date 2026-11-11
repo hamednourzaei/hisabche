@@ -128,7 +128,7 @@ function ServiceDeliveryContent() {
   const moveStatus = useMoveServiceSessionStatus()
   const toast = useToast()
   const [movingId, setMovingId] = useState<string | null>(null)
-  const onMoveStatus = (row: ServiceSessionRow, to: 'in_progress' | 'no_show') => {
+  const onMoveStatus = (row: ServiceSessionRow, to: 'checked_in' | 'in_progress' | 'no_show') => {
     setMovingId(row.id)
     moveStatus.mutate(
       { id: row.id, to },

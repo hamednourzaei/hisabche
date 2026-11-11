@@ -399,3 +399,24 @@ export function useCreateWorkOrder() {
     },
   })
 }
+
+export function useUpdateWorkOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...input
+    }: {
+      id: string
+      quantity?: number | undefined
+      startDate?: string | undefined
+      status?: 'planned' | 'in_progress' | 'cancelled' | undefined
+    }) => {
+      const { data } = await apiClient.patch(`/work-orders/${id}`, input)
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: manufacturingKeys.all })
+    },
+  })
+}

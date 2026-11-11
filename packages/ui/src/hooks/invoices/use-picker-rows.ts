@@ -15,6 +15,7 @@
 import { useMemo } from 'react'
 import { useProducts, useStockPlacement } from '@hisabche/api'
 import { useInvoiceDraftStore } from '@hisabche/store'
+import type { GoldLineSnapshot } from '@hisabche/validation'
 
 import { productCost, readProducts, type PickerProduct } from '../../lib/invoices/products'
 import { pickerRows, type PickerRow } from '../../lib/invoices/picker-rows'
@@ -27,6 +28,7 @@ export interface PickedProduct {
   name: string
   price: string
   unit: string
+  goldSnapshot?: GoldLineSnapshot | undefined
 }
 
 export function usePickerRows(search: string, pickAs: PickAs = 'sale') {
@@ -90,7 +92,8 @@ export function usePickerRows(search: string, pickAs: PickAs = 'sale') {
   const pick = (row: PickerRow): PickedProduct | null => {
     if (row.exhausted) return null
     if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
-    const price = priceOf(row.product).price
+    const quoted = priceOf(row.product)
+    const price = quoted.price
     return {
       id: row.product.id,
       name: row.product.name,
@@ -98,6 +101,7 @@ export function usePickerRows(search: string, pickAs: PickAs = 'sale') {
       // the line then asks for its price instead of selling the goods free.
       price: price > 0 ? String(price) : '',
       unit: row.product.unit ?? 'piece',
+      ...(quoted.goldSnapshot ? { goldSnapshot: quoted.goldSnapshot } : {}),
     }
   }
 

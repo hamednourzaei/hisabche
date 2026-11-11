@@ -422,6 +422,11 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     return this
   }
 
+  /** supabase-js `.returns<T>()` only re-types the result; it never changes rows. */
+  returns() {
+    return this
+  }
+
   range(from: number, to: number) {
     this.rangeFrom = from
     this.limitCount = to - from + 1

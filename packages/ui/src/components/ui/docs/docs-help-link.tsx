@@ -92,6 +92,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   manufacturing: 'manufacturing',
   analysis: 'business-analysis',
   'invoices?tab=pricing': 'promotions',
+  'invoices?tab=orders': 'invoices',
   'customers?tab=outreach&view=campaigns': 'campaigns',
   'billing?tab=money': 'wallet',
   dashboard: 'dashboard-overview',

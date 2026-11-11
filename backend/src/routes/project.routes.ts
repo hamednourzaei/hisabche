@@ -15,8 +15,14 @@ import {
   updateTimeEntrySchema,
 } from '@hisabche/validation'
 import { ProjectService } from '../services/project.service'
+import { InvoiceService } from '../services/invoice.service'
+import { TimesheetsService } from '../services/timesheets'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { ValidationError } from '../errors/validation.error'
+import { readClientRequestId } from '../utils/client-request'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { requireRole } from '../services/tenancy.service'
@@ -307,7 +313,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
-        body: toJsonSchema(createProjectMemberSchema),
+        // projectId is the URL segment; the handler merges it before the full parse.
+        body: toJsonSchema(createProjectMemberSchema.omit({ projectId: true })),
         response: { 201: toJsonSchema(z.any()) },
       },
     },
@@ -387,7 +394,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
-        body: toJsonSchema(createTimeEntrySchema),
+        body: toJsonSchema(createTimeEntrySchema.omit({ projectId: true })),
         response: { 201: toJsonSchema(z.any()) },
       },
     },
@@ -451,6 +458,90 @@ export async function projectRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to delete time entry')
+      }
+    },
+  )
+
+  // ─── POST /api/projects/:id/bill ──────────────────────────
+  // V60 Slice 6: turn unbilled billable hours (`timesheets/billing.domain.ts`)
+  // or an explicit milestone fee into a real sales invoice via `InvoiceService.create`,
+  // locking billed time entries against the created invoice id.
+  fastify.post(
+    '/api/projects/:id/bill',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = z
+          .object({
+            customerId: z.string().uuid().optional(),
+            milestoneTitle: z.string().trim().min(1).max(200).optional(),
+            milestoneAmount: z.number().positive().optional(),
+            paymentMethod: z.enum(['cash', 'bank', 'credit']).optional(),
+            date: z.string().trim().max(32).optional(),
+          })
+          .parse(request.body ?? {})
+
+        const project = (await projectService.getProject(id, request.tenancy)) as {
+          id: string
+          name?: string | null
+          client_id?: string | null
+          currency?: string | null
+        }
+
+        const timesheets = new TimesheetsService()
+        const preview = await timesheets.previewBilling(request.tenancy, id)
+        const invoiceService = new InvoiceService()
+
+        const currency = project.currency ?? undefined
+        const items: Array<{ productName: string; quantity: number; unitPrice: number }> = []
+        const entryIdsToLock: string[] = []
+
+        if (preview.lines.length > 0) {
+          for (const line of preview.lines) {
+            entryIdsToLock.push(...line.entryIds)
+            items.push({
+              productName: line.description || project.name || 'Project services',
+              quantity: 1,
+              unitPrice: line.amountMinor / 100,
+            })
+          }
+        } else if (body.milestoneAmount && body.milestoneAmount > 0) {
+          items.push({
+            productName: body.milestoneTitle ?? project.name ?? 'Project milestone',
+            quantity: 1,
+            unitPrice: body.milestoneAmount,
+          })
+        } else {
+          throw new ValidationError(preview.problems[0] ?? 'PROJECT_NOTHING_TO_BILL')
+        }
+
+        const clientRequestId = readClientRequestId(request)
+        const created = await invoiceService.create(request.tenancy, {
+          type: 'sale',
+          date: body.date ?? new Date().toISOString().slice(0, 10),
+          customerId: body.customerId ?? project.client_id ?? undefined,
+          currency,
+          paymentMethod: body.paymentMethod ?? 'credit',
+          paidAmount: 0,
+          idempotencyKey: clientRequestId ? `${clientRequestId}:project-bill` : undefined,
+          projectId: id,
+          items,
+        } as Parameters<InvoiceService['create']>[1])
+
+        const invoiceId = (created as { id?: string }).id
+        if (invoiceId && entryIdsToLock.length > 0) {
+          await timesheets.markBilled(request.tenancy, entryIdsToLock, invoiceId)
+        }
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.code(201).send({ data: created, billedEntryIds: entryIdsToLock })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to bill project milestone')
       }
     },
   )

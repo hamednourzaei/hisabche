@@ -237,6 +237,7 @@ export const FEATURE_REGISTRY = {
   'settings.books_currency': { execution: 'local', plans: ALL },
   'settings.time_zone': { execution: 'local', plans: ALL },
   'settings.workspace_profile': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  'settings.operational_profile_edit': { execution: 'local', plans: ALL },
   // V53 D4: the server's authoritative copy of the workspace profile. READING it is always allowed;
   // CHANGING it is a separate feature, because a feature that is «always allowed» must not also write.
   'settings.business_profile': { execution: 'server', plans: ALL, alwaysAllowed: true },
@@ -341,6 +342,11 @@ export const FEATURE_REGISTRY = {
   // V55 final completion: the device's expiry batches (v22) — the same shared
   // FEFO rule the server keeps, executed on the device.
   'inventory.batch_items': { execution: 'local', plans: ALL },
+  // V58: Postgres functions on the server; no device engine yet.
+  'inventory.reservations': { execution: 'server', plans: ALL },
+  'stock.bin_move': { execution: 'server', plans: ALL },
+  'hr.leave_policy': { execution: 'server', plans: ALL },
+  'hr.payslip': { execution: 'server', plans: ALL, alwaysAllowed: true },
   'operations.repairs': { execution: 'server', plans: ALL },
   'operations.salon_setup': { execution: 'server', plans: ALL },
   'hr.commission': { execution: 'server', plans: ALL },
@@ -353,6 +359,16 @@ export const FEATURE_REGISTRY = {
   'trade.freight': { execution: 'server', plans: CLOUD },
   'trade.courier': { execution: 'server', plans: CLOUD },
   'trade.delivery_notes': { execution: 'server', plans: CLOUD },
+  // V60 Slice 6 — split-feature fixes + wired sales orders + package grants (no offline engine yet).
+  'sales.orders': { execution: 'server', plans: ALL },
+  'operations.package_grants': { execution: 'server', plans: ALL },
+  'accounting.variant_report': { execution: 'server', plans: ALL, alwaysAllowed: true },
+  'invoice.exchange': { execution: 'server', plans: ALL },
+  'trade.gold_ledger': { execution: 'server', plans: ALL },
+  'inventory.serial_returns': { execution: 'server', plans: ALL },
+  'commerce.contracts': { execution: 'server', plans: ALL },
+  'purchase.three_way_match': { execution: 'server', plans: ALL },
+  'operations.quality': { execution: 'server', plans: ALL },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

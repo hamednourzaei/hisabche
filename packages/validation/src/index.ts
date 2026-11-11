@@ -244,13 +244,19 @@ export {
 
 // ---------- The profit report: revenue, cost, costStatus ----------
 export {
+  buildCostObjectProfitReport,
   buildProfitReport,
   invoiceMargins,
   isCostDeterminate,
   lineRevenues,
   restateAtRates,
+  type CostObjectInvoiceInput,
+  type CostObjectProfitReport,
+  type CostObjectProfitRow,
+  type CostObjectType,
   type CostStatus,
   type InvoiceMargin,
+  type OverheadAllocationPolicy,
   type ProductProfitRow,
   type ProfitConsumption,
   type ProfitInvoice,
@@ -496,11 +502,14 @@ export {
 
 export {
   planReturnDisposition,
+  routeReturnConditionDisposition,
   RETURN_DISPOSITIONS,
 } from './schemas/universal-core/return-disposition.domain'
 export type {
+  ConditionRoutingDecision,
   ReturnDisposition,
   ReturnDispositionPlan,
+  ReturnInventoryBucket,
 } from './schemas/universal-core/return-disposition.domain'
 export {
   computePackageDeferrals,
@@ -788,6 +797,7 @@ export {
 // ---------- Pricing & promotions (shared engine) ----------
 export {
   quotePrice,
+  quoteGoldItemPrice,
   applyPrice,
   basePriceFor,
   isLiveOn,
@@ -1010,6 +1020,8 @@ export {
   type IncompleteDraftLine,
 } from './schemas/draft-purchase-order.domain'
 export {
+  ENGINE_KEYS,
+  ENGINES,
   CAPABILITIES,
   CAPABILITY_KEYS,
   AVAILABLE_CAPABILITIES,
@@ -1017,7 +1029,12 @@ export {
   isAvailableCapability,
   isUsableCapability,
   resolveCapabilities,
+  resolveCapabilityPlan,
+  evaluateFeatureAccess,
   validateCapabilityRegistry,
+  type EngineDefinition,
+  type EngineKey,
+  type EngineOfflineStatus,
   type CapabilityDefinition,
   type CapabilityDiagnostic,
   type CapabilityDiagnosticCode,
@@ -1028,6 +1045,10 @@ export {
   type CapabilityRequirement,
   type CapabilityResolution,
   type CapabilityStatus,
+  type FeatureAccessEvaluation,
+  type FeatureAccessEvaluationInput,
+  type ModuleActivationSignals,
+  type UnifiedCapabilityPlan,
 } from './schemas/business-capabilities'
 export {
   INDUSTRY_KEYS,
@@ -1039,6 +1060,7 @@ export {
   primaryIndustryKeyOf,
   resolveBusinessProfile,
   industryKeysWithProfiles,
+  characteristicsFromAnswers,
   operatingCharacteristicsSchema,
   DEFAULT_OPERATING_CHARACTERISTICS,
   type OperatingCharacteristics,
@@ -1459,6 +1481,11 @@ export {
 export * from './schemas/sync-identity'
 export * from './schemas/subscription-order.schema'
 export * from './schemas/operational-dna'
+export * from './schemas/business-problems'
+export * from './schemas/resource-capacity'
+export * from './schemas/contracts'
+export * from './schemas/procurement-match'
+export * from './schemas/quality'
 export * from './schemas/advance-document'
 export * from './schemas/dashboard-kpis'
 export * from './schemas/user-state'

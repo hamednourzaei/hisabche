@@ -313,7 +313,8 @@
         "Access Control": "کنترل دسترسی",
         "Event Logging": "ثبت وقایع",
         "Multi-user": "چند کاربره",
-        "99_9% Available": "۹۹_۹٪ در دسترس"
+        "99_9% Available": "۹۹_۹٪ در دسترس",
+        "بک‌آپ خودکار": "پشتیبان خودکار"
       },
       "access": {
         "title": "نقش‌ها و مجوزها",
@@ -1834,7 +1835,16 @@
     "alert": "هشدار",
     "viewDetails": "مشاهده جزئیات",
     "listSeparator": "، ",
-    "clearFilters": "پاک کردن فیلترها"
+    "clearFilters": "پاک کردن فیلترها",
+    "address": "نشانی",
+    "customer": "مشتری",
+    "failed": "ناموفق",
+    "item": "مورد",
+    "member": "عضو",
+    "price": "قیمت",
+    "product": "کالا",
+    "quantity": "تعداد",
+    "staff": "کارکنان"
   },
   "invoices": {
     "creditPending": "در انتظار تأیید اعتبار",
@@ -2380,7 +2390,16 @@
       "transfer": "انتقال",
       "adjustment": "تعدیل",
       "opening": "مانده‌ی اول دوره"
-    }
+    },
+    "extClaimIssueRequired": "شرح مشکل را وارد کنید.",
+    "extClaimCreated": "ادعای گارانتی ثبت شد.",
+    "extQualityLogged": "بازرسی کیفیت ثبت شد.",
+    "extSubmitClaim": "ثبت ادعا",
+    "extLogQuality": "ثبت بازرسی",
+    "extClaimIssuePlaceholder": "شرح عیب برای ثبت ادعای گارانتی",
+    "extClaimsCount": "ادعاها",
+    "extQualityCount": "رویداد کیفیت",
+    "label": "انبار"
   },
   "customers": {
     "creditor": "بستانکار",
@@ -3082,7 +3101,66 @@
         "stock": "موجودی"
       }
     },
-    "negativeStockHint": "کالا زیر صفر — در ارزش شمرده نشد"
+    "negativeStockHint": "کالا زیر صفر — در ارزش شمرده نشد",
+    "setupGapsPrompt": "برخی بخش‌های پروفایل کاری هنوز مشخص نشده‌اند؛ تنظیمات پایه را کامل کنید.",
+    "completeSetupAction": "تکمیل پروفایل کاری",
+    "cards": {
+      "operations": "عملیات و فروش",
+      "receivables": "دریافتنی‌ها",
+      "inventory": "موجودی",
+      "cash": "صندوق",
+      "lowStock": "موجودی رو به اتمام"
+    },
+    "roles": {
+      "ownerKpis": "نمای کلی و سود",
+      "workQueue": "کارهای منتظر",
+      "branchOps": "عملیات شعبه",
+      "branchStock": "موجودی شعبه",
+      "newDocument": "ثبت سند جدید",
+      "openTill": "باز کردن صندوق",
+      "todayReceipts": "دریافت‌های امروز",
+      "warehouses": "محل‌های نگهداری",
+      "transfers": "انتقال‌ها",
+      "holds": "رزروهای موجودی",
+      "salonCalendar": "تقویم نوبت‌ها",
+      "salonCheckIn": "پذیرش و ورود مشتری",
+      "clientHistory": "پرونده و سابقه مراجعان",
+      "deposits": "بیعانه‌ها و پیش‌پرداخت‌ها",
+      "mySessions": "جلسات من",
+      "myCommission": "کمیسیون من",
+      "fxRates": "تابلوی نرخ ارز",
+      "fxPositions": "وضعیت ارزها",
+      "fxRemittances": "حواله‌های در جریان",
+      "fxTrades": "ثبت معامله ارزی",
+      "repairAssigned": "تیکت‌های ارجاع‌شده",
+      "repairParts": "قطعات در انتظار",
+      "ledger": "دفتر کل و تراز",
+      "financialReports": "گزارش‌های مالی"
+    },
+    "salon": {
+      "title": "عملیات سالن و خدمات",
+      "scheduled": "در انتظار",
+      "checkedIn": "پذیرش‌شده",
+      "inProgress": "در حال انجام",
+      "delivered": "تکمیل‌شده",
+      "commission": "جمع کمیسیون",
+      "noShowCancelled": "لغوشده / عدم حضور",
+      "profit": "سود خدمات سالن",
+      "totalBooked": "کل نوبت‌های ثبت‌شده"
+    },
+    "commandCenter": {
+      "title": "هشدارهای تصمیم‌گیری",
+      "insufficientData": "داده کافی نیست",
+      "unknown": "نامشخص",
+      "cashForecast": "پیش‌بینی نقدینگی",
+      "latePayers": "پرداخت‌های معوق مشتریان",
+      "stockOutRisk": "ریسک اتمام موجودی",
+      "capacityUtilization": "بهره‌وری ظرفیت منابع",
+      "projectsOverBudget": "پروژه‌های نزدیک یا بالای بودجه",
+      "contractsDue": "قراردادهای در موعد صدور",
+      "procurementMismatches": "مغایرت تطبیق خرید",
+      "openQualityFailures": "موارد باز کیفیت و قرنطینه"
+    }
   },
   "unit": {
     "piece": "عدد",
@@ -3362,7 +3440,8 @@
       "unknownNote": "بهای تمام‌شده‌ی بخشی از فروش این بازه ثبت نشده است. تا ثبت نشود، سود ناخالص و سود خالص قابل محاسبه نیست؛ فروش، سود نیست.",
       "notLedgerBased": "این گزارش از دفتر کل خوانده نشده است؛ ارقام از ردیف‌های فاکتور جمع شده‌اند.",
       "reconciliation": "تفاوت ردیف‌های فاکتور با دفتر کل",
-      "reconciliationCost": "بها"
+      "reconciliationCost": "بها",
+      "byVariantAttr": "سود بر اساس ویژگی تنوع"
     },
     "closingBalance": "مانده‌ی پایان دوره",
     "generalLedger": {
@@ -3456,7 +3535,12 @@
       "inventory_loss": "ضرر و زیان ضایعات کالا",
       "inventory_shrinkage": "کسری موجودی (شمارش)",
       "inventory_gain": "اضافه موجودی (شمارش)",
-      "supplier_advances": "پیش‌پرداخت به تأمین‌کنندگان"
+      "supplier_advances": "پیش‌پرداخت به تأمین‌کنندگان",
+      "fx_vault": "صندوق ارزی"
+    },
+    "variantReport": {
+      "title": "گزارش موجودی و حاشیه بر اساس سایز / رنگ / برند",
+      "empty": "تنوع کالایی یافت نشد."
     }
   },
   "hr": {
@@ -4246,14 +4330,35 @@
         "hasExpiryDates": "کالاهایت تاریخ انقضا دارند؟",
         "sellsOnCredit": "نسیه یا قسطی هم می‌فروشی؟",
         "hasStaff": "کارمند داری؟",
-        "locations": "چند شعبه داری؟"
+        "locations": "چند شعبه داری؟",
+        "staffArrangement": "روش پرداخت یا همکاری همکاران شما چگونه است؟",
+        "holdsCustomerAssets": "آیا کالای مشتری را موقتاً برای تعمیر یا امانت نگه می‌دارید؟",
+        "rentsOutAssets": "آیا تجهیزات، اتاق یا دارایی را به صورت ساعتی/روزانه کرایه می‌دهید؟",
+        "worksAtCustomerSite": "آیا خدمات یا ارسال در محل مشتری یا در مسیر انجام می‌شود؟",
+        "billsRecurring": "آیا قراردادها یا حق‌الاشتراک دوره‌ای (ماهانه/سالانه) صادر می‌کنید؟",
+        "needsApprovals": "آیا قبل از ثبت نهایی یا پرداخت به تأیید مدیر نیاز دارید؟"
       },
       "answers": {
         "yes": "بله",
         "no": "نه",
         "unknown": "نمی‌دانم",
         "single": "یک جا",
-        "multiple": "چند شعبه"
+        "multiple": "چند شعبه",
+        "fixed_salary": "حقوق ثابت",
+        "hourly": "ساعتی",
+        "commission": "درصدی (کمیسیون)",
+        "shift": "شیفتی",
+        "mixed": "ترکیبی"
+      },
+      "gaps": {
+        "unitTrackingUnresolved": "نحوه ردیابی واحد کالا (تک‌شماره/سری/بسته) هنوز مشخص نشده است.",
+        "pricingBasisUnresolved": "مبنای قیمت‌گذاری هنوز مشخص نشده است.",
+        "assetCustodyUnresolved": "وضعیت نگهداری امانی یا اجاره دارایی هنوز مشخص نشده است.",
+        "executionSiteUnresolved": "محل اجرای کار (در فروشگاه / محل مشتری / مسیر) هنوز مشخص نشده است.",
+        "recurrenceUnresolved": "تکرار دوره‌ای خدمات یا قراردادها هنوز مشخص نشده است.",
+        "approvalDepthUnresolved": "ساختار تأیید و کنترل خرید هنوز مشخص نشده است.",
+        "regulatedDomainUnresolved": "وضعیت فعالیت در حوزه تخصصی دارای مقررات هنوز مشخص نشده است.",
+        "regulatedDomainCompliance": "حوزه‌های درمانی، نسخه یا احراز هویت نیازمند رعایت مقررات تخصصی هستند و در حسابچه ثبت نمی‌شوند."
       }
     },
     "brandInitial": "ح",
@@ -4350,15 +4455,7 @@
       "بهمن",
       "اسفند"
     ],
-    "weekdaysShort": [
-      "ش",
-      "ی",
-      "د",
-      "س",
-      "چ",
-      "پ",
-      "ج"
-    ],
+    "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
     "prev": "قبلی",
     "next": "بعدی",
     "selectMonth": "انتخاب ماه",
@@ -6683,7 +6780,14 @@
     "method_fixed": "مقطوع",
     "method_non_billable": "غیرقابل صورتحساب",
     "amount": "مبلغ",
-    "preview_empty": "کارکرد صورتحساب‌نشده‌ای نیست"
+    "preview_empty": "کارکرد صورتحساب‌نشده‌ای نیست",
+    "members": "اعضای پروژه",
+    "billTime": "صورتحساب زمان پروژه",
+    "billCreated": "فاکتور پروژه صادر شد.",
+    "addMember": "افزودن عضو",
+    "billMilestone": "صدور صورتحساب پروژه",
+    "entries": "ساعات ثبت‌شده",
+    "removeMember": "حذف عضو"
   },
   "expiry": {
     "title": "انقضا و بچ",
@@ -8126,7 +8230,7 @@
       "positions": {
         "heading": "موجودی هر ارز و سود",
         "body1": "برای هر ارز موجودی، میانگین بها و سود محقق‌شده از فروش‌ها حساب می‌شود.",
-        "body2": "معاملات ارز فعلاً در دفتر کل و صندوق ثبت نمی‌شوند، چون دفتر کل هنوز چندارزی نیست؛ این عددها از خود معامله‌ها خوانده می‌شوند."
+        "body2": "معاملات ارز، ابطال، پرداخت حواله و تسویه نماینده به‌طور خودکار در دفتر کل به ارز پایه ثبت می‌شوند و موجودی و سود هر ارز از همین معاملات خوانده می‌شود."
       },
       "hawala": {
         "heading": "حواله",
@@ -8341,7 +8445,20 @@
     "sectionsLabel": "بخش",
     "loadFailed": "این بخش خوانده نشد.",
     "lastSale": "آخرین فروش",
-    "neverSold": "هرگز فروش نرفته"
+    "neverSold": "هرگز فروش نرفته",
+    "supplierForDraft": "تأمین‌کننده",
+    "selectSupplier": "انتخاب تأمین‌کننده",
+    "packSize": "ضریب بسته",
+    "unitPriceForDraft": "قیمت واحد پیشنهادی",
+    "createDraftPo": "ایجاد پیش‌نویس سفارش خرید",
+    "draftPoValidation": "لطفاً تأمین‌کننده و قیمت واحد معتبر را مشخص کنید.",
+    "draftPoCreated": "پیش‌نویس سفارش خرید برای تأیید ثبت شد.",
+    "threeWayMatchTitle": "تطبیق سه‌جانبه (سفارش / رسید / فاکتور)",
+    "selectPoForMatch": "انتخاب سفارش خرید",
+    "threeWayMatched": "تطبیق کامل — آماده تأیید پرداخت",
+    "threeWayBlocked": "مغایرت یافت شد — پرداخت متوقف است",
+    "supplierScorecardTitle": "کارنامه تأمین‌کنندگان",
+    "supplierScorecardEmpty": "داده‌ای برای ارزیابی تأمین‌کنندگان موجود نیست."
   },
   "productUnits": {
     "add": "افزودن واحد",
@@ -10405,6 +10522,9 @@
     "sections": {
       "promotions": "تخفیف‌ها",
       "lists": "فهرست‌های قیمت"
+    },
+    "tabs": {
+      "goldRates": "نرخ طلا و عملیات"
     }
   },
   "notes": {
@@ -11110,7 +11230,53 @@
     "tabs": {
       "invoices": "فاکتورها",
       "pricing": "قیمت و تخفیف",
-      "advances": "پیش‌فروش و پیش‌خرید"
+      "advances": "پیش‌فروش و پیش‌خرید",
+      "orders": "سفارش‌ها",
+      "delivery": "حمل و تحویل"
+    },
+    "orders": {
+      "title": "سفارش‌های فروش و ارسال",
+      "subOrders": "سفارش‌های فروش",
+      "subDelivery": "باربری، پیک و رسید تحویل",
+      "newTitle": "ثبت سفارش فروش",
+      "customerName": "نام مشتری",
+      "customerPhone": "شماره تماس",
+      "submitOrder": "ثبت سفارش",
+      "empty": "سفارشی ثبت نشده است.",
+      "confirm": "تأیید",
+      "fulfill": "تکمیل",
+      "invoice": "صدور فاکتور",
+      "cancel": "لغو",
+      "cancelled": "لغوشده",
+      "confirmed": "تاییدشده",
+      "create": "ایجاد سفارش",
+      "fulfilled": "تحویل‌شده",
+      "loadFailed": "سفارش‌ها خوانده نشدند",
+      "pending": "در انتظار",
+      "viewLabel": "بخش سفارش‌ها و تحویل"
+    },
+    "delivery": {
+      "tripsTitle": "سفرهای باربری",
+      "courierTitle": "مرسولات پیک و COD",
+      "notesTitle": "حواله و رسید تحویل (POD)",
+      "origin": "مبدا",
+      "destination": "مقصد",
+      "addTrip": "ثبت سفر",
+      "trackingNo": "کد رهگیری",
+      "address": "آدرس تحویل",
+      "addCourier": "ثبت مرسوله",
+      "settleCod": "تسویه COD",
+      "recipientName": "نام تحویل‌گیرنده برای POD",
+      "recordPod": "ثبت رسید تحویل",
+      "codMinor": "مبلغ COD (واحد خرد)",
+      "confirmPod": "ثبت تایید تحویل",
+      "createCourier": "ثبت مرسوله پیک",
+      "createNote": "ایجاد رسید تحویل",
+      "createTrip": "ثبت سفر بار",
+      "podRecipient": "نام تحویل‌گیرنده",
+      "progressCod": "به‌روزرسانی وضعیت COD",
+      "settleInvoiceId": "شناسه فاکتور برای تسویه COD",
+      "tracking": "شماره رهگیری"
     }
   },
   "warehouseHub": {
@@ -11184,7 +11350,8 @@
       "close": "بستن",
       "saving": "در حال ذخیره…",
       "checkIn": "حاضر شد",
-      "noShow": "نیامد"
+      "noShow": "نیامد",
+      "start": "شروع خدمت"
     },
     "summary": {
       "title": "جمع جلسه‌ها",
@@ -11222,7 +11389,9 @@
       "in_progress": "در حال انجام",
       "delivered": "تحویل‌شده",
       "cancelled": "لغوشده",
-      "no_show": "حاضر نشد"
+      "no_show": "حاضر نشد",
+      "checkedIn": "پذیرش‌شده",
+      "checked_in": "حاضر شد"
     },
     "settlement": {
       "package_credit": "اعتبار بسته",
@@ -12015,7 +12184,11 @@
       "expired": "مدت تمام شده",
       "suspended": "معلق"
     },
-    "failed": "ثبت نشد."
+    "failed": "ثبت نشد.",
+    "submit": "اعطای اعتبار",
+    "granted": "اعتبار بسته ثبت شد.",
+    "grantAction": "اعطای اعتبار",
+    "selectPackage": "انتخاب بسته"
   },
   "firstValue": {
     "title": "راهنمای راه‌اندازی سریع"
@@ -12393,7 +12566,17 @@
     "holdFor": "برای کدام مشتری",
     "holdSave": "رزرو",
     "holdAction": "رزرو برای مشتری",
-    "hold": "رزرو"
+    "hold": "رزرو",
+    "hold24h": "۲۴ ساعت",
+    "hold72h": "۷۲ ساعت",
+    "holdNoExpiry": "بدون انقضا",
+    "expiresAt": "انقضا",
+    "releaseExpiredAction": "آزادسازی منقضی‌ها",
+    "releasedExpired": "رزروهای منقضی آزاد شد",
+    "duplicateImeiNotice": "IMEI تکراری نادیده گرفته شد",
+    "returnAction": "مرجوعی IMEI",
+    "confirmReturn": "تایید مرجوعی",
+    "returnedWithReversal": "دستگاه و برگشت مالی فاکتور ثبت شد"
   },
   "invoiceSerials": {
     "title": "سریال / IMEI فروخته‌شده",
@@ -12461,7 +12644,11 @@
       "VARIANT_STOCK_NOT_ENOUGH": "این مدل این مقدار موجودی ندارد.",
       "VARIANT_STOCK_NOT_READY": "موجودی مدل‌ها هنوز راه‌اندازی نشده (variant-stock-01).",
       "PRODUCT_WAREHOUSE_REQUIRED": "انبار را انتخاب کنید."
-    }
+    },
+    "atp": "آزاد برای فروش (ATP)",
+    "reserved": "رزروشده",
+    "atpShort": "آزاد (ATP)",
+    "brand": "برند"
   },
   "transferRequests": {
     "created": "درخواست ثبت شد",
@@ -12514,7 +12701,13 @@
       "TRANSFER_CONCURRENT_UPDATE": "کس دیگری همین حالا وضعیت را عوض کرد؛ دوباره ببینید.",
       "TRANSFER_UNIT_NOT_SUPPORTED": "این درخواست واحد غیرپایه دارد و هنوز جابه‌جا نمی‌شود.",
       "WAREHOUSE_INSUFFICIENT_STOCK": "انبار مبدأ این مقدار را ندارد."
-    }
+    },
+    "receivedQty": "مقدار تحویل‌گرفته‌شده",
+    "discrepancyNotice": "مغایرت تحویل ثبت خواهد شد",
+    "discrepancy": "مغایرت تحویل",
+    "discrepancyReason": "علت مغایرت",
+    "receiveDiscrepancyTitle": "ثبت دریافت با مغایرت",
+    "shippedQty": "تعداد ارسالی"
   },
   "repairs": {
     "invoice": "فاکتور فروش این تعمیر (اختیاری)",
@@ -12566,14 +12759,45 @@
       "REPAIR_CUSTOMER_NOT_FOUND": "مشتری پیدا نشد.",
       "REPAIR_SERIAL_NOT_FOUND": "این شماره سریال پیدا نشد.",
       "REPAIR_NOT_READY": "بخش تعمیرات هنوز راه‌اندازی نشده (retail-ops-01)."
-    }
+    },
+    "createFromWarranty": "ثبت پذیرش تعمیر",
+    "partsAndBill": "قطعات و فاکتور",
+    "approvedBadge": "تایید مشتری ثبت شده است",
+    "unapprovedBadge": "نیاز به تایید مشتری پیش از مصرف قطعه",
+    "approveAction": "تایید مشتری",
+    "approved": "تایید مشتری ثبت شد",
+    "partProduct": "قطعه یدکی",
+    "partUnitPrice": "قیمت واحد",
+    "reservePart": "رزرو قطعه",
+    "partReserved": "قطعه از موجودی آزاد رزرو شد",
+    "partReserveFailed": "رزرو قطعه انجام نشد",
+    "partsTitle": "قطعات یدکی این تعمیر",
+    "partsEmpty": "هنوز قطعه‌ای برای این تعمیر ثبت نشده است.",
+    "consumePart": "مصرف قطعه",
+    "partConsumed": "قطعه مصرف و از انبار کسر شد",
+    "partConsumeFailed": "مصرف قطعه مجاز نیست",
+    "releasePart": "آزادسازی",
+    "partReleased": "رزرو قطعه آزاد شد",
+    "partsRevenue": "سهم قطعات",
+    "laborRevenue": "سهم اجرت",
+    "totalBill": "جمع صورت‌حساب",
+    "laborFee": "اجرت تعمیر",
+    "createFinalBill": "صدور صورت‌حساب نهایی",
+    "billCreated": "صورت‌حساب نهایی تعمیر در سیستم فاکتور صادر شد",
+    "billFailed": "صدور صورت‌حساب انجام نشد",
+    "billedInvoice": "فاکتور صادر شده"
   },
   "salon": {
     "resourceAdded": "اضافه شد",
     "failed": "انجام نشد",
     "retire": "کنار گذاشتن",
     "reactivate": "فعال کردن",
-    "resources": "صندلی‌ها، اتاق‌ها و تخت‌ها",
+    "resources": {
+      "bookingTitle": "رزرو زمان‌بندی‌شده منبع",
+      "bookButton": "رزرو بازه زمانی",
+      "releaseButton": "آزادسازی",
+      "bookingCreated": "رزرو منبع ثبت شد."
+    },
     "resourcesHint": "دو نوبت هم‌زمان هیچ‌وقت یک صندلی یا اتاق را نمی‌گیرند.",
     "resourcePlaceholder": "مثلاً صندلی ۱ یا اتاق پوست",
     "department": "بخش",
@@ -12609,7 +12833,14 @@
       "SERVICE_CONSUMABLE_WAREHOUSE_REQUIRED": "انباری که مواد از آن کم می‌شود را انتخاب کنید.",
       "RESOURCE_DEPARTMENT_NOT_FOUND": "بخش پیدا نشد.",
       "SALON_NOT_READY": "بخش سالن هنوز راه‌اندازی نشده (salon-01)."
-    }
+    },
+    "bookSlot": "رزرو زمان",
+    "bookingCreated": "رزرو ثبت شد",
+    "freeSlots": "بازه آزاد",
+    "releaseSlot": "آزادسازی",
+    "resource": "منبع",
+    "resourceBookings": "رزروهای منابع",
+    "utilization": "درصد بهره‌وری"
   },
   "commission": {
     "saved": "نرخ ذخیره شد",
@@ -12630,7 +12861,10 @@
     "unknown": "بدون مبلغ مشخص",
     "errors": {
       "COMMISSION_NOT_READY": "کمیسیون هنوز راه‌اندازی نشده (provider-commission-01)."
-    }
+    },
+    "scopeLabel": "دامنه کمیسیون",
+    "scopeTeam": "تیم",
+    "scopeMy": "سهم من"
   },
   "exchange": {
     "kycNeeded": "این مبلغ از حد تعیین‌شده بیشتر است؛ مشخصات شناسایی لازم است.",
@@ -12678,7 +12912,7 @@
     "partnerBalances": "حساب با طرف‌ها",
     "theyOwe": "(طلب ما)",
     "weOwe": "(بدهی ما)",
-    "notInLedger": "معاملات ارز و حواله‌ها فعلاً در دفتر کل و صندوق ثبت نمی‌شوند (دفتر کل هنوز چندارزی نیست). موجودی هر ارز و سود آن از همین معاملات خوانده می‌شود.",
+    "notInLedger": "معاملات ارز، ابطال، پرداخت حواله و تسویه نماینده به‌طور خودکار به ارز پایه در دفتر کل ثبت می‌شوند و موجودی هر ارز جداگانه نگهداری می‌شود.",
     "loadFailed": "تنظیمات صرافی خوانده نشد.",
     "number": "شماره",
     "bookAmount": "معادل",
@@ -12733,11 +12967,39 @@
       "REMITTANCE_CANCEL_REASON_REQUIRED": "دلیل لغو لازم است.",
       "REMITTANCE_CHANGED": "کس دیگری همین حالا وضعیت را عوض کرد.",
       "REMITTANCE_MOVE_NOT_ALLOWED": "از این وضعیت به آن وضعیت نمی‌شود رفت."
+    },
+    "reconcileTitle": "بستن و مطابقت صندوق ارزی",
+    "countedAmount": "شمارش‌شده",
+    "reconcileAction": "ثبت شمارش",
+    "reconcileSaved": "شمارش صندوق ارزی ثبت شد",
+    "variance": "اختلاف",
+    "note": "توضیح",
+    "noReconciliations": "هنوز شمارشی ثبت نشده.",
+    "reconcileStatus": {
+      "matched": "مطابق",
+      "over": "اضافی",
+      "short": "کسری",
+      "unknown": "نامشخص"
+    },
+    "glLinkedNotice": "معاملات ارز، ابطال، پرداخت حواله و تسویه نماینده به‌صورت یکپارچه و اتمیک به ارز پایه در دفتر کل ثبت می‌شوند و موجودی هر ارز جداگانه نگهداری می‌شود.",
+    "pendingReview": "نیازمند بررسی",
+    "approve": "تأیید",
+    "reject": "رد",
+    "glPosted": "ثبت دفتر کل",
+    "agentSettlement": "تسویه حساب با نماینده",
+    "settleCollect": "دریافت از نماینده",
+    "settlePay": "پرداخت به نماینده",
+    "settleAction": "ثبت تسویه",
+    "settlementSaved": "تسویه ثبت شد و به دفتر کل رفت",
+    "settle": {
+      "collect": "دریافت از نماینده",
+      "pay": "پرداخت به نماینده"
     }
   },
   "variantPicker": {
     "pick": "سایز / رنگ را انتخاب کنید",
-    "required": "این کالا چند مدل دارد؛ بدون انتخاب مدل ثبت نمی‌شود."
+    "required": "این کالا چند مدل دارد؛ بدون انتخاب مدل ثبت نمی‌شود.",
+    "atpShort": "موجود (ATP)"
   },
   "tillHub": {
     "label": "صندوق",
@@ -12790,5 +13052,204 @@
       "RESERVATION_INVALID_QUANTITY": "تعداد نامعتبر است.",
       "WAREHOUSE_MAP_SCHEMA_REQUIRED": "میفگریشن نقشه انبار اجرا نشده است."
     }
+  },
+  "terminology": {
+    "generic": {
+      "party": "طرف حساب",
+      "offering": "آیتم / خدمت",
+      "transaction": "سند عملیات",
+      "stock": "موجودی قابل کنترل",
+      "document": "سند عملیات",
+      "storageLocation": "محل نگهداری",
+      "operator": "انجام‌دهنده عملیات",
+      "order": "سفارش / درخواست کار",
+      "buyPrice": "بهای تمام‌شده تأمین",
+      "sellPrice": "نرخ / قیمت عرضه",
+      "returnAction": "برگشت / اصلاح",
+      "quantity": "مقدار",
+      "profit": "سود عملیات",
+      "cashbox": "صندوق / حساب دریافت",
+      "report": "گزارش عملیات و عملکرد",
+      "addItem": "افزودن آیتم جدید",
+      "noItems": "هنوز موردی ثبت نشده است",
+      "insufficientStock": "مقدار در دسترس کافی نیست",
+      "saveDocument": "ثبت سند عملیات",
+      "selectStorage": "محل نگهداری را انتخاب کنید",
+      "selectOperator": "انجام‌دهنده عملیات را انتخاب کنید",
+      "todayReport": "گزارش عملکرد امروز",
+      "noDocuments": "هنوز سندی ثبت نشده است",
+      "noStock": "موجودی ثبت نشده است"
+    },
+    "trades": {
+      "clothing": {
+        "offering": "پوشاک / مدل",
+        "document": "رسید فروش",
+        "storageLocation": "قفسه / انبار فروشگاه",
+        "operator": "فروشنده",
+        "order": "سفارش مشتری"
+      },
+      "beautySalon": {
+        "offering": "خدمت زیبایی",
+        "document": "صورت‌حساب خدمت",
+        "storageLocation": "اتاق / قفسه مصرفی",
+        "operator": "متخصص / آرایشگر",
+        "order": "نوبت"
+      },
+      "mobilePhones": {
+        "offering": "گوشی / قطعه",
+        "document": "رسید فروش / گارانتی",
+        "storageLocation": "ویترین / گاوصندوق",
+        "operator": "فروشنده",
+        "order": "سفارش / تحویل"
+      },
+      "repairs": {
+        "offering": "کار تعمیر / قطعه",
+        "document": "برگه تحویل تعمیر",
+        "storageLocation": "انبار قطعات",
+        "operator": "تعمیرکار",
+        "order": "تیکت تعمیر"
+      },
+      "jewellery": {
+        "offering": "قطعه طلا / جواهر",
+        "document": "سند خرید / فروش طلا",
+        "storageLocation": "ویترین / گاوصندوق",
+        "operator": "طلافروش",
+        "order": "سفارش ساخت / معامله"
+      },
+      "currencyExchange": {
+        "offering": "ارز / حواله",
+        "document": "برگه معامله ارزی",
+        "storageLocation": "صندوق ارز",
+        "operator": "صراف / متصدی",
+        "order": "حواله / معامله"
+      }
+    }
+  },
+  "gold": {
+    "rateBoardTitle": "تابلوی نرخ طلای ۲۴ عیار",
+    "rate24kPerGram": "نرخ هر گرم ۲۴ عیار",
+    "saveRate": "ثبت نرخ",
+    "rateSaved": "نرخ ثبت شد",
+    "rateInvalid": "نرخ نامعتبر است",
+    "rateHistory": "تاریخچه نرخ‌ها",
+    "secondHandPurchase": "خرید طلای دست‌دوم (با احراز هویت)",
+    "sellerName": "نام فروشنده",
+    "sellerId": "شماره تذکره / کارت ملی",
+    "weightGrams": "وزن خالص (گرم)",
+    "karat": "عیار (کیرات)",
+    "totalMinor": "مبلغ کل",
+    "recordPurchase": "ثبت خرید دست‌دوم",
+    "purchaseSaved": "خرید طلا ثبت شد",
+    "meltScrapTitle": "ذوب و کسری/افت وزن",
+    "expectedWeightGrams": "وزن مورد انتظار (گرم)",
+    "meltedWeightGrams": "وزن پس از ذوب (گرم)",
+    "recordMelt": "ثبت ذوب",
+    "meltSaved": "عملیات ذوب ثبت شد",
+    "reconcileTitle": "تطبیق وزن ویترین و گاوصندوق",
+    "location": "محل نگهداری",
+    "locationShowcase": "ویترین",
+    "locationSafe": "گاوصندوق",
+    "actualWeightGrams": "وزن واقعی (گرم)",
+    "reconcileAction": "ثبت تطبیق",
+    "reconciled": "تطبیق وزن ثبت شد",
+    "snapshotLabel": "اسنپ‌شات نرخ طلا",
+    "netWeightMg": "وزن خالص (میلی‌گرم)",
+    "makingCharge": "اجرت ساخت",
+    "deductionBp": "کسری عیار/اجرت (bp)",
+    "enterRate24k": "نرخ طلای ۲۴ عیار را وارد کنید",
+    "inputWeightGrams": "وزن ورودی (گرم)",
+    "kycThreshold": "سقف احراز هویت (KYC)",
+    "latest24k": "آخرین نرخ ۲۴ عیار",
+    "locations": {
+      "safe": "گاوصندوق",
+      "showcase": "ویترین"
+    },
+    "lossGrams": "کاهش وزن / افت (گرم)",
+    "meltTitle": "ذوب و ضایعات طلا",
+    "netCredit": "اعتبار خالص",
+    "noRateYet": "هنوز نرخی ثبت نشده است",
+    "physicalGrams": "وزن شمارش‌شده (گرم)",
+    "reconcileSaved": "مغایرت‌گیری طلا ثبت شد",
+    "recordReconcile": "ثبت شمارش فیزیکی",
+    "recordSecondHand": "ثبت خرید طلای دست‌دوم",
+    "recordedCount": "تعداد ثبت‌شده",
+    "recoveredGrams": "وزن بازیافتی (گرم)",
+    "secondHandSaved": "خرید طلای دست‌دوم ثبت شد",
+    "secondHandTitle": "خرید طلای دست‌دوم / شکسته",
+    "systemGrams": "وزن سیستمی (گرم)"
+  },
+  "returns": {
+    "condition": {
+      "sealed": "پلمپ / دست‌نخورده",
+      "opened": "بازشده و سالم",
+      "used": "استفاده‌شده",
+      "defective": "معیوب",
+      "damaged": "آسیب‌دیده",
+      "incomplete": "ناقص"
+    }
+  },
+  "capabilities": {
+    "resource_capacity": {
+      "label": "ظرفیت و زمان‌بندی منابع"
+    },
+    "time_materials_billing": {
+      "label": "صورتحساب زمان و مصالح پروژه"
+    },
+    "delivery_pod": {
+      "label": "تحویل و رسید تحویل (POD)"
+    },
+    "cod_reconciliation": {
+      "label": "تسویه پرداخت در محل (COD)"
+    },
+    "contracts_recurring": {
+      "label": "قراردادها و صورتحساب دوره‌ای"
+    },
+    "procurement_planning": {
+      "label": "برنامه‌ریزی خرید و سفارش بسته‌ای"
+    },
+    "three_way_match": {
+      "label": "تطبیق سه‌جانبه سفارش، رسید و فاکتور"
+    },
+    "project_costing": {
+      "label": "سود و هزینه به تفکیک پروژه"
+    },
+    "asset_rental": {
+      "label": "کرایه و اجاره دارایی و تجهیزات"
+    },
+    "quality_inspection": {
+      "label": "بازرسی کیفیت و قرنطینه"
+    },
+    "warranty_claims": {
+      "label": "ادعاهای گارانتی و ضمانت"
+    },
+    "cost_allocation": {
+      "label": "تخصیص هزینه و بهای تمام‌شده"
+    },
+    "approval_workflow": {
+      "label": "گردش تأیید و کنترل"
+    },
+    "owner_forecast": {
+      "label": "پیش‌بینی نقدینگی و مرکز فرمان مدیر"
+    },
+    "livestock_register": {
+      "label": "دفتر دام و کشاورزی"
+    },
+    "room_nights": {
+      "label": "اقامت و مدیریت اتاق‌های هتل"
+    },
+    "fleet_optimization": {
+      "label": "بهینه‌سازی مسیر ناوگان"
+    },
+    "clinical_ehr": {
+      "label": "پرونده پزشکی و نسخه درمانی"
+    },
+    "tiered_pricing": {
+      "label": "قیمت‌گذاری پلکانی و عمده"
+    }
+  },
+  "paymentMethod": {
+    "bank": "حواله / کارت بانکی",
+    "cash": "نقد",
+    "credit": "نسیه / اعتباری"
   }
 }

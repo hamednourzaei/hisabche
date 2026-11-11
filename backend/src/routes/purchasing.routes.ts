@@ -7,7 +7,11 @@ import { IdempotencyUnavailableError, readClientRequestId } from '../utils/clien
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createPurchaseOrderSchema, updatePurchaseOrderSchema } from '@hisabche/validation'
+import {
+  createDraftFromSuggestionsSchema,
+  createPurchaseOrderSchema,
+  updatePurchaseOrderSchema,
+} from '@hisabche/validation'
 import PurchasingService from '../services/purchasing.service'
 import { ConflictError, NotFoundError } from '../errors/database.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -164,6 +168,92 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
         if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message })
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to receive goods' })
+      }
+    },
+  )
+
+  // ─── POST /api/purchase-orders/from-suggestions ─────────
+  fastify.post(
+    '/api/purchase-orders/from-suggestions',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')],
+      schema: {
+        body: toJsonSchema(createDraftFromSuggestionsSchema),
+        response: {
+          201: toJsonSchema(z.any()),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = createDraftFromSuggestionsSchema.parse(request.body)
+        const result = await purchasingService.createDraftPurchaseOrdersFromSuggestions(
+          request.tenancy,
+          body,
+          { idempotencyKey: readClientRequestId(request) },
+        )
+        await clearCache('purchase-orders:*')
+        return reply.code(201).send(result)
+      } catch (err) {
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
+        return sendFailure(
+          reply,
+          fastify.log,
+          err,
+          'Failed to draft purchase orders from suggestions',
+        )
+      }
+    },
+  )
+
+  // ─── GET /api/purchase-orders/:id/three-way-match ───────
+  fastify.get(
+    '/api/purchase-orders/:id/three-way-match',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        querystring: toJsonSchema(z.object({ invoiceId: z.string().uuid().optional() })),
+        response: {
+          200: toJsonSchema(z.any()),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { invoiceId } = (request.query ?? {}) as { invoiceId?: string }
+        const result = await purchasingService.evaluateThreeWayMatchForPo(
+          request.tenancy,
+          id,
+          invoiceId,
+        )
+        return reply.send(result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to evaluate three-way match')
+      }
+    },
+  )
+
+  // ─── GET /api/suppliers/scorecard ───────────────────────
+  fastify.get(
+    '/api/suppliers/scorecard',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+      schema: {
+        response: {
+          200: toJsonSchema(z.array(z.any())),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const scorecard = await purchasingService.getSupplierScorecard(request.tenancy)
+        return reply.send(scorecard)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to compute supplier scorecard')
       }
     },
   )

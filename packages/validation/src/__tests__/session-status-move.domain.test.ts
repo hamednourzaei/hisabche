@@ -25,11 +25,16 @@ const base: ServiceDeliverySession = {
 
 describe('planSessionStatusMove', () => {
   it('the closed list carries no money: never delivered or cancelled', () => {
-    expect([...SESSION_STATUS_MOVES]).toEqual(['in_progress', 'no_show'])
+    expect([...SESSION_STATUS_MOVES]).toEqual(['checked_in', 'in_progress', 'no_show'])
   })
 
-  it('check-in from a booking', () => {
-    const r = planSessionStatusMove({ session: base, to: 'in_progress', now: 'T' })
+  it('check-in and start from a booking', () => {
+    const c = planSessionStatusMove({ session: base, to: 'checked_in', now: 'T0' })
+    expect(c.replayed).toBe(false)
+    expect(c.session.status).toBe('checked_in')
+    expect(c.session.updatedAt).toBe('T0')
+
+    const r = planSessionStatusMove({ session: c.session, to: 'in_progress', now: 'T' })
     expect(r.replayed).toBe(false)
     expect(r.session.status).toBe('in_progress')
     expect(r.session.updatedAt).toBe('T')
@@ -62,7 +67,12 @@ describe('planSessionStatusMove', () => {
   })
 
   it('the WHERE of the server update names exactly the legal sources', () => {
-    expect([...sessionStatusMoveSources('in_progress')]).toEqual(['scheduled'])
-    expect([...sessionStatusMoveSources('no_show')].sort()).toEqual(['in_progress', 'scheduled'])
+    expect([...sessionStatusMoveSources('checked_in')]).toEqual(['scheduled'])
+    expect([...sessionStatusMoveSources('in_progress')]).toEqual(['scheduled', 'checked_in'])
+    expect([...sessionStatusMoveSources('no_show')].sort()).toEqual([
+      'checked_in',
+      'in_progress',
+      'scheduled',
+    ])
   })
 })

@@ -166,3 +166,132 @@ export function useUpdateProject() {
     onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
   })
 }
+
+// ─── Project Members & Time Entries & Milestone Billing ─────
+export const projectMembersKeys = {
+  all: ['project-members'] as const,
+  list: (projectId: string) => [...projectMembersKeys.all, projectId] as const,
+}
+
+export const projectTimeEntriesKeys = {
+  all: ['project-time-entries'] as const,
+  list: (projectId: string) => [...projectTimeEntriesKeys.all, projectId] as const,
+}
+
+export function useProjectMembers(projectId: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: projectMembersKeys.list(projectId),
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/projects/${projectId}/members`)
+      return data as Array<Record<string, unknown>>
+    },
+    enabled: authReady && Boolean(projectId),
+  })
+}
+
+export function useAddProjectMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...values
+    }: { projectId: string } & Record<string, unknown>) => {
+      const { data } = await apiClient.post(`/projects/${projectId}/members`, values)
+      return data
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: projectMembersKeys.list(vars.projectId) }),
+  })
+}
+
+export function useRemoveProjectMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, memberId }: { projectId: string; memberId: string }) => {
+      await apiClient.delete(`/projects/${projectId}/members/${memberId}`)
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: projectMembersKeys.list(vars.projectId) }),
+  })
+}
+
+export function useProjectTimeEntries(projectId: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: projectTimeEntriesKeys.list(projectId),
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/projects/${projectId}/time-entries`)
+      return data as Array<Record<string, unknown>>
+    },
+    enabled: authReady && Boolean(projectId),
+  })
+}
+
+export function useCreateProjectTimeEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...values
+    }: { projectId: string } & Record<string, unknown>) => {
+      const { data } = await apiClient.post(`/projects/${projectId}/time-entries`, values)
+      return data
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: projectTimeEntriesKeys.list(vars.projectId) })
+      qc.invalidateQueries({ queryKey: ['timesheets'] })
+    },
+  })
+}
+
+export function useUpdateProjectTimeEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...values }: { id: string } & Record<string, unknown>) => {
+      const { data } = await apiClient.patch(`/time-entries/${id}`, values)
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectTimeEntriesKeys.all })
+      qc.invalidateQueries({ queryKey: ['timesheets'] })
+    },
+  })
+}
+
+export function useDeleteProjectTimeEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/time-entries/${id}`)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectTimeEntriesKeys.all })
+      qc.invalidateQueries({ queryKey: ['timesheets'] })
+    },
+  })
+}
+
+export function useBillProjectMilestone() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      ...input
+    }: {
+      projectId: string
+      customerId?: string | undefined
+      milestoneTitle?: string | undefined
+      milestoneAmount?: number | undefined
+      paymentMethod?: 'cash' | 'bank' | 'credit' | undefined
+      date?: string | undefined
+    }) => {
+      const { data } = await apiClient.post(`/projects/${projectId}/bill`, input)
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['timesheets'] })
+      qc.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}

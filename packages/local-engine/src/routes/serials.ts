@@ -130,9 +130,10 @@ export function registerSerialsRoutes(router: Router): void {
     return db.transaction(() => {
       const created: SerialRow[] = []
       for (const serialNumber of serialNumbers) {
+        // Workspace-wide IMEI uniqueness (not just per product)
         const existing = db.get<{ id: string }>(
-          'SELECT id FROM stock_serials WHERE workspace_id = ? AND product_id = ? AND serial_number = ?',
-          [ctx.workspaceId, productId, serialNumber],
+          'SELECT id FROM stock_serials WHERE workspace_id = ? AND serial_number = ? AND deleted_at IS NULL',
+          [ctx.workspaceId, serialNumber],
         )
         if (existing) throw new ConflictError('SERIAL_DUPLICATE')
         const id = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : ''

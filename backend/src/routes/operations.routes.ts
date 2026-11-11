@@ -19,15 +19,22 @@ import {
   budgetReportQuerySchema,
   checkBudgetSpendBodySchema,
   reviseBudgetBodySchema,
+  routeReturnConditionDisposition,
   serialHoldSchema,
+  serialReturnSchema,
+  type ReturnCondition,
 } from '@hisabche/validation'
 import { BudgetService } from '../services/budgeting'
 import { TraceabilityService } from '../services/traceability'
 import { TimesheetsService } from '../services/timesheets'
+import { holds } from '../services/authorization/authorization.domain'
+import { ForbiddenError } from '../errors/auth.error'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { readClientRequestId } from '../utils/client-request'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 // A type boundary only — the same call and output as before, without `any`
 // (the generic signature trips TS2589 on deep schemas; see conflict.routes.ts).
@@ -445,7 +452,7 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // Hold a unit for a customer / release it (retail-ops-01, 10 Nov 2026).
+  // Hold a unit for a customer (with optional expiry) / release it (retail-ops-01 + mobile-serial-01).
   fastify.post(
     '/serials/:id/hold',
     { preHandler: stockWrite, schema: { response: { 200: toJsonSchema(z.any()) } } },
@@ -456,10 +463,72 @@ export async function operationsRoutes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: 'Invalid id' })
         const body = serialHoldSchema.parse(request.body)
         return reply.send(
-          await traceabilityService.holdSerial(request.tenancy, id, body.customerId),
+          await traceabilityService.holdSerial(request.tenancy, id, body.customerId, {
+            expiresAt: body.expiresAt ?? null,
+            holdMinutes: body.holdMinutes ?? null,
+          }),
         )
       } catch (err) {
         return fail(reply, err, 'Failed to hold the unit')
+      }
+    },
+  )
+
+  fastify.post(
+    '/serials/holds/release-expired',
+    { preHandler: stockWrite, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await traceabilityService.releaseExpiredHolds(request.tenancy))
+      } catch (err) {
+        return fail(reply, err, 'Failed to release expired serial holds')
+      }
+    },
+  )
+
+  // Return a sold phone/IMEI with condition routing (routeReturnedSerial) and financial reversal
+  // against its original sale invoice via InvoiceReturnService.
+  fastify.post(
+    '/serials/:id/return',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        if (!z.string().uuid().safeParse(id).success)
+          return reply.code(400).send({ error: 'Invalid id' })
+        const body = serialReturnSchema.parse(request.body)
+        const disposition = routeReturnConditionDisposition({
+          conditionCode: body.conditionCode as ReturnCondition,
+          restockChoice: body.restockChoice ?? 'restock',
+        })
+        if (disposition.requiresStockAdjust && !holds(request.tenancy, 'stock.adjust')) {
+          throw new ForbiddenError('RETURN_STOCK_DECISION_NOT_PERMITTED')
+        }
+        if (
+          body.refundAmount &&
+          body.refundAmount > 0 &&
+          !holds(request.tenancy, 'payment.record')
+        ) {
+          throw new ForbiddenError('RETURN_REFUND_NOT_PERMITTED')
+        }
+        const result = await traceabilityService.returnSoldSerial(request.tenancy, id, {
+          conditionCode: body.conditionCode as ReturnCondition,
+          restockChoice: disposition.restockChoice,
+          returnNumber: body.returnNumber,
+          returnDate: body.returnDate,
+          reasonCode: body.reasonCode,
+          notes: body.notes,
+          refundMethod: body.refundMethod,
+          refundAmount: body.refundAmount,
+          clientRequestId: readClientRequestId(request),
+        })
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        return fail(reply, err, 'Failed to return the serial unit')
       }
     },
   )

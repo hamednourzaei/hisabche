@@ -5,17 +5,20 @@ import { useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
 
 import { DashboardView } from '../dashboard-view'
+import { resolveRoleStartScreen, type StartScreenRole } from '../DashboardRegistry'
 import { WorkQueueContainer } from '../../work-queue/containers/work-queue-container'
 import { type DateRange, type PresetKey } from '../date-range-picker'
 import {
   apiErrorMessage,
   useDeleteCustomUnit,
   useMyCapabilities,
+  useOperationalProfile,
   useProducts,
   useCustomers,
   useInvoices,
   useServiceDeliverySessions,
 } from '@hisabche/api'
+import { useAuthStore } from '@hisabche/store'
 import { X } from 'lucide-react'
 import { FirstValueChecklist } from '../first-value-checklist'
 import { usePageLook } from '../../../../lib/page-look'
@@ -32,9 +35,12 @@ import { ExchangeRateDialog, useLatestCustomUnits } from '../exchange-rate-dialo
 import { AiAssistantLauncher } from '../../ai/ai-assistant-launcher'
 import { localizePath } from '@hisabche/ui-contract'
 import { useLocalePush, useRouteLang } from '../../../../hooks/use-locale-push'
+import { useTerminology } from '../../../../hooks/use-terminology'
 import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-dashboard-card'
+import { SalonOperationsCard } from '../salon-operations-card'
+import { OwnerCommandCenterSection } from '../owner-command-center'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -89,10 +95,26 @@ export function DashboardContainer() {
   // A saved look is the person's own arrangement and must win. Only without
   // one does the selected industry decide which section comes first.
   const { profile } = useBusinessProfile()
-  const sectionOrder = look.customized ? DASHBOARD_PARTS : profile.dashboard
+  const operationalProfile = useOperationalProfile()
+  const { term, isUnresolved: terminologyUnresolved } = useTerminology()
+  const authRole = useAuthStore((s) => s.user?.role)
   const access = useMyCapabilities().data
   const may = (capability: string) =>
     access === undefined || access.capabilities.includes(capability)
+  const startRole: StartScreenRole =
+    authRole === 'seller' ? 'cashier' : authRole === 'manager' ? 'branch_manager' : 'owner'
+  const roleStart = resolveRoleStartScreen({
+    role: startRole,
+    dna: operationalProfile.data?.dna,
+    tradeKey: profile.primary,
+    can: may,
+    blockedModules: access?.blockedModules ?? [],
+  })
+  const sectionOrder = look.customized
+    ? DASHBOARD_PARTS
+    : operationalProfile.data?.dna?.presentation?.dashboard?.partOrder?.length
+      ? operationalProfile.data.dna.presentation.dashboard.partOrder
+      : profile.dashboard
   const mayInsights = may('invoice.read') && may('customer.read') && may('product.read')
 
   // ─── Data ──────────────────────────────────────────────────────────────
@@ -218,6 +240,32 @@ export function DashboardContainer() {
         hasSessions={hasSessions}
         className="mb-6"
       />
+
+      {operationalProfile.data?.dna && (roleStart.setupGaps.length > 0 || terminologyUnresolved) ? (
+        <div
+          role="note"
+          data-dna-setup-gaps={roleStart.setupGaps.join(',')}
+          data-dna-terminology-unresolved={terminologyUnresolved ? 'true' : 'false'}
+          className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--color-warning)/0.45)] bg-[hsl(var(--color-warning)/0.08)] px-4 py-2.5 text-sm"
+        >
+          <span className="text-[hsl(var(--fg-primary))]">
+            {t(
+              'dashboard.setupGapsPrompt',
+              'برخی بخش‌های پروفایل کاری هنوز مشخص نشده‌اند؛ تنظیمات پایه را کامل کنید.',
+            )}{' '}
+            <span className="text-xs text-[hsl(var(--fg-secondary))]">
+              ({term('transactionLabelKey', 'تراکنش')} / {term('itemLabelKey', 'مورد')})
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => push('/settings')}
+            className="text-xs font-semibold text-[hsl(var(--color-primary))] underline-offset-2 hover:underline"
+          >
+            {t('dashboard.completeSetupAction', 'تکمیل پروفایل کاری')}
+          </button>
+        </div>
+      ) : null}
 
       {/* §12 — what needs doing, above what happened.
           `capabilities` is empty deliberately: no endpoint reports the
@@ -401,6 +449,28 @@ export function DashboardContainer() {
           onOpen={() => push('/manufacturing')}
         />
       ) : null}
+
+      {(operationalProfile.data?.dna?.archetypeHint === 'SALON_MULTI_STAFF' ||
+        operationalProfile.data?.dna?.archetypeHint === 'NAIL_TECH_BEAUTY' ||
+        profile.primary === 'beautySalon') &&
+      may('invoice.read') ? (
+        <SalonOperationsCard
+          t={t}
+          locale={intlLocale}
+          from={toIsoDay(dateRange.from)}
+          to={toIsoDay(dateRange.to)}
+          enabled={may('payroll.read')}
+        />
+      ) : null}
+
+      <OwnerCommandCenterSection
+        t={t}
+        fmtNumber={(val) => formatNumber(val, intlLocale)}
+        can={may}
+        hiddenFigureGroups={kpis?.hidden ?? []}
+        blockedModules={access?.blockedModules ?? []}
+        onNavigate={(href) => push(href)}
+      />
     </>
   )
 }

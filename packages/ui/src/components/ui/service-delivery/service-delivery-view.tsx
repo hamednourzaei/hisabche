@@ -44,6 +44,7 @@ export type Translate = (key: string, fallback?: string) => string
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: 'info',
+  checked_in: 'info',
   in_progress: 'info',
   delivered: 'good',
   cancelled: 'neutral',
@@ -145,7 +146,8 @@ export interface ServiceDeliveryViewProps {
    * «حاضر شد» / «نیامد» on a booked session. Optional: a host that cannot
    * move a status offers no button rather than one that fails.
    */
-  onMoveStatus?: ((row: ServiceSessionRow, to: 'in_progress' | 'no_show') => void) | undefined
+  onMoveStatus?:
+    ((row: ServiceSessionRow, to: 'checked_in' | 'in_progress' | 'no_show') => void) | undefined
   /** The row whose move is on its way — its buttons wait. */
   movingId?: string | null | undefined
   /** Only from a host with an outbox: the link to the page that can re-queue. */
@@ -294,7 +296,8 @@ export function ServiceDeliveryView({
       labelFallback: 'اقدام',
       locked: true,
       render: (row) => {
-        const deliverable = row.status === 'scheduled' || row.status === 'in_progress'
+        const deliverable =
+          row.status === 'scheduled' || row.status === 'checked_in' || row.status === 'in_progress'
         return (
           <span className="flex flex-wrap items-center gap-1">
             <ActionButton variant="quiet" onClick={() => onOpen(row)}>
@@ -304,9 +307,33 @@ export function ServiceDeliveryView({
               <>
                 <ActionButton
                   disabled={movingId === row.id}
-                  onClick={() => onMoveStatus(row, 'in_progress')}
+                  onClick={() => onMoveStatus(row, 'checked_in')}
                 >
                   {t('serviceDelivery.actions.checkIn', 'حاضر شد')}
+                </ActionButton>
+                <ActionButton
+                  variant="quiet"
+                  disabled={movingId === row.id}
+                  onClick={() => onMoveStatus(row, 'in_progress')}
+                >
+                  {t('serviceDelivery.actions.start', 'شروع کار')}
+                </ActionButton>
+                <ActionButton
+                  variant="quiet"
+                  disabled={movingId === row.id}
+                  onClick={() => onMoveStatus(row, 'no_show')}
+                >
+                  {t('serviceDelivery.actions.noShow', 'نیامد')}
+                </ActionButton>
+              </>
+            ) : null}
+            {mayWrite && onMoveStatus && row.status === 'checked_in' ? (
+              <>
+                <ActionButton
+                  disabled={movingId === row.id}
+                  onClick={() => onMoveStatus(row, 'in_progress')}
+                >
+                  {t('serviceDelivery.actions.start', 'شروع کار')}
                 </ActionButton>
                 <ActionButton
                   variant="quiet"

@@ -17,9 +17,15 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import {
+  useBookResource,
   useCommissionRates,
   useCommissionReport,
   useCreateServiceResource,
+  useMyCapabilities,
+  useMyCommissionReport,
+  useReleaseResourceBooking,
+  useResourceBookings,
+  useResourceSlots,
   useSaveServiceCatalog,
   useServiceCatalog,
   useServiceResources,
@@ -33,6 +39,7 @@ import { toIsoDay } from '@hisabche/formatting'
 import { Button } from '../button'
 import { Input } from '../input'
 import { DataTable, type TableColumn } from '../data-table'
+import { SegmentedControl } from '../segmented-control'
 import { useToast } from '../toast-provider'
 import { typedNumber } from '../../../lib/typed-number'
 import { refusalText } from '../../../lib/refusal-text'
@@ -65,10 +72,17 @@ function ResourcesCard() {
   const resources = useServiceResources()
   const create = useCreateServiceResource()
   const update = useUpdateServiceResource()
+  const bookings = useResourceBookings()
+  const book = useBookResource()
+  const releaseBooking = useReleaseResourceBooking()
   const departments = useDepartmentOptions()
   const [name, setName] = useState('')
   const [kind, setKind] = useState<ResourceKind>('chair')
   const [departmentId, setDepartmentId] = useState('')
+  const [selectedResourceId, setSelectedResourceId] = useState('')
+  const [slotStart, setSlotStart] = useState('')
+  const [slotEnd, setSlotEnd] = useState('')
+  const slots = useResourceSlots(selectedResourceId || resources.data?.resources[0]?.id)
 
   if (resources.data && !resources.data.ready) return <NotReady t={t} migration="salon-01" />
 
@@ -172,6 +186,96 @@ function ResourcesCard() {
         rowKey={(r) => r.id}
         paginate={false}
       />
+
+      <div className="mt-4 space-y-2 border-t border-[hsl(var(--border-default))] pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="font-medium text-[hsl(var(--fg-primary))]">
+            {t('salon.resourceBookings', 'رزرو منابع و ظرفیت')}
+          </span>
+          {slots.data?.utilization ? (
+            <span className="text-[hsl(var(--fg-secondary))]">
+              {t('salon.utilization', 'بهره‌وری')}:{' '}
+              {slots.data.utilization.ratio === null
+                ? '—'
+                : `${Math.round(slots.data.utilization.ratio * 100)}%`}{' '}
+              ({slots.data.freeSlots.length} {t('salon.freeSlots', 'بازه آزاد')})
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <LabeledSelect
+            name="bookingResourceId"
+            value={selectedResourceId}
+            placeholder={t('salon.resource', 'منبع')}
+            onChange={setSelectedResourceId}
+            options={(resources.data?.resources ?? []).map((r) => ({ value: r.id, label: r.name }))}
+          />
+          <Input
+            type="datetime-local"
+            value={slotStart}
+            onChange={(e) => setSlotStart(e.target.value)}
+            className="w-44"
+          />
+          <Input
+            type="datetime-local"
+            value={slotEnd}
+            onChange={(e) => setSlotEnd(e.target.value)}
+            className="w-44"
+          />
+          <Button
+            size="sm"
+            disabled={!selectedResourceId || !slotStart || !slotEnd || book.isPending}
+            onClick={() => {
+              if (!selectedResourceId || !slotStart || !slotEnd) return
+              book.mutate(
+                {
+                  resourceId: selectedResourceId,
+                  startAt: new Date(slotStart).toISOString(),
+                  endAt: new Date(slotEnd).toISOString(),
+                  sourceType: 'session',
+                },
+                {
+                  onSuccess: () => {
+                    setSlotStart('')
+                    setSlotEnd('')
+                    toast.success(t('salon.bookingCreated', 'رزرو ثبت شد'))
+                  },
+                  onError: (e) =>
+                    toast.error(
+                      refusalText(e, t, 'salon', SETUP_ERRORS, t('salon.failed', 'انجام نشد')),
+                    ),
+                },
+              )
+            }}
+          >
+            {t('salon.bookSlot', 'ثبت رزرو')}
+          </Button>
+        </div>
+        {(bookings.data?.bookings ?? []).length > 0 ? (
+          <ul className="space-y-1 text-xs">
+            {(bookings.data?.bookings ?? []).slice(0, 5).map((b) => (
+              <li
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded border border-[hsl(var(--border-default))] px-2 py-1"
+              >
+                <span dir="ltr" className="tabular-nums">
+                  {b.sourceType} · {b.status} · {b.startAt ?? '—'} → {b.endAt ?? '—'}
+                </span>
+                {b.status === 'active' ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={releaseBooking.isPending}
+                    onClick={() => releaseBooking.mutate(b.id)}
+                  >
+                    {t('salon.releaseSlot', 'آزادسازی')}
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </section>
   )
 }
@@ -373,12 +477,23 @@ export function CommissionSection() {
   const t = usePackT()
   const toast = useToast()
   const money = useMoneyText()
+  const capabilities = useMyCapabilities()
+  const mayWriteCommission = capabilities.can('payroll.write') !== false
+  const mayReadTeam = capabilities.can('payroll.read') !== false
   const staff = useEmployeeOptions()
   const rates = useCommissionRates()
   const setRate = useSetCommissionRate()
   const [from, setFrom] = useState(monthStart)
   const [to, setTo] = useState(() => toIsoDay(new Date()))
-  const report = useCommissionReport(from, to)
+  const [scope, setScope] = useState<'team' | 'my'>(() => (mayReadTeam ? 'team' : 'my'))
+  const effectiveScope: 'team' | 'my' = mayReadTeam ? scope : 'my'
+  const teamReport = useCommissionReport(from, to, {
+    enabled: mayReadTeam && effectiveScope === 'team',
+  })
+  const myReport = useMyCommissionReport(from, to, {
+    enabled: effectiveScope === 'my',
+  })
+  const report = effectiveScope === 'my' ? myReport : teamReport
   const [employeeId, setEmployeeId] = useState('')
   const [percent, setPercent] = useState('')
 
@@ -465,37 +580,54 @@ export function CommissionSection() {
 
   return (
     <section className="space-y-4" data-guide="commission">
-      <div className={`${packCard} flex flex-wrap items-end gap-2`}>
-        <div className="min-w-48 flex-1">
-          <LabeledSelect
-            name="employeeId"
-            label={t('commission.provider', 'مجری')}
-            value={employeeId}
-            onChange={(v) => {
-              setEmployeeId(v)
-              const bp = rateOf.get(v)
-              setPercent(bp === undefined ? '' : String(bp / 100))
-            }}
-            options={staff}
+      {mayWriteCommission ? (
+        <div className={`${packCard} flex flex-wrap items-end gap-2`}>
+          <div className="min-w-48 flex-1">
+            <LabeledSelect
+              name="employeeId"
+              label={t('commission.provider', 'مجری')}
+              value={employeeId}
+              onChange={(v) => {
+                setEmployeeId(v)
+                const bp = rateOf.get(v)
+                setPercent(bp === undefined ? '' : String(bp / 100))
+              }}
+              options={staff}
+            />
+          </div>
+          <Input
+            className="w-28"
+            name="rateBp"
+            inputMode="decimal"
+            value={percent}
+            placeholder={t('commission.percent', 'درصد')}
+            onChange={(e) => setPercent(e.target.value)}
           />
+          <Button
+            size="sm"
+            onClick={saveRate}
+            disabled={!employeeId || pct === null || setRate.isPending}
+          >
+            {t('commission.setRate', 'ثبت نرخ')}
+          </Button>
         </div>
-        <Input
-          className="w-28"
-          name="rateBp"
-          inputMode="decimal"
-          value={percent}
-          placeholder={t('commission.percent', 'درصد')}
-          onChange={(e) => setPercent(e.target.value)}
-        />
-        <Button
-          size="sm"
-          onClick={saveRate}
-          disabled={!employeeId || pct === null || setRate.isPending}
-        >
-          {t('commission.setRate', 'ثبت نرخ')}
-        </Button>
-      </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 text-sm">
+        {mayReadTeam ? (
+          <SegmentedControl
+            label={t('commission.scopeLabel', 'دامنه کمیسیون')}
+            value={effectiveScope}
+            onChange={setScope}
+            options={[
+              { value: 'team', label: t('commission.scopeTeam', 'تیم') },
+              { value: 'my', label: t('commission.scopeMy', 'سهم من') },
+            ]}
+          />
+        ) : (
+          <span className="rounded-md bg-[hsl(var(--surface-muted))] px-2.5 py-1 text-xs font-medium text-[hsl(var(--fg-secondary))]">
+            {t('commission.scopeMy', 'سهم من')}
+          </span>
+        )}
         <span>{t('commission.from', 'از')}</span>
         <Input
           type="date"

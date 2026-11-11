@@ -64,6 +64,9 @@ export interface SerialUnit {
   /** The invoice that sold it; null while in stock. */
   invoiceId?: string | null
   soldOn?: string | null
+  /** Customer reservation hold + expiry timestamp when status === 'reserved'. */
+  reservedForCustomerId?: string | null
+  reservedUntil?: string | null
 }
 
 export type SerialRuleCode =

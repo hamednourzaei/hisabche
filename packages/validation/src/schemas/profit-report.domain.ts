@@ -564,3 +564,153 @@ export function invoiceMargins(
   }
   return result
 }
+
+// ─── V60 Slice 8: Cost Objects & True Profit (delegates 100% to buildProfitReport) ──
+
+export type CostObjectType =
+  'project' | 'work_order' | 'repair_ticket' | 'service_session' | 'trip' | 'branch' | 'dimension'
+
+export interface CostObjectInvoiceInput extends ProfitInvoice {
+  readonly costObjectId?: string | null | undefined
+  readonly costObjectType?: CostObjectType | undefined
+  readonly costObjectLabel?: string | null | undefined
+}
+
+export interface OverheadAllocationPolicy {
+  readonly policyKey: string
+  /** Explicit allocated overhead in the same currency, keyed by costObjectId. */
+  readonly allocatedByCostObjectId: Readonly<Record<string, number>>
+}
+
+export interface CostObjectProfitRow {
+  readonly costObjectId: string
+  readonly costObjectType: CostObjectType
+  readonly label: string
+  readonly currency: string
+  readonly revenue: number
+  readonly cost: number
+  readonly grossProfit: number | null
+  readonly overheadStatus: 'not_allocated' | 'allocated'
+  readonly overheadNote: string | null
+  readonly overhead: number | null
+  readonly netProfit: number | null
+  readonly marginPercent: number | null
+  readonly costStatus: CostStatus
+  readonly invoiceCount: number
+}
+
+export interface CostObjectProfitReport {
+  readonly from: string
+  readonly to: string
+  readonly currency: string
+  /** NEEDS_OWNER_DECISION when no explicit overhead policy is configured. */
+  readonly overheadPolicyStatus: 'not_allocated' | 'allocated'
+  readonly overheadNotice: string
+  readonly rows: readonly CostObjectProfitRow[]
+}
+
+/**
+ * Slices revenue, direct cost and profit by cost object (dimension/project/work-order/trip)
+ * in ONE currency, delegating every calculation to `buildProfitReport` (no second formula).
+ */
+export function buildCostObjectProfitReport(input: {
+  readonly from: string
+  readonly to: string
+  readonly currency: string
+  readonly invoices: readonly CostObjectInvoiceInput[]
+  readonly lines: readonly ProfitLine[]
+  readonly consumptions: readonly ProfitConsumption[]
+  readonly overheadPolicy?: OverheadAllocationPolicy | undefined
+}): CostObjectProfitReport {
+  const inCurrency = input.invoices.filter((inv) => inv.currency === input.currency)
+  const grouped = new Map<
+    string,
+    {
+      costObjectId: string
+      costObjectType: CostObjectType
+      label: string
+      invoices: CostObjectInvoiceInput[]
+      invoiceIds: Set<string>
+    }
+  >()
+
+  for (const inv of inCurrency) {
+    if (!inv.costObjectId) continue
+    const existing = grouped.get(inv.costObjectId)
+    if (existing) {
+      existing.invoices.push(inv)
+      existing.invoiceIds.add(inv.id)
+    } else {
+      grouped.set(inv.costObjectId, {
+        costObjectId: inv.costObjectId,
+        costObjectType: inv.costObjectType ?? 'dimension',
+        label: inv.costObjectLabel ?? inv.costObjectId,
+        invoices: [inv],
+        invoiceIds: new Set([inv.id]),
+      })
+    }
+  }
+
+  const rows: CostObjectProfitRow[] = []
+  for (const group of grouped.values()) {
+    const groupLines = input.lines.filter((line) => group.invoiceIds.has(line.invoiceId))
+    const groupConsumptions = input.consumptions.filter(
+      (c) => c.invoiceId !== null && group.invoiceIds.has(c.invoiceId),
+    )
+    const subReport = buildProfitReport({
+      from: input.from,
+      to: input.to,
+      currency: input.currency,
+      invoices: group.invoices,
+      lines: groupLines,
+      consumptions: groupConsumptions,
+      payrolls: [],
+    })
+
+    const gp = subReport.totals.grossProfit
+    const hasExplicitOverhead =
+      input.overheadPolicy !== undefined &&
+      Object.prototype.hasOwnProperty.call(
+        input.overheadPolicy.allocatedByCostObjectId,
+        group.costObjectId,
+      )
+    const overheadVal = hasExplicitOverhead
+      ? round2(input.overheadPolicy!.allocatedByCostObjectId[group.costObjectId]!)
+      : null
+
+    // Unknown gross profit stays null ("unknown is not zero").
+    const netVal = gp === null ? null : overheadVal === null ? gp : round2(gp - overheadVal)
+    const marginVal =
+      netVal === null || subReport.totals.revenue <= 0
+        ? null
+        : round2((netVal / subReport.totals.revenue) * 100)
+
+    rows.push({
+      costObjectId: group.costObjectId,
+      costObjectType: group.costObjectType,
+      label: group.label,
+      currency: input.currency,
+      revenue: subReport.totals.revenue,
+      cost: subReport.totals.cost,
+      grossProfit: gp,
+      overheadStatus: overheadVal === null ? 'not_allocated' : 'allocated',
+      overheadNote: overheadVal === null ? 'overhead not allocated' : null,
+      overhead: overheadVal,
+      netProfit: netVal,
+      marginPercent: marginVal,
+      costStatus: subReport.totals.costStatus,
+      invoiceCount: subReport.totals.invoiceCount,
+    })
+  }
+
+  return {
+    from: input.from,
+    to: input.to,
+    currency: input.currency,
+    overheadPolicyStatus: input.overheadPolicy ? 'allocated' : 'not_allocated',
+    overheadNotice: input.overheadPolicy
+      ? input.overheadPolicy.policyKey
+      : 'overhead not allocated',
+    rows,
+  }
+}

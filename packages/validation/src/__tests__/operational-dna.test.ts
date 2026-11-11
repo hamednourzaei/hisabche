@@ -8,9 +8,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   ARCHETYPE_PRESETS,
+  effectiveDnaAxes,
   operationalDnaSchema,
+  operatingQuestionsFor,
   resolveDnaCapabilities,
   inferOperationalDna,
+  setupGapsOf,
 } from '../schemas/operational-dna'
 
 describe('Operational DNA (8 Axes) & Resolver', () => {
@@ -63,17 +66,26 @@ describe('Operational DNA (8 Axes) & Resolver', () => {
   })
 
   it('infers DNA dynamically from operational characteristics instead of trade name alone', () => {
-    // 1. A service salon that takes appointments and uses consumables
+    // 1. A service salon that takes appointments, uses consumables, and explicitly sets hourly pay
     const salonDna = inferOperationalDna({
       takesAppointments: 'yes',
       holdsStock: 'yes',
       hasStaff: 'yes',
+      staffArrangement: 'hourly',
     })
     expect(salonDna.offering).toContain('TIME_SERVICE')
     expect(salonDna.intake).toContain('APPOINTMENT_BOOKING')
     expect(salonDna.inventory).toContain('SERVICE_CONSUMABLES')
     expect(salonDna.workforce).toContain('HOURLY_STAFF')
-    expect(salonDna.archetypeHint).toBe('NAIL_TECH_BEAUTY')
+    expect(salonDna.archetypeHint).toBe('SALON_MULTI_STAFF')
+
+    // 1b. Saying hasStaff=yes without compensation model MUST stay UNRESOLVED (no guessed hourly pay)
+    const unknownPayDna = inferOperationalDna({
+      takesAppointments: 'yes',
+      holdsStock: 'yes',
+      hasStaff: 'yes',
+    })
+    expect(unknownPayDna.workforce).toEqual(['UNRESOLVED'])
 
     // 2. An education center that teaches courses with packages
     const eduDna = inferOperationalDna({
@@ -150,5 +162,147 @@ describe('V55: unknown answers never fabricate a business', () => {
   it('UNRESOLVED parses against the persisted DNA schema (backward compatible)', () => {
     const parsed = operationalDnaSchema.safeParse(inferOperationalDna({ holdsStock: 'unknown' }))
     expect(parsed.success).toBe(true)
+  })
+})
+
+describe('V60 Slice 2: 15-axis DNA, backward compatibility & adaptive questions', () => {
+  it('legacy DNA fixtures without axes 10–15 parse and resolve identically', () => {
+    const legacy = { ...ARCHETYPE_PRESETS.RETAIL_STORE }
+    const parsed = operationalDnaSchema.parse(legacy)
+    expect(parsed.pricingBasis).toBeUndefined()
+    const resolved = resolveDnaCapabilities(parsed)
+    expect(resolved.activeModules).toEqual(
+      expect.arrayContaining([
+        'accounting',
+        'invoices',
+        'customers',
+        'products',
+        'pos',
+        'inventory',
+        'warehouse',
+      ]),
+    )
+    expect(resolved.capabilities.capabilities).toContain('multi_unit')
+  })
+
+  it('maps each new optional axis to its modules/capabilities and emits setup gaps for UNRESOLVED', () => {
+    const weighted = resolveDnaCapabilities(
+      operationalDnaSchema.parse({
+        ...ARCHETYPE_PRESETS.RETAIL_STORE,
+        pricingBasis: ['WEIGHT', 'LENGTH', 'TIERED'],
+        assetCustody: 'CUSTOMER_ASSET_IN_CUSTODY',
+        executionSite: 'CUSTOMER_SITE',
+        recurrence: 'RECURRING_SERVICE',
+        approvalDepth: 'MULTI_STEP',
+      }),
+    )
+    expect(weighted.capabilities.capabilities).toEqual(
+      expect.arrayContaining([
+        'weight_pricing',
+        'length_pricing',
+        'tiered_pricing',
+        'serialized_items',
+      ]),
+    )
+    expect(weighted.activeModules).toEqual(
+      expect.arrayContaining(['job_tickets', 'delivery', 'contracts', 'approvals']),
+    )
+
+    const missingAxesDna = operationalDnaSchema.parse(ARCHETYPE_PRESETS.RETAIL_STORE)
+    expect(effectiveDnaAxes(missingAxesDna).regulatedDomain).toBe('UNRESOLVED')
+
+    const unresolved = operationalDnaSchema.parse({
+      ...ARCHETYPE_PRESETS.RETAIL_STORE,
+      pricingBasis: ['UNRESOLVED'],
+      assetCustody: 'UNRESOLVED',
+      executionSite: 'UNRESOLVED',
+      recurrence: 'UNRESOLVED',
+      approvalDepth: 'UNRESOLVED',
+      regulatedDomain: 'UNRESOLVED',
+    })
+    expect(setupGapsOf(unresolved)).toEqual(
+      expect.arrayContaining([
+        'PRICING_BASIS_UNRESOLVED',
+        'ASSET_CUSTODY_UNRESOLVED',
+        'EXECUTION_SITE_UNRESOLVED',
+        'RECURRENCE_UNRESOLVED',
+        'APPROVAL_DEPTH_UNRESOLVED',
+        'REGULATED_DOMAIN_UNRESOLVED',
+      ]),
+    )
+  })
+
+  it('regulatedDomain emits compliance gap only and NEVER grants an available capability', () => {
+    const base = operationalDnaSchema.parse(ARCHETYPE_PRESETS.RETAIL_STORE)
+    const clinicDna = operationalDnaSchema.parse({
+      ...base,
+      regulatedDomain: 'HEALTH_RECORDS',
+    })
+    const basePlan = resolveDnaCapabilities(base)
+    const clinicPlan = resolveDnaCapabilities(clinicDna)
+    expect(clinicPlan.capabilities.capabilities).toEqual(basePlan.capabilities.capabilities)
+    expect(clinicPlan.activeModules).toEqual(basePlan.activeModules)
+    expect(clinicPlan.setupGaps).toContain('REGULATED_DOMAIN_COMPLIANCE')
+  })
+
+  it('builds tailored adaptive operatingQuestionsFor sets across 8 families without irrelevant questions', () => {
+    const barber = operatingQuestionsFor({ takesAppointments: 'yes', holdsStock: 'no' })
+    expect(barber).not.toContain('producesGoods')
+    expect(barber).not.toContain('rentsOutAssets')
+    expect(barber).not.toContain('holdsCustomerAssets')
+    expect(barber.join(',')).not.toContain('livestock')
+
+    const rental = operatingQuestionsFor({
+      takesAppointments: 'no',
+      holdsStock: 'yes',
+      rentsOutAssets: 'yes',
+    })
+    expect(rental).toContain('rentsOutAssets')
+    expect(rental).toContain('billsRecurring')
+
+    const clinic = operatingQuestionsFor({
+      takesAppointments: 'yes',
+      holdsStock: 'yes',
+      hasStaff: 'yes',
+    })
+    expect(clinic).toContain('staffArrangement')
+    expect(clinic).toContain('needsApprovals')
+
+    const contractor = operatingQuestionsFor({
+      takesJobTicketsOrRepairs: 'yes',
+      holdsStock: 'yes',
+      worksAtCustomerSite: 'yes',
+    })
+    expect(contractor).toContain('holdsCustomerAssets')
+    expect(contractor).toContain('worksAtCustomerSite')
+
+    const courier = operatingQuestionsFor({
+      holdsStock: 'no',
+      takesAppointments: 'no',
+      worksAtCustomerSite: 'yes',
+    })
+    expect(courier).not.toContain('tracksSerials')
+    expect(courier).toContain('worksAtCustomerSite')
+
+    const farm = operatingQuestionsFor({ holdsStock: 'yes', producesGoods: 'yes' })
+    expect(farm).toContain('hasExpiryDates')
+    expect(farm).not.toContain('rentsOutAssets')
+
+    const wholesaler = operatingQuestionsFor({
+      holdsStock: 'yes',
+      sellsOnCredit: 'yes',
+      hasStaff: 'yes',
+    })
+    expect(wholesaler).toContain('needsApprovals')
+    expect(wholesaler).toContain('hasPointOfSale')
+
+    const restaurant = operatingQuestionsFor({
+      holdsStock: 'yes',
+      producesGoods: 'yes',
+      hasPointOfSale: 'yes',
+    })
+    expect(restaurant).toContain('hasExpiryDates')
+    expect(restaurant).not.toContain('holdsCustomerAssets')
+    expect(restaurant).not.toContain('rentsOutAssets')
   })
 })

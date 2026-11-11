@@ -522,6 +522,70 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /profit-report/variants ────────────────────────
+  // Size / colour / brand report via the single report owner (`AccountingService`).
+  fastify.get(
+    '/profit-report/variants',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = z
+          .object({ attribute: z.string().trim().min(1).max(40).default('size') })
+          .parse(request.query)
+        return reply.send({
+          data: await accountingService.getVariantStockReport(request.tenancy, query.attribute),
+        })
+      } catch (err) {
+        if (err instanceof z.ZodError)
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        return fail(reply, err, 'Failed to build the variant attribute report')
+      }
+    },
+  )
+
+  // ─── GET /profit-report/cost-objects ─────────────────────
+  // V60 Slice 8: per-cost-object (project / branch / dimension) profit via the
+  // ONE profit formula (`buildCostObjectProfitReport` -> `buildProfitReport`).
+  fastify.get(
+    '/profit-report/cost-objects',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = z
+          .object({
+            from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            currency: z.string().min(3).max(8),
+          })
+          .parse(request.query)
+        return reply.send(
+          await accountingService.getCostObjectProfitReports(
+            request.tenancy,
+            query.from,
+            query.to,
+            query.currency,
+          ),
+        )
+      } catch (err) {
+        if (err instanceof z.ZodError)
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        return fail(reply, err, 'Failed to build the cost-object profit report')
+      }
+    },
+  )
+
   // ─── GET /cash-flow ────────────────────────────────────
   fastify.get(
     '/cash-flow',

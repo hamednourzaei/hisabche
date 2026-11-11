@@ -28,6 +28,7 @@ import {
   RETURNS_CORE_ALTERS,
   SERIALS_STATEMENTS,
   BATCHES_STATEMENTS,
+  REPAIR_TICKETS_STATEMENTS,
   SERVICE_CANCELLATION_REASON_ALTERS,
   SERVICE_DELIVERY_AUDIT_ALTERS,
   SERVICE_DELIVERY_STATEMENTS,
@@ -724,6 +725,58 @@ const V22_BATCH_IDENTITY: LocalMigration = {
   statements: [...BATCHES_STATEMENTS],
 }
 
+/**
+ * v22 -> v23: versioned Operational DNA + onboarding progress on local_workspace
+ * so offline edits and cross-device sync share optimistic concurrency (`operational_dna_version`).
+ */
+const V23_OPERATIONAL_PROFILE: LocalMigration = {
+  to: 23,
+  statements: [
+    `CREATE TABLE IF NOT EXISTS local_workspace (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL DEFAULT '',
+      base_currency TEXT NOT NULL DEFAULT '',
+      time_zone TEXT NOT NULL DEFAULT 'Asia/Kabul',
+      business_types TEXT NOT NULL DEFAULT '',
+      business_types_updated_at TEXT,
+      credit_limit_mode TEXT NOT NULL DEFAULT 'warn',
+      logo_url TEXT,
+      stamp_url TEXT,
+      signature_url TEXT,
+      created_at TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT ''
+    )`,
+    `ALTER TABLE local_workspace ADD COLUMN operational_dna TEXT`,
+    `ALTER TABLE local_workspace ADD COLUMN operational_dna_version INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE local_workspace ADD COLUMN onboarding_progress TEXT`,
+  ],
+}
+
+/**
+ * v23 -> v24: append-only local service delivery status transition audit log
+ * mirroring salon-02-migration.sql (`service_delivery_status_audit`).
+ */
+const V24_SERVICE_STATUS_AUDIT: LocalMigration = {
+  to: 24,
+  statements: [
+    `CREATE TABLE IF NOT EXISTS service_delivery_status_audit (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL DEFAULT '',
+      session_id TEXT NOT NULL,
+      from_status TEXT,
+      to_status TEXT NOT NULL,
+      actor_id TEXT,
+      changed_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_service_delivery_audit_session ON service_delivery_status_audit(workspace_id, session_id, changed_at DESC)`,
+  ],
+}
+
+const V25_REPAIR_TICKETS: LocalMigration = {
+  to: 25,
+  statements: [...REPAIR_TICKETS_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -746,6 +799,9 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V20_VARIANT_IDENTITY,
   V21_SERIAL_IDENTITY,
   V22_BATCH_IDENTITY,
+  V23_OPERATIONAL_PROFILE,
+  V24_SERVICE_STATUS_AUDIT,
+  V25_REPAIR_TICKETS,
 ]
 
 /**

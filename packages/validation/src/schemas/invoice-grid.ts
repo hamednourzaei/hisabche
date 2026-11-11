@@ -36,6 +36,7 @@ import { unitSchema } from './common.schema'
 import type { currencyCodeSchema } from './common.schema'
 import { isMeasurementUnit, lineUnitIssue } from './measurement.domain'
 import { fractionDigits } from '@hisabche/formatting'
+import type { GoldLineSnapshot } from './universal-core/gold-jewellery.domain'
 
 type CurrencyCode = z.infer<typeof currencyCodeSchema>
 
@@ -235,6 +236,8 @@ export interface InvoiceGridRow {
    * before this field existed.
    */
   productUnit?: string
+  /** V59.1 gold-01: locked metal-rate snapshot attached to weighted gold lines. */
+  goldSnapshot?: GoldLineSnapshot
   /** Raw text exactly as typed, keyed by column id. */
   values: Record<string, string>
 }
@@ -912,6 +915,7 @@ export interface MappedInvoiceItem {
   unit: InvoiceUnit
   unitLabel?: string
   weightGrams?: number
+  goldSnapshot?: GoldLineSnapshot
   unitPrice: number
   discount: number
   totalPrice: number
@@ -1032,6 +1036,7 @@ export function rowToInvoiceItem(
     unit,
     ...(unit === 'custom' && unitRaw ? { unitLabel: unitRaw.slice(0, 24) } : {}),
     ...(weight > 0 ? { weightGrams: weight } : {}),
+    ...(row.goldSnapshot ? { goldSnapshot: row.goldSnapshot } : {}),
     unitPrice: rowUnitPrice(row, columns, ctx),
     discount: rowDiscountPercent(row),
     totalPrice: rowTotal(row, columns, ctx),

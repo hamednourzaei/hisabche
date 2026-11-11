@@ -212,7 +212,7 @@ export class VariantService {
    */
   async stock(workspaceId: string, productId: string) {
     await this.assertProduct(workspaceId, productId)
-    const [variants, stock, sold, product] = await Promise.all([
+    const [variants, stock, sold, product, activeHolds] = await Promise.all([
       this.activeVariants(workspaceId, productId),
       this.stockRows(workspaceId, productId),
       this.soldByVariant(workspaceId, productId),
@@ -222,6 +222,7 @@ export class VariantService {
         .eq('workspace_id', workspaceId)
         .eq('id', productId)
         .maybeSingle(),
+      this.activeReservations(workspaceId, productId),
     ])
     if (product.error) throw new DatabaseError('Failed to read the product', product.error)
     const lines = summarizeVariantStock(
@@ -241,7 +242,42 @@ export class VariantService {
       productOnHand,
       unassigned: Math.round((productOnHand - onVariants) * 10_000) / 10_000,
       variants: lines,
+      reservations: activeHolds,
     }
+  }
+
+  private async activeReservations(
+    workspaceId: string,
+    productId: string,
+  ): Promise<
+    Array<{
+      variantId: string
+      warehouseId: string
+      quantity: number
+      status: 'active' | 'settled' | 'released' | 'expired'
+    }>
+  > {
+    const nowIso = new Date().toISOString()
+    const { data, error } = await this.db
+      .from('stock_reservations')
+      .select('variant_id, warehouse_id, quantity, status, expires_at')
+      .eq('workspace_id', workspaceId)
+      .eq('product_id', productId)
+      .eq('status', 'active')
+    if (error) {
+      if (isStockNotReady(error) || error.code === '42P01' || error.code === 'PGRST205') {
+        return []
+      }
+      throw new DatabaseError('Failed to read active variant reservations', error)
+    }
+    return ((data ?? []) as Array<Record<string, unknown>>)
+      .filter((r) => Boolean(r.variant_id) && (!r.expires_at || String(r.expires_at) > nowIso))
+      .map((r) => ({
+        variantId: String(r.variant_id),
+        warehouseId: String(r.warehouse_id ?? 'default'),
+        quantity: Number(r.quantity) || 0,
+        status: 'active' as const,
+      }))
   }
 
   /**

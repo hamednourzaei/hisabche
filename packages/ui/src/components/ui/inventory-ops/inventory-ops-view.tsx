@@ -18,11 +18,16 @@
 import { useNumberFormat } from '../../../hooks/use-number-format'
 import { useState } from 'react'
 import {
+  apiErrorMessage,
   useCashForecast,
+  useCreateDraftPurchaseOrdersFromSuggestions,
   useDeadStock,
+  usePurchaseOrders,
   useReorderSuggestions,
   useShiftHistory,
   useStaleOpportunities,
+  useSupplierScorecard,
+  useThreeWayMatch,
 } from '@hisabche/api'
 
 import { cn } from '../../../lib/utils'
@@ -30,6 +35,7 @@ import { SearchableTable } from '../data-table'
 import { EmptyState } from '../empty-state'
 import { KpiCard } from '../kpi-card'
 import { SegmentedControl } from '../segmented-control'
+import { SelectField } from '../select-field'
 
 export interface InventoryOpsViewProps {
   t?: ((key: string, fallback?: string) => string) | undefined
@@ -72,67 +78,222 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
   const num = useNumberFormat()
   const tr = translator(t)
   const reorder = useReorderSuggestions()
+  const createDraftPos = useCreateDraftPurchaseOrdersFromSuggestions()
+  const scorecard = useSupplierScorecard()
+  const purchaseOrders = usePurchaseOrders()
+
+  const [selectedSupplierId, setSelectedSupplierId] = useState('')
+  const [packSizeInput, setPackSizeInput] = useState('1')
+  const [unitPriceInput, setUnitPriceInput] = useState('')
+  const [selectedPoId, setSelectedPoId] = useState('')
+  const [draftFeedback, setDraftFeedback] = useState<string | null>(null)
+
+  const threeWayMatch = useThreeWayMatch(selectedPoId || null)
+
   if (reorder.isLoading) return <Waiting text={tr('common.loading', 'در حال بارگذاری…')} />
   if (reorder.isError) return <Failed text={tr('ops.loadFailed', 'این بخش خوانده نشد.')} />
+
+  const supplierOptions = (scorecard.data ?? []).map((s) => ({
+    value: s.supplierId,
+    label: s.name,
+  }))
+  const poOptions = (purchaseOrders.data ?? []).map((po) => ({
+    value: po.id,
+    label: `${po.supplier?.name ?? po.id.slice(0, 8)} (${po.status})`,
+  }))
+
+  const handleDraftAll = async () => {
+    setDraftFeedback(null)
+    const rows = reorder.data ?? []
+    const packSize = Math.max(1, Number(packSizeInput) || 1)
+    const unitPrice = Number(unitPriceInput)
+    if (!selectedSupplierId || !(unitPrice > 0) || rows.length === 0) {
+      setDraftFeedback(
+        tr('ops.draftPoValidation', 'لطفاً تأمین‌کننده و قیمت واحد معتبر را مشخص کنید.'),
+      )
+      return
+    }
+    try {
+      await createDraftPos.mutateAsync({
+        suggestions: rows.map((r) => ({
+          productId: r.productId,
+          productName: r.productName,
+          supplierId: selectedSupplierId,
+          onHand: r.onHand,
+          reorderLevel: r.reorderLevel,
+          openPoQuantity: 0,
+          purchasePackSize: packSize,
+          unitPrice,
+        })),
+      })
+      setDraftFeedback(tr('ops.draftPoCreated', 'پیش‌نویس سفارش خرید برای تأیید ثبت شد.'))
+    } catch (err) {
+      setDraftFeedback(apiErrorMessage(err, tr('ops.loadFailed', 'این بخش خوانده نشد.')))
+    }
+  }
+
   return (
-    <SearchableTable
-      tableId="ops-reorder"
-      rows={reorder.data ?? []}
-      rowKey={(item) => item.productId}
-      words={(item) => [item.productName]}
-      empty={
-        <EmptyState
-          title={tr('ops.reorderEmpty', 'هیچ کالایی به نقطه‌ی سفارش نرسیده')}
-          description={tr('ops.reorderEmptyHint', 'موجودی همه‌ی کالاها بالای حد تعیین‌شده است.')}
-        />
-      }
-      columns={[
-        {
-          id: 'product',
-          labelKey: 'ops.product',
-          labelFallback: 'کالا',
-          locked: true,
-          sortValue: (item) => item.productName,
-          render: (item) => <span className="font-medium">{item.productName}</span>,
-        },
-        {
-          id: 'onHand',
-          labelKey: 'ops.onHand',
-          labelFallback: 'موجودی',
-          align: 'end',
-          sortValue: (item) => item.onHand,
-          render: (item) => <span className="tabular-nums">{num(item.onHand)}</span>,
-        },
-        {
-          id: 'reorderLevel',
-          labelKey: 'ops.reorderLevel',
-          labelFallback: 'نقطه‌ی سفارش',
-          align: 'end',
-          showFrom: 'md',
-          sortValue: (item) => item.reorderLevel,
-          render: (item) => <span className="tabular-nums">{num(item.reorderLevel)}</span>,
-        },
-        {
-          id: 'suggested',
-          labelKey: 'ops.suggested',
-          labelFallback: 'پیشنهاد',
-          align: 'end',
-          sortValue: (item) => item.suggestedQuantity,
-          render: (item) => (
-            <span className="font-semibold tabular-nums">{num(item.suggestedQuantity)}</span>
-          ),
-        },
-        {
-          id: 'daysOfCover',
-          labelKey: 'ops.daysOfCover',
-          labelFallback: 'کفایت (روز)',
-          align: 'end',
-          showFrom: 'md',
-          sortValue: (item) => item.daysOfCover ?? null,
-          render: (item) => <span className="tabular-nums">{orDash(item.daysOfCover, num)}</span>,
-        },
-      ]}
-    />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3">
+        <div className="min-w-44 flex-1">
+          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+            {tr('ops.supplierForDraft', 'تأمین‌کننده')}
+          </label>
+          <SelectField
+            value={selectedSupplierId}
+            onChange={setSelectedSupplierId}
+            options={supplierOptions}
+            placeholder={tr('ops.selectSupplier', 'انتخاب تأمین‌کننده')}
+            searchable
+          />
+        </div>
+        <div className="w-28">
+          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+            {tr('ops.packSize', 'ضریب بسته')}
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={packSizeInput}
+            onChange={(e) => setPackSizeInput(e.target.value)}
+            className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
+          />
+        </div>
+        <div className="w-36">
+          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+            {tr('ops.unitPriceForDraft', 'قیمت واحد پیشنهادی')}
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={unitPriceInput}
+            onChange={(e) => setUnitPriceInput(e.target.value)}
+            className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleDraftAll}
+          disabled={createDraftPos.isPending || (reorder.data?.length ?? 0) === 0}
+          className="h-9 rounded-md bg-[hsl(var(--color-primary))] px-3 text-xs font-medium text-[hsl(var(--color-primary-fg))] disabled:opacity-50"
+        >
+          {tr('ops.createDraftPo', 'ایجاد پیش‌نویس سفارش خرید')}
+        </button>
+        {draftFeedback ? (
+          <p className="w-full text-xs text-[hsl(var(--fg-secondary))]">{draftFeedback}</p>
+        ) : null}
+      </div>
+
+      <SearchableTable
+        tableId="ops-reorder"
+        rows={reorder.data ?? []}
+        rowKey={(item) => item.productId}
+        words={(item) => [item.productName]}
+        empty={
+          <EmptyState
+            title={tr('ops.reorderEmpty', 'هیچ کالایی به نقطه‌ی سفارش نرسیده')}
+            description={tr('ops.reorderEmptyHint', 'موجودی همه‌ی کالاها بالای حد تعیین‌شده است.')}
+          />
+        }
+        columns={[
+          {
+            id: 'product',
+            labelKey: 'ops.product',
+            labelFallback: 'کالا',
+            locked: true,
+            sortValue: (item) => item.productName,
+            render: (item) => <span className="font-medium">{item.productName}</span>,
+          },
+          {
+            id: 'onHand',
+            labelKey: 'ops.onHand',
+            labelFallback: 'موجودی',
+            align: 'end',
+            sortValue: (item) => item.onHand,
+            render: (item) => <span className="tabular-nums">{num(item.onHand)}</span>,
+          },
+          {
+            id: 'reorderLevel',
+            labelKey: 'ops.reorderLevel',
+            labelFallback: 'نقطه‌ی سفارش',
+            align: 'end',
+            showFrom: 'md',
+            sortValue: (item) => item.reorderLevel,
+            render: (item) => <span className="tabular-nums">{num(item.reorderLevel)}</span>,
+          },
+          {
+            id: 'suggested',
+            labelKey: 'ops.suggested',
+            labelFallback: 'پیشنهاد',
+            align: 'end',
+            sortValue: (item) => item.suggestedQuantity,
+            render: (item) => (
+              <span className="font-semibold tabular-nums">{num(item.suggestedQuantity)}</span>
+            ),
+          },
+          {
+            id: 'daysOfCover',
+            labelKey: 'ops.daysOfCover',
+            labelFallback: 'کفایت (روز)',
+            align: 'end',
+            showFrom: 'md',
+            sortValue: (item) => item.daysOfCover ?? null,
+            render: (item) => <span className="tabular-nums">{orDash(item.daysOfCover, num)}</span>,
+          },
+        ]}
+      />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-[hsl(var(--border-default))] p-3">
+          <h4 className="mb-2 text-sm font-medium">
+            {tr('ops.threeWayMatchTitle', 'تطبیق سه‌جانبه (سفارش / رسید / فاکتور)')}
+          </h4>
+          <SelectField
+            value={selectedPoId}
+            onChange={setSelectedPoId}
+            options={poOptions}
+            placeholder={tr('ops.selectPoForMatch', 'انتخاب سفارش خرید')}
+            searchable
+          />
+          {selectedPoId && threeWayMatch.data ? (
+            <div className="mt-2 space-y-1 text-xs">
+              <p className="font-medium">
+                {threeWayMatch.data.matched
+                  ? tr('ops.threeWayMatched', 'تطبیق کامل — آماده تأیید پرداخت')
+                  : tr('ops.threeWayBlocked', 'مغایرت یافت شد — پرداخت متوقف است')}
+              </p>
+              {threeWayMatch.data.mismatches.map((m, idx) => (
+                <p key={`${m.code}-${idx}`} className="text-[hsl(var(--color-destructive))]">
+                  {m.code}: {m.detail}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border border-[hsl(var(--border-default))] p-3">
+          <h4 className="mb-2 text-sm font-medium">
+            {tr('ops.supplierScorecardTitle', 'کارنامه تأمین‌کنندگان')}
+          </h4>
+          {(scorecard.data ?? []).length === 0 ? (
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              {tr('ops.supplierScorecardEmpty', 'داده‌ای برای ارزیابی تأمین‌کنندگان موجود نیست.')}
+            </p>
+          ) : (
+            <ul className="space-y-1 text-xs">
+              {(scorecard.data ?? []).slice(0, 6).map((row) => (
+                <li key={row.supplierId} className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium">{row.name}</span>
+                  <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+                    {row.band} ({row.evidence.purchases})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

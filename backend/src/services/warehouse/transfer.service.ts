@@ -192,7 +192,11 @@ export class TransferService {
     ctx: TenancyContext,
     id: string,
     action: TransferAction,
-    options: { reason?: string | undefined } = {},
+    options: {
+      reason?: string | undefined
+      receivedLines?:
+        Array<{ lineId: string; receivedQuantity: number; reason?: string | undefined }> | undefined
+    } = {},
   ) {
     const { data: current, error } = await supabase
       .from('stock_transfers')
@@ -216,7 +220,10 @@ export class TransferService {
     // Decided 10 Nov 2026 — see the header: the stock moves at RECEIVE, line
     // by line, BEFORE the document says «received». A receive that fails
     // half-way leaves the document «shipped» and the next try finishes it.
-    if (action === 'receive') await this.moveLines(ctx, id)
+    let discrepancySummary: string | null = null
+    if (action === 'receive') {
+      discrepancySummary = await this.moveLines(ctx, id, options.receivedLines)
+    }
 
     const now = new Date().toISOString()
     const updates: Record<string, unknown> = { status: verdict.next, updated_at: now }
@@ -235,6 +242,9 @@ export class TransferService {
     if (action === 'receive') {
       updates.received_by = ctx.userId
       updates.received_at = now
+      if (discrepancySummary) {
+        updates.notes = discrepancySummary
+      }
     }
     if (action === 'cancel') {
       updates.cancelled_at = now
@@ -265,7 +275,15 @@ export class TransferService {
    * skips what already arrived; the engine's key stops a line moving twice
    * even when the mark was lost.
    */
-  private async moveLines(ctx: TenancyContext, id: string): Promise<void> {
+  private async moveLines(
+    ctx: TenancyContext,
+    id: string,
+    receivedLines?: Array<{
+      lineId: string
+      receivedQuantity: number
+      reason?: string | undefined
+    }>,
+  ): Promise<string | null> {
     const transfer = (await this.get(ctx, id)) as unknown as {
       transfer_number: string | null
       from_warehouse_id: string
@@ -281,29 +299,57 @@ export class TransferService {
     if (transfer.lines.some((line) => line.unit_id)) {
       throw new ValidationError('TRANSFER_UNIT_NOT_SUPPORTED')
     }
+    const overrides = new Map<string, { receivedQuantity: number; reason?: string | undefined }>()
+    for (const entry of receivedLines ?? []) {
+      const target = transfer.lines.find((l) => l.id === entry.lineId)
+      if (!target) throw new ValidationError('TRANSFER_LINE_NOT_FOUND')
+      if (entry.receivedQuantity > Number(target.quantity)) {
+        throw new ValidationError('TRANSFER_RECEIVED_EXCEEDS_SHIPPED')
+      }
+      overrides.set(entry.lineId, entry)
+    }
+
     const engine = new WarehouseService()
+    const discrepancies: string[] = []
     for (const line of transfer.lines) {
       if (line.received_quantity !== null && line.received_quantity !== undefined) continue
-      const quantity = Number(line.quantity)
-      await engine.transferStock(
-        ctx,
-        {
-          productId: line.product_id,
-          fromWarehouseId: transfer.from_warehouse_id,
-          toWarehouseId: transfer.to_warehouse_id,
-          quantity,
-          notes: `transfer ${transfer.transfer_number ?? id}`,
-        },
-        { idempotencyKey: `transfer-${id}-${line.id}` },
-      )
+      const shippedQty = Number(line.quantity)
+      const override = overrides.get(line.id)
+      const actualQty = override ? override.receivedQuantity : shippedQty
+      const discrepancy = shippedQty - actualQty
+
+      if (actualQty > 0) {
+        await engine.transferStock(
+          ctx,
+          {
+            productId: line.product_id,
+            fromWarehouseId: transfer.from_warehouse_id,
+            toWarehouseId: transfer.to_warehouse_id,
+            quantity: actualQty,
+            notes: `transfer ${transfer.transfer_number ?? id}`,
+          },
+          { idempotencyKey: `transfer-${id}-${line.id}` },
+        )
+      }
+
+      const lineNote =
+        discrepancy > 0
+          ? `discrepancy: ${discrepancy}${override?.reason ? ` — ${override.reason}` : ''}`
+          : null
+      if (lineNote) discrepancies.push(`${line.product_id}: ${lineNote}`)
+
       const { error } = await supabase
         .from('stock_transfer_lines')
-        .update({ received_quantity: quantity })
+        .update({
+          received_quantity: actualQty,
+          ...(lineNote ? { notes: lineNote } : {}),
+        })
         .eq('id', line.id)
         .eq('workspace_id', ctx.workspaceId)
         .is('received_quantity', null)
       if (error) throw new DatabaseError('Failed to mark the line received', error)
     }
+    return discrepancies.length > 0 ? discrepancies.join('; ') : null
   }
 
   /** K3 — what has left a warehouse and not yet arrived. Derived, never stored. */

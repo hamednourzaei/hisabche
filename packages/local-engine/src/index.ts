@@ -50,6 +50,7 @@ import { registerPackageCreditsRoutes } from './routes/package-credits'
 import { registerServiceDeliveryRoutes } from './routes/service-delivery'
 import { registerTaxRoutes } from './routes/tax'
 import { registerWarehouseRoutes } from './routes/warehouses'
+import { registerWorkspaceProfileRoutes } from './routes/workspace-profile'
 import { registerWorkspaceRoutes } from './routes/workspace'
 import type {
   LocalContext,
@@ -65,6 +66,7 @@ export * from './errors'
 export * from './export'
 export * from './router'
 export * from './types'
+export * from './services/repair-transitions'
 
 export interface LocalEngine {
   request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>>
@@ -94,6 +96,7 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerExchangeRateRoutes(router)
   registerBackupRoutes(router)
   registerWorkspaceRoutes(router)
+  registerWorkspaceProfileRoutes(router)
   registerMeRoutes(router)
   registerDashboardRoutes(router)
   registerFeedRoutes(router)

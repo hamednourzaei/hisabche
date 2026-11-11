@@ -172,7 +172,15 @@
         "Access Control": "Access Control",
         "Event Logging": "Event Logging",
         "Multi-user": "Multi-user",
-        "99_9% Available": "99_9% Available"
+        "99_9% Available": "99_9% Available",
+        "آفلاین اول": "Offline First",
+        "رمزنگاری شده": "Encrypted",
+        "پشتیبان خودکار": "Auto Backup",
+        "بک‌آپ خودکار": "Auto Backup",
+        "کنترل دسترسی": "Access Control",
+        "ثبت رویدادها": "Event Logging",
+        "چند کاربره": "Multi-user",
+        "۹۹_۹٪ در دسترس": "99.9% Available"
       },
       "isolation": {
         "title": "Isolated business data",
@@ -1827,7 +1835,16 @@
     "showMore": "More",
     "showLess": "Less",
     "listSeparator": ", ",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "address": "Address",
+    "customer": "Customer",
+    "failed": "Failed",
+    "item": "Item",
+    "member": "Member",
+    "price": "Price",
+    "product": "Product",
+    "quantity": "Quantity",
+    "staff": "Staff"
   },
   "invoices": {
     "creditPending": "Awaiting credit approval",
@@ -2373,7 +2390,16 @@
       "transfer": "Transfer",
       "adjustment": "Adjustment",
       "opening": "Opening balance"
-    }
+    },
+    "extClaimIssueRequired": "Please enter the issue description.",
+    "extClaimCreated": "Warranty claim submitted.",
+    "extQualityLogged": "Quality check logged.",
+    "extSubmitClaim": "Submit claim",
+    "extLogQuality": "Log inspection",
+    "extClaimIssuePlaceholder": "Describe the defect to file a warranty claim",
+    "extClaimsCount": "Claims",
+    "extQualityCount": "Quality checks",
+    "label": "Warehouse"
   },
   "customers": {
     "creditor": "Creditor",
@@ -3075,7 +3101,66 @@
         "stock": "Stock"
       }
     },
-    "negativeStockHint": "products below zero — not counted in the value"
+    "negativeStockHint": "products below zero — not counted in the value",
+    "setupGapsPrompt": "Some parts of your operating profile are still unspecified; complete your basic setup.",
+    "completeSetupAction": "Complete operating profile",
+    "cards": {
+      "operations": "Operations & Sales",
+      "receivables": "Receivables",
+      "inventory": "Inventory",
+      "cash": "Cashbox",
+      "lowStock": "Low Stock Items"
+    },
+    "roles": {
+      "ownerKpis": "Overview & Profit",
+      "workQueue": "Work Queue",
+      "branchOps": "Branch Operations",
+      "branchStock": "Branch Stock",
+      "newDocument": "New Document",
+      "openTill": "Open Till",
+      "todayReceipts": "Today's Receipts",
+      "warehouses": "Storage Locations",
+      "transfers": "Transfers",
+      "holds": "Stock Holds",
+      "salonCalendar": "Appointments Calendar",
+      "salonCheckIn": "Client Check-in",
+      "clientHistory": "Client History",
+      "deposits": "Deposits & Advances",
+      "mySessions": "My Sessions",
+      "myCommission": "My Commission",
+      "fxRates": "FX Rate Board",
+      "fxPositions": "Currency Positions",
+      "fxRemittances": "Open Remittances",
+      "fxTrades": "Record FX Trade",
+      "repairAssigned": "Assigned Tickets",
+      "repairParts": "Waiting Parts",
+      "ledger": "General Ledger & Trial Balance",
+      "financialReports": "Financial Reports"
+    },
+    "salon": {
+      "title": "Salon Operations",
+      "scheduled": "Scheduled",
+      "checkedIn": "Checked In",
+      "inProgress": "In Progress",
+      "delivered": "Delivered",
+      "commission": "Total Commission",
+      "noShowCancelled": "No-show / cancelled",
+      "profit": "Salon profit",
+      "totalBooked": "Total booked"
+    },
+    "commandCenter": {
+      "title": "Decision alerts",
+      "insufficientData": "Insufficient data",
+      "unknown": "Unknown",
+      "cashForecast": "Cash forecast",
+      "latePayers": "Late customer payments",
+      "stockOutRisk": "Stock-out risk",
+      "capacityUtilization": "Resource capacity",
+      "projectsOverBudget": "Projects near/over budget",
+      "contractsDue": "Contracts due for billing",
+      "procurementMismatches": "Procurement mismatches",
+      "openQualityFailures": "Open quality failures"
+    }
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -3344,7 +3429,8 @@
       "unknownNote": "Part of this period’s sales has no recorded cost of goods. Until it is recorded, gross and net profit cannot be calculated — sales are not profit.",
       "notLedgerBased": "This report was not read from the ledger; the figures are summed from the invoice rows.",
       "reconciliation": "Difference between the invoice rows and the ledger",
-      "reconciliationCost": "Cost"
+      "reconciliationCost": "Cost",
+      "byVariantAttr": "Profit by variant attribute"
     },
     "closingBalance": "Closing balance",
     "generalLedger": {
@@ -3438,7 +3524,12 @@
       "inventory_loss": "Inventory scrap loss",
       "inventory_shrinkage": "Inventory shrinkage (count)",
       "inventory_gain": "Inventory gain (count)",
-      "supplier_advances": "Advances to suppliers"
+      "supplier_advances": "Advances to suppliers",
+      "fx_vault": "FX Vault"
+    },
+    "variantReport": {
+      "title": "Inventory & Margin by Size / Colour / Brand",
+      "empty": "No variant stock recorded."
     }
   },
   "hr": {
@@ -4228,14 +4319,35 @@
         "hasExpiryDates": "Do your goods carry expiry dates?",
         "sellsOnCredit": "Do you sell on credit or installments?",
         "hasStaff": "Do you have staff?",
-        "locations": "How many branches?"
+        "locations": "How many branches?",
+        "staffArrangement": "How are your staff members paid or arranged?",
+        "holdsCustomerAssets": "Do you temporarily hold customer items for repair or custody?",
+        "rentsOutAssets": "Do you rent or lease out equipment, rooms, or assets?",
+        "worksAtCustomerSite": "Is work performed on customer site or along a delivery route?",
+        "billsRecurring": "Do you issue recurring contract or subscription invoices?",
+        "needsApprovals": "Do purchases or postings require manager approval?"
       },
       "answers": {
         "yes": "Yes",
         "no": "No",
         "unknown": "Don't know",
         "single": "One place",
-        "multiple": "Several"
+        "multiple": "Several",
+        "fixed_salary": "Fixed salary",
+        "hourly": "Hourly",
+        "commission": "Commission",
+        "shift": "Shift-based",
+        "mixed": "Mixed"
+      },
+      "gaps": {
+        "unitTrackingUnresolved": "Unit tracking method has not been chosen yet.",
+        "pricingBasisUnresolved": "Pricing basis has not been chosen yet.",
+        "assetCustodyUnresolved": "Asset custody model has not been chosen yet.",
+        "executionSiteUnresolved": "Execution location has not been chosen yet.",
+        "recurrenceUnresolved": "Billing recurrence has not been chosen yet.",
+        "approvalDepthUnresolved": "Approval requirement has not been chosen yet.",
+        "regulatedDomainUnresolved": "Regulated domain status has not been chosen yet.",
+        "regulatedDomainCompliance": "Clinical records, prescriptions, and regulatory KYC are outside Hisabche scope."
       }
     },
     "brandInitial": "H",
@@ -4389,15 +4501,7 @@
       "November",
       "December"
     ],
-    "weekdaysShort": [
-      "Su",
-      "Mo",
-      "Tu",
-      "We",
-      "Th",
-      "Fr",
-      "Sa"
-    ],
+    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
     "prev": "Previous",
     "next": "Next",
     "selectMonth": "Select month",
@@ -6676,7 +6780,14 @@
     "method_fixed": "Fixed price",
     "method_non_billable": "Non-billable",
     "amount": "Amount",
-    "preview_empty": "No unbilled time"
+    "preview_empty": "No unbilled time",
+    "members": "Project members",
+    "billTime": "Bill project time",
+    "billCreated": "Project invoice generated.",
+    "addMember": "Add member",
+    "billMilestone": "Bill project milestone",
+    "entries": "Time entries",
+    "removeMember": "Remove member"
   },
   "expiry": {
     "title": "Expiry and batches",
@@ -8119,7 +8230,7 @@
       "positions": {
         "heading": "Holdings and profit",
         "body1": "For each currency: the holding, its average cost and the profit realised by sales.",
-        "body2": "Currency trades are not yet posted to the general ledger or the till, because the ledger is not multi-currency yet; these figures are read from the trades themselves."
+        "body2": "Currency trades, voids, remittance payouts, and agent settlements post atomically to the general ledger in the books currency while preserving exact per-currency positions."
       },
       "hawala": {
         "heading": "Hawala (remittance)",
@@ -8334,7 +8445,20 @@
     "sectionsLabel": "Section",
     "loadFailed": "This part could not be read.",
     "lastSale": "Last sale",
-    "neverSold": "Never sold"
+    "neverSold": "Never sold",
+    "supplierForDraft": "Supplier",
+    "selectSupplier": "Select supplier",
+    "packSize": "Pack size",
+    "unitPriceForDraft": "Unit price",
+    "createDraftPo": "Create draft PO",
+    "draftPoValidation": "Please choose a supplier and enter a valid unit price.",
+    "draftPoCreated": "Draft purchase order created for approval.",
+    "threeWayMatchTitle": "Three-way match (PO / receipt / invoice)",
+    "selectPoForMatch": "Select purchase order",
+    "threeWayMatched": "Full match — ready for payment approval",
+    "threeWayBlocked": "Mismatch found — payment blocked",
+    "supplierScorecardTitle": "Supplier scorecard",
+    "supplierScorecardEmpty": "No supplier history available yet."
   },
   "productUnits": {
     "add": "Add unit",
@@ -10398,6 +10522,9 @@
     "sections": {
       "promotions": "Discounts",
       "lists": "Price lists"
+    },
+    "tabs": {
+      "goldRates": "Gold Rates & Operations"
     }
   },
   "notes": {
@@ -11103,7 +11230,53 @@
     "tabs": {
       "invoices": "Invoices",
       "pricing": "Prices and discounts",
-      "advances": "Pre-sales & pre-purchases"
+      "advances": "Pre-sales & pre-purchases",
+      "orders": "Orders",
+      "delivery": "Delivery"
+    },
+    "orders": {
+      "title": "Sales orders & deliveries",
+      "subOrders": "Sales orders",
+      "subDelivery": "Freight, courier & POD",
+      "newTitle": "New sales order",
+      "customerName": "Customer name",
+      "customerPhone": "Phone",
+      "submitOrder": "Place order",
+      "empty": "No sales orders yet.",
+      "confirm": "Confirm",
+      "fulfill": "Fulfill",
+      "invoice": "Create invoice",
+      "cancel": "Cancel",
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
+      "create": "Create order",
+      "fulfilled": "Fulfilled",
+      "loadFailed": "Failed to load orders",
+      "pending": "Pending",
+      "viewLabel": "Orders & delivery"
+    },
+    "delivery": {
+      "tripsTitle": "Freight trips",
+      "courierTitle": "Courier & COD deliveries",
+      "notesTitle": "Delivery notes & POD",
+      "origin": "Origin",
+      "destination": "Destination",
+      "addTrip": "Add trip",
+      "trackingNo": "Tracking code",
+      "address": "Delivery address",
+      "addCourier": "Dispatch courier",
+      "settleCod": "Settle COD",
+      "recipientName": "Recipient name for POD",
+      "recordPod": "Record POD",
+      "codMinor": "COD amount",
+      "confirmPod": "Confirm POD",
+      "createCourier": "Dispatch courier",
+      "createNote": "Create delivery note",
+      "createTrip": "Add freight trip",
+      "podRecipient": "Recipient name",
+      "progressCod": "Advance COD status",
+      "settleInvoiceId": "Invoice ID for COD settlement",
+      "tracking": "Tracking #"
     }
   },
   "warehouseHub": {
@@ -11177,7 +11350,8 @@
       "close": "Close",
       "saving": "Saving…",
       "checkIn": "Checked in",
-      "noShow": "No-show"
+      "noShow": "No-show",
+      "start": "Start Service"
     },
     "summary": {
       "title": "Sessions",
@@ -11215,7 +11389,9 @@
       "in_progress": "In progress",
       "delivered": "Delivered",
       "cancelled": "Cancelled",
-      "no_show": "Did not attend"
+      "no_show": "Did not attend",
+      "checkedIn": "Checked In",
+      "checked_in": "Checked in"
     },
     "settlement": {
       "package_credit": "Package credit",
@@ -12008,7 +12184,11 @@
       "expired": "Term ended",
       "suspended": "Suspended"
     },
-    "failed": "Could not be recorded."
+    "failed": "Could not be recorded.",
+    "submit": "Grant credits",
+    "granted": "Package credits granted.",
+    "grantAction": "Grant credits",
+    "selectPackage": "Select package"
   },
   "firstValue": {
     "title": "Quick Setup Guide"
@@ -12386,7 +12566,17 @@
     "holdFor": "For which customer",
     "holdSave": "Hold",
     "holdAction": "Hold for a customer",
-    "hold": "Hold"
+    "hold": "Hold",
+    "hold24h": "24 hours",
+    "hold72h": "72 hours",
+    "holdNoExpiry": "No expiry",
+    "expiresAt": "Expires",
+    "releaseExpiredAction": "Release Expired",
+    "releasedExpired": "Expired holds released",
+    "duplicateImeiNotice": "Duplicate IMEIs ignored",
+    "returnAction": "Return IMEI",
+    "confirmReturn": "Confirm Return",
+    "returnedWithReversal": "IMEI returned & invoice reversed"
   },
   "invoiceSerials": {
     "title": "Serials / IMEIs sold",
@@ -12454,7 +12644,11 @@
       "VARIANT_STOCK_NOT_ENOUGH": "This variant does not hold that much.",
       "VARIANT_STOCK_NOT_READY": "Variant stock is not set up yet (variant-stock-01).",
       "PRODUCT_WAREHOUSE_REQUIRED": "Choose the warehouse."
-    }
+    },
+    "atp": "Available (ATP)",
+    "reserved": "Reserved",
+    "atpShort": "ATP",
+    "brand": "Brand"
   },
   "transferRequests": {
     "created": "Request recorded",
@@ -12507,7 +12701,13 @@
       "TRANSFER_CONCURRENT_UPDATE": "Someone else just changed it; look again.",
       "TRANSFER_UNIT_NOT_SUPPORTED": "This request uses a non-base unit and cannot move yet.",
       "WAREHOUSE_INSUFFICIENT_STOCK": "The source warehouse does not hold that much."
-    }
+    },
+    "receivedQty": "Received Qty",
+    "discrepancyNotice": "Receipt discrepancy will be logged",
+    "discrepancy": "Discrepancy",
+    "discrepancyReason": "Discrepancy reason",
+    "receiveDiscrepancyTitle": "Receive with discrepancy",
+    "shippedQty": "Shipped qty"
   },
   "repairs": {
     "invoice": "Sale invoice for this repair (optional)",
@@ -12559,14 +12759,45 @@
       "REPAIR_CUSTOMER_NOT_FOUND": "Customer not found.",
       "REPAIR_SERIAL_NOT_FOUND": "That serial was not found.",
       "REPAIR_NOT_READY": "Repairs are not set up yet (retail-ops-01)."
-    }
+    },
+    "createFromWarranty": "Open repair slip",
+    "partsAndBill": "Parts & Bill",
+    "approvedBadge": "Customer approval recorded",
+    "unapprovedBadge": "Customer approval required before part consumption",
+    "approveAction": "Approve Repair",
+    "approved": "Repair approved",
+    "partProduct": "Spare Part",
+    "partUnitPrice": "Unit Price",
+    "reservePart": "Reserve Part",
+    "partReserved": "Part reserved from ATP",
+    "partReserveFailed": "Failed to reserve part",
+    "partsTitle": "Ticket Spare Parts",
+    "partsEmpty": "No spare parts added yet.",
+    "consumePart": "Consume Part",
+    "partConsumed": "Part consumed from stock",
+    "partConsumeFailed": "Part consumption blocked",
+    "releasePart": "Release",
+    "partReleased": "Part hold released",
+    "partsRevenue": "Parts Revenue",
+    "laborRevenue": "Labor Revenue",
+    "totalBill": "Total Bill",
+    "laborFee": "Repair Labor",
+    "createFinalBill": "Create Final Bill",
+    "billCreated": "Final repair invoice created",
+    "billFailed": "Failed to create repair invoice",
+    "billedInvoice": "Billed Invoice"
   },
   "salon": {
     "resourceAdded": "Added",
     "failed": "Not done",
     "retire": "Retire",
     "reactivate": "Reactivate",
-    "resources": "Chairs, rooms and beds",
+    "resources": {
+      "bookingTitle": "Timed resource booking",
+      "bookButton": "Book time slot",
+      "releaseButton": "Release",
+      "bookingCreated": "Resource slot booked."
+    },
     "resourcesHint": "Two bookings can never hold the same chair or room at the same time.",
     "resourcePlaceholder": "e.g. Chair 1 or Skin room",
     "department": "Department",
@@ -12602,7 +12833,14 @@
       "SERVICE_CONSUMABLE_WAREHOUSE_REQUIRED": "Choose the warehouse the materials leave from.",
       "RESOURCE_DEPARTMENT_NOT_FOUND": "Department not found.",
       "SALON_NOT_READY": "Salon set-up is not ready yet (salon-01)."
-    }
+    },
+    "bookSlot": "Book slot",
+    "bookingCreated": "Booking created",
+    "freeSlots": "Free slots",
+    "releaseSlot": "Release",
+    "resource": "Resource",
+    "resourceBookings": "Resource bookings",
+    "utilization": "Utilization"
   },
   "commission": {
     "saved": "Rate saved",
@@ -12623,7 +12861,10 @@
     "unknown": "No known amount",
     "errors": {
       "COMMISSION_NOT_READY": "Commission is not set up yet (provider-commission-01)."
-    }
+    },
+    "scopeLabel": "Commission Scope",
+    "scopeTeam": "Team",
+    "scopeMy": "My Share"
   },
   "exchange": {
     "kycNeeded": "This amount is above the set limit; identity details are required.",
@@ -12671,7 +12912,7 @@
     "partnerBalances": "Balance with partners",
     "theyOwe": "(they owe us)",
     "weOwe": "(we owe them)",
-    "notInLedger": "Currency trades and remittances are not yet posted to the general ledger or the till (the ledger is not multi-currency yet). Each currency’s holding and profit are read from these trades.",
+    "notInLedger": "Currency trades, voids, remittance payouts, and agent settlements post atomically to the general ledger in the books currency while tracking per-currency holdings separately.",
     "loadFailed": "Exchange settings could not be read.",
     "number": "Number",
     "bookAmount": "Equivalent",
@@ -12726,11 +12967,39 @@
       "REMITTANCE_CANCEL_REASON_REQUIRED": "A reason is required to cancel.",
       "REMITTANCE_CHANGED": "Someone else just changed it.",
       "REMITTANCE_MOVE_NOT_ALLOWED": "That move is not allowed from this status."
+    },
+    "reconcileTitle": "Currency cashbox reconciliation",
+    "countedAmount": "Counted",
+    "reconcileAction": "Record count",
+    "reconcileSaved": "Cashbox count recorded",
+    "variance": "Variance",
+    "note": "Note",
+    "noReconciliations": "No counts recorded yet.",
+    "reconcileStatus": {
+      "matched": "Matched",
+      "over": "Over",
+      "short": "Short",
+      "unknown": "Unknown"
+    },
+    "glLinkedNotice": "Currency trades, voids, remittance payouts, and agent settlements post atomically to the general ledger in the books currency while tracking per-currency holdings separately.",
+    "pendingReview": "Pending Review",
+    "approve": "Approve",
+    "reject": "Reject",
+    "glPosted": "GL Posted",
+    "agentSettlement": "Agent Settlement",
+    "settleCollect": "Collect from agent",
+    "settlePay": "Pay agent",
+    "settleAction": "Record settlement",
+    "settlementSaved": "Settlement recorded and posted to general ledger",
+    "settle": {
+      "collect": "Collected",
+      "pay": "Paid"
     }
   },
   "variantPicker": {
     "pick": "Choose size / colour",
-    "required": "This product has several variants; it cannot be recorded without choosing one."
+    "required": "This product has several variants; it cannot be recorded without choosing one.",
+    "atpShort": "ATP"
   },
   "tillHub": {
     "label": "Till",
@@ -12783,5 +13052,204 @@
       "RESERVATION_INVALID_QUANTITY": "Invalid quantity.",
       "WAREHOUSE_MAP_SCHEMA_REQUIRED": "The warehouse map migration has not run yet."
     }
+  },
+  "terminology": {
+    "generic": {
+      "party": "Counterparty",
+      "offering": "Offering / Item",
+      "transaction": "Transaction Document",
+      "stock": "Controllable Quantity",
+      "document": "Operation Document",
+      "storageLocation": "Storage Location",
+      "operator": "Operator",
+      "order": "Work Order / Request",
+      "buyPrice": "Procurement Cost",
+      "sellPrice": "Offer Price / Rate",
+      "returnAction": "Return / Correction",
+      "quantity": "Quantity",
+      "profit": "Operation Profit",
+      "cashbox": "Cashbox / Receipt Account",
+      "report": "Operations & Performance Report",
+      "addItem": "Add new item",
+      "noItems": "No offerings yet",
+      "insufficientStock": "Available quantity is not enough",
+      "saveDocument": "Save operation document",
+      "selectStorage": "Select storage location",
+      "selectOperator": "Select who performs the operation",
+      "todayReport": "Today's performance report",
+      "noDocuments": "No documents recorded yet",
+      "noStock": "No quantity recorded yet"
+    },
+    "trades": {
+      "clothing": {
+        "offering": "Garment / Style",
+        "document": "Sales Receipt",
+        "storageLocation": "Shop Floor / Rack",
+        "operator": "Sales Associate",
+        "order": "Customer Order"
+      },
+      "beautySalon": {
+        "offering": "Beauty Service",
+        "document": "Service Statement",
+        "storageLocation": "Room / Supply Cabinet",
+        "operator": "Stylist / Specialist",
+        "order": "Appointment"
+      },
+      "mobilePhones": {
+        "offering": "Device / Accessory",
+        "document": "Sales & Warranty Receipt",
+        "storageLocation": "Showcase / Safe",
+        "operator": "Sales Cashier",
+        "order": "Order / Handover"
+      },
+      "repairs": {
+        "offering": "Repair Job / Part",
+        "document": "Repair Bill",
+        "storageLocation": "Parts Store",
+        "operator": "Technician",
+        "order": "Repair Ticket"
+      },
+      "jewellery": {
+        "offering": "Gold Item",
+        "document": "Gold Trade Document",
+        "storageLocation": "Showcase / Safe",
+        "operator": "Jeweller",
+        "order": "Work Order / Trade"
+      },
+      "currencyExchange": {
+        "offering": "Currency / Remittance",
+        "document": "FX Trade Slip",
+        "storageLocation": "Currency Cashbox",
+        "operator": "Dealer / Teller",
+        "order": "Remittance / Trade"
+      }
+    }
+  },
+  "gold": {
+    "rateBoardTitle": "24K Gold Rate Board",
+    "rate24kPerGram": "24K Rate per Gram",
+    "saveRate": "Save Rate",
+    "rateSaved": "Gold rate saved",
+    "rateInvalid": "Invalid gold rate",
+    "rateHistory": "Rate History",
+    "secondHandPurchase": "Second-Hand Gold Purchase (KYC)",
+    "sellerName": "Seller Name",
+    "sellerId": "Seller National ID",
+    "weightGrams": "Net Weight (g)",
+    "karat": "Purity (Karat)",
+    "totalMinor": "Total Amount",
+    "recordPurchase": "Record Purchase",
+    "purchaseSaved": "Gold purchase recorded",
+    "meltScrapTitle": "Melt & Scrap Loss",
+    "expectedWeightGrams": "Expected Weight (g)",
+    "meltedWeightGrams": "Melted Weight (g)",
+    "recordMelt": "Record Melt",
+    "meltSaved": "Melt loss recorded",
+    "reconcileTitle": "Showcase & Safe Weight Reconciliation",
+    "location": "Location",
+    "locationShowcase": "Showcase",
+    "locationSafe": "Safe",
+    "actualWeightGrams": "Actual Weight (g)",
+    "reconcileAction": "Reconcile Weight",
+    "reconciled": "Weight reconciled",
+    "snapshotLabel": "Locked Gold Snapshot",
+    "netWeightMg": "Net Weight (mg)",
+    "makingCharge": "Making Charge",
+    "deductionBp": "Deduction (bp)",
+    "enterRate24k": "Enter 24k rate",
+    "inputWeightGrams": "Input weight (g)",
+    "kycThreshold": "KYC threshold",
+    "latest24k": "Latest 24k rate",
+    "locations": {
+      "safe": "Safe vault",
+      "showcase": "Showcase"
+    },
+    "lossGrams": "Weight loss (g)",
+    "meltTitle": "Melt & scrap",
+    "netCredit": "Net credit",
+    "noRateYet": "No rate set yet",
+    "physicalGrams": "Physical weight (g)",
+    "reconcileSaved": "Gold reconciliation saved",
+    "recordReconcile": "Record physical count",
+    "recordSecondHand": "Record second-hand purchase",
+    "recordedCount": "Recorded",
+    "recoveredGrams": "Recovered weight (g)",
+    "secondHandSaved": "Second-hand purchase saved",
+    "secondHandTitle": "Second-hand purchase",
+    "systemGrams": "System weight (g)"
+  },
+  "returns": {
+    "condition": {
+      "sealed": "Sealed",
+      "opened": "Opened",
+      "used": "Used",
+      "defective": "Defective",
+      "damaged": "Damaged",
+      "incomplete": "Incomplete"
+    }
+  },
+  "capabilities": {
+    "resource_capacity": {
+      "label": "Resource capacity & booking"
+    },
+    "time_materials_billing": {
+      "label": "Time & materials billing"
+    },
+    "delivery_pod": {
+      "label": "Delivery & proof of delivery"
+    },
+    "cod_reconciliation": {
+      "label": "Cash-on-delivery settlement"
+    },
+    "contracts_recurring": {
+      "label": "Contracts & recurring billing"
+    },
+    "procurement_planning": {
+      "label": "Procurement planning"
+    },
+    "three_way_match": {
+      "label": "Three-way match (PO / receipt / invoice)"
+    },
+    "project_costing": {
+      "label": "Project cost & profit tracking"
+    },
+    "asset_rental": {
+      "label": "Asset rental & lease"
+    },
+    "quality_inspection": {
+      "label": "Quality inspection & quarantine"
+    },
+    "warranty_claims": {
+      "label": "Warranty claims"
+    },
+    "cost_allocation": {
+      "label": "Cost allocation"
+    },
+    "approval_workflow": {
+      "label": "Approval workflow"
+    },
+    "owner_forecast": {
+      "label": "Owner cash forecast & alerts"
+    },
+    "livestock_register": {
+      "label": "Livestock & agriculture register"
+    },
+    "room_nights": {
+      "label": "Hotel room nights & housekeeping"
+    },
+    "fleet_optimization": {
+      "label": "Fleet route optimization"
+    },
+    "clinical_ehr": {
+      "label": "Clinical EHR & prescriptions"
+    },
+    "tiered_pricing": {
+      "label": "Tiered & wholesale pricing"
+    }
+  },
+  "paymentMethod": {
+    "bank": "Bank transfer",
+    "cash": "Cash",
+    "credit": "Credit"
   }
 }

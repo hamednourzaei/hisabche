@@ -34,6 +34,7 @@ import { minutesOf, type AttendanceDay } from '../attendance-rules'
 
 export const SERVICE_DELIVERY_STATUSES = [
   'scheduled',
+  'checked_in',
   'in_progress',
   'delivered',
   'cancelled',
@@ -161,7 +162,16 @@ export function isValidSessionStatusTransition(
 
   switch (from) {
     case 'scheduled':
-      return to === 'in_progress' || to === 'delivered' || to === 'cancelled' || to === 'no_show'
+      return (
+        to === 'checked_in' ||
+        to === 'in_progress' ||
+        to === 'delivered' ||
+        to === 'cancelled' ||
+        to === 'no_show'
+      )
+    case 'checked_in':
+      // The customer arrived: «no-show» would contradict the recorded check-in.
+      return to === 'in_progress' || to === 'delivered' || to === 'cancelled'
     case 'in_progress':
       return to === 'delivered' || to === 'no_show' || to === 'cancelled'
     case 'delivered':
@@ -177,7 +187,8 @@ export function isValidSessionStatusTransition(
 
 /**
  * The moves a person makes on a booked session that carry NO money:
- *   in_progress  «حاضر شد» — the customer arrived (check-in) and the service began
+ *   checked_in   «حاضر شد» — the customer arrived at reception
+ *   in_progress  «در حال انجام» — the service began in chair/room
  *   no_show      «نیامد»   — the customer never came
  *
  * ⚠️ `delivered` and `cancelled` are NOT here. A delivery is a settlement and a
@@ -185,7 +196,7 @@ export function isValidSessionStatusTransition(
  * transaction. This list is closed so that a status change can never become a
  * back door around them.
  */
-export const SESSION_STATUS_MOVES = ['in_progress', 'no_show'] as const
+export const SESSION_STATUS_MOVES = ['checked_in', 'in_progress', 'no_show'] as const
 export type SessionStatusMove = (typeof SESSION_STATUS_MOVES)[number]
 export const sessionStatusMoveSchema = z.enum(SESSION_STATUS_MOVES)
 
@@ -479,5 +490,22 @@ export function planServiceDeliveryCancellation(
       updatedAt: new Date().toISOString(),
     },
     reversalEntry,
+  }
+}
+
+export function canonicalSessionStageLabelKey(status: ServiceDeliveryStatus): string {
+  switch (status) {
+    case 'scheduled':
+      return 'serviceDelivery.status.scheduled'
+    case 'checked_in':
+      return 'serviceDelivery.status.checkedIn'
+    case 'in_progress':
+      return 'serviceDelivery.status.checkedInOrInProgress'
+    case 'delivered':
+      return 'serviceDelivery.status.completed'
+    case 'no_show':
+      return 'serviceDelivery.status.noShow'
+    case 'cancelled':
+      return 'serviceDelivery.status.cancelled'
   }
 }

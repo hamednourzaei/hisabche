@@ -17,6 +17,7 @@ import {
   optionalStringSchema,
   type PaymentMethod,
 } from './common.schema'
+import { goldLineSnapshotSchema } from './universal-core/gold-jewellery.domain'
 
 // ============================================
 // Invoice Item
@@ -78,6 +79,13 @@ export const invoiceItemSchema = z.object({
    * sale must never be forced to open or fill this.
    */
   details: z.array(invoiceItemDetailSchema).default([]),
+
+  /**
+   * V59.1 gold-01: locked metal-rate / purity / net-weight / making-charge
+   * snapshot attached at invoice creation so rate-board edits never re-price
+   * historical lines.
+   */
+  goldSnapshot: goldLineSnapshotSchema.optional(),
 
   /**
    * @deprecated Components are always ADDITIVE — see `computeItemTotal`.

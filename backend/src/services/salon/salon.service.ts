@@ -21,15 +21,19 @@
 import {
   catalogRefusal,
   commissionReport,
+  freeSlots,
+  utilization,
   type CommissionRateInput,
   type CommissionSession,
+  type ResourceBookingCreateInput,
   type ServiceCatalogInput,
   type ServiceResourceInput,
   type ServiceResourcePatch,
+  type TimeRange,
 } from '@hisabche/validation'
 import { FRACTION_DIGITS } from '@hisabche/formatting'
 import { supabase } from '../../db'
-import { DatabaseError, NotFoundError } from '../../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { baseCurrencyOf } from '../base-currency'
@@ -262,7 +266,12 @@ export class SalonService {
   }
 
   /** Delivered sessions between two days (inclusive), per provider and currency. */
-  async commission(ctx: TenancyContext, from: string, to: string) {
+  async commission(
+    ctx: TenancyContext,
+    from: string,
+    to: string,
+    onlyPractitionerId?: string | undefined,
+  ) {
     const ws = ctx.workspaceId
     const { data: sessions, error } = await selectAllPages<
       {
@@ -273,8 +282,8 @@ export class SalonService {
         invoice_id: string | null
       },
       { message: string; code?: string }
-    >((lo, hi) =>
-      supabase
+    >((lo, hi) => {
+      let q = supabase
         .from('service_delivery_sessions')
         .select('id, practitioner_id, service_offering_id, settlement_method, invoice_id')
         .eq('workspace_id', ws)
@@ -282,18 +291,20 @@ export class SalonService {
         .is('deleted_at', null)
         .gte('session_date', from)
         .lte('session_date', to)
-        .order('id', { ascending: true })
-        .range(lo, hi)
-        .returns<
-          Array<{
-            id: string
-            practitioner_id: string | null
-            service_offering_id: string
-            settlement_method: string
-            invoice_id: string | null
-          }>
-        >(),
-    )
+      if (onlyPractitionerId) {
+        q = q.eq('practitioner_id', onlyPractitionerId)
+      }
+      return q.order('id', { ascending: true }).range(lo, hi) as unknown as Promise<{
+        data: Array<{
+          id: string
+          practitioner_id: string | null
+          service_offering_id: string
+          settlement_method: string
+          invoice_id: string | null
+        }> | null
+        error: { message: string; code?: string } | null
+      }>
+    })
     if (error) throw new DatabaseError('Failed to read the delivered sessions', error)
 
     const invoiceIds = [
@@ -344,6 +355,166 @@ export class SalonService {
 
     const rates = await this.commissionRates(ctx)
     const rateMap = new Map(rates.rates.map((r) => [r.employeeId, r.rateBp]))
-    return { ready: rates.ready, from, to, lines: commissionReport(priced, rateMap) }
+    const filteredRates: ReadonlyMap<string, number> = onlyPractitionerId
+      ? rateMap.has(onlyPractitionerId)
+        ? new Map([[onlyPractitionerId, rateMap.get(onlyPractitionerId)!]])
+        : new Map()
+      : rateMap
+    return { ready: rates.ready, from, to, lines: commissionReport(priced, filteredRates) }
+  }
+
+  /** Stylist self-view: only commission lines belonging to the acting user's employee record. */
+  async myCommission(ctx: TenancyContext, from: string, to: string) {
+    const { data, error } = await selectAllPages<
+      { id: string; user_id: string | null },
+      { message: string; code?: string }
+    >(
+      (rangeFrom, rangeTo) =>
+        supabase
+          .from('employees')
+          .select('id, user_id')
+          .eq('workspace_id', ctx.workspaceId)
+          .order('id', { ascending: true })
+          .range(rangeFrom, rangeTo) as unknown as Promise<{
+          data: Array<{ id: string; user_id: string | null }> | null
+          error: { message: string; code?: string } | null
+        }>,
+    )
+    if (error) throw new DatabaseError('Failed to resolve employee profile', error)
+    const me = (data ?? []).find((row) => row.user_id === ctx.userId)
+    if (!me?.id) {
+      return { ready: true, from, to, lines: [] }
+    }
+    return this.commission(ctx, from, to, String(me.id))
+  }
+
+  // ─── Resource Bookings & Capacity (V60 Slice 7) ───────────────────────────
+  private parseTstzRange(raw: unknown): TimeRange | null {
+    if (typeof raw !== 'string') return null
+    const cleaned = raw.replace(/^[[(]/, '').replace(/[\])]$/, '')
+    const parts = cleaned.split(',')
+    if (parts.length !== 2) return null
+    const startMs = Date.parse(parts[0]!.replace(/^"|"$/g, ''))
+    const endMs = Date.parse(parts[1]!.replace(/^"|"$/g, ''))
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null
+    return { startAt: new Date(startMs).toISOString(), endAt: new Date(endMs).toISOString() }
+  }
+
+  async listResourceBookings(ctx: TenancyContext, resourceId?: string) {
+    let query = supabase
+      .from('resource_bookings')
+      .select(
+        'id, resource_id, during, source_type, source_id, status, notes, created_at, released_at',
+      )
+      .eq('workspace_id', ctx.workspaceId)
+      .order('created_at', { ascending: false })
+    if (resourceId) query = query.eq('resource_id', resourceId)
+    const { data, error } = await query
+    if (isNotReady(error)) return { ready: false, bookings: [] }
+    if (error) throw new DatabaseError('Failed to read resource bookings', error)
+    return {
+      ready: true,
+      bookings: (data ?? []).map((row: Record<string, unknown>) => {
+        const range = this.parseTstzRange(row.during)
+        return {
+          id: row.id as string,
+          resourceId: row.resource_id as string,
+          startAt: range?.startAt ?? null,
+          endAt: range?.endAt ?? null,
+          sourceType: row.source_type as string,
+          sourceId: (row.source_id as string | null) ?? null,
+          status: row.status as string,
+          notes: (row.notes as string | null) ?? null,
+          createdAt: row.created_at as string,
+          releasedAt: (row.released_at as string | null) ?? null,
+        }
+      }),
+    }
+  }
+
+  async bookResource(ctx: TenancyContext, input: ResourceBookingCreateInput) {
+    const during = `[${new Date(input.startAt).toISOString()},${new Date(input.endAt).toISOString()})`
+    const { data, error } = await supabase
+      .from('resource_bookings')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        resource_id: input.resourceId,
+        during,
+        source_type: input.sourceType,
+        source_id: input.sourceId ?? null,
+        notes: input.notes ?? null,
+        created_by: ctx.userId,
+        status: 'active',
+      })
+      .select('id, resource_id, during, source_type, source_id, status, notes, created_at')
+      .single()
+
+    if (error) {
+      if (
+        error.code === '23P01' ||
+        (error.message ?? '').includes('resource_bookings_no_overlap')
+      ) {
+        throw new ConflictError('RESOURCE_BOOKING_OVERLAP')
+      }
+      if ((error.message ?? '').includes('RESOURCE_INACTIVE')) {
+        throw new ValidationError('RESOURCE_INACTIVE')
+      }
+      if ((error.message ?? '').includes('RESOURCE_NOT_FOUND')) {
+        throw new NotFoundError('Resource')
+      }
+      if ((error.message ?? '').includes('TENANT_RESOURCE_MISMATCH')) {
+        throw new NotFoundError('Resource')
+      }
+      throw new DatabaseError('Failed to book resource', error)
+    }
+
+    const row = data as Record<string, unknown>
+    const range = this.parseTstzRange(row.during)
+    return {
+      id: row.id as string,
+      resourceId: row.resource_id as string,
+      startAt: range?.startAt ?? input.startAt,
+      endAt: range?.endAt ?? input.endAt,
+      sourceType: row.source_type as string,
+      sourceId: (row.source_id as string | null) ?? null,
+      status: row.status as string,
+      notes: (row.notes as string | null) ?? null,
+      createdAt: row.created_at as string,
+    }
+  }
+
+  async releaseResourceBooking(ctx: TenancyContext, bookingId: string) {
+    const { data, error } = await supabase
+      .from('resource_bookings')
+      .update({ status: 'released', released_at: new Date().toISOString() })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', bookingId)
+      .eq('status', 'active')
+      .select('id, status, released_at')
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to release booking', error)
+    if (!data) throw new NotFoundError('Resource booking')
+    return data
+  }
+
+  async getResourceSlots(
+    ctx: TenancyContext,
+    resourceId: string,
+    window: TimeRange,
+    slotMinutes = 60,
+  ) {
+    const { bookings } = await this.listResourceBookings(ctx, resourceId)
+    const activeIntervals: TimeRange[] = bookings
+      .filter((b) => b.status === 'active' && b.startAt && b.endAt)
+      .map((b) => ({ startAt: b.startAt!, endAt: b.endAt! }))
+
+    return {
+      resourceId,
+      window,
+      slotMinutes,
+      freeSlots: freeSlots(window, activeIntervals, slotMinutes),
+      utilization: utilization(window, activeIntervals),
+    }
   }
 }

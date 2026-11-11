@@ -109,6 +109,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
   },
   'purchasing.routes.ts': {
     '/api/purchase-orders': unproven('PATCH /api/purchase-orders/:id'),
+    '/api/purchase-orders/from-suggestions': unproven('PATCH /api/purchase-orders/:id'),
     '/api/purchase-orders/:id/receive': none('a goods receipt has no reversing route'),
   },
   'warehouse.routes.ts': {
@@ -139,18 +140,32 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/repair-tickets/:id/status': none(
       'the slip history is append-only; a wrong move is followed by the move back where REPAIR_MOVES allows it',
     ),
+    '/api/repair-tickets/:id/approve': inert,
+    '/api/repair-tickets/:id/parts': unproven('POST /api/repair-tickets/:id/parts/:partId/release'),
+    '/api/repair-tickets/:id/parts/:partId/consume': none(
+      'consumed spare parts are stock adjustments reversed only by a stock count',
+    ),
+    '/api/repair-tickets/:id/parts/:partId/release': inert,
+    '/api/repair-tickets/:id/bill': unproven('DELETE /api/invoices/:id'),
   },
   'exchange.routes.ts': {
     '/api/fx/rates': inert,
     '/api/fx/trades': unproven('POST /api/fx/trades/:id/void'),
+    '/api/fx/trades/:id/resolve-review': unproven('POST /api/fx/trades/:id/void'),
     '/api/fx/trades/:id/void': none('a void is final; a wrongly voided trade is recorded again'),
     '/api/fx/remittances': unproven('POST /api/fx/remittances/:id/status'),
     '/api/fx/remittances/:id/status': none(
       'a payout is money that left; cancel is possible only before it',
     ),
+    '/api/fx/remittances/settle': none(
+      'an agent settlement is posted to the general ledger and is never deleted',
+    ),
+    '/api/fx/reconciliations': inert,
   },
   'salon.routes.ts': {
     '/api/service-resources': unproven('PATCH /api/service-resources/:id'),
+    '/api/resource-bookings': unproven('POST /api/resource-bookings/:id/release'),
+    '/api/resource-bookings/:id/release': inert,
   },
   'customer.routes.ts': {
     '/api/customers': proven('DELETE /api/customers/:id', 'reverse-guards.test.ts'),
@@ -267,6 +282,11 @@ describe('every way forward has a decided way back', () => {
     // or retire route), +6 none (final states), +1 inert (rate board is history).
     // V58 (leave-policy-01): +2 inert — the entitlement side moves no money
     // and no stock; a policy's undo is switching it off.
-    expect(counts).toEqual({ proven: 9, unproven: 22, none: 23, inert: 17 })
+    // V59 (exchange-02): +1 inert — physical cashbox count snapshot moves no money or stock.
+    // V59.1 (exchange-03 + repair-parts-01): +3 unproven (fx resolve-review, repair parts reserve,
+    // repair final bill), +2 none (fx agent settle, repair part consume), +2 inert (repair approve, part release).
+    // V60 (Slice 7 & Slice 10): +2 unproven (POST /api/resource-bookings, POST /api/purchase-orders/from-suggestions),
+    // +1 inert (POST /api/resource-bookings/:id/release).
+    expect(counts).toEqual({ proven: 9, unproven: 27, none: 25, inert: 21 })
   })
 })

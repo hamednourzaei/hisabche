@@ -8,11 +8,7 @@
 // ============================================
 
 import { z } from 'zod'
-import {
-  type CapabilityKey,
-  resolveCapabilities as resolveCoreCapabilities,
-  type CapabilityResolution,
-} from './business-capabilities'
+import { resolveCapabilityPlan, type CapabilityResolution } from './business-capabilities'
 
 // ─── AXIS 1: Offering Model ──────────────────────────────────────────
 export const offeringModelEnum = z.enum([
@@ -72,6 +68,62 @@ export const unitTrackingEnum = z.enum([
 ])
 export type UnitTracking = z.infer<typeof unitTrackingEnum>
 
+// ─── AXES 10–15: V60 Deeper Orthogonal Axes (all optional, UNRESOLVED on missing) ──
+export const pricingBasisEnum = z.enum([
+  'UNIT',
+  'WEIGHT',
+  'LENGTH',
+  'AREA',
+  'VOLUME',
+  'TIME',
+  'RATE_BOARD',
+  'CONTRACT',
+  'TIERED',
+  'UNRESOLVED',
+])
+export type PricingBasis = z.infer<typeof pricingBasisEnum>
+
+export const assetCustodyEnum = z.enum([
+  'OWN_STOCK',
+  'CUSTOMER_ASSET_IN_CUSTODY',
+  'RENTED_OUT_ASSET',
+  'NONE',
+  'UNRESOLVED',
+])
+export type AssetCustody = z.infer<typeof assetCustodyEnum>
+
+export const executionSiteEnum = z.enum([
+  'PREMISES',
+  'CUSTOMER_SITE',
+  'MOBILE_ROUTE',
+  'REMOTE',
+  'UNRESOLVED',
+])
+export type ExecutionSite = z.infer<typeof executionSiteEnum>
+
+export const recurrenceEnum = z.enum([
+  'ONE_OFF',
+  'RECURRING_SERVICE',
+  'SUBSCRIPTION',
+  'LEASE',
+  'UNRESOLVED',
+])
+export type Recurrence = z.infer<typeof recurrenceEnum>
+
+export const approvalDepthEnum = z.enum(['NONE', 'SINGLE', 'MULTI_STEP', 'UNRESOLVED'])
+export type ApprovalDepth = z.infer<typeof approvalDepthEnum>
+
+// Regulated domain creates a compliance gap ONLY — never grants a clinical/KYC capability.
+export const regulatedDomainEnum = z.enum([
+  'NONE',
+  'HEALTH_RECORDS',
+  'PRESCRIPTION',
+  'FINANCIAL_KYC',
+  'FOOD_SAFETY',
+  'UNRESOLVED',
+])
+export type RegulatedDomain = z.infer<typeof regulatedDomainEnum>
+
 // ─── AXIS 4: Billing & Settlement ────────────────────────────────────
 export const billingSettlementEnum = z.enum([
   'IMMEDIATE_SETTLEMENT',
@@ -92,8 +144,20 @@ export const workforceModelEnum = z.enum([
   'SALARIED_STAFF',
   'SHIFT_BASED_STAFF',
   'MIXED_WORKFORCE',
+  'UNRESOLVED',
 ])
 export type WorkforceModel = z.infer<typeof workforceModelEnum>
+
+export const staffArrangementEnum = z.enum([
+  'solo',
+  'fixed_salary',
+  'hourly',
+  'commission',
+  'shift',
+  'mixed',
+  'unknown',
+])
+export type StaffArrangement = z.infer<typeof staffArrangementEnum>
 
 // ─── AXIS 6: Customer / Party Profile ────────────────────────────────
 export const customerProfileEnum = z.enum([
@@ -118,13 +182,79 @@ export const operationalTopologyEnum = z.enum([
 export type OperationalTopology = z.infer<typeof operationalTopologyEnum>
 
 // ─── AXIS 8: Terminology & Presentation Profile ──────────────────────
+// Keys ONLY — never stored localized prose sentences.
 export const terminologyProfileSchema = z.object({
   partyLabelKey: z.string().default('common.customer'),
   itemLabelKey: z.string().default('common.product'),
   transactionLabelKey: z.string().default('common.sale'),
   inventoryLabelKey: z.string().default('common.stock'),
+  // W1 extended canonical terminology keys (optional so persisted v1 DNAs remain valid)
+  documentLabelKey: z.string().optional(),
+  storageLabelKey: z.string().optional(),
+  operatorLabelKey: z.string().optional(),
+  orderLabelKey: z.string().optional(),
+  buyPriceLabelKey: z.string().optional(),
+  sellPriceLabelKey: z.string().optional(),
+  returnLabelKey: z.string().optional(),
+  quantityLabelKey: z.string().optional(),
+  profitLabelKey: z.string().optional(),
+  cashboxLabelKey: z.string().optional(),
+  reportLabelKey: z.string().optional(),
+  addItemActionKey: z.string().optional(),
+  noItemsEmptyKey: z.string().optional(),
+  insufficientStockErrorKey: z.string().optional(),
+  saveDocumentActionKey: z.string().optional(),
+  selectStoragePromptKey: z.string().optional(),
+  selectOperatorPromptKey: z.string().optional(),
+  todayReportTitleKey: z.string().optional(),
 })
 export type TerminologyProfile = z.infer<typeof terminologyProfileSchema>
+
+export const presentationProfileSchema = z.object({
+  version: z.number().int().positive().default(1),
+  vocabulary: terminologyProfileSchema.optional(),
+  navigation: z
+    .object({
+      hiddenPaths: z.array(z.string()).default([]),
+      pinnedPaths: z.array(z.string()).default([]),
+      groupOrder: z.array(z.string()).default([]),
+    })
+    .default({}),
+  dashboard: z
+    .object({
+      partOrder: z.array(z.string()).default([]),
+      hiddenParts: z.array(z.string()).default([]),
+      emphasizedWidgets: z.array(z.string()).default([]),
+    })
+    .default({}),
+  forms: z
+    .object({
+      emphasizedProductFields: z.array(z.string()).default([]),
+      defaultProductUnit: z.string().optional(),
+      extraInvoiceColumns: z.array(z.string()).default([]),
+    })
+    .default({}),
+  reports: z
+    .object({
+      emphasizedReports: z.array(z.string()).default([]),
+    })
+    .default({}),
+  emptyStates: z
+    .object({
+      catalogKey: z.string().default('terminology.generic.noItems'),
+      transactionsKey: z.string().default('terminology.generic.noDocuments'),
+      stockKey: z.string().default('terminology.generic.noStock'),
+    })
+    .default({}),
+  quickActions: z.array(z.string()).default([]),
+  workflowDefaults: z
+    .object({
+      defaultSettlementMethod: z.string().optional(),
+      defaultUnitTracking: z.string().optional(),
+    })
+    .default({}),
+})
+export type PresentationProfile = z.infer<typeof presentationProfileSchema>
 
 // ─── Canonical Operational DNA ────────────────────────────────────────
 export const operationalDnaSchema = z.object({
@@ -139,7 +269,15 @@ export const operationalDnaSchema = z.object({
   // V55 P1: optional — a DNA saved before this axis exists stays valid, and
   // `resolveDnaCapabilities` reads a missing axis as NONE.
   unitTracking: unitTrackingEnum.optional(),
+  // V60: Axes 10–15 (optional; missing reads as UNRESOLVED, never a default trade).
+  pricingBasis: z.array(pricingBasisEnum).min(1).optional(),
+  assetCustody: assetCustodyEnum.optional(),
+  executionSite: executionSiteEnum.optional(),
+  recurrence: recurrenceEnum.optional(),
+  approvalDepth: approvalDepthEnum.optional(),
+  regulatedDomain: regulatedDomainEnum.optional(),
   terminology: terminologyProfileSchema.optional(),
+  presentation: presentationProfileSchema.optional(),
   archetypeHint: z.string().optional(),
 })
 
@@ -215,6 +353,188 @@ export const ARCHETYPE_PRESETS: Record<string, OperationalDna> = {
       inventoryLabelKey: 'common.spare_parts',
     },
   },
+  SALON_MULTI_STAFF: {
+    version: 1,
+    offering: ['TIME_SERVICE', 'PHYSICAL_GOODS'],
+    intake: ['APPOINTMENT_BOOKING', 'WALK_IN'],
+    inventory: ['SERVICE_CONSUMABLES', 'RETAIL_STOCK'],
+    settlement: ['DEPOSIT_PREPAYMENT', 'IMMEDIATE_SETTLEMENT'],
+    workforce: ['MIXED_WORKFORCE'],
+    customer: ['CLIENT_CARE_PROFILE'],
+    topology: ['RESOURCE_CAPACITY'],
+    archetypeHint: 'SALON_MULTI_STAFF',
+    terminology: {
+      partyLabelKey: 'common.client',
+      itemLabelKey: 'common.service',
+      transactionLabelKey: 'common.appointment',
+      inventoryLabelKey: 'common.consumables',
+    },
+  },
+}
+
+// ─── DNA Setup Gaps & Presentation Resolution (W1 + W2) ─────────────
+
+export type DnaSetupGap =
+  | 'OFFERING_UNRESOLVED'
+  | 'INVENTORY_UNRESOLVED'
+  | 'WORKFORCE_UNRESOLVED'
+  | 'UNIT_TRACKING_UNRESOLVED'
+  | 'PRICING_BASIS_UNRESOLVED'
+  | 'ASSET_CUSTODY_UNRESOLVED'
+  | 'EXECUTION_SITE_UNRESOLVED'
+  | 'RECURRENCE_UNRESOLVED'
+  | 'APPROVAL_DEPTH_UNRESOLVED'
+  | 'REGULATED_DOMAIN_UNRESOLVED'
+  | 'REGULATED_DOMAIN_COMPLIANCE'
+
+export function setupGapMessageKey(gap: DnaSetupGap): string {
+  return `onboarding.operating.gaps.${gap}`
+}
+
+/** Reads missing optional axes as UNRESOLVED so legacy DNAs never guess defaults. */
+export function effectiveDnaAxes(dna: OperationalDna) {
+  return {
+    offering: dna.offering,
+    intake: dna.intake,
+    inventory: dna.inventory,
+    settlement: dna.settlement,
+    workforce: dna.workforce,
+    customer: dna.customer,
+    topology: dna.topology,
+    unitTracking: dna.unitTracking ?? ('UNRESOLVED' as const),
+    pricingBasis: dna.pricingBasis ?? (['UNRESOLVED'] as const),
+    assetCustody: dna.assetCustody ?? ('UNRESOLVED' as const),
+    executionSite: dna.executionSite ?? ('UNRESOLVED' as const),
+    recurrence: dna.recurrence ?? ('UNRESOLVED' as const),
+    approvalDepth: dna.approvalDepth ?? ('UNRESOLVED' as const),
+    regulatedDomain: dna.regulatedDomain ?? ('UNRESOLVED' as const),
+  }
+}
+
+export const GENERIC_TERMINOLOGY: TerminologyProfile = {
+  partyLabelKey: 'terminology.generic.party',
+  itemLabelKey: 'terminology.generic.offering',
+  transactionLabelKey: 'terminology.generic.transaction',
+  inventoryLabelKey: 'terminology.generic.stock',
+  documentLabelKey: 'terminology.generic.document',
+  storageLabelKey: 'terminology.generic.storageLocation',
+  operatorLabelKey: 'terminology.generic.operator',
+  orderLabelKey: 'terminology.generic.order',
+  buyPriceLabelKey: 'terminology.generic.buyPrice',
+  sellPriceLabelKey: 'terminology.generic.sellPrice',
+  returnLabelKey: 'terminology.generic.returnAction',
+  quantityLabelKey: 'terminology.generic.quantity',
+  profitLabelKey: 'terminology.generic.profit',
+  cashboxLabelKey: 'terminology.generic.cashbox',
+  reportLabelKey: 'terminology.generic.report',
+  addItemActionKey: 'terminology.generic.addItem',
+  noItemsEmptyKey: 'terminology.generic.noItems',
+  insufficientStockErrorKey: 'terminology.generic.insufficientStock',
+  saveDocumentActionKey: 'terminology.generic.saveDocument',
+  selectStoragePromptKey: 'terminology.generic.selectStorage',
+  selectOperatorPromptKey: 'terminology.generic.selectOperator',
+  todayReportTitleKey: 'terminology.generic.todayReport',
+}
+
+/**
+ * Fallback chain: explicit DNA terminology → specialized trade/archetype keys →
+ * generic neutral keys (never retail when unknown).
+ */
+export function resolveTerminologyProfile(
+  dna: OperationalDna,
+  tradeKey?: string | null | undefined,
+): TerminologyProfile {
+  const unresolved = dna.offering.includes('UNRESOLVED') || dna.inventory.includes('UNRESOLVED')
+  const tradeNs =
+    !unresolved &&
+    tradeKey &&
+    [
+      'clothing',
+      'beautySalon',
+      'mobilePhones',
+      'repairs',
+      'jewellery',
+      'currencyExchange',
+    ].includes(tradeKey)
+      ? tradeKey
+      : null
+
+  if (unresolved) {
+    const pres = dna.presentation?.vocabulary
+    return pres
+      ? ({
+          ...GENERIC_TERMINOLOGY,
+          ...Object.fromEntries(
+            Object.entries(pres).filter(([, v]) => typeof v === 'string' && v.length > 0),
+          ),
+        } as TerminologyProfile)
+      : GENERIC_TERMINOLOGY
+  }
+
+  const base: TerminologyProfile = tradeNs
+    ? {
+        ...GENERIC_TERMINOLOGY,
+        itemLabelKey: `terminology.trades.${tradeNs}.offering`,
+        transactionLabelKey: `terminology.trades.${tradeNs}.document`,
+        storageLabelKey: `terminology.trades.${tradeNs}.storageLocation`,
+        operatorLabelKey: `terminology.trades.${tradeNs}.operator`,
+        orderLabelKey: `terminology.trades.${tradeNs}.order`,
+      }
+    : {
+        ...GENERIC_TERMINOLOGY,
+        ...(dna.terminology
+          ? Object.fromEntries(
+              Object.entries(dna.terminology).filter(
+                ([, v]) => typeof v === 'string' && v.length > 0,
+              ),
+            )
+          : {}),
+      }
+
+  const explicit = dna.presentation?.vocabulary
+  if (!explicit) return base
+  return {
+    ...base,
+    ...Object.fromEntries(
+      Object.entries(explicit).filter(([, v]) => typeof v === 'string' && v.length > 0),
+    ),
+  } as TerminologyProfile
+}
+
+export function resolvePresentationProfile(
+  dna: OperationalDna,
+  tradeKey?: string | null | undefined,
+): PresentationProfile {
+  const base = presentationProfileSchema.parse(dna.presentation ?? {})
+  return {
+    ...base,
+    vocabulary: resolveTerminologyProfile(dna, tradeKey),
+  }
+}
+
+const REGULATED_COMPLIANCE_DOMAINS = new Set<RegulatedDomain>([
+  'HEALTH_RECORDS',
+  'PRESCRIPTION',
+  'FINANCIAL_KYC',
+  'FOOD_SAFETY',
+])
+
+export function setupGapsOf(dna: OperationalDna): DnaSetupGap[] {
+  const gaps: DnaSetupGap[] = []
+  if (dna.offering.includes('UNRESOLVED')) gaps.push('OFFERING_UNRESOLVED')
+  if (dna.inventory.includes('UNRESOLVED')) gaps.push('INVENTORY_UNRESOLVED')
+  if (dna.workforce.includes('UNRESOLVED')) gaps.push('WORKFORCE_UNRESOLVED')
+  if (dna.unitTracking === 'UNRESOLVED') gaps.push('UNIT_TRACKING_UNRESOLVED')
+  if (dna.pricingBasis?.includes('UNRESOLVED')) gaps.push('PRICING_BASIS_UNRESOLVED')
+  if (dna.assetCustody === 'UNRESOLVED') gaps.push('ASSET_CUSTODY_UNRESOLVED')
+  if (dna.executionSite === 'UNRESOLVED') gaps.push('EXECUTION_SITE_UNRESOLVED')
+  if (dna.recurrence === 'UNRESOLVED') gaps.push('RECURRENCE_UNRESOLVED')
+  if (dna.approvalDepth === 'UNRESOLVED') gaps.push('APPROVAL_DEPTH_UNRESOLVED')
+  if (dna.regulatedDomain === 'UNRESOLVED') gaps.push('REGULATED_DOMAIN_UNRESOLVED')
+  if (dna.regulatedDomain && REGULATED_COMPLIANCE_DOMAINS.has(dna.regulatedDomain)) {
+    gaps.push('REGULATED_DOMAIN_COMPLIANCE')
+  }
+  return gaps
 }
 
 // ─── DNA-to-Capability Resolver ───────────────────────────────────────
@@ -223,93 +543,33 @@ export interface ResolvedBusinessConfiguration {
   capabilities: CapabilityResolution
   activeModules: readonly string[]
   terminology: TerminologyProfile
+  presentation: PresentationProfile
+  setupGaps: readonly DnaSetupGap[]
+  isSetupComplete: boolean
 }
 
 /**
- * Deterministically maps an 8-axis Operational DNA into enabled capabilities and active UI modules.
+ * Deterministically maps an 8-axis Operational DNA into enabled capabilities,
+ * active UI modules, presentation profile, and explicit setup gaps.
+ * Delegates capability and module activation to the ONE resolver in
+ * `business-capabilities.ts` (`resolveCapabilityPlan`).
  */
 export function resolveDnaCapabilities(dna: OperationalDna): ResolvedBusinessConfiguration {
-  const requestedCapabilities: CapabilityKey[] = []
-  const activeModules = new Set<string>()
-
-  // Core base modules always active
-  activeModules.add('accounting')
-  activeModules.add('invoices')
-  activeModules.add('customers')
-
-  // Axis 1: Offering
-  if (dna.offering.includes('PHYSICAL_GOODS') || dna.offering.includes('MIXED_OFFERING')) {
-    activeModules.add('products')
-    requestedCapabilities.push('measurement', 'multi_unit')
-  }
-  if (dna.offering.includes('TIME_SERVICE') || dna.offering.includes('PACKAGE_SESSION')) {
-    activeModules.add('services')
-  }
-
-  // Axis 2: Intake
-  if (dna.intake.includes('COUNTER_POS')) {
-    activeModules.add('pos')
-  }
-  if (dna.intake.includes('APPOINTMENT_BOOKING')) {
-    activeModules.add('appointments')
-  }
-  if (dna.intake.includes('CLASS_ATTENDANCE')) {
-    activeModules.add('attendance')
-  }
-  if (dna.intake.includes('JOB_TICKET')) {
-    activeModules.add('job_tickets')
-    requestedCapabilities.push('auto_fitments', 'serialized_items')
-  }
-
-  // Axis 3: Inventory
-  if (
-    dna.inventory.includes('RETAIL_STOCK') ||
-    dna.inventory.includes('SPARE_PARTS') ||
-    dna.inventory.includes('RAW_MATERIALS') ||
-    dna.inventory.includes('FINISHED_GOODS') ||
-    dna.inventory.includes('HYBRID_INVENTORY')
-  ) {
-    activeModules.add('inventory')
-    activeModules.add('warehouse')
-    requestedCapabilities.push('variants')
-  }
-  if (dna.inventory.includes('RAW_MATERIALS')) {
-    requestedCapabilities.push('recipe_bom', 'batch_expiry')
-  }
-
-  // Axis 9 (V55 P1): what the person SAID about unit-level tracking requests
-  // these — no trade guess and no inventory-axis guess stands in for it. A
-  // missing axis (every DNA saved before V55) requests nothing.
-  if (dna.unitTracking === 'SERIAL_NUMBERS' || dna.unitTracking === 'BOTH') {
-    requestedCapabilities.push('serialized_items')
-  }
-  if (dna.unitTracking === 'EXPIRY_DATES' || dna.unitTracking === 'BOTH') {
-    requestedCapabilities.push('batch_expiry')
-  }
-  if (dna.inventory.includes('SERVICE_CONSUMABLES')) {
-    activeModules.add('consumables')
-  }
-
-  // Axis 4: Settlement
-  if (dna.settlement.includes('DEPOSIT_PREPAYMENT')) {
-    activeModules.add('order_deposits')
-  }
-  if (dna.settlement.includes('PACKAGE_CREDITS')) {
-    activeModules.add('package_credits')
-  }
-
-  // Axis 5: Workforce
-  if (!dna.workforce.includes('SOLO_OWNER')) {
-    activeModules.add('team')
-    activeModules.add('payroll')
-  }
-
-  // Axis 7: Topology
-  if (dna.topology.includes('MULTI_BRANCH') || dna.topology.includes('WAREHOUSE_NETWORK')) {
-    activeModules.add('branches')
-  }
-
-  const capabilities = resolveCoreCapabilities(requestedCapabilities)
+  const plan = resolveCapabilityPlan({
+    offering: dna.offering,
+    intake: dna.intake,
+    inventory: dna.inventory,
+    settlement: dna.settlement,
+    workforce: dna.workforce,
+    topology: dna.topology,
+    unitTracking: dna.unitTracking,
+    pricingBasis: dna.pricingBasis,
+    assetCustody: dna.assetCustody,
+    executionSite: dna.executionSite,
+    recurrence: dna.recurrence,
+    approvalDepth: dna.approvalDepth,
+    regulatedDomain: dna.regulatedDomain,
+  })
 
   const defaultTerminology: TerminologyProfile = {
     partyLabelKey: 'common.customer',
@@ -318,11 +578,17 @@ export function resolveDnaCapabilities(dna: OperationalDna): ResolvedBusinessCon
     inventoryLabelKey: 'common.stock',
   }
 
+  const setupGaps = setupGapsOf(dna)
+  const presentation = resolvePresentationProfile(dna)
+
   return {
     dna,
-    capabilities,
-    activeModules: Array.from(activeModules),
+    capabilities: plan.capabilities,
+    activeModules: plan.activeModules,
     terminology: dna.terminology ?? defaultTerminology,
+    presentation,
+    setupGaps,
+    isSetupComplete: setupGaps.length === 0,
   }
 }
 
@@ -334,12 +600,24 @@ export interface OperationalInferenceInput {
   readonly sellsOnCredit?: 'yes' | 'no' | 'unknown' | undefined
   readonly hasPointOfSale?: 'yes' | 'no' | 'unknown' | undefined
   readonly hasStaff?: 'yes' | 'no' | 'unknown' | undefined
+  readonly staffArrangement?: StaffArrangement | undefined
   readonly locations?: 'single' | 'multiple' | 'unknown' | undefined
   readonly takesAppointments?: 'yes' | 'no' | 'unknown' | undefined
   readonly deliversCoursesOrPackages?: 'yes' | 'no' | 'unknown' | undefined
   readonly takesJobTicketsOrRepairs?: 'yes' | 'no' | 'unknown' | undefined
   readonly tracksSerials?: 'yes' | 'no' | 'unknown' | undefined
   readonly hasExpiryDates?: 'yes' | 'no' | 'unknown' | undefined
+  readonly rentsOutAssets?: 'yes' | 'no' | 'unknown' | undefined
+  readonly worksAtCustomerSite?: 'yes' | 'no' | 'unknown' | undefined
+  readonly billsRecurring?: 'yes' | 'no' | 'unknown' | undefined
+  readonly holdsCustomerAssets?: 'yes' | 'no' | 'unknown' | undefined
+  readonly needsApprovals?: 'yes' | 'no' | 'unknown' | undefined
+  readonly pricingBasis?: readonly PricingBasis[] | undefined
+  readonly assetCustody?: AssetCustody | undefined
+  readonly executionSite?: ExecutionSite | undefined
+  readonly recurrence?: Recurrence | undefined
+  readonly approvalDepth?: ApprovalDepth | undefined
+  readonly regulatedDomain?: RegulatedDomain | undefined
 }
 
 /**
@@ -433,12 +711,27 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     settlement.push('CUSTOMER_CREDIT')
   }
 
-  // 5. Workforce
+  // 5. Workforce — never guess compensation from hasStaff/headcount (W2).
+  const STAFF_MAP: Readonly<Record<StaffArrangement, WorkforceModel>> = {
+    solo: 'SOLO_OWNER',
+    fixed_salary: 'SALARIED_STAFF',
+    hourly: 'HOURLY_STAFF',
+    commission: 'COMMISSION_PROVIDERS',
+    shift: 'SHIFT_BASED_STAFF',
+    mixed: 'MIXED_WORKFORCE',
+    unknown: 'UNRESOLVED',
+  }
   const workforce: WorkforceModel[] = []
-  if (input.hasStaff === 'yes') {
-    workforce.push('HOURLY_STAFF')
-  } else {
+  if (input.staffArrangement) {
+    workforce.push(STAFF_MAP[input.staffArrangement])
+  } else if (input.hasStaff === 'no') {
     workforce.push('SOLO_OWNER')
+  } else if (
+    input.hasStaff === 'yes' ||
+    input.hasStaff === 'unknown' ||
+    input.hasStaff === undefined
+  ) {
+    workforce.push('UNRESOLVED')
   }
 
   // 6. Customer
@@ -504,6 +797,81 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
             ? 'NONE'
             : undefined
 
+  // 10–15. V60 orthogonal axes — only populated from explicit answers or trade hints.
+  const rentsOut = said('rentsOutAssets')
+  const holdsCustomerAsset = said('holdsCustomerAssets')
+  const atCustomerSite = said('worksAtCustomerSite')
+  const recurring = said('billsRecurring')
+  const approvals = said('needsApprovals')
+
+  const TRADE_REGULATED: Readonly<Record<string, RegulatedDomain>> = {
+    pharmacy: 'PRESCRIPTION',
+    clinic: 'HEALTH_RECORDS',
+    currencyExchange: 'FINANCIAL_KYC',
+    restaurant: 'FOOD_SAFETY',
+    bakery: 'FOOD_SAFETY',
+    cafe: 'FOOD_SAFETY',
+    hotel: 'FOOD_SAFETY',
+  }
+  const TRADE_PRICING: Readonly<Record<string, readonly PricingBasis[]>> = {
+    jewellery: ['WEIGHT', 'RATE_BOARD'],
+    currencyExchange: ['RATE_BOARD'],
+    clothing: ['UNIT', 'LENGTH'],
+    hardware: ['UNIT', 'LENGTH', 'AREA'],
+  }
+
+  const derivedPricing: PricingBasis[] = input.pricingBasis
+    ? [...input.pricingBasis]
+    : [...(input.tradeKey && TRADE_PRICING[input.tradeKey] ? TRADE_PRICING[input.tradeKey]! : [])]
+  if (!input.pricingBasis) {
+    if (rentsOut === 'yes' || isAppointmentDriven) derivedPricing.push('TIME')
+    if (recurring === 'yes') derivedPricing.push('CONTRACT')
+  }
+  const pricingBasis = derivedPricing.length > 0 ? Array.from(new Set(derivedPricing)) : undefined
+
+  const assetCustody: AssetCustody | undefined =
+    input.assetCustody ??
+    (holdsCustomerAsset === 'yes' || isRepairDriven
+      ? 'CUSTOMER_ASSET_IN_CUSTODY'
+      : rentsOut === 'yes'
+        ? 'RENTED_OUT_ASSET'
+        : input.holdsStock === 'yes'
+          ? 'OWN_STOCK'
+          : holdsCustomerAsset === 'no' && rentsOut === 'no' && input.holdsStock === 'no'
+            ? 'NONE'
+            : undefined)
+
+  const executionSite: ExecutionSite | undefined =
+    input.executionSite ??
+    (input.tradeKey === 'courier' ||
+    input.tradeKey === 'transport' ||
+    input.tradeKey === 'logistics'
+      ? 'MOBILE_ROUTE'
+      : atCustomerSite === 'yes'
+        ? 'CUSTOMER_SITE'
+        : atCustomerSite === 'no'
+          ? 'PREMISES'
+          : undefined)
+
+  const recurrence: Recurrence | undefined =
+    input.recurrence ??
+    (recurring === 'yes'
+      ? rentsOut === 'yes'
+        ? 'LEASE'
+        : isPackageDriven
+          ? 'SUBSCRIPTION'
+          : 'RECURRING_SERVICE'
+      : recurring === 'no'
+        ? 'ONE_OFF'
+        : undefined)
+
+  const approvalDepth: ApprovalDepth | undefined =
+    input.approvalDepth ??
+    (approvals === 'yes' ? 'SINGLE' : approvals === 'no' ? 'NONE' : undefined)
+
+  const regulatedDomain: RegulatedDomain | undefined =
+    input.regulatedDomain ?? (input.tradeKey ? TRADE_REGULATED[input.tradeKey] : undefined)
+
   return {
     version: 1,
     offering,
@@ -515,15 +883,24 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     topology,
     terminology,
     ...(unitTracking ? { unitTracking } : {}),
-    archetypeHint: isAppointmentDriven
-      ? 'NAIL_TECH_BEAUTY'
-      : isPackageDriven
-        ? 'LANGUAGE_TEACHER'
-        : isRepairDriven
-          ? 'SERVICE_REPAIR'
-          : isRetailTrade
-            ? 'RETAIL_STORE'
-            : 'GENERIC_BUSINESS',
+    ...(pricingBasis ? { pricingBasis } : {}),
+    ...(assetCustody ? { assetCustody } : {}),
+    ...(executionSite ? { executionSite } : {}),
+    ...(recurrence ? { recurrence } : {}),
+    ...(approvalDepth ? { approvalDepth } : {}),
+    ...(regulatedDomain ? { regulatedDomain } : {}),
+    archetypeHint:
+      isAppointmentDriven && workforce.some((w) => w !== 'SOLO_OWNER' && w !== 'UNRESOLVED')
+        ? 'SALON_MULTI_STAFF'
+        : isAppointmentDriven
+          ? 'NAIL_TECH_BEAUTY'
+          : isPackageDriven
+            ? 'LANGUAGE_TEACHER'
+            : isRepairDriven
+              ? 'SERVICE_REPAIR'
+              : isRetailTrade
+                ? 'RETAIL_STORE'
+                : 'GENERIC_BUSINESS',
   }
 }
 
@@ -544,30 +921,48 @@ export const YES_NO_QUESTIONS = [
   'hasPointOfSale',
   'tracksSerials',
   'hasExpiryDates',
+  'holdsCustomerAssets',
+  'rentsOutAssets',
+  'worksAtCustomerSite',
   'sellsOnCredit',
+  'billsRecurring',
   'hasStaff',
+  'needsApprovals',
 ] as const
 export type YesNoQuestion = (typeof YES_NO_QUESTIONS)[number]
-export type OperatingQuestion = YesNoQuestion | 'locations'
+export type OperatingQuestion = YesNoQuestion | 'locations' | 'staffArrangement'
+
+export type LocationScope = 'single' | 'multiple' | 'unknown'
 
 export type OperatingAnswers = {
   readonly [K in YesNoQuestion]?: YesNo | undefined
-} & { readonly locations?: 'single' | 'multiple' | 'unknown' | undefined }
+} & {
+  readonly locations?: LocationScope | undefined
+  readonly staffArrangement?: StaffArrangement | undefined
+}
 
-const yesNo = z.enum(['yes', 'no', 'unknown'])
+export const yesNoSchema = z.enum(['yes', 'no', 'unknown'])
+export const locationScopeSchema = z.enum(['single', 'multiple', 'unknown'])
+
 export const operatingAnswersSchema = z
   .object({
-    takesAppointments: yesNo.optional(),
-    deliversCoursesOrPackages: yesNo.optional(),
-    takesJobTicketsOrRepairs: yesNo.optional(),
-    holdsStock: yesNo.optional(),
-    producesGoods: yesNo.optional(),
-    hasPointOfSale: yesNo.optional(),
-    tracksSerials: yesNo.optional(),
-    hasExpiryDates: yesNo.optional(),
-    sellsOnCredit: yesNo.optional(),
-    hasStaff: yesNo.optional(),
-    locations: z.enum(['single', 'multiple', 'unknown']).optional(),
+    takesAppointments: yesNoSchema.optional(),
+    deliversCoursesOrPackages: yesNoSchema.optional(),
+    takesJobTicketsOrRepairs: yesNoSchema.optional(),
+    holdsStock: yesNoSchema.optional(),
+    producesGoods: yesNoSchema.optional(),
+    hasPointOfSale: yesNoSchema.optional(),
+    tracksSerials: yesNoSchema.optional(),
+    hasExpiryDates: yesNoSchema.optional(),
+    holdsCustomerAssets: yesNoSchema.optional(),
+    rentsOutAssets: yesNoSchema.optional(),
+    worksAtCustomerSite: yesNoSchema.optional(),
+    sellsOnCredit: yesNoSchema.optional(),
+    billsRecurring: yesNoSchema.optional(),
+    hasStaff: yesNoSchema.optional(),
+    needsApprovals: yesNoSchema.optional(),
+    staffArrangement: staffArrangementEnum.optional(),
+    locations: locationScopeSchema.optional(),
   })
   .strict()
 
@@ -581,6 +976,10 @@ const COUNTER_TRADES = new Set(['retail', 'grocery'])
 // a pharmacy sells the batch that expires first (FEFO).
 const SERIAL_TRADES = new Set(['mobilePhones', 'repairs', 'mechanic'])
 const EXPIRY_TRADES = new Set(['pharmacy', 'grocery'])
+const WHOLESALE_TRADES = new Set(['wholesale'])
+const CONSULTING_TRADES = new Set(['consulting', 'itServices'])
+const COURIER_TRADES = new Set(['courier'])
+const RENTAL_TRADES = new Set(['wedding'])
 
 /**
  * What the trade suggests for each question — the wizard's pre-filled answer.
@@ -602,6 +1001,21 @@ export function suggestedOperatingAnswers(tradeKey: string | undefined): Operati
   }
   if (SERIAL_TRADES.has(tradeKey)) out.tracksSerials = 'yes'
   if (EXPIRY_TRADES.has(tradeKey)) out.hasExpiryDates = 'yes'
+  if (WHOLESALE_TRADES.has(tradeKey)) {
+    out.holdsStock = 'yes'
+    out.sellsOnCredit = 'yes'
+  }
+  if (CONSULTING_TRADES.has(tradeKey)) {
+    out.holdsStock = 'no'
+    out.sellsOnCredit = 'yes'
+  }
+  if (COURIER_TRADES.has(tradeKey)) {
+    out.holdsStock = 'no'
+    out.worksAtCustomerSite = 'yes'
+  }
+  if (RENTAL_TRADES.has(tradeKey)) {
+    out.rentsOutAssets = 'yes'
+  }
   return out
 }
 
@@ -612,17 +1026,38 @@ export function suggestedOperatingAnswers(tradeKey: string | undefined): Operati
  */
 export function operatingQuestionsFor(answers: OperatingAnswers): OperatingQuestion[] {
   const keepsStock = answers.holdsStock !== 'no'
+  const isAppointment = answers.takesAppointments === 'yes'
+  const isPackage = answers.deliversCoursesOrPackages === 'yes'
+  const isRepair = answers.takesJobTicketsOrRepairs === 'yes'
+  const isProducer = answers.producesGoods === 'yes'
+  const canRentAssets = !isAppointment && !isPackage && !isProducer
+  const needsControl =
+    answers.hasStaff === 'yes' ||
+    answers.sellsOnCredit === 'yes' ||
+    answers.locations === 'multiple'
+
   return [
     'takesAppointments',
     'deliversCoursesOrPackages',
     'takesJobTicketsOrRepairs',
     'holdsStock',
-    ...(keepsStock ? (['producesGoods', 'hasPointOfSale'] as const) : []),
-    // V55 P1: unit-level tracking is only asked of a business that keeps
-    // stock — a serial number or an expiry date lives on a unit on a shelf.
-    ...(keepsStock ? (['tracksSerials', 'hasExpiryDates'] as const) : []),
+    ...(keepsStock
+      ? (['producesGoods', 'hasPointOfSale', 'tracksSerials', 'hasExpiryDates'] as const)
+      : []),
+    ...(isRepair || answers.holdsCustomerAssets !== undefined
+      ? (['holdsCustomerAssets'] as const)
+      : []),
+    ...(canRentAssets || answers.rentsOutAssets !== undefined ? (['rentsOutAssets'] as const) : []),
+    ...(!isPackage || answers.worksAtCustomerSite !== undefined
+      ? (['worksAtCustomerSite'] as const)
+      : []),
     'sellsOnCredit',
+    ...(!isAppointment || answers.billsRecurring !== undefined
+      ? (['billsRecurring'] as const)
+      : []),
     'hasStaff',
+    ...(answers.hasStaff === 'yes' ? (['staffArrangement'] as const) : []),
+    ...(needsControl || answers.needsApprovals !== undefined ? (['needsApprovals'] as const) : []),
     'locations',
   ]
 }

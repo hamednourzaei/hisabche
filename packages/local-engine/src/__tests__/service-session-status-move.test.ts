@@ -84,6 +84,47 @@ describe('session status move on the device', () => {
     expect(queued()).toBe(before + 1)
   })
 
+  it('checked_in then in_progress writes status audit entries once and replays cleanly', async () => {
+    const { engine, id, queued, status } = await booked()
+    const before = queued()
+
+    const checkedIn = await engine.request<{ replayed: boolean; session: ServiceDeliverySession }>({
+      method: 'POST',
+      path: `/service-delivery/sessions/${id}/status`,
+      body: { to: 'checked_in' },
+      headers,
+    })
+    expect(checkedIn.status).toBe(200)
+    expect(checkedIn.data.replayed).toBe(false)
+    expect(checkedIn.data.session.status).toBe('checked_in')
+    expect(status()).toBe('checked_in')
+    expect(queued()).toBe(before + 1)
+
+    const inProgress = await engine.request<{ replayed: boolean; session: ServiceDeliverySession }>(
+      {
+        method: 'POST',
+        path: `/service-delivery/sessions/${id}/status`,
+        body: { to: 'in_progress' },
+        headers,
+      },
+    )
+    expect(inProgress.status).toBe(200)
+    expect(inProgress.data.replayed).toBe(false)
+    expect(inProgress.data.session.status).toBe('in_progress')
+    expect(status()).toBe('in_progress')
+    expect(queued()).toBe(before + 2)
+
+    const replay = await engine.request<{ replayed: boolean }>({
+      method: 'POST',
+      path: `/service-delivery/sessions/${id}/status`,
+      body: { to: 'in_progress' },
+      headers,
+    })
+    expect(replay.status).toBe(200)
+    expect(replay.data.replayed).toBe(true)
+    expect(queued()).toBe(before + 2)
+  })
+
   it('no-show from a booked session; then check-in is refused with the server code', async () => {
     const { engine, id, status } = await booked()
     const noShow = await engine.request({

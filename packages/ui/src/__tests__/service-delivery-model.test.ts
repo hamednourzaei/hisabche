@@ -175,9 +175,9 @@ describe('the cancellation reason', () => {
 })
 
 describe('which statuses may be delivered and cancelled', () => {
-  it('only scheduled / in progress can be delivered', () => {
+  it('only scheduled / checked_in / in_progress can be delivered', () => {
     const deliverable = SERVICE_SESSION_STATUSES.filter((status) => !deliveryBlocked(status))
-    expect(deliverable).toEqual(['scheduled', 'in_progress'])
+    expect(deliverable).toEqual(['scheduled', 'checked_in', 'in_progress'])
     expect(deliveryBlocked('delivered')).toBe(true)
     expect(deliveryBlocked('cancelled')).toBe(true)
     expect(deliveryBlocked('no_show')).toBe(true)

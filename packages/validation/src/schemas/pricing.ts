@@ -49,6 +49,11 @@
 
 import type { CURRENCY_CODES } from './common.schema'
 import { z } from 'zod'
+import {
+  priceGoldLineWithSnapshot,
+  type GoldLineQuoteInput,
+  type GoldLineSnapshot,
+} from './universal-core/gold-jewellery.domain'
 
 /** How a price is expressed. Matches the `CURRENCY_CODES` policy elsewhere. */
 export type PricingCurrency = (typeof CURRENCY_CODES)[number] | (string & {})
@@ -139,6 +144,7 @@ export interface PriceQuote {
    * see, or the first bug this engine prevents is the second one it misses.
    */
   driftFromRequest?: { requestedMinor: number; quotedMinor: number } | undefined
+  goldSnapshot?: GoldLineSnapshot | undefined
   problems: { code: PricingRuleCode; detail: string }[]
 }
 
@@ -308,6 +314,44 @@ export function quotePrice(
   return quote
 }
 
+/**
+ * Quotes a weighted-gold line through the unified `quotePrice` / floor / promotion pipeline
+ * from a locked rate snapshot so invoice totals & discounts run one single engine.
+ */
+export function quoteGoldItemPrice(
+  request: PriceRequest,
+  goldInput: Omit<GoldLineQuoteInput, 'productId'>,
+  floorUnitPrice: number | undefined,
+  promotions: readonly Promotion[],
+  asOf: string,
+): PriceQuote {
+  const goldResult = priceGoldLineWithSnapshot({
+    ...goldInput,
+    productId: request.productId,
+  })
+  const baseQuote = quotePrice(
+    request,
+    {
+      productId: request.productId,
+      baseUnitPrice: fromMinor(goldResult.totalMinor),
+      floorUnitPrice,
+    },
+    promotions,
+    asOf,
+  )
+  return {
+    ...baseQuote,
+    goldSnapshot: {
+      karat: goldInput.karat,
+      netWeightMg: goldInput.netWeightMg,
+      rate24kMinorPerGram: goldResult.rateSnapshot.rate24kMinorPerGram,
+      makingChargeMinor: goldResult.makingChargeMinor,
+      capturedAt: goldResult.rateSnapshot.capturedAt,
+      capturedBy: goldResult.rateSnapshot.capturedBy,
+    },
+  }
+}
+
 /** What one promotion takes off, never below zero. */
 function discountOf(promotion: Promotion, priceMinor: number): number {
   const raw =
@@ -340,6 +384,7 @@ export function applyPrice(
   productId: string
   quantity: number
   unitPrice: number | null
+  goldSnapshot?: GoldLineSnapshot | undefined
   reason?: 'NO_QUOTE'
 }[] {
   return items.map((item) => {
@@ -356,6 +401,7 @@ export function applyPrice(
       productId: item.productId,
       quantity: item.quantity,
       unitPrice: fromMinor(quote.unitPriceMinor),
+      ...(quote.goldSnapshot ? { goldSnapshot: quote.goldSnapshot } : {}),
     }
   })
 }

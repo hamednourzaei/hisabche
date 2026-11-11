@@ -27,7 +27,7 @@
 
 import { Suspense, lazy } from 'react'
 import { useTranslations } from 'next-intl'
-import { ReceiptText, Tags } from 'lucide-react'
+import { PackageCheck, ReceiptText, Tags } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
@@ -37,11 +37,14 @@ import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
 import { InvoicesContainer } from './invoices-container'
 
+const SalesOrdersContainer = lazy(() =>
+  import('./sales-orders-container').then((m) => ({ default: m.SalesOrdersContainer })),
+)
 const PromotionsContainer = lazy(() =>
   import('../../promotions/promotions-container').then((m) => ({ default: m.PromotionsContainer })),
 )
 
-export const SALES_HUB_TABS = ['invoices', 'pricing'] as const
+export const SALES_HUB_TABS = ['invoices', 'orders', 'pricing'] as const
 export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
 
 /**
@@ -50,10 +53,11 @@ export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
  */
 export const SALES_HUB_SOURCE: Record<SalesHubTab, string> = {
   invoices: '/invoices',
+  orders: '/invoices',
   pricing: '/promotions',
 }
 
-const TAB_ICON = { invoices: ReceiptText, pricing: Tags } as const
+const TAB_ICON = { invoices: ReceiptText, orders: PackageCheck, pricing: Tags } as const
 
 export function SalesHubContainer() {
   return <SalesHub />
@@ -99,6 +103,16 @@ function SalesHub() {
             }
           >
             <PromotionsContainer />
+          </Suspense>
+        ) : active === 'orders' ? (
+          <Suspense
+            fallback={
+              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                {t('loading')}
+              </p>
+            }
+          >
+            <SalesOrdersContainer />
           </Suspense>
         ) : (
           <InvoicesContainer />

@@ -35,6 +35,9 @@ export const universalCoreKeys = {
   packBarcode: (barcode: string) => [...universalCoreKeys.all, 'pack-barcode', barcode] as const,
   serials: (productId: string) => [...universalCoreKeys.all, 'serials', productId] as const,
   metalRate: () => [...universalCoreKeys.all, 'metal-rate', 'latest'] as const,
+  metalRateHistory: () => [...universalCoreKeys.all, 'metal-rate', 'history'] as const,
+  goldOperations: () => [...universalCoreKeys.all, 'gold', 'operations'] as const,
+  goldReconciliations: () => [...universalCoreKeys.all, 'gold', 'reconciliations'] as const,
   fitments: (productId: string) => [...universalCoreKeys.all, 'fitments', productId] as const,
   vehicles: () => [...universalCoreKeys.all, 'vehicles'] as const,
   warranties: () => [...universalCoreKeys.all, 'warranties'] as const,
@@ -88,6 +91,36 @@ export interface MetalRateRecord {
   id: string
   rateDate: string
   rate24kMinorPerGram: number
+  setBy?: string | null
+  createdAt?: string | null
+}
+
+export interface GoldOperationRecord {
+  id: string
+  operation_type: 'second_hand_purchase' | 'melt_scrap'
+  karat: number
+  input_weight_mg: number
+  recovered_pure_mg: number | null
+  weight_loss_mg: number | null
+  rate_24k_minor_per_gram: number
+  gross_credit_minor: number | null
+  deduction_bp: number | null
+  net_credit_minor: number | null
+  waste_cost_minor: number | null
+  id_full_name: string | null
+  note: string | null
+  created_at: string
+}
+
+export interface GoldLocationReconciliationRecord {
+  id: string
+  location: 'showcase' | 'safe'
+  karat: number
+  system_weight_mg: number
+  physical_counted_mg: number
+  variance_mg: number
+  note: string | null
+  reconciled_at: string
 }
 
 export interface AutoFitmentRecord {
@@ -347,13 +380,42 @@ export function useCreateProductVariant(productId: string) {
 
 // ─── 4. Metal Rates (G-13) ───────────────────────────────────────
 
+function normalizeMetalRate(
+  raw: Record<string, unknown> | null | undefined,
+): MetalRateRecord | null {
+  if (!raw || typeof raw !== 'object') return null
+  return {
+    id: String(raw.id ?? ''),
+    rateDate: String(raw.rateDate ?? raw.rate_date ?? ''),
+    rate24kMinorPerGram: Number(raw.rate24kMinorPerGram ?? raw.rate_24k_minor_per_gram ?? 0),
+    setBy: (raw.setBy ?? raw.set_by ?? null) as string | null,
+    createdAt: (raw.createdAt ?? raw.created_at ?? null) as string | null,
+  }
+}
+
 export function useLatestMetalRate() {
   const authReady = useAuthReady()
   return useQuery({
     queryKey: universalCoreKeys.metalRate(),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ data: MetalRateRecord | null }>('/metal-rates/latest')
-      return data.data
+      const { data } = await apiClient.get<{ data: Record<string, unknown> | null }>(
+        '/metal-rates/latest',
+      )
+      return normalizeMetalRate(data.data)
+    },
+    enabled: authReady,
+  })
+}
+
+export function useMetalRateHistory() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.metalRateHistory(),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: Record<string, unknown>[] }>('/metal-rates')
+      return asList<Record<string, unknown>>(data?.data, '/metal-rates')
+        .map((row) => normalizeMetalRate(row))
+        .filter((row): row is MetalRateRecord => row !== null)
     },
     enabled: authReady,
   })
@@ -363,11 +425,132 @@ export function useRecordMetalRate() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: { rateDate: string; rate24kMinorPerGram: number }) => {
-      const { data } = await apiClient.post<{ data: MetalRateRecord }>('/metal-rates', input)
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        '/metal-rates',
+        input,
+      )
+      return normalizeMetalRate(data.data)!
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: universalCoreKeys.metalRate() })
+      void queryClient.invalidateQueries({ queryKey: universalCoreKeys.metalRateHistory() })
+    },
+  })
+}
+
+export function useGoldOperations() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.goldOperations(),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        data?: { ready?: boolean; operations?: GoldOperationRecord[] }
+      }>('/gold/operations')
+      return {
+        ready: data?.data?.ready !== false,
+        operations: asList<GoldOperationRecord>(data?.data?.operations, '/gold/operations'),
+      }
+    },
+    enabled: authReady,
+  })
+}
+
+export function useRecordSecondHandGoldPurchase() {
+  const queryClient = useQueryClient()
+  const intentKey = useIntentKey('gold-purchase')
+  return useMutation({
+    mutationFn: async (input: {
+      karat: 24 | 22 | 21 | 18 | 14 | 9
+      scrapWeightMg: number
+      deductionBp?: number
+      kycThresholdMinor?: number | null
+      customerId?: string | null
+      identity?: {
+        fullName: string
+        idType: 'national_id' | 'passport' | 'driving_licence' | 'other'
+        idNumber: string
+      } | null
+      note?: string
+    }) => {
+      const { data } = await apiClient.post<{ data: GoldOperationRecord }>(
+        '/gold/second-hand-purchase',
+        input,
+        { headers: { 'Idempotency-Key': intentKey.current() } },
+      )
       return data.data
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: universalCoreKeys.metalRate() })
+      intentKey.settle()
+      void queryClient.invalidateQueries({ queryKey: universalCoreKeys.goldOperations() })
+    },
+  })
+}
+
+export function useRecordGoldMeltScrap() {
+  const queryClient = useQueryClient()
+  const intentKey = useIntentKey('gold-melt')
+  return useMutation({
+    mutationFn: async (input: {
+      karat: 24 | 22 | 21 | 18 | 14 | 9
+      inputWeightMg: number
+      recoveredPureMg: number
+      note?: string
+    }) => {
+      const { data } = await apiClient.post<{ data: GoldOperationRecord }>(
+        '/gold/melt-scrap',
+        input,
+        { headers: { 'Idempotency-Key': intentKey.current() } },
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      intentKey.settle()
+      void queryClient.invalidateQueries({ queryKey: universalCoreKeys.goldOperations() })
+    },
+  })
+}
+
+export function useGoldReconciliations() {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.goldReconciliations(),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        data?: { ready?: boolean; reconciliations?: GoldLocationReconciliationRecord[] }
+      }>('/gold/reconciliations')
+      return {
+        ready: data?.data?.ready !== false,
+        reconciliations: asList<GoldLocationReconciliationRecord>(
+          data?.data?.reconciliations,
+          '/gold/reconciliations',
+        ),
+      }
+    },
+    enabled: authReady,
+  })
+}
+
+export function useReconcileGoldLocation() {
+  const queryClient = useQueryClient()
+  const intentKey = useIntentKey('gold-reconcile')
+  return useMutation({
+    mutationFn: async (input: {
+      location: 'showcase' | 'safe'
+      karat: 24 | 22 | 21 | 18 | 14 | 9
+      systemWeightMg: number
+      physicalCountedMg: number
+      note?: string
+    }) => {
+      const { data } = await apiClient.post<{ data: GoldLocationReconciliationRecord }>(
+        '/gold/reconciliations',
+        input,
+        { headers: { 'Idempotency-Key': intentKey.current() } },
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      intentKey.settle()
+      void queryClient.invalidateQueries({ queryKey: universalCoreKeys.goldReconciliations() })
     },
   })
 }
@@ -971,6 +1154,90 @@ export function useCreateDeliveryNote() {
   })
 }
 
+export function useRecordDeliveryPod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      noteId,
+      recipientName,
+      deliveredAt,
+      notes,
+    }: {
+      noteId: string
+      recipientName: string
+      deliveredAt?: string | undefined
+      notes?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        `/deliveries/notes/${noteId}/pod`,
+        {
+          recipientName,
+          ...(deliveredAt ? { deliveredAt } : {}),
+          ...(notes ? { notes } : {}),
+        },
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryNotes() })
+    },
+  })
+}
+
+export function useSettleCourierCod() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      deliveryId,
+      invoiceId,
+      method,
+      amountMinor,
+      notes,
+    }: {
+      deliveryId: string
+      invoiceId: string
+      method?: 'cash' | 'bank' | undefined
+      amountMinor?: number | undefined
+      notes?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        `/deliveries/courier/${deliveryId}/settle-cod`,
+        {
+          invoiceId,
+          ...(method ? { method } : {}),
+          ...(amountMinor !== undefined ? { amountMinor } : {}),
+          ...(notes ? { notes } : {}),
+        },
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.courier() })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+export function useGrantPackageCredits() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      customerId: string
+      packageProductId: string
+      quantity: number
+      unit?: string | undefined
+      notes?: string | undefined
+      expiresAt?: string | undefined
+    }) => {
+      const { data } = await apiClient.post('/package-credits/grant', input)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
 // ─── 15. Package Credit & Entitlement Ledger (M3) ───────────────────
 
 export interface PackageCreditBalanceResponse {
@@ -1290,7 +1557,13 @@ export function useDeliverServiceDeliverySession() {
 export function useMoveServiceSessionStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, to }: { id: string; to: 'in_progress' | 'no_show' }) => {
+    mutationFn: async ({
+      id,
+      to,
+    }: {
+      id: string
+      to: 'checked_in' | 'in_progress' | 'no_show'
+    }) => {
       const { data } = await apiClient.post<{
         session: ServiceDeliverySessionItem
         replayed: boolean

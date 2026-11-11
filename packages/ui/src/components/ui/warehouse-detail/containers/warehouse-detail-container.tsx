@@ -375,7 +375,17 @@ ${t('warehouse.deactivateInstead')}`)
               <ProductFitmentsSection t={safeT} productId={id} />
             ) : null}
             {profile.capabilities.includes('serialized_items') ? (
-              <WarrantiesSection t={safeT} productId={id} />
+              <WarrantiesSection
+                t={safeT}
+                productId={id}
+                onOpenRepair={(serial) =>
+                  push(
+                    serial
+                      ? `/customers?tab=sessions&view=repairs&serial=${encodeURIComponent(serial)}`
+                      : '/customers?tab=sessions&view=repairs',
+                  )
+                }
+              />
             ) : null}
           </>
         ) : null

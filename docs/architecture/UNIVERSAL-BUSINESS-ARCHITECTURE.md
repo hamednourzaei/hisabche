@@ -293,3 +293,11 @@ flowchart LR
 ### O. شاهد
 
 همه‌ی مسیرهای بالا در کامیت `28154aca` خوانده شد؛ اعداد ماتریس آفلاین با شمارش ردیف‌های `'METHOD /path'`؛ «صفر مصرف‌کننده» با `grep -rlw <hook> packages apps` بدون `node_modules`/`__tests__`.
+
+---
+
+## بازبینی V59 — 11 نوامبر 2026
+
+- یکپارچه‌سازی یکتای قابلیت/استحقاق/دسترسی ([`resolveCapabilityPlan`](packages/validation/src/schemas/business-capabilities.ts)، [`evaluateFeatureAccess`](packages/validation/src/schemas/business-capabilities.ts)، جداسازی کامل از نقش و اشتراک).
+- محور ۵ بدون حدس حقوق (`UNRESOLVED` + `staffArrangement`) و محور ۸ (`presentationProfileSchema`) با [`useTerminology`](packages/ui/src/hooks/use-terminology.ts) و ذخیره‌سازی آفلاین SQLite V23 و کنترل تداخل نسخه (`409 OPERATIONAL_PROFILE_CHANGED`).
+- تکمیل ۶ جریان صنفی در دامنه‌ی مشترک و گاردها (`V59-TRADE-ACCEPTANCE-MATRIX.md`) + تست‌های HTTP واقعی (`v59-http-routes.test.ts`) + مهاجرت افزایشی تطبیق صندوق ارزی (`docs/exchange-02-migration.sql` — در انتظار تایید انسانی).

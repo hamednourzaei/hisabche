@@ -10,8 +10,8 @@
 //                sales earned above it, and the book-currency cash effect
 //   remittances  hawala out / in, with a payout code shown once
 //
-// ⚠️ Stated on the screen: none of this posts to the general ledger or a
-// till yet (the ledger is single-currency) — the QA document's own rule.
+// V59.1 (exchange-03): trades, voids, remittance payouts, and agent settlements
+// post book-currency journal entries atomically to the general ledger.
 // ============================================
 
 import { useMemo, useState } from 'react'
@@ -25,10 +25,16 @@ import {
   useFxTrades,
   useMoveRemittance,
   usePartnerBalances,
+  useReconcileFxCashbox,
   useRemittances,
   useSaveFxSettings,
   useSetFxRate,
   useVoidFxTrade,
+  useResolveFxTradeReview,
+  useFxAgentSettlements,
+  useSettleFxAgent,
+  useFxReconciliations,
+  type FxCashboxReconciliation,
   type FxPosition,
   type FxTrade,
   type Remittance,
@@ -39,6 +45,7 @@ import {
   FX_ID_TYPES,
   identityRequired,
   parseRate,
+  reconcileCurrencyCashbox,
   REMITTANCE_MOVES,
   type FxSide,
   type RemittanceDirection,
@@ -130,10 +137,11 @@ function TradesView({ book, threshold }: { book: string; threshold: number | nul
   const rates = useFxRates()
   const create = useCreateFxTrade()
   const voidTrade = useVoidFxTrade()
+  const resolveReview = useResolveFxTradeReview()
   const customers = useCustomerOptions()
 
   const [side, setSide] = useState<FxSide>('buy')
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState('')
   const [amount, setAmount] = useState('')
   const [rate, setRate] = useState('')
   const [customerId, setCustomerId] = useState('')
@@ -238,10 +246,59 @@ function TradesView({ book, threshold }: { book: string; threshold: number | nul
       render: (r) =>
         r.status === 'voided' ? (
           <span title={r.voidReason ?? ''}>{t('exchange.voided', 'باطل')}</span>
+        ) : r.status === 'pending_review' ? (
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="rounded px-1.5 py-0.5 text-xs bg-[hsl(var(--color-warning))]/15 text-[hsl(var(--color-warning))]">
+              {t('exchange.pendingReview', 'نیازمند بررسی')}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={resolveReview.isPending}
+              onClick={() =>
+                resolveReview.mutate(
+                  { id: r.id, decision: 'approve' },
+                  {
+                    onError: (e) =>
+                      toast.error(
+                        refusalText(e, t, 'exchange', ERRORS, t('exchange.failed', 'انجام نشد')),
+                      ),
+                  },
+                )
+              }
+            >
+              {t('exchange.approve', 'تأیید')}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={resolveReview.isPending}
+              onClick={() =>
+                resolveReview.mutate(
+                  { id: r.id, decision: 'reject' },
+                  {
+                    onError: (e) =>
+                      toast.error(
+                        refusalText(e, t, 'exchange', ERRORS, t('exchange.failed', 'انجام نشد')),
+                      ),
+                  },
+                )
+              }
+            >
+              {t('exchange.reject', 'رد')}
+            </Button>
+          </div>
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setVoiding(r)}>
-            {t('exchange.void', 'ابطال')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-1">
+            {r.journalEntryId ? (
+              <span className="text-xs text-[hsl(var(--color-success))]">
+                {t('exchange.glPosted', 'ثبت دفتر کل')}
+              </span>
+            ) : null}
+            <Button size="sm" variant="ghost" onClick={() => setVoiding(r)}>
+              {t('exchange.void', 'ابطال')}
+            </Button>
+          </div>
         ),
     },
   ]
@@ -366,7 +423,7 @@ function RatesView({ book, threshold }: { book: string; threshold: number | null
   const rates = useFxRates()
   const setRate = useSetFxRate()
   const saveSettings = useSaveFxSettings()
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState('')
   const [buy, setBuy] = useState('')
   const [sell, setSell] = useState('')
   const [limit, setLimit] = useState(threshold === null ? '' : String(threshold))
@@ -502,9 +559,53 @@ function RatesView({ book, threshold }: { book: string; threshold: number | null
 
 function PositionsView() {
   const t = usePackT()
+  const toast = useToast()
   const money = useMoneyText()
+  const { date } = useDateFormat()
   const positions = useFxPositions()
+  const reconciliations = useFxReconciliations()
+  const reconcile = useReconcileFxCashbox()
   const book = positions.data?.bookCurrency ?? ''
+  const [countCurrency, setCountCurrency] = useState(book || '')
+  const [counted, setCounted] = useState('')
+  const [countNote, setCountNote] = useState('')
+  const [recRequestId, setRecRequestId] = useState(newKey)
+
+  const positionRows = positions.data?.positions ?? []
+  const effectiveCurrency =
+    positionRows.some((p) => p.currency === countCurrency) || positionRows.length === 0
+      ? countCurrency
+      : positionRows[0]!.currency
+  const expectedRow = positionRows.find((p) => p.currency === effectiveCurrency) ?? null
+  const countedMinor = counted.trim() ? typedMinor(counted, effectiveCurrency) : null
+  const preview = reconcileCurrencyCashbox(
+    expectedRow ? expectedRow.heldMinor : null,
+    countedMinor,
+    effectiveCurrency,
+  )
+
+  const submitReconcile = () => {
+    if (countedMinor === null || countedMinor < 0) return
+    reconcile.mutate(
+      {
+        requestId: recRequestId,
+        currency: effectiveCurrency,
+        countedMinor,
+        ...(countNote.trim() ? { note: countNote.trim() } : {}),
+      },
+      {
+        onSuccess: () => {
+          toast.success(t('exchange.reconcileSaved', 'شمارش صندوق ارزی ثبت شد'))
+          setCounted('')
+          setCountNote('')
+          setRecRequestId(newKey())
+        },
+        onError: (e) =>
+          toast.error(refusalText(e, t, 'exchange', ERRORS, t('exchange.failed', 'انجام نشد'))),
+      },
+    )
+  }
+
   const columns: TableColumn<FxPosition>[] = [
     {
       id: 'currency',
@@ -550,12 +651,57 @@ function PositionsView() {
       render: (r) => (r.shortMinor > 0 ? money(r.shortMinor, r.currency) : '—'),
     },
   ]
+
+  const recColumns: TableColumn<FxCashboxReconciliation>[] = [
+    {
+      id: 'currency',
+      labelKey: 'exchange.currency',
+      labelFallback: 'ارز',
+      locked: true,
+      render: (r) => r.currency,
+    },
+    {
+      id: 'expected',
+      labelKey: 'exchange.held',
+      labelFallback: 'موجودی',
+      align: 'end',
+      render: (r) => money(r.expectedMinor, r.currency),
+    },
+    {
+      id: 'counted',
+      labelKey: 'exchange.countedAmount',
+      labelFallback: 'شمارش‌شده',
+      align: 'end',
+      render: (r) => money(r.countedMinor, r.currency),
+    },
+    {
+      id: 'variance',
+      labelKey: 'exchange.variance',
+      labelFallback: 'اختلاف',
+      align: 'end',
+      render: (r) => money(r.varianceMinor, r.currency),
+    },
+    {
+      id: 'status',
+      labelKey: 'exchange.status',
+      labelFallback: 'وضعیت',
+      render: (r) => t(`exchange.reconcileStatus.${r.status}`, r.status),
+    },
+    {
+      id: 'date',
+      labelKey: 'exchange.date',
+      labelFallback: 'تاریخ',
+      showFrom: 'md',
+      render: (r) => date(r.reconciledAt),
+    },
+  ]
+
   return (
     <div className="space-y-3">
       <DataTable
         tableId="fx-positions"
         t={t}
-        rows={positions.data?.positions ?? []}
+        rows={positionRows}
         columns={columns}
         rowKey={(r) => r.currency}
         paginate={false}
@@ -569,6 +715,65 @@ function PositionsView() {
           <b>{money(positions.data?.bookCashMinor ?? 0, book)}</b>
         </p>
       ) : null}
+
+      <div className={`${packCard} space-y-2`}>
+        <h4 className="text-sm font-semibold">
+          {t('exchange.reconcileTitle', 'بستن و مطابقت صندوق ارزی')}
+        </h4>
+        <div className="flex flex-wrap items-end gap-2">
+          <SelectField
+            name="reconcileCurrency"
+            value={effectiveCurrency}
+            onChange={setCountCurrency}
+            options={(positionRows.length > 0
+              ? positionRows.map((p) => p.currency)
+              : currencyCodeSchema.options.filter((c) => c !== book)
+            ).map((c) => ({ value: c, label: c }))}
+          />
+          <Input
+            name="countedMinor"
+            inputMode="decimal"
+            value={counted}
+            placeholder={`${t('exchange.countedAmount', 'شمارش‌شده')} (${effectiveCurrency})`}
+            onChange={(e) => setCounted(e.target.value)}
+          />
+          <Input
+            name="reconcileNote"
+            value={countNote}
+            placeholder={t('exchange.note', 'توضیح')}
+            onChange={(e) => setCountNote(e.target.value)}
+          />
+          <Button
+            size="sm"
+            disabled={countedMinor === null || countedMinor < 0 || reconcile.isPending}
+            onClick={submitReconcile}
+          >
+            {t('exchange.reconcileAction', 'ثبت شمارش')}
+          </Button>
+        </div>
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('exchange.variance', 'اختلاف')}:{' '}
+          {preview.varianceMinor === null
+            ? t(`exchange.reconcileStatus.${preview.status}`, 'نامشخص')
+            : `${money(preview.varianceMinor, preview.currency)} (${t(`exchange.reconcileStatus.${preview.status}`, preview.status)})`}
+        </p>
+      </div>
+
+      {reconciliations.data?.ready ? (
+        <DataTable
+          tableId="fx-reconciliations"
+          t={t}
+          rows={reconciliations.data.reconciliations}
+          columns={recColumns}
+          rowKey={(r) => r.id}
+          paginate={false}
+          emptyState={
+            <p className="p-4 text-sm">
+              {t('exchange.noReconciliations', 'هنوز شمارشی ثبت نشده.')}
+            </p>
+          }
+        />
+      ) : null}
     </div>
   )
 }
@@ -580,8 +785,19 @@ function RemittancesView({ book, threshold }: { book: string; threshold: number 
   const { date } = useDateFormat()
   const list = useRemittances()
   const balances = usePartnerBalances()
+  const settlements = useFxAgentSettlements()
+  const settleAgent = useSettleFxAgent()
   const create = useCreateRemittance()
   const move = useMoveRemittance()
+  const [settleForm, setSettleForm] = useState({
+    counterparty: '',
+    direction: 'collect' as 'collect' | 'pay',
+    currency: book || '',
+    amount: '',
+    rate: '',
+    note: '',
+  })
+  const [settleReqId, setSettleReqId] = useState(newKey)
   const [direction, setDirection] = useState<RemittanceDirection>('outgoing')
   const [form, setForm] = useState({
     counterparty: '',
@@ -589,7 +805,7 @@ function RemittancesView({ book, threshold }: { book: string; threshold: number 
     receiverName: '',
     receiverPhone: '',
     destination: '',
-    currency: book || 'USD',
+    currency: book || '',
     amount: '',
     fee: '',
     payoutCode: '',
@@ -915,6 +1131,85 @@ function RemittancesView({ book, threshold }: { book: string; threshold: number 
           </ul>
         </div>
       ) : null}
+
+      <div className={`${packCard} space-y-2`}>
+        <h4 className="text-sm font-semibold">
+          {t('exchange.agentSettlement', 'تسویه حساب با نماینده')}
+        </h4>
+        <div className="grid gap-2 sm:grid-cols-5">
+          <Input
+            name="settleCounterparty"
+            value={settleForm.counterparty}
+            placeholder={t('exchange.counterparty', 'طرف (دفتر/نماینده)')}
+            onChange={(e) => setSettleForm((s) => ({ ...s, counterparty: e.target.value }))}
+          />
+          <SelectField
+            name="settleDirection"
+            value={settleForm.direction}
+            onChange={(v) => setSettleForm((s) => ({ ...s, direction: v as 'collect' | 'pay' }))}
+            options={[
+              { value: 'collect', label: t('exchange.settleCollect', 'دریافت از نماینده') },
+              { value: 'pay', label: t('exchange.settlePay', 'پرداخت به نماینده') },
+            ]}
+          />
+          <SelectField
+            name="settleCurrency"
+            value={settleForm.currency}
+            onChange={(v) => setSettleForm((s) => ({ ...s, currency: v }))}
+            options={currencyCodeSchema.options.map((c) => ({ value: c, label: c }))}
+          />
+          <Input
+            name="settleAmount"
+            inputMode="decimal"
+            value={settleForm.amount}
+            placeholder={t('exchange.amount', 'مبلغ')}
+            onChange={(e) => setSettleForm((s) => ({ ...s, amount: e.target.value }))}
+          />
+          <Button
+            size="sm"
+            disabled={
+              !settleForm.counterparty.trim() ||
+              typedMinor(settleForm.amount, settleForm.currency) === null ||
+              settleAgent.isPending
+            }
+            onClick={() => {
+              const minor = typedMinor(settleForm.amount, settleForm.currency)
+              if (minor === null) return
+              settleAgent.mutate(
+                {
+                  requestId: settleReqId,
+                  counterparty: settleForm.counterparty.trim(),
+                  direction: settleForm.direction,
+                  currency: settleForm.currency,
+                  amountMinor: minor,
+                  ...(settleForm.rate.trim() ? { rate: settleForm.rate.trim() } : {}),
+                  ...(settleForm.note.trim() ? { note: settleForm.note.trim() } : {}),
+                },
+                {
+                  onSuccess: () => {
+                    toast.success(t('exchange.settlementSaved', 'تسویه ثبت شد و به دفتر کل رفت'))
+                    setSettleReqId(newKey())
+                    setSettleForm((s) => ({ ...s, amount: '', rate: '', note: '' }))
+                  },
+                  onError: fail,
+                },
+              )
+            }}
+          >
+            {t('exchange.settleAction', 'ثبت تسویه')}
+          </Button>
+        </div>
+        {(settlements.data?.settlements.length ?? 0) > 0 ? (
+          <ul className="space-y-1 text-xs text-[hsl(var(--fg-secondary))]">
+            {settlements.data?.settlements.slice(0, 5).map((s) => (
+              <li key={s.id}>
+                {s.counterparty} — {t(`exchange.settle.${s.direction}`, s.direction)}:{' '}
+                {money(s.amountMinor, s.currency)} ({money(s.bookAmountMinor, s.bookCurrency)})
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -939,8 +1234,8 @@ export function ExchangeSection({ view }: { view: ExchangeView }) {
     <section className="space-y-3" data-guide="exchange">
       <p className="rounded-xl bg-[hsl(var(--surface-muted))] p-3 text-xs text-[hsl(var(--fg-secondary))]">
         {t(
-          'exchange.notInLedger',
-          'معاملات ارز و حواله‌ها فعلاً در دفتر کل و صندوق ثبت نمی‌شوند (دفتر کل هنوز چندارزی نیست). موجودی هر ارز و سود آن از همین معاملات خوانده می‌شود.',
+          'exchange.glLinkedNotice',
+          'معاملات ارز، ابطال، پرداخت حواله و تسویه نماینده به‌صورت یکپارچه و اتمیک به ارز پایه در دفتر کل ثبت می‌شوند و موجودی هر ارز جداگانه نگهداری می‌شود.',
         )}
       </p>
       {settings.isError ? (

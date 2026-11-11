@@ -7,7 +7,13 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { NewDocumentKind } from '../../invoices/new-invoice-chooser'
-import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
+import {
+  COLUMN,
+  currencyPrecision,
+  moveColumn,
+  type GoldLineSnapshot,
+  type InvoiceColumn,
+} from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
   invoiceDraftSnapshot,
@@ -168,7 +174,16 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   // backend move stock for this line. Free text leaves it unset and moves no
   // stock — both are legitimate invoice lines.
   const handlePickProduct = useCallback(
-    (rowId: string, product: { id: string; name: string; price: string; unit: string }) => {
+    (
+      rowId: string,
+      product: {
+        id: string
+        name: string
+        price: string
+        unit: string
+        goldSnapshot?: GoldLineSnapshot | undefined
+      },
+    ) => {
       const before = useInvoiceDraftStore.getState().rows.find((row) => row.id === rowId)
       const price = priceForInvoice(product.price, currency, bookCurrency, lineRate)
       // ⚠️ Picking ANOTHER product on a line whose price the app had filled
@@ -178,6 +193,7 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
       const ours = typedPrice !== '' && autoPriced.get(rowId)?.filled === typedPrice
       if (ours && before?.productId !== product.id) draft.setCell(rowId, COLUMN.unitPrice, '')
       draft.setRowProduct(rowId, product.id, product.name, price, product.unit || 'piece')
+      draft.setRowGoldSnapshot(rowId, product.goldSnapshot)
       // setRowProduct seeds the unit and price only where they are empty — only
       // then are they ours.
       if (!typedPrice || ours) rememberAutoPrice(rowId, product.price, price)

@@ -63,3 +63,11 @@
 - `CAPABILITIES` دو بار با دو معنا تعریف شده: مجوز کاربر (`backend/src/services/authorization/authorization.domain.ts:50`) و قابلیت کسب‌وکار (`packages/validation/src/schemas/business-capabilities.ts:81`).
 - قابلیت کسب‌وکار در API و موتور محلی **اجرا نمی‌شود**؛ فقط entitlement و permission اجرا می‌شوند.
 - بیلد ویندوز و اندروید روی این دستگاه مسدود است (قفل فایل موقت esbuild) — `V54-IMPLEMENTATION-PROGRESS.md`.
+
+---
+
+## بازبینی V59 — 11 نوامبر 2026
+
+- جدول محلی SQLite به نسخه‌ی `SCHEMA_VERSION = 23` ارتقا یافت (`V23_OPERATIONAL_PROFILE`: ستون‌های `operational_dna`, `operational_dna_version`, `onboarding_progress`) و روتر محلی `/workspace/profile`, `/workspace/operational-profile` (با کنترل تداخل نسخه `409 OPERATIONAL_PROFILE_CHANGED`) و `/workspace/onboarding-progress` در `packages/local-engine` فعال شد.
+- یکتایی سراسری سریال/IMEI در سطح `workspace_id` بین سرور (`traceability.service.ts`) و موتور محلی (`local-engine/src/routes/serials.ts`) هم‌تراز شد.
+- جداسازی یکتای سه لایه‌ی `resolveCapabilityPlan`, `resolveEntitlement`, و `requireCapability` با تست‌های مستقل تأیید شده است (`V59-UNIVERSAL-BUSINESS-IMPLEMENTATION-REPORT.md`).

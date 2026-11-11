@@ -45,4 +45,6 @@ export const STANDARD_ACCOUNT_FOR_ROLE: Partial<Record<AccountRole, StandardAcco
   supplier_advances: { code: '1250', name: 'پیش‌پرداخت به تأمین‌کنندگان', type: 'asset' },
   // V58: production overhead absorbed into finished goods (see accounting.schema).
   manufacturing_overhead: { code: '5300', name: 'سربار تولید', type: 'expense' },
+  // V59.1: book-currency value of foreign currency held in the FX vault.
+  fx_vault: { code: '1030', name: 'صندوق ارزی', type: 'asset' },
 }

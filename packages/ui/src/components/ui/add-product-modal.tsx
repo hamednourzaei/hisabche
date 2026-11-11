@@ -14,6 +14,7 @@ import { useCreateProduct } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { barcodeTakenMessage } from '../../lib/barcode/barcode-errors'
 import { useBusinessProfile } from '../../hooks/use-business-profile'
+import { useTerminology } from '../../hooks/use-terminology'
 import { translateOr } from '../../lib/translate-or'
 
 type AddProductModalProps = {
@@ -58,6 +59,7 @@ export const AddProductModal = memo(function AddProductModal({
 }: AddProductModalProps) {
   const t = useTranslations()
   const { profile } = useBusinessProfile()
+  const { term } = useTerminology()
   const createProduct = useCreateProduct()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
@@ -224,7 +226,7 @@ export const AddProductModal = memo(function AddProductModal({
         )}
 
         <DialogHeader>
-          <DialogTitle>{t('warehouse.addProductModal')}</DialogTitle>
+          <DialogTitle>{term('addItemActionKey', t('warehouse.addProductModal'))}</DialogTitle>
           <DialogDescription>{t('warehouse.addProductDescription')}</DialogDescription>
         </DialogHeader>
 

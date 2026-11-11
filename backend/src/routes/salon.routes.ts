@@ -12,6 +12,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   commissionRateSchema,
+  resourceBookingCreateSchema,
   serviceCatalogSchema,
   serviceResourcePatchSchema,
   serviceResourceSchema,
@@ -97,6 +98,21 @@ export async function salonRoutes(fastify: FastifyInstance) {
     ),
   )
   fastify.get(
+    '/api/provider-commissions/my',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { from, to } = request.query as { from?: string; to?: string }
+      if (!from || !to || !DAY.test(from) || !DAY.test(to) || from > to) {
+        return reply
+          .code(400)
+          .send({ error: 'COMMISSION_RANGE_INVALID', code: 'COMMISSION_RANGE_INVALID' })
+      }
+      return handle('Failed to compute your commission', (r) =>
+        service.myCommission(r.tenancy, from, to),
+      )(request, reply)
+    },
+  )
+  fastify.get(
     '/api/provider-commissions',
     { preHandler: payRead },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -110,5 +126,45 @@ export async function salonRoutes(fastify: FastifyInstance) {
         service.commission(r.tenancy, from, to),
       )(request, reply)
     },
+  )
+
+  // ─── Generalized Resource Capacity & Interval Bookings (V60 Slice 7) ──────
+  fastify.get(
+    '/api/resource-bookings',
+    { preHandler: read },
+    handle('Failed to read resource bookings', (r) => {
+      const q = (r.query ?? {}) as { resourceId?: string }
+      return service.listResourceBookings(r.tenancy, q.resourceId)
+    }),
+  )
+
+  fastify.post(
+    '/api/resource-bookings',
+    { preHandler: setup },
+    handle(
+      'Failed to book resource slot',
+      (r) => service.bookResource(r.tenancy, resourceBookingCreateSchema.parse(r.body)),
+      201,
+    ),
+  )
+
+  fastify.post(
+    '/api/resource-bookings/:id/release',
+    { preHandler: setup },
+    withId('Failed to release resource booking', (r, id) =>
+      service.releaseResourceBooking(r.tenancy, id),
+    ),
+  )
+
+  fastify.get(
+    '/api/service-resources/:id/slots',
+    { preHandler: read },
+    withId('Failed to read resource availability', (r, id) => {
+      const q = (r.query ?? {}) as { startAt?: string; endAt?: string; slotMinutes?: string }
+      const startAt = q.startAt ?? new Date().toISOString()
+      const endAt = q.endAt ?? new Date(Date.now() + 8 * 60 * 60_000).toISOString()
+      const slotMinutes = q.slotMinutes ? Number(q.slotMinutes) : 60
+      return service.getResourceSlots(r.tenancy, id, { startAt, endAt }, slotMinutes)
+    }),
   )
 }

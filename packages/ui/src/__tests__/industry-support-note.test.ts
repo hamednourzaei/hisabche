@@ -32,6 +32,8 @@ describe('industrySupportNoteKey', () => {
 
   it('uses the generic note for a trade with no capability', () => {
     expect(industrySupportNoteKey(['courier'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
+    expect(industrySupportNoteKey(['other'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
+    expect(industrySupportNoteKey(['freightTransport'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
   })
 
   it('uses the partial note for a trade that rides on a partial capability', () => {
@@ -50,4 +52,12 @@ describe('both note keys exist in every language', () => {
       expect(messages.industry.supportNote.partial).toBeTruthy()
     })
   }
+
+  it('the English generic support note promises general tools, never specialized trade completeness', () => {
+    const en = JSON.parse(readFileSync(resolve(MESSAGES, 'en', 'common.json'), 'utf8')) as {
+      industry: { supportNote: Record<string, string> }
+    }
+    expect(en.industry.supportNote.generic).toMatch(/universal|general/i)
+    expect(en.industry.supportNote.generic).toMatch(/not yet available/i)
+  })
 })

@@ -508,3 +508,17 @@ export function usePostUnpostedInvoices() {
     },
   })
 }
+
+export function useExchangeInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ invoiceId, ...body }: { invoiceId: string } & Record<string, unknown>) => {
+      const { data } = await apiClient.post(`/invoices/${invoiceId}/exchange`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+}

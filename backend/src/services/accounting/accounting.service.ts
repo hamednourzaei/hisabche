@@ -12,9 +12,14 @@
 
 import { sourceIdOf } from '../../utils/deterministic-id'
 import {
+  buildCostObjectProfitReport,
   type AccountRole,
+  type CostObjectInvoiceInput,
+  type CostObjectProfitReport,
+  type CostObjectType,
   type CreateAccount,
   type CreateJournalEntry,
+  type OverheadAllocationPolicy,
   type UpdateAccount,
 } from '@hisabche/validation'
 
@@ -50,6 +55,7 @@ import {
 import {
   STANDARD_ACCOUNT_FOR_ROLE,
   buildGeneralLedger,
+  summarizeVariantStockReport,
   type BalanceSheet,
   type IncomeStatement,
 } from '@hisabche/validation'
@@ -551,6 +557,39 @@ export class AccountingService implements LedgerPort {
     return this.getJournalEntry(ctx, entryId)
   }
 
+  /**
+   * Clothing & Footwear variant inventory / profit breakdown grouped by attribute
+   * (`size` | `colour` | `brand`). Calls the shared `summarizeVariantStockReport`
+   * domain rule and keeps unknown cost/revenue strictly null (never `?? 0`).
+   */
+  async getVariantStockReport(ctx: TenancyContext, attributeName: string) {
+    const [variantsRes, movesRes] = await Promise.all([
+      this.repo.listVariantRows(ctx.workspaceId),
+      this.repo.listVariantStockMovements(ctx.workspaceId),
+    ])
+    const soldMap = new Map<string, number>()
+    const onHandMap = new Map<string, number>()
+    for (const m of movesRes) {
+      const qty = Number(m.quantity) || 0
+      onHandMap.set(m.variantId, (onHandMap.get(m.variantId) ?? 0) + qty)
+      if (m.referenceType === 'invoice' && qty < 0) {
+        soldMap.set(m.variantId, (soldMap.get(m.variantId) ?? 0) - qty)
+      }
+    }
+    return summarizeVariantStockReport(
+      variantsRes.map((v) => ({
+        variantId: v.id,
+        sku: v.sku,
+        attributes: v.attributes,
+        onHand: onHandMap.get(v.id) ?? 0,
+        sold: soldMap.get(v.id) ?? 0,
+        revenueMinor: v.revenueMinor,
+        costMinor: v.costMinor,
+      })),
+      attributeName,
+    )
+  }
+
   /** Move a draft into the ledger. Re-checks everything at posting time. */
   async postDraft(ctx: TenancyContext, id: string) {
     const entry = await this.getJournalEntry(ctx, id)
@@ -782,6 +821,40 @@ export class AccountingService implements LedgerPort {
       ]),
     ].filter((code, index, all) => code && all.indexOf(code) === index)
     return currencies.map((currency) => buildProfitReport({ from, to, currency, ...sources }))
+  }
+
+  /**
+   * V60 Slice 8 — Profit & direct cost grouped by cost object (project / branch / dimension)
+   * using the ONE formula (`buildCostObjectProfitReport` -> `buildProfitReport`).
+   */
+  async getCostObjectProfitReports(
+    ctx: TenancyContext,
+    fromDate: string,
+    toDate: string,
+    currency: string,
+    overheadPolicy?: OverheadAllocationPolicy,
+  ): Promise<CostObjectProfitReport> {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    if (from > to) throw new ValidationError('PROFIT_REPORT_RANGE_INVALID')
+    const sources = await this.repo.profitSources(ctx.workspaceId, from, to)
+    const tags = await this.repo.costObjectTagsForInvoices(
+      ctx.workspaceId,
+      sources.invoices.map((i) => i.id),
+    )
+    const taggedInvoices: CostObjectInvoiceInput[] = sources.invoices.map((inv) => {
+      const tag = tags.get(inv.id)
+      return tag ? { ...inv, ...tag } : inv
+    })
+    return buildCostObjectProfitReport({
+      from,
+      to,
+      currency,
+      invoices: taggedInvoices,
+      lines: sources.lines,
+      consumptions: sources.consumptions,
+      overheadPolicy,
+    })
   }
 
   /** Per-product profit in every currency present (insights' «profit change» explanation). */

@@ -14,10 +14,16 @@ import { resolve } from 'node:path'
 import {
   AVAILABLE_CAPABILITIES,
   CAPABILITIES,
+  CAPABILITY_KEYS,
+  ENGINE_KEYS,
+  ENGINES,
+  USABLE_CAPABILITIES,
   type CapabilityKey,
 } from '../schemas/business-capabilities'
+import { OFFLINE_ENDPOINT_MATRIX } from '../schemas/offline-endpoint-matrix'
 
 const REPO_ROOT = resolve(__dirname, '../../../..')
+const stripQuery = (p: string) => p.split('?')[0]!
 
 describe('capability-has-consumer guard', () => {
   it('only truly wired capabilities are available', () => {
@@ -115,5 +121,61 @@ describe('capability-has-consumer guard', () => {
       (src) => !src.startsWith('packages/validation/'),
     )
     expect(outsideSources.length).toBe(0)
+  })
+
+  it('V60 honesty rule: available requires engine clientHook + uiHost on disk AND offline matrix rows', () => {
+    const matrixFeatures = new Set(
+      Object.values(OFFLINE_ENDPOINT_MATRIX).map(([feature]) => feature),
+    )
+
+    for (const key of AVAILABLE_CAPABILITIES) {
+      const def = CAPABILITIES[key]
+      expect(def.engine, `${key} missing engine`).not.toBeNull()
+      const engine = ENGINES[def.engine!]
+      expect(engine, `${key} unknown engine`).toBeDefined()
+      expect(engine.clientHook, `${key} engine ${engine.key} missing clientHook`).toBeTruthy()
+      expect(engine.uiHost, `${key} engine ${engine.key} missing uiHost`).toBeTruthy()
+      expect(
+        existsSync(resolve(REPO_ROOT, stripQuery(engine.clientHook!))),
+        `${key} clientHook missing on disk: ${engine.clientHook}`,
+      ).toBe(true)
+      expect(
+        existsSync(resolve(REPO_ROOT, stripQuery(engine.uiHost!))),
+        `${key} uiHost missing on disk: ${engine.uiHost}`,
+      ).toBe(true)
+      expect(engine.matrixFeature, `${key} missing matrixFeature`).toBeTruthy()
+      expect(
+        (matrixFeatures as Set<string>).has(engine.matrixFeature!),
+        `${key} matrixFeature "${engine.matrixFeature}" has no row in OFFLINE_ENDPOINT_MATRIX`,
+      ).toBe(true)
+    }
+  })
+
+  it('V60 honesty rule: every USABLE capability + ENGINES path exists on disk and partial names limitations', () => {
+    for (const key of USABLE_CAPABILITIES) {
+      const def = CAPABILITIES[key]
+      expect(def.evidence.sources.length, `${key} needs sources`).toBeGreaterThan(0)
+      expect(def.evidence.tests.length, `${key} needs tests`).toBeGreaterThan(0)
+      for (const s of [...def.evidence.sources, ...def.evidence.tests]) {
+        expect(existsSync(resolve(REPO_ROOT, s)), `${key} missing disk evidence: ${s}`).toBe(true)
+      }
+      if (def.status === 'partial') {
+        expect(def.limitations.length, `${key} partial must name limitations`).toBeGreaterThan(0)
+      } else {
+        expect(def.limitations, `${key} available must not name limitations`).toEqual([])
+      }
+    }
+
+    for (const key of ENGINE_KEYS) {
+      const e = ENGINES[key]
+      for (const file of [e.service, e.localEngine, e.clientHook, e.uiHost]) {
+        if (!file) continue
+        expect(
+          existsSync(resolve(REPO_ROOT, stripQuery(file))),
+          `ENGINES.${key} missing file on disk: ${file}`,
+        ).toBe(true)
+      }
+    }
+    expect(CAPABILITY_KEYS.length).toBeGreaterThanOrEqual(37)
   })
 })

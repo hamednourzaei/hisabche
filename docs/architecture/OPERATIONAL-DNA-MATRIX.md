@@ -1,7 +1,7 @@
-# HISABCHE OPERATIONAL DNA MATRIX (8 AXES)
+# HISABCHE OPERATIONAL DNA MATRIX (15 AXES)
 
 **Package Home:** `packages/validation/src/schemas/operational-dna.ts`  
-**Date:** 2026-11-04
+**Date:** 2026-11-11 (V60)
 
 ---
 
@@ -104,3 +104,24 @@ User interface skinning, contextual vocabulary, and dashboard layout.
 - DNA **روی سرور ذخیره نمی‌شود**؛ پروفایل سروری فقط `workspaces.business_types` است (`backend/src/services/workspace-profile.ts:60-106`) — بدون نسخه، تاریخچه یا ممیزی.
 - هیچ شرط نام صنف در `backend/src/services` پیدا نشد (`grep`)؛ نگاشت صنف → محور فقط در `inferOperationalDna` (onboarding) است، که مجاز است.
 - گزارش کامل: [UNIVERSAL-BUSINESS-ARCHITECTURE.md § ممیزی Phase 5.0](UNIVERSAL-BUSINESS-ARCHITECTURE.md).
+
+---
+
+## بازبینی V59 — 11 نوامبر 2026
+
+- محور ۵ (`workforce_model`) اکنون مقدار `UNRESOLVED` و پرسش صریح `staffArrangement` دارد؛ پاسخ `hasStaff = yes` بدون تعیین آرایش نیرو دیگر به‌اشتباه به `HOURLY_STAFF` نگاشت نمی‌شود (`packages/validation/src/schemas/operational-dna.ts`).
+- پیش‌تنظیم `SALON_MULTI_STAFF` برای سالن‌های چندپرسنلی در کنار `NAIL_TECH_BEAUTY` (`SOLO_OWNER`) اضافه شد.
+- محور ۸ (`presentation_profile`) با فیلدهای اعلانی `terminology`, `navigation.hiddenPaths`, `dashboard` و مصرف‌کننده‌ی واحد `useTerminology()` در UI و ذخیره در SQLite V23 (`local_workspace.operational_dna`, `operational_dna_version`, `onboarding_progress`) تکمیل شد (`V59-IMPLEMENTATION-PROGRESS.md`).
+
+---
+
+## بازبینی V60 — 15 محور متعامد (11 نوامبر 2026)
+
+- محور ۹ (`unitTracking`): `NONE | SERIAL_NUMBERS | EXPIRY_DATES | BOTH | UNRESOLVED` (پشتیبانی از سریال/IMEI و تاریخ انقضا).
+- محور ۱۰ (`pricingBasis`, آرایه): `UNIT | WEIGHT | LENGTH | AREA | VOLUME | TIME | RATE_BOARD | CONTRACT | TIERED | UNRESOLVED`.
+- محور ۱۱ (`assetCustody`): `OWN_STOCK | CUSTOMER_ASSET_IN_CUSTODY | RENTED_OUT_ASSET | NONE | UNRESOLVED`.
+- محور ۱۲ (`executionSite`): `PREMISES | CUSTOMER_SITE | MOBILE_ROUTE | REMOTE | UNRESOLVED`.
+- محور ۱۳ (`recurrence`): `ONE_OFF | RECURRING_SERVICE | SUBSCRIPTION | LEASE | UNRESOLVED`.
+- محور ۱۴ (`approvalDepth`): `NONE | SINGLE | MULTI_STEP | UNRESOLVED`.
+- محور ۱۵ (`regulatedDomain`): `NONE | HEALTH_RECORDS | PRESCRIPTION | FINANCIAL_KYC | FOOD_SAFETY | UNRESOLVED` — **تنها شکاف انطباق (`REGULATED_DOMAIN_COMPLIANCE`) ایجاد می‌کند و هرگز قابلیت `available` فعال نمی‌سازد.**
+- تمامی محورهای جدید اختیاری و سازگار با داده‌های پیشین هستند؛ محور غایب به‌صورت `UNRESOLVED` خوانده می‌شود و هرگز به کسب‌وکار پیش‌فرض (مانند خواروبارفروشی/فروشگاه) سقوط نمی‌کند.

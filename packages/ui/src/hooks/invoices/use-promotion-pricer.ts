@@ -20,10 +20,17 @@
 // ============================================
 
 import { useCallback, useMemo } from 'react'
-import { useCustomerPriceList, usePromotions } from '@hisabche/api'
-import { toIsoDay } from '@hisabche/formatting'
+import { useCustomerPriceList, useLatestMetalRate, usePromotions } from '@hisabche/api'
+import { fractionDigits, toIsoDay } from '@hisabche/formatting'
 import { useCurrencyStore, useInvoiceDraftStore } from '@hisabche/store'
-import { priceListPricing, promotionsFor, quotePrice } from '@hisabche/validation'
+import {
+  applyPrice,
+  priceListPricing,
+  promotionsFor,
+  quoteGoldItemPrice,
+  quotePrice,
+  type GoldLineSnapshot,
+} from '@hisabche/validation'
 
 import { productPrice, type PickerProduct } from '../../lib/invoices/products'
 
@@ -34,6 +41,8 @@ export interface PickedPrice {
   discounted: boolean
   /** The price list that set the price, when one did. */
   listName?: string | undefined
+  /** Locked gold-rate snapshot when priced from the workspace's daily rate board. */
+  goldSnapshot?: GoldLineSnapshot | undefined
 }
 
 export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
@@ -43,6 +52,7 @@ export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
   const isSale = transactionType === 'sale'
   const saved = usePromotions({ activeOnly: true, enabled: isSale })
   const customerList = useCustomerPriceList(customerId, { enabled: isSale })
+  const metalRate = useLatestMetalRate()
 
   const promotions = useMemo(
     () => (isSale && saved.data ? promotionsFor(saved.data, currency) : []),
@@ -54,6 +64,41 @@ export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
     (product: PickerProduct): PickedPrice => {
       const base = productPrice(product)
       const today = toIsoDay(new Date())
+
+      // Weighted gold lines price through quoteGoldItemPrice + applyPrice with a locked snapshot
+      // whenever a daily 24K rate is present on the board.
+      if (isSale && product.unit === 'gram' && (metalRate.data?.rate24kMinorPerGram ?? 0) > 0) {
+        const rate24k = metalRate.data!.rate24kMinorPerGram
+        const goldQuote = quoteGoldItemPrice(
+          { productId: product.id, kind: 'sale', customerId, quantity: 1 },
+          {
+            karat: 24,
+            netWeightMg: 1000,
+            rateSnapshot: {
+              rate24kMinorPerGram: rate24k,
+              capturedAt: metalRate.data?.createdAt ?? `${today}T00:00:00.000Z`,
+              capturedBy: metalRate.data?.setBy ?? 'system',
+            },
+            makingChargeType: 'fixed',
+            makingChargeValue: 0,
+          },
+          undefined,
+          promotions,
+          today,
+        )
+        const [appliedGold] = applyPrice([{ productId: product.id, quantity: 1 }], [goldQuote])
+        const scale = Math.pow(10, fractionDigits(currency))
+        if (goldQuote.problems.length === 0 && appliedGold?.unitPrice != null) {
+          const goldUnitPrice = Math.round(appliedGold.unitPrice * 100) / scale
+          return {
+            price: goldUnitPrice,
+            base: goldUnitPrice,
+            discounted: false,
+            ...(appliedGold.goldSnapshot ? { goldSnapshot: appliedGold.goldSnapshot } : {}),
+          }
+        }
+      }
+
       const onList = priceListPricing(priceList, product.id, currency, today)
       if (!onList.priceListId && (promotions.length === 0 || !(base > 0))) {
         return { price: base, base, discounted: false }
@@ -73,7 +118,8 @@ export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
       )
       // A quote with a problem is not a price: fall back to the product's own.
       if (quote.problems.length > 0) return { price: base, base, discounted: false }
-      const price = quote.unitPriceMinor / 100
+      const [applied] = applyPrice([{ productId: product.id, quantity: 1 }], [quote])
+      const price = applied?.unitPrice ?? quote.unitPriceMinor / 100
       return {
         price,
         base,
@@ -81,6 +127,6 @@ export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
         listName: onList.priceListId ? priceList?.name : undefined,
       }
     },
-    [promotions, customerId, priceList, currency],
+    [promotions, customerId, priceList, currency, isSale, metalRate.data],
   )
 }

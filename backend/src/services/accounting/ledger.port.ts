@@ -54,6 +54,10 @@ export type LedgerSourceType =
   // P1 (V53): money received before the sale. Keyed by the deposit id, so a
   // retried deposit posts one entry, and the deposit is never booked as revenue.
   | 'order_deposit'
+  // V59.1: FX & hawala lifecycle events post book-currency entries atomically.
+  | 'fx_trade'
+  | 'remittance_payout'
+  | 'fx_agent_settlement'
   | 'manual'
   | 'reversal'
 

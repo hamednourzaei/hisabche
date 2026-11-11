@@ -7,7 +7,7 @@
 // ============================================
 
 import { describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import {
@@ -24,9 +24,11 @@ import {
   canonicalIndustryTypes,
   primaryIndustryKeyOf,
   resolveBusinessProfile,
+  characteristicsFromAnswers,
   operatingCharacteristicsSchema,
   DEFAULT_OPERATING_CHARACTERISTICS,
 } from '../schemas/industry-profiles'
+import { operatingAnswersSchema } from '../schemas/operational-dna'
 import { INVOICE_UNIT_CHOICES } from '../schemas/measurement.domain'
 
 const REPO_ROOT = resolve(__dirname, '../../../..')
@@ -202,6 +204,26 @@ describe('resolveBusinessProfile', () => {
         producesGoods: 'yes',
       }),
     ).toThrow(/CANNOT_PRODUCE_WITHOUT_STOCK/)
+  })
+
+  it('derives operatingCharacteristics cleanly from OperatingAnswers without a second yes/no enum', () => {
+    const src = readFileSync(resolve(__dirname, '../schemas/industry-profiles.ts'), 'utf8')
+    expect(src).not.toMatch(/z\.enum\(\s*\[\s*['"]yes['"]/)
+    const raw = {
+      holdsStock: 'yes' as const,
+      locations: 'multiple' as const,
+      producesGoods: 'no' as const,
+    }
+    const parsed = operatingCharacteristicsSchema.parse(raw)
+    expect(parsed).toEqual(characteristicsFromAnswers(operatingAnswersSchema.parse(raw)))
+    expect(parsed).toEqual({
+      holdsStock: 'yes',
+      locations: 'multiple',
+      producesGoods: 'no',
+      sellsOnCredit: 'unknown',
+      hasPointOfSale: 'unknown',
+      hasStaff: 'unknown',
+    })
   })
 
   it('resolver derives policy, recommended modules, and inventory relevance from characteristics', () => {

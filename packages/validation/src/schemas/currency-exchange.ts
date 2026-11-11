@@ -13,13 +13,11 @@
 //   • hawala / remittance — a transfer with a payout code and its own states;
 //   • identity check (KYC) above a threshold the business sets (none by default).
 //
-// ⚠️ What this is NOT: a multi-currency general ledger, and not the tills. The ledger still has
-// no currency on its lines (01-CURRENCY-AUDIT.md), so trades and remittances
-// do not post journal entries — and they do not enter the tills either, since
-// a till's cash movements post to the ledger (POS transfers). The QA document
-// itself says the exchange must not enter the general books before the ledger
-// is multi-currency. The position per currency IS the exchange's treasury;
-// every figure here is read from these documents, and the screens say so.
+// General-ledger integration (V59.1 / exchange-03-migration.sql):
+//   Every FX lifecycle event (trade create, trade void, remittance payout,
+//   and agent settlement) posts book-currency journal entries atomically
+//   inside PostgreSQL via public.accounting_post_journal_entry() while
+//   keeping foreign-currency positions exact inside fx_trades.
 //
 // Rates are decimals typed by a person («70.25» afghani per dollar). They are
 // held as integer millionths (rate × 1 000 000) and every conversion is done
@@ -142,10 +140,27 @@ export const fxTradeCreateSchema = z.object({
   customerId: z.string().uuid().nullable().optional(),
   identity: fxIdentitySchema.nullable().optional(),
   note: z.string().trim().max(300).optional(),
+  /** True when replaying a queued offline trade; short sells become pending_review. */
+  offlineQueued: z.boolean().optional(),
 })
 export type FxTradeCreateInput = z.infer<typeof fxTradeCreateSchema>
 
 export const fxVoidSchema = z.object({ reason: z.string().trim().min(3).max(300) })
+export const fxTradeResolveReviewSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().trim().min(3).max(300).optional(),
+})
+export type FxTradeResolveReviewInput = z.infer<typeof fxTradeResolveReviewSchema>
+
+export const fxAgentSettleSchema = z.object({
+  counterparty: z.string().trim().min(1).max(120),
+  direction: z.enum(['collect', 'pay']),
+  currency: z.string().trim().length(3),
+  amountMinor: z.number().int().positive().max(1e15),
+  rate: rateText.optional(),
+  note: z.string().trim().max(300).optional(),
+})
+export type FxAgentSettleInput = z.infer<typeof fxAgentSettleSchema>
 
 export type FxTradeRefusal =
   'FX_SAME_AS_BOOK_CURRENCY' | 'FX_KYC_REQUIRED' | 'FX_OPENING_HAS_NO_PARTY'
@@ -179,7 +194,7 @@ export interface FxTradeRow {
   readonly amountMinor: number
   readonly rateMicro: bigint
   readonly bookAmountMinor: number
-  readonly status: 'posted' | 'voided'
+  readonly status: 'posted' | 'voided' | 'pending_review'
   readonly createdAt: string
 }
 
@@ -359,19 +374,302 @@ export function partnerBalances(
     readonly currency: string
     readonly amountMinor: number
   }>,
+  settlements: ReadonlyArray<{
+    readonly counterparty: string
+    readonly direction: 'collect' | 'pay'
+    readonly currency: string
+    readonly amountMinor: number
+  }> = [],
 ): Array<{ counterparty: string; currency: string; balanceMinor: number }> {
   const totals = new Map<string, { counterparty: string; currency: string; balanceMinor: number }>()
   for (const row of rows) {
     if (row.status !== 'paid') continue
-    const key = `${row.counterparty.trim().toLowerCase()}|${row.currency}`
+    const key = `${row.counterparty.trim().toLowerCase()}|${row.currency.toUpperCase()}`
     const entry = totals.get(key) ?? {
       counterparty: row.counterparty.trim(),
-      currency: row.currency,
+      currency: row.currency.toUpperCase(),
       balanceMinor: 0,
     }
     // We paid an incoming one: the partner owes us. They paid an outgoing one: we owe them.
     entry.balanceMinor += row.direction === 'incoming' ? row.amountMinor : -row.amountMinor
     totals.set(key, entry)
   }
+  for (const s of settlements) {
+    const key = `${s.counterparty.trim().toLowerCase()}|${s.currency.toUpperCase()}`
+    const entry = totals.get(key) ?? {
+      counterparty: s.counterparty.trim(),
+      currency: s.currency.toUpperCase(),
+      balanceMinor: 0,
+    }
+    // Collect reduces what partner owes us; pay reduces what we owe partner.
+    entry.balanceMinor += s.direction === 'collect' ? -s.amountMinor : s.amountMinor
+    totals.set(key, entry)
+  }
   return [...totals.values()]
+}
+
+// ─── Cross-currency conversion, cashbox reconciliation & offline conflict ────
+
+/**
+ * Two-leg currency exchange via the business's book currency (`from -> book -> to`)
+ * using exact BigInt rate arithmetic. Both `fromRateToBookMicro` and
+ * `bookToTargetRateMicro` express book units per 1 foreign unit (matching the
+ * workspace rate board). Returns null whenever a needed rate is missing/invalid
+ * so unknown exchange rates are never coerced to zero.
+ */
+export function crossExchangeAtRates(input: {
+  readonly amountMinor: number
+  readonly fromCurrency: string
+  readonly toCurrency: string
+  readonly bookCurrency: string
+  readonly fromRateToBookMicro: bigint | null
+  readonly bookToTargetRateMicro: bigint | null
+}): {
+  readonly intermediateBookMinor: number
+  readonly targetMinor: number
+  readonly effectiveCrossRateMicro: bigint
+} | null {
+  const from = input.fromCurrency.trim().toUpperCase()
+  const to = input.toCurrency.trim().toUpperCase()
+  const book = input.bookCurrency.trim().toUpperCase()
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return null
+  if (!input.fromRateToBookMicro || input.fromRateToBookMicro <= BigInt(0)) return null
+  if (!input.bookToTargetRateMicro || input.bookToTargetRateMicro <= BigInt(0)) return null
+  if (from === to) {
+    return {
+      intermediateBookMinor: convertAtRate(
+        input.amountMinor,
+        input.fromRateToBookMicro,
+        from,
+        book,
+      ),
+      targetMinor: input.amountMinor,
+      effectiveCrossRateMicro: RATE_SCALE,
+    }
+  }
+
+  const intermediateBookMinor = convertAtRate(
+    input.amountMinor,
+    input.fromRateToBookMicro,
+    from,
+    book,
+  )
+
+  // Convert book minor units to target minor units:
+  // targetMinor = bookMinor * 10^digits(to) * RATE_SCALE / (bookToTargetRateMicro * 10^digits(book))
+  const num = BigInt(intermediateBookMinor) * BigInt(10) ** BigInt(digits(to)) * RATE_SCALE
+  const den = input.bookToTargetRateMicro * BigInt(10) ** BigInt(digits(book))
+  const half = den / BigInt(2)
+  const targetMinor = Number((num + half) / den)
+
+  // Cross rate = fromRateToBookMicro / bookToTargetRateMicro scaled by RATE_SCALE
+  const rateNum = input.fromRateToBookMicro * RATE_SCALE
+  const rateHalf = input.bookToTargetRateMicro / BigInt(2)
+  const effectiveCrossRateMicro = (rateNum + rateHalf) / input.bookToTargetRateMicro
+
+  return {
+    intermediateBookMinor,
+    targetMinor,
+    effectiveCrossRateMicro,
+  }
+}
+
+export const fxCashboxReconcileSchema = z.object({
+  currency: z.string().trim().length(3),
+  countedMinor: z.number().int().nonnegative().max(1e15),
+  note: z.string().trim().max(300).optional(),
+})
+export type FxCashboxReconcileInput = z.infer<typeof fxCashboxReconcileSchema>
+
+export interface FxCashboxReconciliationResult {
+  readonly currency: string
+  readonly expectedMinor: number | null
+  readonly countedMinor: number | null
+  readonly varianceMinor: number | null
+  readonly status: 'matched' | 'over' | 'short' | 'unknown'
+}
+
+/**
+ * Reconciles physical foreign cashbox count against expected held position for
+ * ONE currency. Missing values stay `null` (`status: 'unknown'`) and are never
+ * converted into zero; currencies are never summed together.
+ */
+export function reconcileCurrencyCashbox(
+  expectedMinor: number | null,
+  countedMinor: number | null,
+  currency: string,
+): FxCashboxReconciliationResult {
+  const code = currency.trim().toUpperCase()
+  if (expectedMinor === null || countedMinor === null) {
+    return {
+      currency: code,
+      expectedMinor,
+      countedMinor,
+      varianceMinor: null,
+      status: 'unknown',
+    }
+  }
+  const varianceMinor = countedMinor - expectedMinor
+  return {
+    currency: code,
+    expectedMinor,
+    countedMinor,
+    varianceMinor,
+    status: varianceMinor === 0 ? 'matched' : varianceMinor > 0 ? 'over' : 'short',
+  }
+}
+
+export interface OfflineFxConflictResult {
+  readonly localTradeId: string
+  readonly resolution: 'APPLY' | 'PENDING_REVIEW'
+  readonly reason: 'FX_OFFLINE_POSITION_SHORT' | null
+  readonly shortfallMinor: number
+}
+
+/**
+ * Offline FX rule: queued sell trades whose server position fell short before
+ * sync must be marked `PENDING_REVIEW` rather than silently rejected or dropped.
+ */
+export function resolveOfflineFxConflict(input: {
+  readonly localTradeId: string
+  readonly requestedSide: FxSide
+  readonly requestedAmountMinor: number
+  readonly serverHeldMinor: number | null
+}): OfflineFxConflictResult {
+  if (input.requestedSide !== 'sell') {
+    return {
+      localTradeId: input.localTradeId,
+      resolution: 'APPLY',
+      reason: null,
+      shortfallMinor: 0,
+    }
+  }
+  if (input.serverHeldMinor === null) {
+    return {
+      localTradeId: input.localTradeId,
+      resolution: 'PENDING_REVIEW',
+      reason: 'FX_OFFLINE_POSITION_SHORT',
+      shortfallMinor: input.requestedAmountMinor,
+    }
+  }
+  if (input.serverHeldMinor < input.requestedAmountMinor) {
+    return {
+      localTradeId: input.localTradeId,
+      resolution: 'PENDING_REVIEW',
+      reason: 'FX_OFFLINE_POSITION_SHORT',
+      shortfallMinor: input.requestedAmountMinor - input.serverHeldMinor,
+    }
+  }
+  return {
+    localTradeId: input.localTradeId,
+    resolution: 'APPLY',
+    reason: null,
+    shortfallMinor: 0,
+  }
+}
+
+export interface ExchangeCurrencySummary {
+  readonly currency: string
+  readonly buyCount: number
+  readonly sellCount: number
+  readonly buyVolumeMinor: number
+  readonly sellVolumeMinor: number
+  readonly heldMinor: number
+  readonly realizedBookMinor: number
+  readonly shortMinor: number
+}
+
+export interface OpenRemittanceCurrencySummary {
+  readonly currency: string
+  readonly openCount: number
+  readonly openAmountMinor: number
+}
+
+/**
+ * Exchange summary strictly grouped per currency — multi-currency volumes and
+ * remittance totals are never summed into one mixed number.
+ */
+export function summarizeExchangeOperations(input: {
+  readonly trades: readonly FxTradeRow[]
+  readonly bookCurrency: string
+  readonly remittances: ReadonlyArray<{
+    readonly counterparty: string
+    readonly direction: RemittanceDirection
+    readonly status: RemittanceStatus
+    readonly currency: string
+    readonly amountMinor: number
+  }>
+  readonly cashboxVariances?: ReadonlyArray<{
+    readonly currency: string
+    readonly varianceMinor: number | null
+  }>
+  readonly pendingReviewCount?: number
+}) {
+  const positions = positionsFrom(input.trades, input.bookCurrency)
+  const volByCurrency = new Map<
+    string,
+    { buyCount: number; sellCount: number; buyVolumeMinor: number; sellVolumeMinor: number }
+  >()
+  for (const t of input.trades) {
+    if (t.status !== 'posted') continue
+    const code = t.currency.toUpperCase()
+    const entry = volByCurrency.get(code) ?? {
+      buyCount: 0,
+      sellCount: 0,
+      buyVolumeMinor: 0,
+      sellVolumeMinor: 0,
+    }
+    if (t.side === 'sell') {
+      entry.sellCount += 1
+      entry.sellVolumeMinor += t.amountMinor
+    } else if (t.side === 'buy') {
+      entry.buyCount += 1
+      entry.buyVolumeMinor += t.amountMinor
+    }
+    volByCurrency.set(code, entry)
+  }
+
+  const currencies: ExchangeCurrencySummary[] = positions.map((pos) => {
+    const vol = volByCurrency.get(pos.currency) ?? {
+      buyCount: 0,
+      sellCount: 0,
+      buyVolumeMinor: 0,
+      sellVolumeMinor: 0,
+    }
+    return {
+      currency: pos.currency,
+      buyCount: vol.buyCount,
+      sellCount: vol.sellCount,
+      buyVolumeMinor: vol.buyVolumeMinor,
+      sellVolumeMinor: vol.sellVolumeMinor,
+      heldMinor: pos.heldMinor,
+      realizedBookMinor: pos.realizedMinor,
+      shortMinor: pos.shortMinor,
+    }
+  })
+
+  const openMap = new Map<
+    string,
+    { currency: string; openCount: number; openAmountMinor: number }
+  >()
+  for (const r of input.remittances) {
+    if (r.status !== 'created' && r.status !== 'sent') continue
+    const code = r.currency.toUpperCase()
+    const item = openMap.get(code) ?? { currency: code, openCount: 0, openAmountMinor: 0 }
+    item.openCount += 1
+    item.openAmountMinor += r.amountMinor
+    openMap.set(code, item)
+  }
+
+  const unreconciledCurrencies = (input.cashboxVariances ?? [])
+    .filter((c) => c.varianceMinor === null || c.varianceMinor !== 0)
+    .map((c) => c.currency.toUpperCase())
+
+  return {
+    currencies,
+    openRemittancesByCurrency: [...openMap.values()] satisfies OpenRemittanceCurrencySummary[],
+    partnerBalances: partnerBalances(input.remittances),
+    pendingReviewCount: input.pendingReviewCount ?? 0,
+    unreconciledCurrencies,
+  }
 }

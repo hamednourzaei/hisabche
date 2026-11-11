@@ -13,7 +13,13 @@ import {
 } from '@hisabche/formatting'
 import { useCurrencyStore } from '@hisabche/store'
 import { cn } from '../../../../lib/utils'
-import { useIncomeStatement, useProfitReportsByCurrency, type TrialBalance } from '@hisabche/api'
+import {
+  useIncomeStatement,
+  useProfitReportsByCurrency,
+  useVariantAttributeReport,
+  type TrialBalance,
+} from '@hisabche/api'
+import { SegmentedControl } from '../../segmented-control'
 import { ProductProfitTable } from '../components/ProductProfitTable'
 import { UnvaluedStockNotice } from '../components/UnvaluedStockNotice'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
@@ -144,6 +150,8 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const primaryCurrency = useCurrencyStore((state) => state.primaryCurrency)
   const locale = useIntlLocale()
   const profitReports = useProfitReportsByCurrency(from, to, primaryCurrency)
+  const [variantAttr, setVariantAttr] = useState<'size' | 'colour' | 'brand'>('size')
+  const variantReport = useVariantAttributeReport(variantAttr)
   const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null)
   const reports = profitReports.data ?? []
   const currency =
@@ -303,6 +311,49 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
               ) : null}
               <UnvaluedStockNotice currency={selectedReport.currency} />
               <ProductProfitTable t={safeT} report={selectedReport} money={money} num={num} />
+              {(variantReport.data?.length ?? 0) > 0 ? (
+                <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                      {safeT(
+                        'accounting.profit.byVariantAttr',
+                        'گزارش موجودی و فروش بر اساس ویژگی مدل',
+                      )}
+                    </h4>
+                    <SegmentedControl
+                      label={safeT('variantStock.totalsBy', 'جمع بر اساس')}
+                      value={variantAttr}
+                      onChange={(v) => setVariantAttr(v as 'size' | 'colour' | 'brand')}
+                      options={[
+                        { value: 'size', label: safeT('variantStock.size', 'سایز') },
+                        { value: 'colour', label: safeT('variantStock.colour', 'رنگ') },
+                        { value: 'brand', label: safeT('variantStock.brand', 'برند') },
+                      ]}
+                    />
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {(variantReport.data ?? []).map((row) => (
+                      <div
+                        key={row.attributeValue}
+                        className="rounded-lg border border-[hsl(var(--border-default))] px-3 py-2 text-xs"
+                      >
+                        <div className="font-semibold text-[hsl(var(--fg-primary))]">
+                          {row.attributeValue}
+                        </div>
+                        <div className="mt-1 text-[hsl(var(--fg-secondary))]">
+                          {safeT('variantStock.onHand', 'موجودی')}: {num(row.onHand)} ·{' '}
+                          {safeT('variantStock.sold', 'فروخته‌شده')}: {num(row.sold)}
+                        </div>
+                        <div className="mt-0.5 text-[hsl(var(--fg-tertiary))]">
+                          {row.marginMinor === null
+                            ? safeT('accounting.profit.unknown', 'سود قابل محاسبه نیست')
+                            : money(row.marginMinor)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
         </section>

@@ -251,4 +251,25 @@ describe('the pattern, for every other page', () => {
     }
     expect(offenders).toEqual([])
   })
+
+  it('no file outside profit-report.domain.ts defines a profit derivation formula', () => {
+    const formulaRoots = [
+      join(ROOT, 'packages', 'validation', 'src', 'schemas'),
+      join(ROOT, 'backend', 'src', 'services'),
+    ]
+    const offenders: string[] = []
+    const PROFIT_ASSIGN = /(?:const|let)\s+profit\s*=/
+    for (const root of formulaRoots) {
+      for (const file of walk(root)) {
+        const rel = file.slice(ROOT.length + 1).replace(/\\/g, '/')
+        if (rel.endsWith('profit-report.domain.ts')) continue
+        const lines = readFileSync(file, 'utf8').split('\n')
+        lines.forEach((line, index) => {
+          if (/^\s*(\/\/|\*|\/\*)/.test(line)) return
+          if (PROFIT_ASSIGN.test(line)) offenders.push(`${rel}:${index + 1}`)
+        })
+      }
+    }
+    expect(offenders).toEqual([])
+  })
 })

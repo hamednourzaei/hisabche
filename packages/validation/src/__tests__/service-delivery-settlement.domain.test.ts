@@ -133,6 +133,11 @@ describe('settlement is explicit', () => {
 
 describe('the transition table', () => {
   const ALLOWED: Array<[ServiceDeliveryStatus, ServiceDeliveryStatus]> = [
+    // V59.1: reception check-in. A checked-in customer arrived, so never no-show.
+    ['scheduled', 'checked_in'],
+    ['checked_in', 'in_progress'],
+    ['checked_in', 'delivered'],
+    ['checked_in', 'cancelled'],
     ['scheduled', 'in_progress'],
     ['scheduled', 'delivered'],
     ['scheduled', 'cancelled'],

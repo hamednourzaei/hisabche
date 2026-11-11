@@ -140,6 +140,8 @@ import { repairRoutes } from './routes/repair.routes'
 import { exchangeRoutes } from './routes/exchange.routes'
 import { salonRoutes } from './routes/salon.routes'
 import { workspaceProfileRoutes } from './routes/workspace-profile.routes'
+import { contractsRoutes } from './routes/contracts.routes'
+import { qualityRoutes } from './routes/quality.routes'
 import { metalRatesRoutes } from './routes/metal-rates.routes'
 import { fitmentRoutes } from './routes/fitment.routes'
 import { warrantyRoutes } from './routes/warranty.routes'
@@ -837,6 +839,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(exchangeRoutes)
   await server.register(salonRoutes)
   await server.register(workspaceProfileRoutes)
+  await server.register(contractsRoutes)
+  await server.register(qualityRoutes)
   await server.register(metalRatesRoutes)
   await server.register(fitmentRoutes)
   await server.register(warrantyRoutes)

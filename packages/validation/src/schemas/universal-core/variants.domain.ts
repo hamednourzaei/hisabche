@@ -194,3 +194,96 @@ export function checkVariantSalesAvailability(input: {
   }
   return null
 }
+
+export interface VariantReservationHoldLike {
+  readonly variantId: string | null
+  readonly warehouseId: string
+  readonly quantity: number
+  readonly status: 'active' | 'settled' | 'released' | 'expired'
+}
+
+/**
+ * Clothing ATP check (8.1): on-hand variant stock MINUS active, unexpired variant holds.
+ * Uses the exact same rule as V58 stock_reservations (`onHand - activeReserved`) so a reserved
+ * garment size/color cannot be sold twice across counter/online channels.
+ */
+export function checkVariantAtpAvailability(input: {
+  readonly demands: readonly VariantSaleDemand[]
+  readonly stock: readonly VariantStockRowLike[]
+  readonly activeReservations: readonly VariantReservationHoldLike[]
+}): VariantStockRefusal | null {
+  const effectiveStock: VariantStockRowLike[] = [...input.stock]
+  for (const hold of input.activeReservations) {
+    if (hold.status !== 'active' || !hold.variantId || !(hold.quantity > 0)) continue
+    effectiveStock.push({
+      variantId: hold.variantId,
+      warehouseId: hold.warehouseId,
+      quantity: -hold.quantity,
+    })
+  }
+  return checkVariantSalesAvailability({ demands: input.demands, stock: effectiveStock })
+}
+
+export interface ClothingVariantSummaryLine {
+  readonly variantId: string
+  readonly sku: string
+  readonly attributes: readonly VariantAttribute[]
+  readonly onHand: number
+  readonly sold: number
+  readonly revenueMinor: number | null
+  readonly costMinor: number | null
+}
+
+export interface ClothingAttributeReportRow {
+  readonly attributeName: string
+  readonly attributeValue: string
+  readonly onHand: number
+  readonly sold: number
+  /** Null when any included item lacks verified revenue or cost (unknown is not zero). */
+  readonly marginMinor: number | null
+}
+
+/**
+ * Clothing inventory & margin summary grouped by model attribute (size/colour/brand).
+ * Unknown cost/revenue stays null — never defaulted to 0.
+ */
+export function summarizeVariantStockReport(
+  lines: readonly ClothingVariantSummaryLine[],
+  attributeName: string,
+): ClothingAttributeReportRow[] {
+  const grouped = new Map<
+    string,
+    { onHand: number; sold: number; revenue: number; cost: number; knownMargin: boolean }
+  >()
+
+  for (const line of lines) {
+    const attr = line.attributes.find(
+      (a) => a.name.trim().toLowerCase() === attributeName.trim().toLowerCase(),
+    )
+    const value = attr?.value.trim() || 'UNSPECIFIED'
+    const acc = grouped.get(value) ?? {
+      onHand: 0,
+      sold: 0,
+      revenue: 0,
+      cost: 0,
+      knownMargin: true,
+    }
+    acc.onHand += line.onHand
+    acc.sold += line.sold
+    if (line.revenueMinor === null || line.costMinor === null) {
+      acc.knownMargin = false
+    } else {
+      acc.revenue += line.revenueMinor
+      acc.cost += line.costMinor
+    }
+    grouped.set(value, acc)
+  }
+
+  return [...grouped.entries()].map(([attributeValue, acc]) => ({
+    attributeName,
+    attributeValue,
+    onHand: acc.onHand,
+    sold: acc.sold,
+    marginMinor: acc.knownMargin ? acc.revenue - acc.cost : null,
+  }))
+}

@@ -1,3 +1,8 @@
+---
+name: new-reels
+description: Generate a new 9:16 Persian promo reel in hisabche-promo-reel with zero discovery — reads only the pre-indexed .claude/reel-plugin contracts, then writes the reel definition, strategy prompt, registry entry, ledger and state memory. Use when the person invokes /new_reels or /new-reels, asks for another promo reel, a launch film, or the next reel in the series.
+---
+
 # Skill: `/new_reels` — Zero-Discovery Universal Promo Reel Generator
 > **Command:** `/new_reels [موضوع]` or `/new-reels [موضوع]`  
 > **Entrypoint:** `.claude/skills/new-reels/SKILL.md`  

@@ -17,8 +17,12 @@
 // resolver's output), never an industry name.
 // ============================================
 
-import type { OperationalDna } from '@hisabche/validation'
-import { resolveDnaCapabilities } from '@hisabche/validation'
+import {
+  resolveDnaCapabilities,
+  resolveTerminologyProfile,
+  type OperationalDna,
+  type TerminologyProfile,
+} from '@hisabche/validation'
 
 /** Menu paths the suggestion may hide, each with the reason it is kept. */
 const SUGGESTIBLE: ReadonlyArray<{
@@ -47,7 +51,26 @@ const SUGGESTIBLE: ReadonlyArray<{
  * fabrication the DNA exists to prevent.
  */
 export function suggestedHiddenMenuPaths(dna: OperationalDna): string[] {
-  if (dna.offering.includes('UNRESOLVED') || dna.inventory.includes('UNRESOLVED')) return []
+  if (
+    dna.offering.includes('UNRESOLVED') ||
+    dna.inventory.includes('UNRESOLVED') ||
+    dna.workforce.includes('UNRESOLVED')
+  ) {
+    return []
+  }
   const modules = new Set(resolveDnaCapabilities(dna).activeModules)
-  return SUGGESTIBLE.filter((item) => !item.keep(modules, dna)).map((item) => item.path)
+  const suggested = SUGGESTIBLE.filter((item) => !item.keep(modules, dna)).map((item) => item.path)
+  const explicitHidden = dna.presentation?.navigation?.hiddenPaths ?? []
+  return [...new Set([...suggested, ...explicitHidden])]
+}
+
+/** Combines suggested hidden paths with the DNA-resolved terminology profile (never retail on UNRESOLVED). */
+export function suggestedNavigationContext(
+  dna: OperationalDna,
+  selectedIndustry?: string | null,
+): { readonly hiddenPaths: string[]; readonly terminology: TerminologyProfile } {
+  return {
+    hiddenPaths: suggestedHiddenMenuPaths(dna),
+    terminology: resolveTerminologyProfile(dna, selectedIndustry),
+  }
 }

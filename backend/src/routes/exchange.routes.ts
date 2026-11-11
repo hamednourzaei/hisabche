@@ -12,9 +12,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   REMITTANCE_STATUSES,
+  fxAgentSettleSchema,
+  fxCashboxReconcileSchema,
   fxRateBoardSchema,
   fxSettingsSchema,
   fxTradeCreateSchema,
+  fxTradeResolveReviewSchema,
   fxVoidSchema,
   remittanceCreateSchema,
   remittanceMoveSchema,
@@ -108,6 +111,13 @@ export async function exchangeRoutes(fastify: FastifyInstance) {
       service.voidTrade(r.tenancy, id, fxVoidSchema.parse(r.body).reason),
     ),
   )
+  fastify.post(
+    '/api/fx/trades/:id/resolve-review',
+    { preHandler: record },
+    withId('Failed to resolve the pending trade review', (r, id) =>
+      service.resolvePendingTrade(r.tenancy, id, fxTradeResolveReviewSchema.parse(r.body)),
+    ),
+  )
   fastify.get(
     '/api/fx/positions',
     { preHandler: read },
@@ -131,6 +141,11 @@ export async function exchangeRoutes(fastify: FastifyInstance) {
     { preHandler: read },
     handle('Failed to read the partner balances', (r) => service.partnerBalances(r.tenancy)),
   )
+  fastify.get(
+    '/api/fx/remittances/settlements',
+    { preHandler: read },
+    handle('Failed to read the agent settlements', (r) => service.settlements(r.tenancy)),
+  )
   fastify.post(
     '/api/fx/remittances',
     { preHandler: record },
@@ -150,6 +165,42 @@ export async function exchangeRoutes(fastify: FastifyInstance) {
     { preHandler: record },
     withId('Failed to move the remittance', (r, id) =>
       service.moveRemittance(r.tenancy, id, remittanceMoveSchema.parse(r.body)),
+    ),
+  )
+  fastify.post(
+    '/api/fx/remittances/settle',
+    { preHandler: record },
+    handle(
+      'Failed to settle the agent balance',
+      (r) =>
+        service.settleAgent(r.tenancy, fxAgentSettleSchema.parse(r.body), readClientRequestId(r)),
+      201,
+    ),
+  )
+
+  fastify.get(
+    '/api/fx/reconciliations',
+    { preHandler: read },
+    handle('Failed to read the reconciliations', (r) => {
+      const { currency } = r.query as { currency?: string }
+      return service.reconciliations(
+        r.tenancy,
+        currency && /^[A-Za-z]{3}$/.test(currency) ? { currency } : {},
+      )
+    }),
+  )
+  fastify.post(
+    '/api/fx/reconciliations',
+    { preHandler: record },
+    handle(
+      'Failed to reconcile the cashbox',
+      (r) =>
+        service.reconcileCashbox(
+          r.tenancy,
+          fxCashboxReconcileSchema.parse(r.body),
+          readClientRequestId(r),
+        ),
+      201,
     ),
   )
 }

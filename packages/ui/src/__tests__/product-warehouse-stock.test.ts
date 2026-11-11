@@ -143,12 +143,12 @@ describe('changing a product’s shelf from the product page', () => {
   it('moves through the map’s ONE placing path — no second stock engine', () => {
     expect(shelves).toContain('useMoveProductPlacement()')
     const move = hook.slice(hook.indexOf('export function useMoveProductPlacement'))
-    expect(move).toContain('/storage-locations/${input.fromLocationId}/place')
-    // ⚠️ The old shelf goes down BEFORE the new one goes up, so the warehouse
-    // cap is never exceeded midway.
-    expect(move.indexOf('input.fromLocationId}/place')).toBeLessThan(
-      move.indexOf('input.toLocationId}/place'),
-    )
+    // V58: shelf → shelf is ONE server function (storage_move_stock), so the
+    // source never goes down without the destination going up.
+    expect(move).toContain('/storage-locations/move')
+    expect(move).not.toContain('input.fromLocationId}/place')
+    // Units not yet on any shelf are simply placed.
+    expect(move).toContain('/storage-locations/${input.toLocationId}/place')
   })
 
   it('never offers more than the source holds', () => {

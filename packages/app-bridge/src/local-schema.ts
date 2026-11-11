@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 22
+export const SCHEMA_VERSION = 25
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -20,6 +20,7 @@ import {
   UNIVERSAL_CORE_STATEMENTS,
   SERIALS_STATEMENTS,
   BATCHES_STATEMENTS,
+  REPAIR_TICKETS_STATEMENTS,
 } from './local-universal-core-schema'
 
 export const CREATE_STATEMENTS: readonly string[] = [
@@ -430,6 +431,9 @@ export const CREATE_STATEMENTS: readonly string[] = [
     time_zone TEXT NOT NULL DEFAULT 'Asia/Kabul',
     business_types TEXT NOT NULL DEFAULT '',
     business_types_updated_at TEXT,
+    operational_dna TEXT,
+    operational_dna_version INTEGER NOT NULL DEFAULT 0,
+    onboarding_progress TEXT,
     credit_limit_mode TEXT NOT NULL DEFAULT 'warn',
     logo_url TEXT,
     stamp_url TEXT,
@@ -719,6 +723,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`,
+
+  ...REPAIR_TICKETS_STATEMENTS,
 ]
 
 /** Columns that may be written per table — anything else in a payload is dropped. */
@@ -922,6 +928,9 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'time_zone',
     'business_types',
     'business_types_updated_at',
+    'operational_dna',
+    'operational_dna_version',
+    'onboarding_progress',
     'logo_url',
     'stamp_url',
     'signature_url',

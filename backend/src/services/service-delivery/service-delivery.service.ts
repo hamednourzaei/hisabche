@@ -25,6 +25,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
+import { logBusinessEvent } from '../event-log.service'
 
 export interface CreateSessionInput {
   id?: string | undefined
@@ -412,7 +413,21 @@ export class ServiceDeliveryService {
       .select('*')
       .maybeSingle()
     if (error) throw new DatabaseError('Failed to change service session status', error)
-    if (data) return { session: mapDbRowToSession(data), replayed: false }
+    if (data) {
+      if (ctx.userId) {
+        void logBusinessEvent({
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+          entityType: 'service_delivery_session',
+          entityId: id,
+          action: 'service_session_status_moved',
+          title: `Service session status changed: ${current.status} -> ${target}`,
+          metadata: { from: current.status, to: target },
+          notify: false,
+        })
+      }
+      return { session: mapDbRowToSession(data), replayed: false }
+    }
 
     const now = await this.getById(ctx, id)
     if (now.status === target) return { session: now, replayed: true }

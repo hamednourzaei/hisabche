@@ -23,7 +23,17 @@
 import { z } from 'zod'
 import { minutesOf } from './attendance-rules'
 
-export const RESOURCE_KINDS = ['chair', 'room', 'bed', 'station', 'equipment'] as const
+export const RESOURCE_KINDS = [
+  'chair',
+  'room',
+  'bed',
+  'station',
+  'equipment',
+  'table',
+  'vehicle',
+  'machine',
+  'court',
+] as const
 export type ResourceKind = (typeof RESOURCE_KINDS)[number]
 
 export const serviceResourceSchema = z.object({
@@ -150,4 +160,143 @@ export function commissionReport(
       commissionMinor: rateBp === null ? null : Math.round((line.baseMinor * rateBp) / 10_000),
     }
   })
+}
+
+export const providerAllocationSchema = z.object({
+  employeeId: z.string().uuid(),
+  /** Share of this session in basis points (sum across providers must equal 10,000). */
+  shareBp: z.number().int().positive().max(10_000),
+})
+export type ProviderAllocation = z.infer<typeof providerAllocationSchema>
+
+export interface AllocatedCommissionResult {
+  readonly employeeId: string
+  readonly shareBp: number
+  readonly attributedChargeMinor: number
+}
+
+/**
+ * Multi-provider commission rule (8.2 + NEEDS_OWNER_DECISION):
+ * - Single provider -> 100% (10,000 bp)
+ * - Multiple providers without explicit configured allocations summing to 10,000 bp ->
+ *   REFUSED with `COMMISSION_MULTI_PROVIDER_ALLOCATION_REQUIRED`.
+ *   Never duplicates 100% per provider and never invents an arbitrary equal split.
+ */
+export function allocateCommissionShares(input: {
+  readonly sessionId: string
+  readonly chargedMinor: number
+  readonly providerIds: readonly string[]
+  readonly allocations?: readonly ProviderAllocation[] | undefined
+}): AllocatedCommissionResult[] {
+  const uniqueProviders = [...new Set(input.providerIds.filter(Boolean))]
+  if (uniqueProviders.length === 0) return []
+
+  if (uniqueProviders.length === 1) {
+    return [
+      {
+        employeeId: uniqueProviders[0]!,
+        shareBp: 10_000,
+        attributedChargeMinor: input.chargedMinor,
+      },
+    ]
+  }
+
+  const explicit = input.allocations ?? []
+  const sumBp = explicit.reduce((acc, a) => acc + a.shareBp, 0)
+  const coversAll =
+    explicit.length === uniqueProviders.length &&
+    uniqueProviders.every((id) => explicit.some((a) => a.employeeId === id)) &&
+    sumBp === 10_000
+
+  if (!coversAll) {
+    throw new Error('COMMISSION_MULTI_PROVIDER_ALLOCATION_REQUIRED')
+  }
+
+  let distributed = 0
+  return explicit.map((alloc, index) => {
+    const isLast = index === explicit.length - 1
+    const share = isLast
+      ? input.chargedMinor - distributed
+      : Math.round((input.chargedMinor * alloc.shareBp) / 10_000)
+    distributed += share
+    return {
+      employeeId: alloc.employeeId,
+      shareBp: alloc.shareBp,
+      attributedChargeMinor: share,
+    }
+  })
+}
+
+export interface SalonOperationsSummary {
+  readonly totalSessions: number
+  readonly scheduledCount: number
+  readonly inProgressCount: number
+  readonly deliveredCount: number
+  readonly noShowCount: number
+  readonly cancelledCount: number
+  readonly freeCapacityMinutes: number | null
+  /** Null whenever any delivered session's charge, material cost, or commission is unknown. */
+  readonly serviceProfitMinor: number | null
+}
+
+export function summarizeSalonOperations(input: {
+  readonly sessions: ReadonlyArray<{
+    readonly status: string
+    readonly durationMinutes: number
+    readonly revenueMinor: number | null
+    readonly materialCostMinor: number | null
+    readonly commissionMinor: number | null
+  }>
+  readonly totalAvailableResourceMinutes?: number | null | undefined
+}): SalonOperationsSummary {
+  let scheduledCount = 0
+  let inProgressCount = 0
+  let deliveredCount = 0
+  let noShowCount = 0
+  let cancelledCount = 0
+  let occupiedMinutes = 0
+  let knownProfitTotal = 0
+  let allDeliveredCostsKnown = true
+
+  for (const s of input.sessions) {
+    switch (s.status) {
+      case 'scheduled':
+        scheduledCount += 1
+        occupiedMinutes += s.durationMinutes
+        break
+      case 'in_progress':
+        inProgressCount += 1
+        occupiedMinutes += s.durationMinutes
+        break
+      case 'delivered':
+        deliveredCount += 1
+        occupiedMinutes += s.durationMinutes
+        if (s.revenueMinor === null || s.materialCostMinor === null || s.commissionMinor === null) {
+          allDeliveredCostsKnown = false
+        } else {
+          knownProfitTotal += s.revenueMinor - s.materialCostMinor - s.commissionMinor
+        }
+        break
+      case 'no_show':
+        noShowCount += 1
+        break
+      case 'cancelled':
+        cancelledCount += 1
+        break
+    }
+  }
+
+  return {
+    totalSessions: input.sessions.length,
+    scheduledCount,
+    inProgressCount,
+    deliveredCount,
+    noShowCount,
+    cancelledCount,
+    freeCapacityMinutes:
+      input.totalAvailableResourceMinutes != null
+        ? Math.max(0, input.totalAvailableResourceMinutes - occupiedMinutes)
+        : null,
+    serviceProfitMinor: deliveredCount === 0 ? 0 : allDeliveredCostsKnown ? knownProfitTotal : null,
+  }
 }

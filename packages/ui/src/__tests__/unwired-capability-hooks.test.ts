@@ -64,14 +64,6 @@ const consumersOf = (hook: string): string[] => {
  * would expect to find them behind; it is asserted NOT to be `available`.
  */
 const UNWIRED: Record<string, { capability?: CapabilityKey; reason: string }> = {
-  useLatestMetalRate: {
-    capability: 'gold_purity',
-    reason: 'metal rates are stored and served; no invoice line is priced from purity yet',
-  },
-  useRecordMetalRate: {
-    capability: 'gold_purity',
-    reason: 'same as above: the rate can be recorded through the API, not through a screen',
-  },
   useVehicles: {
     capability: 'auto_fitments',
     reason: 'vehicle records exist for fitment; no vehicle screen is wired',
@@ -91,13 +83,6 @@ const UNWIRED: Record<string, { capability?: CapabilityKey; reason: string }> = 
   useCreateAppointment: { reason: 'appointment API only; no scheduling screen' },
   useCropCycles: { reason: 'crop-cycle API only; no farm screen' },
   useCreateCropCycle: { reason: 'crop-cycle API only; no farm screen' },
-  useFreightTrips: { reason: 'freight API only; no dispatch screen' },
-  useCreateFreightTrip: { reason: 'freight API only; no dispatch screen' },
-  useCourierDeliveries: { reason: 'courier API only; no dispatch screen' },
-  useCreateCourierDelivery: { reason: 'courier API only; no dispatch screen' },
-  useProgressCourierCod: { reason: 'courier API only; no dispatch screen' },
-  useDeliveryNotes: { reason: 'delivery-note API only; no screen' },
-  useCreateDeliveryNote: { reason: 'delivery-note API only; no screen' },
   useConsumePackageCredit: { reason: 'package credits are consumed by the service-delivery path' },
   useReversePackageCredit: { reason: 'package credit API only; no screen' },
   useExpirePackageCredit: { reason: 'package credit API only; no screen' },

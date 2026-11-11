@@ -13,6 +13,7 @@
 // ============================================
 
 export {
+  buildCostObjectProfitReport,
   buildProfitReport,
   invoiceMargins,
   isCostDeterminate,
@@ -21,8 +22,13 @@ export {
 } from '@hisabche/validation'
 
 export type {
+  CostObjectInvoiceInput,
+  CostObjectProfitReport,
+  CostObjectProfitRow,
+  CostObjectType,
   CostStatus,
   InvoiceMargin,
+  OverheadAllocationPolicy,
   ProductProfitRow,
   ProfitConsumption,
   ProfitInvoice,

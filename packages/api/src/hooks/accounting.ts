@@ -477,3 +477,45 @@ export function useProfitReportsByCurrency(from: string, to: string, currency: s
     staleTime: 30_000,
   })
 }
+
+export interface VariantAttributeReportRow {
+  attributeName: string
+  attributeValue: string
+  onHand: number
+  sold: number
+  marginMinor: number | null
+}
+
+export function useVariantAttributeReport(attribute: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: ['accounting', 'profit-report', 'variants', attribute],
+    queryFn: async ({ signal }): Promise<VariantAttributeReportRow[]> => {
+      const { data } = await apiClient.get('/accounting/profit-report/variants', {
+        params: { attribute },
+        signal,
+      })
+      return asList<VariantAttributeReportRow>(
+        (data as { data?: VariantAttributeReportRow[] })?.data ?? data,
+      )
+    },
+    enabled: authReady && Boolean(attribute),
+    staleTime: 30_000,
+  })
+}
+
+export function useCostObjectProfitReport(from: string, to: string, currency: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: ['accounting', 'profit-report', 'cost-objects', from, to, currency],
+    queryFn: async ({ signal }) => {
+      const { data } = await apiClient.get('/accounting/profit-report/cost-objects', {
+        params: { from, to, currency },
+        signal,
+      })
+      return data
+    },
+    enabled: authReady && Boolean(from && to && currency),
+    staleTime: 30_000,
+  })
+}

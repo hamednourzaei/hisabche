@@ -18,9 +18,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   CommissionLine,
   CommissionRateInput,
+  FxAgentSettleInput,
+  FxCashboxReconcileInput,
   FxRateBoardInput,
   FxSettingsInput,
   FxTradeCreateInput,
+  FxTradeResolveReviewInput,
   RemittanceCreateInput,
   RemittanceDirection,
   RemittanceMoveInput,
@@ -54,11 +57,19 @@ const fresh = (data: { ready?: unknown } | undefined) => data?.ready === true
 
 // ─── Clothing: variant stock ─────────────────────────────────────────────────
 
+export interface VariantReservationHold {
+  variantId: string
+  warehouseId: string
+  quantity: number
+  status: 'active' | 'settled' | 'released' | 'expired'
+}
+
 export interface VariantStockView {
   ready: boolean
   productOnHand: number
   unassigned: number
   variants: VariantStockLine[]
+  reservations: VariantReservationHold[]
 }
 
 export function useVariantStock(productId: string | undefined) {
@@ -74,6 +85,7 @@ export function useVariantStock(productId: string | undefined) {
         productOnHand: Number(data?.data?.productOnHand) || 0,
         unassigned: Number(data?.data?.unassigned) || 0,
         variants: asList<VariantStockLine>(data?.data?.variants),
+        reservations: asList<VariantReservationHold>(data?.data?.reservations),
       }
     },
     enabled: authReady && Boolean(productId),
@@ -201,6 +213,11 @@ export function useAdvanceTransferRequest() {
       id: string
       action: TransferAction
       reason?: string | undefined
+      receivedLines?: Array<{
+        lineId: string
+        receivedQuantity: number
+        reason?: string | undefined
+      }>
     }) => {
       const { data } = await apiClient.post<{ data: TransferRequestRow }>(
         `/transfer-requests/${encodeURIComponent(id)}/action`,
@@ -238,7 +255,23 @@ export interface RepairTicket {
   closedAt: string | null
 }
 
+export interface RepairTicketPart {
+  id: string
+  ticketId: string
+  warehouseId: string
+  productId: string
+  quantity: number
+  unitPriceMinor: number
+  unitCostMinor: number | null
+  currency: string
+  reservationId: string | null
+  status: 'reserved' | 'consumed' | 'released'
+  consumedAt: string | null
+  createdAt: string
+}
+
 export interface RepairTicketDetail extends RepairTicket {
+  customerApproved?: boolean
   events: Array<{
     id: string
     fromStatus: RepairStatus | null
@@ -246,6 +279,7 @@ export interface RepairTicketDetail extends RepairTicket {
     note: string | null
     createdAt: string
   }>
+  parts?: RepairTicketPart[]
 }
 
 export function useRepairTickets(filter: RepairStatus | 'open' | undefined = 'open') {
@@ -274,6 +308,7 @@ export function useRepairTicket(id: string | null) {
       return {
         ...data.data,
         events: asList<RepairTicketDetail['events'][number]>(data.data?.events),
+        parts: asList<RepairTicketPart>(data.data?.parts),
       }
     },
     enabled: authReady && Boolean(id),
@@ -312,16 +347,131 @@ export function useMoveRepairTicket() {
   })
 }
 
+export function useApproveRepairTicket() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (ticketId: string) => {
+      const { data } = await apiClient.post<{ data: RepairTicketDetail }>(
+        `/repair-tickets/${encodeURIComponent(ticketId)}/approve`,
+        {},
+      )
+      return data.data
+    },
+    onSuccess: (_d, ticketId) => {
+      void queryClient.invalidateQueries({ queryKey: ['business-packs', 'repairs'] })
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(ticketId) })
+    },
+  })
+}
+
+export function useAddRepairPart() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      ...body
+    }: {
+      ticketId: string
+      warehouseId: string
+      productId: string
+      quantity: number
+      unitPriceMinor?: number | undefined
+      currency?: string | undefined
+      customerApproved?: boolean | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: RepairTicketPart }>(
+        `/repair-tickets/${encodeURIComponent(ticketId)}/parts`,
+        body,
+      )
+      return data.data
+    },
+    onSuccess: (_d, v) => {
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.ticketId) })
+      void queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+    },
+  })
+}
+
+export function useConsumeRepairPart() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ticketId, partId }: { ticketId: string; partId: string }) => {
+      const { data } = await apiClient.post<{ data: RepairTicketPart }>(
+        `/repair-tickets/${encodeURIComponent(ticketId)}/parts/${encodeURIComponent(partId)}/consume`,
+        {},
+      )
+      return data.data
+    },
+    onSuccess: (_d, v) => {
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.ticketId) })
+      void queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+      void queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+}
+
+export function useReleaseRepairPart() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ ticketId, partId }: { ticketId: string; partId: string }) => {
+      const { data } = await apiClient.post<{ data: RepairTicketPart }>(
+        `/repair-tickets/${encodeURIComponent(ticketId)}/parts/${encodeURIComponent(partId)}/release`,
+        {},
+      )
+      return data.data
+    },
+    onSuccess: (_d, v) => {
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.ticketId) })
+      void queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+    },
+  })
+}
+
+export function useCreateRepairBill() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      ...body
+    }: {
+      ticketId: string
+      warehouseId?: string | undefined
+      laborFeeMinor?: number | undefined
+      laborProductId?: string | undefined
+      paymentMethod?: 'cash' | 'bank' | 'credit' | undefined
+      paidAmount?: number | undefined
+      markDelivered?: boolean | undefined
+    }) => {
+      const { data } = await apiClient.post<{
+        data: {
+          invoice: { id: string; invoiceNumber?: string }
+          revenueSplit: {
+            partsRevenueMinor: number
+            laborRevenueMinor: number
+            totalRevenueMinor: number
+          }
+          ticket: RepairTicketDetail
+        }
+      }>(`/repair-tickets/${encodeURIComponent(ticketId)}/bill`, body)
+      return data.data
+    },
+    onSuccess: (_d, v) => {
+      void queryClient.invalidateQueries({ queryKey: ['business-packs', 'repairs'] })
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.ticketId) })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
 export function useSerialHolds(productId: string | undefined) {
   const authReady = useAuthReady()
   return useQuery({
     queryKey: businessPackKeys.serialHolds(productId ?? ''),
     queryFn: async () => {
-      const { data } = await apiClient.get<Array<{ serialId: string; customerId: string }>>(
-        '/operations/serials/holds',
-        { params: { productId } },
-      )
-      return asList<{ serialId: string; customerId: string }>(data)
+      const { data } = await apiClient.get<
+        Array<{ serialId: string; customerId: string; reservedUntil?: string | null }>
+      >('/operations/serials/holds', { params: { productId } })
+      return asList<{ serialId: string; customerId: string; reservedUntil?: string | null }>(data)
     },
     enabled: authReady && Boolean(productId),
   })
@@ -333,13 +483,21 @@ export function useHoldSerial(productId: string) {
     mutationFn: async ({
       serialId,
       customerId,
+      holdMinutes,
+      expiresAt,
     }: {
       serialId: string
       customerId: string | null
+      holdMinutes?: number | null | undefined
+      expiresAt?: string | null | undefined
     }) => {
       const { data } = await apiClient.post(
         `/operations/serials/${encodeURIComponent(serialId)}/hold`,
-        { customerId },
+        {
+          customerId,
+          ...(holdMinutes !== undefined ? { holdMinutes } : {}),
+          ...(expiresAt !== undefined ? { expiresAt } : {}),
+        },
       )
       return data
     },
@@ -347,6 +505,79 @@ export function useHoldSerial(productId: string) {
       void queryClient.invalidateQueries({ queryKey: businessPackKeys.serialHolds(productId) })
       void queryClient.invalidateQueries({ queryKey: ['traceability'] })
       void queryClient.invalidateQueries({ queryKey: ['serials'] })
+    },
+  })
+}
+
+export function useReleaseExpiredSerialHolds(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ releasedCount: number; releasedIds: string[] }>(
+        '/operations/serials/holds/release-expired',
+        {},
+      )
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.serialHolds(productId) })
+      void queryClient.invalidateQueries({ queryKey: ['traceability'] })
+      void queryClient.invalidateQueries({ queryKey: ['serials'] })
+    },
+  })
+}
+
+export function useReturnSerial(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      serialId,
+      conditionCode,
+      restockChoice,
+      reasonCode,
+      notes,
+      returnDate,
+      returnNumber,
+      refundMethod,
+      refundAmount,
+    }: {
+      serialId: string
+      conditionCode: 'sealed' | 'opened' | 'used' | 'damaged' | 'defective' | 'incomplete'
+      restockChoice?: 'restock' | 'scrap' | undefined
+      reasonCode?:
+        | 'defective'
+        | 'wrong_item'
+        | 'customer_change_of_mind'
+        | 'damaged_in_transit'
+        | 'expired'
+        | 'other'
+        | undefined
+      notes?: string | undefined
+      returnDate?: string | undefined
+      returnNumber?: string | undefined
+      refundMethod?: 'cash' | 'bank' | undefined
+      refundAmount?: number | undefined
+    }) => {
+      const { data } = await apiClient.post(
+        `/operations/serials/${encodeURIComponent(serialId)}/return`,
+        {
+          conditionCode,
+          ...(restockChoice !== undefined ? { restockChoice } : {}),
+          ...(reasonCode !== undefined ? { reasonCode } : {}),
+          ...(notes !== undefined ? { notes } : {}),
+          ...(returnDate !== undefined ? { returnDate } : {}),
+          ...(returnNumber !== undefined ? { returnNumber } : {}),
+          ...(refundMethod !== undefined ? { refundMethod } : {}),
+          ...(refundAmount !== undefined ? { refundAmount } : {}),
+        },
+      )
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.serialHolds(productId) })
+      void queryClient.invalidateQueries({ queryKey: ['traceability'] })
+      void queryClient.invalidateQueries({ queryKey: ['serials'] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
     },
   })
 }
@@ -373,10 +604,26 @@ export interface FxTrade {
   rate: string
   bookCurrency: string
   bookAmountMinor: number
+  costBasisMinor?: number | null
   customerId: string | null
   identityName: string | null
-  status: 'posted' | 'voided'
+  status: 'posted' | 'voided' | 'pending_review'
   voidReason: string | null
+  journalEntryId?: string | null
+  voidJournalEntryId?: string | null
+  note: string | null
+  createdAt: string
+}
+export interface FxAgentSettlement {
+  id: string
+  counterparty: string
+  direction: 'collect' | 'pay'
+  currency: string
+  amountMinor: number
+  rate: string
+  bookCurrency: string
+  bookAmountMinor: number
+  journalEntryId: string | null
   note: string | null
   createdAt: string
 }
@@ -389,6 +636,16 @@ export interface FxPosition {
   bought: number
   sold: number
   shortMinor: number
+}
+export interface FxCashboxReconciliation {
+  id: string
+  currency: string
+  expectedMinor: number
+  countedMinor: number
+  varianceMinor: number
+  status: 'matched' | 'over' | 'short'
+  note: string | null
+  reconciledAt: string
 }
 export interface Remittance {
   id: string
@@ -502,6 +759,11 @@ export const useVoidFxTrade = () =>
     async ({ id, reason }: { id: string; reason: string }) =>
       (await apiClient.post(`/fx/trades/${encodeURIComponent(id)}/void`, { reason })).data,
   )
+export const useResolveFxTradeReview = () =>
+  useFxWrite(
+    async ({ id, ...body }: FxTradeResolveReviewInput & { id: string }) =>
+      (await apiClient.post(`/fx/trades/${encodeURIComponent(id)}/resolve-review`, body)).data,
+  )
 export const useCreateRemittance = () =>
   useFxWrite(async ({ requestId, ...input }: RemittanceCreateInput & { requestId: string }) => {
     const { data } = await apiClient.post<{
@@ -514,6 +776,42 @@ export const useMoveRemittance = () =>
     async ({ id, ...body }: RemittanceMoveInput & { id: string }) =>
       (await apiClient.post(`/fx/remittances/${encodeURIComponent(id)}/status`, body)).data,
   )
+export const useFxAgentSettlements = () =>
+  useFxRead(
+    () => apiClient.get<Wrapped>('/fx/remittances/settlements'),
+    (d) => ({
+      ready: d?.ready === true,
+      settlements: asList<FxAgentSettlement>(d?.settlements),
+    }),
+    'settlements',
+  )
+export const useSettleFxAgent = () =>
+  useFxWrite(async ({ requestId, ...input }: FxAgentSettleInput & { requestId: string }) => {
+    const { data } = await apiClient.post<{ data: FxAgentSettlement }>(
+      '/fx/remittances/settle',
+      input,
+      { headers: { 'Idempotency-Key': requestId } },
+    )
+    return data.data
+  })
+export const useFxReconciliations = () =>
+  useFxRead(
+    () => apiClient.get<Wrapped>('/fx/reconciliations'),
+    (d) => ({
+      ready: d?.ready === true,
+      reconciliations: asList<FxCashboxReconciliation>(d?.reconciliations),
+    }),
+    'reconciliations',
+  )
+export const useReconcileFxCashbox = () =>
+  useFxWrite(async ({ requestId, ...input }: FxCashboxReconcileInput & { requestId: string }) => {
+    const { data } = await apiClient.post<{ data: FxCashboxReconciliation }>(
+      '/fx/reconciliations',
+      input,
+      { headers: { 'Idempotency-Key': requestId } },
+    )
+    return data.data
+  })
 
 // ─── Salon ───────────────────────────────────────────────────────────────────
 
@@ -585,7 +883,7 @@ export const useCommissionRates = () =>
     }),
     ['commission-rates'],
   )
-export function useCommissionReport(from: string, to: string) {
+export function useCommissionReport(from: string, to: string, options?: { enabled?: boolean }) {
   const authReady = useAuthReady()
   return useQuery({
     queryKey: [...businessPackKeys.salon, 'commission', from, to],
@@ -596,7 +894,22 @@ export function useCommissionReport(from: string, to: string) {
       )
       return { ready: data?.data?.ready === true, lines: asList<CommissionLine>(data?.data?.lines) }
     },
-    enabled: authReady && Boolean(from && to),
+    enabled: authReady && Boolean(from && to) && (options?.enabled ?? true),
+    staleTime: 0,
+  })
+}
+export function useMyCommissionReport(from: string, to: string, options?: { enabled?: boolean }) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...businessPackKeys.salon, 'commission', 'my', from, to],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: { ready?: boolean; lines?: unknown } }>(
+        '/provider-commissions/my',
+        { params: { from, to } },
+      )
+      return { ready: data?.data?.ready === true, lines: asList<CommissionLine>(data?.data?.lines) }
+    },
+    enabled: authReady && Boolean(from && to) && (options?.enabled ?? true),
     staleTime: 0,
   })
 }
@@ -628,3 +941,71 @@ export const useSetCommissionRate = () =>
     async (input: CommissionRateInput) =>
       (await apiClient.put('/provider-commissions/rates', input)).data,
   )
+
+export interface ResourceBookingRow {
+  id: string
+  resourceId: string
+  startAt: string | null
+  endAt: string | null
+  sourceType: string
+  sourceId: string | null
+  status: string
+  notes: string | null
+  createdAt: string
+  releasedAt: string | null
+}
+
+export function useResourceBookings(resourceId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...businessPackKeys.salon, 'bookings', resourceId ?? 'all'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        data: { ready: boolean; bookings: ResourceBookingRow[] }
+      }>('/resource-bookings', { params: resourceId ? { resourceId } : undefined })
+      return data.data
+    },
+    enabled: authReady,
+  })
+}
+
+export const useBookResource = () =>
+  useSalonWrite(
+    async (input: {
+      resourceId: string
+      startAt: string
+      endAt: string
+      sourceType?: 'session' | 'appointment' | 'rental' | 'table' | 'maintenance' | undefined
+      sourceId?: string | undefined
+      notes?: string | undefined
+    }) => (await apiClient.post('/resource-bookings', input)).data,
+  )
+
+export const useReleaseResourceBooking = () =>
+  useSalonWrite(
+    async (bookingId: string) =>
+      (await apiClient.post(`/resource-bookings/${bookingId}/release`, {})).data,
+  )
+
+export function useResourceSlots(
+  resourceId: string | undefined,
+  params?: { startAt?: string; endAt?: string; slotMinutes?: number },
+) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...businessPackKeys.salon, 'slots', resourceId ?? '', params] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        data: {
+          resourceId: string
+          window: { startAt: string; endAt: string }
+          slotMinutes: number
+          freeSlots: Array<{ startAt: string; endAt: string }>
+          utilization: { bookedMinutes: number; totalMinutes: number; ratio: number | null }
+        }
+      }>(`/service-resources/${resourceId}/slots`, { params })
+      return data.data
+    },
+    enabled: authReady && Boolean(resourceId),
+  })
+}

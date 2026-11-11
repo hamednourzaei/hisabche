@@ -19,6 +19,7 @@ import type { EntitySyncState, ServiceDeliverySessionItem } from '@hisabche/api'
 
 export const SERVICE_SESSION_STATUSES = [
   'scheduled',
+  'checked_in',
   'in_progress',
   'delivered',
   'cancelled',
@@ -123,7 +124,8 @@ export function summarizeSessions(rows: readonly ServiceSessionRow[]): ServiceSe
   }
 
   for (const row of rows) {
-    if (row.status === 'scheduled' || row.status === 'in_progress') summary.scheduled += 1
+    if (row.status === 'scheduled' || row.status === 'checked_in' || row.status === 'in_progress')
+      summary.scheduled += 1
     if (row.status === 'delivered') summary.delivered += 1
     if (row.status === 'cancelled') summary.cancelled += 1
     if (row.sync === 'pending') summary.awaitingSync += 1
@@ -133,9 +135,9 @@ export function summarizeSessions(rows: readonly ServiceSessionRow[]): ServiceSe
   return summary
 }
 
-/** Not `scheduled` / `in_progress` — the delivery dialog has nothing to offer. */
+/** Not `scheduled` / `checked_in` / `in_progress` — the delivery dialog has nothing to offer. */
 export function deliveryBlocked(status: string): boolean {
-  return status !== 'scheduled' && status !== 'in_progress'
+  return status !== 'scheduled' && status !== 'checked_in' && status !== 'in_progress'
 }
 
 /**
@@ -146,7 +148,12 @@ export function deliveryBlocked(status: string): boolean {
  * would be a promise the server breaks.
  */
 export function cancellable(status: string): boolean {
-  return status === 'scheduled' || status === 'in_progress' || status === 'delivered'
+  return (
+    status === 'scheduled' ||
+    status === 'checked_in' ||
+    status === 'in_progress' ||
+    status === 'delivered'
+  )
 }
 
 /** A cancellation without a stated why cannot be audited: the server refuses it, so the form does not offer it. */

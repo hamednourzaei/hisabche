@@ -12,12 +12,18 @@ import { ForbiddenError } from '../errors/auth.error'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ValidationError } from '../errors/validation.error'
 import {
+  invoiceItemSchema,
   planReturnDisposition,
+  routeReturnedSerial,
+  routeReturnConditionDisposition,
   type ReturnCondition,
   type ReturnDeductionRequest,
 } from '@hisabche/validation'
 import { ledger } from '../services/accounting'
+import { InvoiceService } from '../services/invoice.service'
 import { InvoiceReturnService } from '../services/sales/invoice-return.service'
+import { supabase } from '../db'
+import { NotFoundError } from '../errors/database.error'
 import { sendFailure } from '../errors/http-failure'
 import { readClientRequestId, sendCreated } from '../utils/client-request'
 import { invalidateMoneyCaches } from '../utils/money-cache'
@@ -74,6 +80,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
               | 'other'
               | undefined
             conditionCode?: ReturnCondition | undefined
+            serialNumbers?: string[] | undefined
           }>
         }
         // A body with no list of lines must be refused here: it would otherwise reach the
@@ -93,6 +100,15 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         }
         if (disposition.needsStockAdjust && !holds(request.tenancy, 'stock.adjust')) {
           throw new ForbiddenError('RETURN_STOCK_DECISION_NOT_PERMITTED')
+        }
+        for (const line of body.lines) {
+          const routed = routeReturnConditionDisposition({
+            conditionCode: line.conditionCode,
+            restockChoice: (line.restockChoice ?? 'restock') as 'restock' | 'scrap',
+          })
+          if (routed.requiresStockAdjust && !holds(request.tenancy, 'stock.adjust')) {
+            throw new ForbiddenError('RETURN_STOCK_DECISION_NOT_PERMITTED')
+          }
         }
         // RG-1: a scrapped line books its purchase cost as a LOSS (docs/invoice-return-06-scrap-loss-migration.sql). The
         // loss account is made on first use, like every other role; a workspace that cannot have it refuses the return.
@@ -126,6 +142,52 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
             conditionCode: l.conditionCode,
           })),
         })
+        // Route any named sold IMEIs / serial numbers using routeReturnedSerial alongside financial reversal.
+        const linesWithSerials = body.lines.filter(
+          (l) => Array.isArray(l.serialNumbers) && l.serialNumbers.length > 0,
+        )
+        if (linesWithSerials.length > 0) {
+          for (const line of linesWithSerials) {
+            const serialNumbers = line.serialNumbers ?? []
+            const { data: matching } = await supabase
+              .from('stock_serials')
+              .select('id, product_id, serial_number, status, warehouse_id, invoice_id')
+              .eq('workspace_id', workspaceId)
+              .eq('invoice_id', id)
+              .in('serial_number', serialNumbers)
+            for (const row of matching ?? []) {
+              const s = row as {
+                id: string
+                product_id: string
+                serial_number: string
+                status: 'sold'
+                warehouse_id?: string | null
+                invoice_id?: string | null
+              }
+              const routed = routeReturnedSerial(
+                {
+                  serialNumber: s.serial_number,
+                  productId: s.product_id,
+                  status: s.status,
+                  warehouseId: s.warehouse_id ?? null,
+                  soldInvoiceId: s.invoice_id ?? null,
+                },
+                (line.conditionCode ?? 'opened') as ReturnCondition,
+              )
+              const nextStatus = line.restockChoice === 'scrap' ? 'scrapped' : routed.status
+              await supabase
+                .from('stock_serials')
+                .update({
+                  status: nextStatus,
+                  invoice_id: null,
+                  sold_on: null,
+                  reserved_for_customer_id: null,
+                })
+                .eq('workspace_id', workspaceId)
+                .eq('id', s.id)
+            }
+          }
+        }
         // A return changes the customer's statement and balance, the dashboard and
         // stock; a cached copy would keep showing the figures from before it
         // (BUG-008: it stayed «unpaid» for two minutes after a payment).
@@ -161,6 +223,118 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         return sendCreated(reply, { data: result })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to refund invoice return')
+      }
+    },
+  )
+
+  // Clothing / variant exchange against an original sale invoice:
+  // routes each returned variant by condition (sellable_stock / quarantine / scrap)
+  // through existing return stock movements and issues replacement invoice lines via InvoiceService.
+  fastify.post(
+    '/api/invoices/:id/exchange',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const workspaceId = request.tenancy.workspaceId
+        const userId = request.tenancy.userId
+        const { id } = request.params as { id: string }
+        const clientRequestId = readClientRequestId(request)
+        const body = request.body as {
+          returnNumber: string
+          returnDate: string
+          notes?: string | undefined
+          warehouseId?: string | undefined
+          returnedLines: Array<{
+            originalLineId: string
+            variantId?: string | undefined
+            quantity: number
+            restockChoice?: 'restock' | 'scrap' | undefined
+            conditionCode?: ReturnCondition | undefined
+          }>
+          replacementItems?: unknown[] | undefined
+          paymentMethod?: 'cash' | 'bank' | 'credit' | undefined
+          paidAmount?: number | undefined
+        }
+
+        if (!Array.isArray(body?.returnedLines) || body.returnedLines.length === 0) {
+          throw new ValidationError('RETURN_LINES_REQUIRED')
+        }
+
+        const { data: originalInv, error: invErr } = await supabase
+          .from('invoices')
+          .select('id, workspace_id, customer_id, currency, warehouse_id, branch_id')
+          .eq('id', id)
+          .eq('workspace_id', workspaceId)
+          .maybeSingle()
+        if (invErr) throw invErr
+        if (!originalInv) throw new NotFoundError('Invoice')
+
+        const lineDecisions = body.returnedLines.map((l) => {
+          const restockChoice = l.restockChoice ?? 'restock'
+          const decision = routeReturnConditionDisposition({
+            conditionCode: l.conditionCode,
+            restockChoice,
+          })
+          if (decision.requiresStockAdjust && !holds(request.tenancy, 'stock.adjust')) {
+            throw new ForbiddenError('RETURN_STOCK_DECISION_NOT_PERMITTED')
+          }
+          return { line: l, decision }
+        })
+
+        const returnResult = await service.createReturn(workspaceId, {
+          originalInvoiceId: id,
+          userId,
+          clientRequestId,
+          returnType: 'sale_return',
+          returnNumber: body.returnNumber,
+          returnDate: body.returnDate,
+          reasonCode: 'wrong_item',
+          notes:
+            body.notes ??
+            lineDecisions
+              .filter((d) => d.decision.bucket === 'quarantine')
+              .map((d) => `quarantine:${d.line.originalLineId}`)
+              .join(', '),
+          lines: lineDecisions.map(({ line, decision }) => ({
+            originalLineId: line.originalLineId,
+            returnQuantity: line.quantity,
+            restockChoice: decision.restockChoice,
+            reasonCode: 'wrong_item',
+            conditionCode: line.conditionCode,
+          })),
+        })
+
+        let replacementInvoice: unknown = null
+        if (Array.isArray(body.replacementItems) && body.replacementItems.length > 0) {
+          const parsedItems = body.replacementItems.map((raw) => invoiceItemSchema.parse(raw))
+          const invoiceService = new InvoiceService()
+          replacementInvoice = await invoiceService.create(request.tenancy, {
+            type: 'sale',
+            date: body.returnDate,
+            warehouseId: body.warehouseId ?? (originalInv.warehouse_id as string | undefined),
+            customerId: (originalInv.customer_id as string | undefined) ?? undefined,
+            currency: (originalInv.currency as string | undefined) ?? undefined,
+            paymentMethod: body.paymentMethod ?? 'cash',
+            paidAmount: body.paidAmount ?? 0,
+            idempotencyKey: clientRequestId ? `${clientRequestId}:exchange-sale` : undefined,
+            items: parsedItems,
+          } as Parameters<InvoiceService['create']>[1])
+        }
+
+        await invalidateMoneyCaches(workspaceId)
+        return sendCreated(reply, {
+          data: {
+            returnDocument: returnResult,
+            replacementInvoice,
+            dispositions: lineDecisions.map(({ line, decision }) => ({
+              originalLineId: line.originalLineId,
+              variantId: line.variantId ?? null,
+              bucket: decision.bucket,
+            })),
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to process variant exchange')
       }
     },
   )

@@ -331,6 +331,7 @@ export const EVIDENCE = {
     'packages/validation/src/schemas/universal-core/gold-jewellery.domain.ts',
     'calculateJewelleryLine',
   ),
+  UNIVERSAL_GOLD_SNAPSHOT: E('packages/validation/src/schemas/pricing.ts', 'quoteGoldItemPrice'),
   UNIVERSAL_PACK_BARCODE: E(
     'packages/validation/src/schemas/universal-core/pack-barcode.domain.ts',
     'resolvePackScan',
@@ -618,16 +619,16 @@ export const CAPABILITIES = {
     why: '',
   },
   goldPurity: {
-    status: 'VERIFIED_SUPPORTED',
-    evidence: ['UNIVERSAL_GOLD'],
+    status: 'PARTIALLY_SUPPORTED',
+    evidence: ['UNIVERSAL_GOLD', 'UNIVERSAL_GOLD_SNAPSHOT'],
     tests: ['UNIVERSAL_CORE', 'PARITY'],
-    why: '',
+    why: 'Karat/purity pricing rules (priceGoldLineWithSnapshot, quoteGoldItemPrice) and metal_rates exist, while persisted invoice-line karat/making snapshot columns remain pending dedicated DB schema approval.',
   },
   makingCharges: {
-    status: 'VERIFIED_SUPPORTED',
-    evidence: ['UNIVERSAL_GOLD'],
+    status: 'PARTIALLY_SUPPORTED',
+    evidence: ['UNIVERSAL_GOLD', 'UNIVERSAL_GOLD_SNAPSHOT'],
     tests: ['UNIVERSAL_CORE', 'PARITY'],
-    why: '',
+    why: 'Making charge and wastage pricing rules work in pure domain + pricing quote pipeline, while invoice-line immutable snapshot persistence remains pending dedicated DB schema approval.',
   },
   oldGold: {
     status: 'VERIFIED_SUPPORTED',
@@ -932,3 +933,28 @@ export const INDUSTRIES = [
     ],
   },
 ]
+
+/**
+ * V60 Slice 5 — End-to-end HTTP / integration acceptance tests mapped by canonical IndustryKey.
+ * A trade is marked `workflowComplete: true` ONLY when every cited file exists on disk AND
+ * `profiled: true` (`OVERRIDES` or explicit trade DNA preset) AND `registered: true` (`INDUSTRY_KEYS`).
+ */
+export const INDUSTRY_ACCEPTANCE_TESTS = {
+  retail: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  grocery: ['backend/src/__tests__/http-e2e-business-day.test.ts'],
+  jewellery: ['backend/src/__tests__/v59-1-gold-routes-http.test.ts'],
+  clothing: ['backend/src/__tests__/v59-1-clothing-routes-http.test.ts'],
+  mobilePhones: ['backend/src/__tests__/v59-1-mobile-serials-http.test.ts'],
+  repairs: ['backend/src/__tests__/v59-1-repair-routes-http.test.ts'],
+  beautySalon: ['backend/src/__tests__/service-delivery-http.test.ts'],
+  barber: ['backend/src/__tests__/service-delivery-http.test.ts'],
+  currencyExchange: ['backend/src/__tests__/v59-1-exchange-gl-http.test.ts'],
+  manufacturing: ['backend/src/__tests__/manufacturing-page-500s.test.ts'],
+  wholesale: ['backend/src/__tests__/v60-http-families.test.ts'],
+  consulting: ['backend/src/__tests__/v60-http-families.test.ts'],
+  wedding: ['backend/src/__tests__/v60-http-families.test.ts'],
+  courier: ['backend/src/__tests__/v60-http-families.test.ts'],
+}

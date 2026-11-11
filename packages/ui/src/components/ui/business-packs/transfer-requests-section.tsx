@@ -15,6 +15,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import {
   useAdvanceTransferRequest,
   useCreateTransferRequest,
+  useTransferRequest,
   useTransferRequests,
   type TransferAction,
   type TransferRequestRow,
@@ -128,18 +129,39 @@ export function TransferRequestsSection() {
   // A cancel asks its reason inline (window.prompt does not exist in the desktop app).
   const [cancelFor, setCancelFor] = useState<TransferRequestRow | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [receivingFor, setReceivingFor] = useState<TransferRequestRow | null>(null)
+  const receivingDetail = useTransferRequest(receivingFor?.id ?? null)
+  const [receivedQtys, setReceivedQtys] = useState<Record<string, string>>({})
+  const [discrepancyReason, setDiscrepancyReason] = useState('')
 
-  const step = (row: TransferRequestRow, action: TransferAction, reason?: string) => {
+  const step = (
+    row: TransferRequestRow,
+    action: TransferAction,
+    reason?: string,
+    receivedLines?: Array<{ lineId: string; receivedQuantity: number; reason?: string }>,
+  ) => {
     if (action === 'cancel' && !reason?.trim()) {
       setCancelFor(row)
       return
     }
+    if (action === 'receive' && !receivedLines) {
+      setReceivingFor(row)
+      setReceivedQtys({})
+      setDiscrepancyReason('')
+      return
+    }
     advance.mutate(
-      { id: row.id, action, ...(reason ? { reason: reason.trim() } : {}) },
+      {
+        id: row.id,
+        action,
+        ...(reason ? { reason: reason.trim() } : {}),
+        ...(receivedLines ? { receivedLines } : {}),
+      },
       {
         onSuccess: () => {
           setCancelFor(null)
           setCancelReason('')
+          setReceivingFor(null)
           toast.success(
             action === 'receive'
               ? t('transferRequests.received', 'رسید؛ موجودی به انبار مقصد رفت')
@@ -320,6 +342,73 @@ export function TransferRequestsSection() {
           <Button size="sm" variant="ghost" onClick={() => setCancelFor(null)}>
             {t('transferRequests.close', 'انصراف')}
           </Button>
+        </div>
+      ) : null}
+
+      {receivingFor ? (
+        <div className={`${packCard} space-y-2`}>
+          <h4 className="text-sm font-semibold">
+            {t('transferRequests.receiveDiscrepancyTitle', 'تأیید دریافت و ثبت مغایرت')}:{' '}
+            {receivingFor.transfer_number ?? receivingFor.id.slice(0, 8)}
+          </h4>
+          {(receivingDetail.data?.lines ?? receivingFor.lines ?? []).map((line) => {
+            const shipped = Number(line.quantity)
+            const currentVal = receivedQtys[line.id] ?? String(shipped)
+            return (
+              <div key={line.id} className="grid items-center gap-2 sm:grid-cols-3">
+                <span className="text-xs">
+                  {labelOf(products, line.product_id)} ({t('transferRequests.shippedQty', 'ارسالی')}
+                  : {shipped})
+                </span>
+                <Input
+                  name={`received.${line.id}`}
+                  inputMode="decimal"
+                  value={currentVal}
+                  onChange={(e) =>
+                    setReceivedQtys((prev) => ({ ...prev, [line.id]: e.target.value }))
+                  }
+                />
+                <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {t('transferRequests.discrepancy', 'مغایرت')}:{' '}
+                  {Math.max(0, shipped - (Number(currentVal) || 0))}
+                </span>
+              </div>
+            )
+          })}
+          <Input
+            name="discrepancyReason"
+            value={discrepancyReason}
+            placeholder={t(
+              'transferRequests.discrepancyReason',
+              'توضیح کسری یا آسیب (در صورت مغایرت)',
+            )}
+            onChange={(e) => setDiscrepancyReason(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={advance.isPending}
+              onClick={() => {
+                const detailLines = receivingDetail.data?.lines ?? receivingFor.lines ?? []
+                const payload = detailLines.map((line) => {
+                  const shipped = Number(line.quantity)
+                  const raw = receivedQtys[line.id]
+                  const qty = raw === undefined ? shipped : Number(raw)
+                  return {
+                    lineId: line.id,
+                    receivedQuantity: Number.isFinite(qty) && qty >= 0 ? qty : shipped,
+                    ...(discrepancyReason.trim() ? { reason: discrepancyReason.trim() } : {}),
+                  }
+                })
+                step(receivingFor, 'receive', undefined, payload)
+              }}
+            >
+              {t('transferRequests.actionsLabel.receive', 'تأیید دریافت')}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setReceivingFor(null)}>
+              {t('transferRequests.close', 'انصراف')}
+            </Button>
+          </div>
         </div>
       ) : null}
 

@@ -39,3 +39,29 @@ export function planReturnDisposition(input: {
   })
   return { needsStockAdjust: dispositions.includes('scrap'), dispositions }
 }
+
+export type ReturnInventoryBucket = 'sellable_stock' | 'quarantine' | 'scrap'
+
+export interface ConditionRoutingDecision {
+  readonly restockChoice: ReturnDisposition
+  readonly bucket: ReturnInventoryBucket
+  readonly requiresStockAdjust: boolean
+}
+
+/**
+ * Maps physical condition on clothing/retail returns (`sealed`/`opened`/`used`/`damaged`/`defective`/`incomplete`)
+ * to inventory handling bucket while preserving explicit restock/scrap disposition checks.
+ */
+export function routeReturnConditionDisposition(input: {
+  conditionCode: string | null | undefined
+  restockChoice: ReturnDisposition
+}): ConditionRoutingDecision {
+  if (input.restockChoice === 'scrap') {
+    return { restockChoice: 'scrap', bucket: 'scrap', requiresStockAdjust: true }
+  }
+  const c = (input.conditionCode ?? '').toLowerCase()
+  if (c === 'defective' || c === 'damaged' || c === 'incomplete') {
+    return { restockChoice: 'restock', bucket: 'quarantine', requiresStockAdjust: true }
+  }
+  return { restockChoice: 'restock', bucket: 'sellable_stock', requiresStockAdjust: false }
+}

@@ -106,3 +106,112 @@ export function useReceiveGoods() {
     },
   })
 }
+
+export interface ThreeWayMatchMismatch {
+  code: string
+  productId: string | null
+  variantId: string | null
+  orderedQty: number
+  receivedQty: number
+  invoicedQty: number
+  orderedUnitPriceMinor: number | null
+  invoicedUnitPriceMinor: number | null
+  detail: string
+}
+
+export interface ThreeWayMatchResponse {
+  purchaseOrderId: string
+  supplierInvoiceId: string | null
+  matched: boolean
+  mayApprovePayment: boolean
+  paymentBlocked: boolean
+  mismatches: ThreeWayMatchMismatch[]
+  summary: {
+    orderedQtyTotal: number
+    receivedQtyTotal: number
+    invoicedQtyTotal: number
+  }
+}
+
+export interface SupplierScorecardItem {
+  supplierId: string
+  name: string
+  band: 'low' | 'moderate' | 'high' | 'unknown'
+  score: number | null
+  signals: Array<{ key: string; detail: string; weight: number }>
+  evidence: {
+    purchases: number
+    received: number
+    neverReceived: number
+    averageDaysLate: number | null
+    averagePricePremiumPercent: number | null
+  }
+}
+
+export function useCreateDraftPurchaseOrdersFromSuggestions() {
+  const queryClient = useQueryClient()
+  const intent = useIntentKey('po-suggestions')
+  return useMutation({
+    mutationFn: async (input: {
+      suggestions: Array<{
+        productId: string
+        supplierId?: string | null | undefined
+        onHand: number
+        reservedQuantity?: number | undefined
+        openPoQuantity?: number | undefined
+        reorderLevel: number
+        demandForecastDaily?: number | undefined
+        leadTimeDays?: number | undefined
+        purchasePackSize?: number | undefined
+        unitPrice?: number | undefined
+      }>
+      notes?: string | undefined
+      expectedDeliveryDate?: string | undefined
+    }) => {
+      const { data } = await apiClient.post('/purchase-orders/from-suggestions', input, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
+      return data
+    },
+    onError: (error) => intent.settle(error),
+    onSuccess: () => {
+      intent.settle()
+      queryClient.invalidateQueries({ queryKey: purchasingKeys.orders() })
+    },
+  })
+}
+
+export function useThreeWayMatch(
+  purchaseOrderId: string | null | undefined,
+  invoiceId?: string | null,
+) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [
+      ...purchasingKeys.order(purchaseOrderId ?? ''),
+      'three-way-match',
+      invoiceId ?? '',
+    ] as const,
+    queryFn: async (): Promise<ThreeWayMatchResponse> => {
+      const { data } = await apiClient.get(`/purchase-orders/${purchaseOrderId}/three-way-match`, {
+        params: invoiceId ? { invoiceId } : {},
+      })
+      return data
+    },
+    enabled: authReady && Boolean(purchaseOrderId),
+    staleTime: 30_000,
+  })
+}
+
+export function useSupplierScorecard(enabled = true) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...purchasingKeys.all, 'supplier-scorecard'] as const,
+    queryFn: async (): Promise<SupplierScorecardItem[]> => {
+      const { data } = await apiClient.get('/suppliers/scorecard')
+      return asList<SupplierScorecardItem>(data)
+    },
+    enabled: authReady && enabled,
+    staleTime: 60_000,
+  })
+}

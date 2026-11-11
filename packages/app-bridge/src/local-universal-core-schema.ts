@@ -137,6 +137,16 @@ export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_workspace_date ON service_delivery_sessions(workspace_id, session_date)`,
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_customer ON service_delivery_sessions(workspace_id, customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_practitioner ON service_delivery_sessions(workspace_id, practitioner_id)`,
+  `CREATE TABLE IF NOT EXISTS service_delivery_status_audit (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    session_id TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT NOT NULL,
+    actor_id TEXT,
+    changed_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_service_delivery_audit_session ON service_delivery_status_audit(workspace_id, session_id, changed_at DESC)`,
 ]
 
 /** v15 on an existing v14 cache: the reason a free session was free, and the one-consume-per-session guard. */
@@ -547,4 +557,41 @@ export const BATCHES_STATEMENTS: readonly string[] = [
      ON lot_allocations(workspace_id, consumer_type, consumer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_lot_allocations_batch
      ON lot_allocations(workspace_id, batch_id)`,
+]
+
+export const REPAIR_TICKETS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS repair_tickets (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    number INTEGER NOT NULL DEFAULT 0,
+    customer_id TEXT NOT NULL,
+    serial_id TEXT,
+    device_label TEXT NOT NULL,
+    problem TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'received'
+      CHECK (status IN ('received', 'diagnosing', 'waiting_parts', 'repairing', 'ready', 'delivered', 'cancelled')),
+    under_warranty INTEGER NOT NULL DEFAULT 0,
+    customer_approved INTEGER NOT NULL DEFAULT 0,
+    estimate_minor INTEGER,
+    currency TEXT,
+    technician_employee_id TEXT,
+    promised_on TEXT,
+    invoice_id TEXT,
+    created_by TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    closed_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_repair_tickets_workspace_status ON repair_tickets(workspace_id, status, created_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS repair_ticket_events (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    ticket_id TEXT NOT NULL,
+    from_status TEXT,
+    to_status TEXT NOT NULL,
+    note TEXT,
+    actor_id TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_repair_ticket_events_ticket ON repair_ticket_events(ticket_id, created_at)`,
 ]

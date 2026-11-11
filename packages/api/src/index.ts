@@ -78,6 +78,7 @@ export {
   useUpdateInvoice,
   usePostInvoiceToLedger,
   usePostUnpostedInvoices,
+  useExchangeInvoice,
   type PostUnpostedSummary,
   type InvoiceLedgerPostResult,
   useDeleteInvoice,
@@ -290,8 +291,18 @@ export {
   useCreateProjectTask,
   useUpdateProjectTask,
   useDeleteProjectTask,
+  useProjectMembers,
+  useAddProjectMember,
+  useRemoveProjectMember,
+  useProjectTimeEntries,
+  useCreateProjectTimeEntry,
+  useUpdateProjectTimeEntry,
+  useDeleteProjectTimeEntry,
+  useBillProjectMilestone,
   projectKeys,
   projectTaskKeys,
+  projectMembersKeys,
+  projectTimeEntriesKeys,
 } from './hooks/projects'
 
 // ─── Workspace ────────────────────────────────────────────
@@ -395,6 +406,9 @@ export {
   useBalanceSheet,
   useIncomeStatement,
   useProfitReportsByCurrency,
+  useVariantAttributeReport,
+  useCostObjectProfitReport,
+  type VariantAttributeReportRow,
   type ProfitReport,
   type ProductProfitRow,
   type CostStatus,
@@ -704,6 +718,7 @@ export {
   useBOMs,
   useWorkOrders,
   useCreateWorkOrder,
+  useUpdateWorkOrder,
   useProductionDefinition,
   useSaveProductionDefinition,
   useProduce,
@@ -729,9 +744,15 @@ export {
   usePurchaseOrder,
   useCreatePurchaseOrder,
   useReceiveGoods,
+  useCreateDraftPurchaseOrdersFromSuggestions,
+  useThreeWayMatch,
+  useSupplierScorecard,
   purchasingKeys,
   type PurchaseOrder,
   type PurchaseOrderItem,
+  type ThreeWayMatchMismatch,
+  type ThreeWayMatchResponse,
+  type SupplierScorecardItem,
 } from './hooks/purchasing'
 
 // ─── Billing & Subscription ───────────────────────────────
@@ -1329,12 +1350,21 @@ export {
 
 // ─── Sales orders and the storefront ──────────────────────
 export {
+  useSalesOrders,
+  useSalesOrder,
+  useCreateSalesOrder,
+  useConfirmSalesOrder,
+  useCancelSalesOrder,
+  useFulfillSalesOrder,
+  useInvoiceSalesOrder,
   useStorefrontSettings,
   useSaveStorefrontSettings,
   usePublishableKeys,
   useCreatePublishableKey,
   useRevokePublishableKey,
   orderKeys,
+  type SalesOrderRow,
+  type SalesOrderItemRow,
   type PublishableKeyRow,
 } from './hooks/orders'
 
@@ -1417,6 +1447,8 @@ export {
 
 export { useCmsRemoteContent, type CmsGlobals } from './hooks/cms/remote-content'
 export * from './hooks/universal-core'
+export * from './hooks/contracts'
+export * from './hooks/quality'
 export * from './hooks/guide-progress'
 export * from './hooks/dashboard-kpis'
 export * from './hooks/user-state'

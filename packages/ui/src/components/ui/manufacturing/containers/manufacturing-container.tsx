@@ -8,6 +8,7 @@ import {
   useBOMs,
   useCreateWorkOrder,
   useProducts,
+  useUpdateWorkOrder,
   useWorkOrders,
   type BOM,
   type WorkOrder,
@@ -89,6 +90,7 @@ function ManufacturingScreen() {
   // the production form itself searches the whole catalogue.
   const { data: productsData } = useProducts({ limit: 200, isActive: true })
   const { mutate: createWorkOrder, isPending: isCreatingWorkOrder } = useCreateWorkOrder()
+  const { mutate: updateWorkOrder } = useUpdateWorkOrder()
 
   const isLoading = activeTab === 'boms' ? isBomsLoading : isWorkOrdersLoading
   const error = activeTab === 'boms' ? bomsError : workOrdersError
@@ -179,6 +181,9 @@ function ManufacturingScreen() {
         onProduce={handleProduce}
         onEditDefinition={handleEditDefinition}
         onCompleteWorkOrder={handleCompleteWorkOrder}
+        onCancelWorkOrder={(workOrder) =>
+          updateWorkOrder({ id: workOrder.id, status: 'cancelled' })
+        }
         onOpenCreateWorkOrder={() => setIsWorkOrderDialogOpen(true)}
         history={<ProductionHistory t={t} locale={locale} />}
         report={<ManufacturingReportView t={t} locale={locale} />}

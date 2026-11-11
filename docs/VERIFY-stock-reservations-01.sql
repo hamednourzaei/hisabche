@@ -58,3 +58,11 @@ SELECT r.id
   LEFT JOIN public.warehouses w ON w.id = r.warehouse_id
  WHERE w.id IS NULL OR w.workspace_id IS DISTINCT FROM r.workspace_id;
 -- EXPECT: 0 rows.
+
+-- RLS on and the public keys locked out (expect ok = true).
+SELECT 'rls_and_public_locked' AS check_name,
+       bool_and(c.relrowsecurity)
+       AND NOT bool_or(has_table_privilege('anon', c.oid, 'SELECT'))
+       AND NOT bool_or(has_table_privilege('authenticated', c.oid, 'SELECT')) AS ok
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname IN ('stock_reservations');

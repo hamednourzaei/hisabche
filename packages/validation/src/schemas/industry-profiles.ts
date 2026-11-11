@@ -18,9 +18,14 @@
 // changes authorisation, never hides a module and never touches money.
 // ============================================
 
-import { z } from 'zod'
 import type { CapabilityDiagnostic, CapabilityKey } from './business-capabilities'
 import { USABLE_CAPABILITIES, resolveCapabilities } from './business-capabilities'
+import {
+  operatingAnswersSchema,
+  type LocationScope,
+  type OperatingAnswers,
+  type YesNo,
+} from './operational-dna'
 
 /**
  * Canonical industry keys.
@@ -429,22 +434,14 @@ export function canonicalIndustryTypes(
   }
 }
 
-export const operatingCharacteristicsSchema = z
-  .object({
-    holdsStock: z.enum(['yes', 'no', 'unknown']).default('unknown'),
-    locations: z.enum(['single', 'multiple', 'unknown']).default('unknown'),
-    producesGoods: z.enum(['yes', 'no', 'unknown']).default('unknown'),
-    sellsOnCredit: z.enum(['yes', 'no', 'unknown']).default('unknown'),
-    hasPointOfSale: z.enum(['yes', 'no', 'unknown']).default('unknown'),
-    hasStaff: z.enum(['yes', 'no', 'unknown']).default('unknown'),
-  })
-  .strict()
-  .refine((data) => !(data.holdsStock === 'no' && data.producesGoods === 'yes'), {
-    message: 'CANNOT_PRODUCE_WITHOUT_STOCK',
-    path: ['producesGoods'],
-  })
-
-export type OperatingCharacteristics = z.infer<typeof operatingCharacteristicsSchema>
+export interface OperatingCharacteristics {
+  readonly holdsStock: YesNo
+  readonly locations: LocationScope
+  readonly producesGoods: YesNo
+  readonly sellsOnCredit: YesNo
+  readonly hasPointOfSale: YesNo
+  readonly hasStaff: YesNo
+}
 
 export const DEFAULT_OPERATING_CHARACTERISTICS: OperatingCharacteristics = {
   holdsStock: 'unknown',
@@ -454,6 +451,33 @@ export const DEFAULT_OPERATING_CHARACTERISTICS: OperatingCharacteristics = {
   hasPointOfSale: 'unknown',
   hasStaff: 'unknown',
 }
+
+export function characteristicsFromAnswers(answers: OperatingAnswers): OperatingCharacteristics {
+  return {
+    holdsStock: answers.holdsStock ?? 'unknown',
+    locations: answers.locations ?? 'unknown',
+    producesGoods: answers.producesGoods ?? 'unknown',
+    sellsOnCredit: answers.sellsOnCredit ?? 'unknown',
+    hasPointOfSale: answers.hasPointOfSale ?? 'unknown',
+    hasStaff: answers.hasStaff ?? 'unknown',
+  }
+}
+
+export const operatingCharacteristicsSchema = operatingAnswersSchema
+  .pick({
+    holdsStock: true,
+    locations: true,
+    producesGoods: true,
+    sellsOnCredit: true,
+    hasPointOfSale: true,
+    hasStaff: true,
+  })
+  .strict()
+  .transform((raw) => characteristicsFromAnswers(raw))
+  .refine((data) => !(data.holdsStock === 'no' && data.producesGoods === 'yes'), {
+    message: 'CANNOT_PRODUCE_WITHOUT_STOCK',
+    path: ['producesGoods'],
+  })
 
 export interface BusinessProfile {
   /** Null only when nothing recognisable was selected. */
@@ -573,7 +597,7 @@ export function resolveBusinessProfile(
 
   // Derive recommended modules in deterministic priority order
   const recommendedModules: string[] = ['today', 'sell']
-  if (inventoryRelevant !== false) {
+  if (inventoryRelevant === true) {
     recommendedModules.push('stock')
   }
   if (parsedChars.hasPointOfSale === 'yes') {

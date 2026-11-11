@@ -12,10 +12,18 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { usePackageGrants, useRecordGrantSuspension, apiErrorMessage } from '@hisabche/api'
+import {
+  useGrantPackageCredits,
+  usePackageGrants,
+  useProducts,
+  useRecordGrantSuspension,
+  apiErrorMessage,
+} from '@hisabche/api'
 
 import { Badge } from '../capability/capability-kit'
 import { Button } from '../button'
+import { Input } from '../input'
+import { SelectField } from '../select-field'
 
 export interface PackageGrantsPanelProps {
   customerId: string
@@ -42,11 +50,15 @@ export function PackageGrantsPanel({ customerId, maySuspend }: PackageGrantsPane
   }
   const grants = usePackageGrants(customerId)
   const record = useRecordGrantSuspension()
+  const grantCredits = useGrantPackageCredits()
+  const products = useProducts({ limit: 100, isActive: true })
   const [reasonFor, setReasonFor] = useState<{ id: string; kind: 'SUSPEND' | 'RESUME' } | null>(
     null,
   )
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [grantProductId, setGrantProductId] = useState('')
+  const [grantQty, setGrantQty] = useState('1')
 
   if (grants.isLoading) {
     return (
@@ -61,11 +73,59 @@ export function PackageGrantsPanel({ customerId, maySuspend }: PackageGrantsPane
     )
   }
   const items = grants.data ?? []
+  const packageOptions = (products.data?.products ?? [])
+    .filter((p): p is typeof p & { id: string } => Boolean(p.id))
+    .map((p) => ({ value: p.id, label: p.name }))
+
+  const grantForm = maySuspend ? (
+    <form
+      className="flex flex-wrap items-center gap-2 rounded-md border border-[hsl(var(--border-default))] p-2"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const qty = Number(grantQty)
+        if (!grantProductId || !Number.isFinite(qty) || qty <= 0) return
+        setError(null)
+        grantCredits.mutate(
+          { customerId, packageProductId: grantProductId, quantity: qty },
+          {
+            onSuccess: () => {
+              setGrantProductId('')
+              setGrantQty('1')
+            },
+            onError: (cause) =>
+              setError(apiErrorMessage(cause, t('packageGrants.failed', 'ثبت نشد.'))),
+          },
+        )
+      }}
+    >
+      <SelectField
+        value={grantProductId}
+        onChange={setGrantProductId}
+        options={packageOptions}
+        placeholder={t('packageGrants.selectPackage', 'بسته')}
+        className="w-40"
+      />
+      <Input
+        type="number"
+        min={1}
+        value={grantQty}
+        onChange={(e) => setGrantQty(e.target.value)}
+        className="w-20"
+      />
+      <Button type="submit" size="sm" disabled={grantCredits.isPending || !grantProductId}>
+        {t('packageGrants.grantAction', 'اعطای اعتبار')}
+      </Button>
+    </form>
+  ) : null
+
   if (items.length === 0) {
     return (
-      <p className="text-xs text-[hsl(var(--fg-secondary))]">
-        {t('packageGrants.empty', 'این مشتری هنوز بسته‌ای نخریده است.')}
-      </p>
+      <section aria-label={t('packageGrants.title', 'بسته‌های مشتری')} className="space-y-2">
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('packageGrants.empty', 'این مشتری هنوز بسته‌ای نخریده است.')}
+        </p>
+        {grantForm}
+      </section>
     )
   }
 
@@ -93,6 +153,7 @@ export function PackageGrantsPanel({ customerId, maySuspend }: PackageGrantsPane
       <h3 className="text-sm font-medium text-[hsl(var(--fg-primary))]">
         {t('packageGrants.title', 'بسته‌های مشتری')}
       </h3>
+      {grantForm}
       <ul className="space-y-2">
         {items.map((grant) => (
           <li

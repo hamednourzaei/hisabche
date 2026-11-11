@@ -12,7 +12,7 @@
 // ============================================
 
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -20,6 +20,7 @@ import { INDUSTRY_KEYS } from '../index'
 
 const ROOT = resolve(__dirname, '../../../..')
 const CSV = resolve(ROOT, 'docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.csv')
+const LEVELS_CSV = resolve(ROOT, 'docs/architecture/universal-core/INDUSTRY-SUPPORT-LEVELS.csv')
 
 const STATUSES = [
   'VERIFIED_SUPPORTED',
@@ -157,6 +158,41 @@ describe('industry coverage table', () => {
       'other',
     ]) {
       expect(INDUSTRY_KEYS as readonly string[], key).toContain(key)
+    }
+  })
+
+  it('three-level industry status enforces workflowComplete => profiled => registered and verifies cited tests on disk', () => {
+    expect(existsSync(LEVELS_CSV)).toBe(true)
+    const [lvlHeader, ...lvlRecords] = parseCsv(readFileSync(LEVELS_CSV, 'utf8'))
+    const idx = (name: string) => lvlHeader!.indexOf(name)
+
+    const seenKeys = new Set<string>()
+    for (const row of lvlRecords) {
+      const key = row[idx('industry_key')]!
+      const registered = row[idx('registered')] === 'true'
+      const profiled = row[idx('profiled')] === 'true'
+      const workflowComplete = row[idx('workflow_complete')] === 'true'
+      const testsRaw = row[idx('acceptance_tests')] ?? ''
+      seenKeys.add(key)
+
+      if (profiled) expect(registered, `${key} profiled => registered`).toBe(true)
+      if (workflowComplete) {
+        expect(profiled, `${key} workflowComplete => profiled`).toBe(true)
+        const files = testsRaw
+          .split(';')
+          .map((s) => s.trim())
+          .filter(Boolean)
+        expect(files.length, `${key} workflowComplete must list acceptance tests`).toBeGreaterThan(
+          0,
+        )
+        for (const file of files) {
+          expect(existsSync(resolve(ROOT, file)), `${key} missing test ${file}`).toBe(true)
+        }
+      }
+    }
+
+    for (const key of INDUSTRY_KEYS) {
+      expect(seenKeys.has(key), `missing level row for ${key}`).toBe(true)
     }
   })
 })

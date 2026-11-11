@@ -375,9 +375,17 @@ export interface CashForecast {
   days: { date: string; expectedIn: number; expectedOut: number; balance: number }[]
   /** The first day the balance goes negative, or null. */
   firstShortfallDate: string | null
+  status?: 'ok' | 'insufficient_data'
+  windows?: Array<{
+    days: number
+    status?: 'ok' | 'insufficient_data'
+    expectedInflowMinor: number
+    openingCashMinor: number
+    projectedCashMinor: number | null
+  }>
 }
 
-export function useCashForecast(days = 30) {
+export function useCashForecast(days = 30, options?: { enabled?: boolean }) {
   const ready = useAuthReady()
 
   return useQuery({
@@ -386,7 +394,7 @@ export function useCashForecast(days = 30) {
       const { data } = await apiClient.get('/intelligence/cash-forecast', { params: { days } })
       return (data as CashForecast) ?? null
     },
-    enabled: ready,
+    enabled: ready && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000,
   })
 }

@@ -33,11 +33,119 @@ export interface PublishableKeyRow {
 
 export const orderKeys = {
   all: ['orders'] as const,
+  list: (ws: string, params?: { status?: string; limit?: number; offset?: number }) =>
+    [...orderKeys.all, ws, 'list', params] as const,
+  detail: (ws: string, id: string) => [...orderKeys.all, ws, 'detail', id] as const,
   settings: (ws: string) => [...orderKeys.all, ws, 'storefront-settings'] as const,
   publishable: (ws: string) => [...orderKeys.all, ws, 'publishable-keys'] as const,
 }
 
+export interface SalesOrderItemRow {
+  id?: string
+  product_id?: string | null
+  product_name: string
+  quantity: string | number
+  unit_price: string | number
+  line_total: string | number
+}
+
+export interface SalesOrderRow {
+  id: string
+  order_number?: string | null
+  status: string
+  customer_id?: string | null
+  customer_name?: string | null
+  customer_phone?: string | null
+  currency?: string | null
+  total: string | number
+  invoice_id?: string | null
+  notes?: string | null
+  created_at: string
+  items?: SalesOrderItemRow[]
+}
+
 const ws = () => getActiveWorkspaceId() ?? ''
+
+export function useSalesOrders(params?: { status?: string; limit?: number; offset?: number }) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: orderKeys.list(ws(), params),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        data?: SalesOrderRow[]
+        total?: number
+        limit?: number
+        offset?: number
+      }>('/orders', { params })
+      return {
+        orders: asList<SalesOrderRow>(data?.data, '/orders'),
+        total: Number(data?.total ?? 0),
+      }
+    },
+    enabled: ready,
+  })
+}
+
+export function useSalesOrder(id: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: orderKeys.detail(ws(), id ?? ''),
+    queryFn: async () => (await apiClient.get(`/orders/${id}`)).data as SalesOrderRow,
+    enabled: ready && Boolean(id),
+  })
+}
+
+export function useCreateSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) =>
+      (await apiClient.post('/orders', input)).data as SalesOrderRow,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useConfirmSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await apiClient.post(`/orders/${id}/confirm`, {})).data as SalesOrderRow,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useCancelSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) =>
+      (await apiClient.post(`/orders/${id}/cancel`, reason ? { reason } : {}))
+        .data as SalesOrderRow,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useFulfillSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await apiClient.post(`/orders/${id}/fulfill`, {})).data as SalesOrderRow,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useInvoiceSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, customerId }: { id: string; customerId?: string }) =>
+      (await apiClient.post(`/orders/${id}/invoice`, customerId ? { customerId } : {})).data as {
+        order: SalesOrderRow
+        invoiceId?: string
+      },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.all })
+      qc.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
 
 export function useStorefrontSettings() {
   const ready = useAuthReady()

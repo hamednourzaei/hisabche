@@ -14,7 +14,12 @@
 import { useMemo, useState } from 'react'
 import { Grid3x3, PackagePlus } from 'lucide-react'
 import { useCreateVariantMatrix, useMoveVariantStock, useVariantStock } from '@hisabche/api'
-import { totalsByAttribute, VARIANT_STOCK_MODES, type VariantStockMode } from '@hisabche/validation'
+import {
+  checkVariantAtpAvailability,
+  totalsByAttribute,
+  VARIANT_STOCK_MODES,
+  type VariantStockMode,
+} from '@hisabche/validation'
 
 import { Button } from '../button'
 import { Input } from '../input'
@@ -160,6 +165,47 @@ export function VariantStockPanel({
           {row.onHand}
         </span>
       ),
+    },
+    {
+      id: 'atp',
+      labelKey: 'variantStock.atp',
+      labelFallback: 'قابل فروش (ATP)',
+      align: 'end',
+      render: (row) => {
+        const holds = data?.reservations ?? []
+        const reserved = holds
+          .filter((h) => h.variantId === row.variantId && h.status === 'active')
+          .reduce((s, h) => s + h.quantity, 0)
+        const atpAvailable =
+          checkVariantAtpAvailability({
+            demands: [
+              {
+                variantId: row.variantId,
+                warehouseId: row.byWarehouse[0]?.warehouseId ?? 'default',
+                quantity: 1,
+              },
+            ],
+            stock: row.byWarehouse.map((w) => ({
+              variantId: row.variantId,
+              warehouseId: w.warehouseId ?? 'default',
+              quantity: w.quantity,
+            })),
+            activeReservations: holds,
+          }) === null
+        const atpQty = Math.max(0, row.onHand - reserved)
+        return (
+          <span
+            className={
+              !atpAvailable
+                ? 'text-[hsl(var(--color-warning))] font-medium'
+                : 'text-[hsl(var(--fg-primary))]'
+            }
+          >
+            {atpQty}
+            {reserved > 0 ? ` (${t('variantStock.reserved', 'رزرو')}: ${reserved})` : ''}
+          </span>
+        )
+      },
     },
     {
       id: 'byWarehouse',

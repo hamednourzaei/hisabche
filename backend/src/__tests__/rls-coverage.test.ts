@@ -93,6 +93,11 @@ const TENANT_TABLES = [
   'mdm_merges',
   'ui_visibility_profiles',
   'ui_visibility_suggestions',
+  'fx_agent_settlements',
+  'gold_operations',
+  'gold_location_reconciliations',
+  'service_delivery_status_audit',
+  'repair_ticket_parts',
   'branches',
   'member_branches',
   // docs/developer-platform-migration.sql — SELECT for owners/managers only.
@@ -109,6 +114,11 @@ const TENANT_TABLES = [
   'app_installations',
   'app_reviews',
   'app_reports',
+  'resource_bookings',
+  'contracts',
+  'contract_obligations',
+  'quality_events',
+  'warranty_claims',
 ]
 
 function allMigrationSql(): string {

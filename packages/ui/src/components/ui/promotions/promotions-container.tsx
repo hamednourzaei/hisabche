@@ -45,6 +45,7 @@ import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SegmentedControl } from '../segmented-control'
 import { SelectField } from '../select-field'
+import { GoldRateBoardPanel } from './gold-rate-board-panel'
 import { PriceListsPanel } from './price-lists-panel'
 
 /** Server and schema refusals with a translation. Anything else: the general message. */
@@ -77,7 +78,7 @@ export function PromotionsContainer() {
   const [adding, setAdding] = useState(false)
   const [search, setSearch] = useState('')
   // Promotions and price lists are two lists; one is on screen at a time.
-  const [section, setSection] = useState<'promotions' | 'lists'>('promotions')
+  const [section, setSection] = useState<'promotions' | 'lists' | 'goldRates'>('promotions')
   // The shared table speaks whole keys with a fallback; this screen's own `t`
   // is scoped. Same catalogue, and a missing column label never throws.
   const translateAll = useTranslations()
@@ -218,10 +219,12 @@ export function PromotionsContainer() {
         options={[
           { value: 'promotions', label: t('sections.promotions') },
           { value: 'lists', label: t('sections.lists') },
+          { value: 'goldRates', label: tableT('gold.rateBoardTitle', 'تابلوی نرخ طلا') },
         ]}
       />
 
       {section === 'lists' ? <PriceListsPanel /> : null}
+      {section === 'goldRates' ? <GoldRateBoardPanel /> : null}
 
       {section === 'promotions' && adding ? (
         <PromotionForm onDone={() => setAdding(false)} errorText={errorText} />

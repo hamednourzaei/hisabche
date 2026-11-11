@@ -41,3 +41,11 @@ SELECT a.employee_id, a.leave_type, SUM(a.accrued) AS accrued
  GROUP BY a.employee_id, a.leave_type
 HAVING SUM(a.accrued) < 0;
 -- EXPECT: 0 rows.
+
+-- RLS on and the public keys locked out (expect ok = true).
+SELECT 'rls_and_public_locked' AS check_name,
+       bool_and(c.relrowsecurity)
+       AND NOT bool_or(has_table_privilege('anon', c.oid, 'SELECT'))
+       AND NOT bool_or(has_table_privilege('authenticated', c.oid, 'SELECT')) AS ok
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relname IN ('leave_policies','leave_accruals');

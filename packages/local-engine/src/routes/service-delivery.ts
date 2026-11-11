@@ -429,6 +429,21 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       )
       if (changed.changes !== 1) throw new ConflictError('SESSION_CHANGED')
 
+      c.db.run(
+        `INSERT INTO service_delivery_status_audit (
+           id, workspace_id, session_id, from_status, to_status, actor_id, changed_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          `${sessionId}-${sessionRow.status}-${plan.session.status}-${plan.session.updatedAt}`,
+          c.ctx.workspaceId,
+          sessionId,
+          sessionRow.status,
+          plan.session.status,
+          c.ctx.userId ?? null,
+          plan.session.updatedAt,
+        ],
+      )
+
       if (c.headers?.['x-hisabche-queue'] === '1') {
         enqueueSessionCommand(c, `${sessionId}-${plan.session.status}`, 'update', {
           ...plan.session,

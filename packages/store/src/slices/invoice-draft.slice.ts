@@ -117,6 +117,8 @@ export interface InvoiceDraftState {
   ) => void
   /** The size / colour of a line whose product has variants (clothing, 10 Nov 2026). */
   setRowVariant: (rowId: string, variantId: string | undefined) => void
+  /** V59.1 gold-01: attach or clear a locked metal-rate snapshot on a line. */
+  setRowGoldSnapshot: (rowId: string, snapshot: InvoiceGridRow['goldSnapshot']) => void
 
   // ---- columns ----
   initColumns: (currency: CurrencyCode, defaults?: InvoiceDefaultSelection) => void
@@ -273,6 +275,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
             ...(source.productId ? { productId: source.productId } : {}),
             ...(source.variantId ? { variantId: source.variantId } : {}),
             ...(source.productUnit ? { productUnit: source.productUnit } : {}),
+            ...(source.goldSnapshot ? { goldSnapshot: source.goldSnapshot } : {}),
             values: { ...source.values },
           }
           const rows = [...state.rows]
@@ -310,6 +313,17 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
             const next: InvoiceGridRow = { ...row }
             if (variantId) next.variantId = variantId
             else delete next.variantId
+            return next
+          }),
+        })),
+
+      setRowGoldSnapshot: (rowId, snapshot) =>
+        set((state) => ({
+          rows: state.rows.map((row) => {
+            if (row.id !== rowId) return row
+            const next: InvoiceGridRow = { ...row }
+            if (snapshot) next.goldSnapshot = snapshot
+            else delete next.goldSnapshot
             return next
           }),
         })),

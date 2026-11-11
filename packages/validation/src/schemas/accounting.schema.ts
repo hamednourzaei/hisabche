@@ -77,6 +77,8 @@ export const accountRoles = [
   // balance — the absorbed-but-never-expensed overhead. Flagged in
   // V58-OWNER-DECISIONS.
   'manufacturing_overhead',
+  // V59.1: book-currency value held in foreign-currency cashboxes / vaults.
+  'fx_vault',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

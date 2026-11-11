@@ -15,7 +15,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | General-purpose baseline              | 44    |
 | Exact match with `JOURNEY_INDUSTRIES` | 14    |
 | Available capabilities                | 3     |
-| Partial capabilities                  | 6     |
+| Partial capabilities                  | 30    |
 
 ## Industry registry
 
@@ -97,21 +97,46 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 
 <!-- industry-capability-table -->
 
-| Capability         | Status    | Active in a resolved profile |
-| ------------------ | --------- | ---------------------------- |
-| `measurement`      | available | فعال                         |
-| `weight_pricing`   | available | فعال                         |
-| `length_pricing`   | planned   | فعال نیست                    |
-| `volume_pricing`   | planned   | فعال نیست                    |
-| `multi_unit`       | available | فعال                         |
-| `batch_expiry`     | partial   | فعال (جزئی)                  |
-| `recipe_bom`       | planned   | فعال نیست                    |
-| `variants`         | partial   | فعال (جزئی)                  |
-| `table_service`    | planned   | فعال نیست                    |
-| `serialized_items` | partial   | فعال (جزئی)                  |
-| `auto_fitments`    | partial   | فعال (جزئی)                  |
-| `gold_purity`      | partial   | فعال (جزئی)                  |
-| `making_charges`   | partial   | فعال (جزئی)                  |
+| Capability             | Status    | Active in a resolved profile |
+| ---------------------- | --------- | ---------------------------- |
+| `measurement`          | available | فعال                         |
+| `weight_pricing`       | available | فعال                         |
+| `length_pricing`       | partial   | فعال (جزئی)                  |
+| `volume_pricing`       | partial   | فعال (جزئی)                  |
+| `area_pricing`         | partial   | فعال (جزئی)                  |
+| `roll_cutting`         | partial   | فعال (جزئی)                  |
+| `tiered_pricing`       | partial   | فعال (جزئی)                  |
+| `multi_unit`           | available | فعال                         |
+| `batch_expiry`         | partial   | فعال (جزئی)                  |
+| `recipe_bom`           | partial   | فعال (جزئی)                  |
+| `variants`             | partial   | فعال (جزئی)                  |
+| `table_service`        | planned   | فعال نیست                    |
+| `serialized_items`     | partial   | فعال (جزئی)                  |
+| `auto_fitments`        | partial   | فعال (جزئی)                  |
+| `gold_purity`          | partial   | فعال (جزئی)                  |
+| `making_charges`       | partial   | فعال (جزئی)                  |
+| `resource_capacity`    | partial   | فعال (جزئی)                  |
+| `work_queue_sla`       | partial   | فعال (جزئی)                  |
+| `sales_orders`         | partial   | فعال (جزئی)                  |
+| `procurement_planning` | partial   | فعال (جزئی)                  |
+| `three_way_match`      | partial   | فعال (جزئی)                  |
+| `project_costing`      | partial   | فعال (جزئی)                  |
+| `timesheet_billing`    | partial   | فعال (جزئی)                  |
+| `contracts_recurring`  | partial   | فعال (جزئی)                  |
+| `deposits_liability`   | partial   | فعال (جزئی)                  |
+| `installments`         | partial   | فعال (جزئی)                  |
+| `package_credits`      | partial   | فعال (جزئی)                  |
+| `delivery_pod`         | partial   | فعال (جزئی)                  |
+| `fleet_dispatch`       | partial   | فعال (جزئی)                  |
+| `asset_rental`         | planned   | فعال نیست                    |
+| `quality_inspection`   | partial   | فعال (جزئی)                  |
+| `warranty_claims`      | partial   | فعال (جزئی)                  |
+| `cost_allocation`      | partial   | فعال (جزئی)                  |
+| `approval_workflow`    | partial   | فعال (جزئی)                  |
+| `owner_forecast`       | partial   | فعال (جزئی)                  |
+| `livestock_register`   | planned   | فعال نیست                    |
+| `crop_cycle`           | planned   | فعال نیست                    |
+| `room_nights`          | planned   | فعال نیست                    |
 
 <!-- /industry-capability-table -->
 

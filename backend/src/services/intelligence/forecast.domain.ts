@@ -79,15 +79,24 @@ export function averagePaymentDelay(settled: readonly SettledInvoiceInput[]): Pa
   }
 }
 
+export const MIN_FORECAST_HISTORY_SAMPLES = 3
+
+export type ForecastConfidenceStatus = 'ok' | 'insufficient_data'
+
 export interface ForecastWindow {
   /** 7 or 30. */
   days: number
+  /** Whether settled invoice history was sufficient to project cash reliably. */
+  status: ForecastConfidenceStatus
   /** Receivables expected to land inside the window, in minor units. */
   expectedInflowMinor: number
   /** Cash and bank today, in minor units. */
   openingCashMinor: number
-  /** opening + expected. What the business is likely to have. */
-  projectedCashMinor: number
+  /**
+   * opening + expected when history is sufficient; `null` when history is
+   * insufficient (`insufficient_data`) — never invented as 0.
+   */
+  projectedCashMinor: number | null
   /** Invoices counted toward the inflow. */
   invoiceCount: number
   /**
@@ -105,6 +114,7 @@ export interface ForecastWindow {
 
 export interface CashForecast {
   asOf: string
+  status: ForecastConfidenceStatus
   delay: PaymentDelay
   windows: ForecastWindow[]
 }
@@ -125,6 +135,10 @@ export function forecastCash(input: {
   delay: PaymentDelay
   windowDays?: readonly number[]
 }): CashForecast {
+  const sufficientHistory =
+    input.delay.basis === 'observed' && input.delay.sampleSize >= MIN_FORECAST_HISTORY_SAMPLES
+  const status: ForecastConfidenceStatus = sufficientHistory ? 'ok' : 'insufficient_data'
+
   const windows = (input.windowDays ?? [7, 30]).map((days) => {
     const horizon = new Date(input.asOf.getTime() + days * 86_400_000)
 
@@ -159,16 +173,17 @@ export function forecastCash(input: {
 
     return {
       days,
+      status,
       expectedInflowMinor: expected,
       openingCashMinor: input.openingCashMinor,
-      projectedCashMinor: input.openingCashMinor + expected,
+      projectedCashMinor: sufficientHistory ? input.openingCashMinor + expected : null,
       invoiceCount: count,
       overdueMinor: overdue,
       undatedMinor: undated,
     }
   })
 
-  return { asOf: input.asOf.toISOString(), delay: input.delay, windows }
+  return { asOf: input.asOf.toISOString(), status, delay: input.delay, windows }
 }
 
 // ---------------------------------------------------------------------------

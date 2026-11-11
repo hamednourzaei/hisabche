@@ -37,11 +37,16 @@ const view = ui('invoices', 'invoices-view.tsx')
 const pageHook = code(read('packages', 'ui', 'src', 'hooks', 'invoices', 'use-invoices-page.ts'))
 
 describe('three tabs, built from shared parts', () => {
-  it('invoices and pricing — and nothing else', () => {
+  it('invoices, orders and pricing — and nothing else', () => {
     // Pre-sale / pre-purchase are type options of the invoices tab, not a tab
-    // (owner request, 8 Nov 2026: the page must not get crowded).
-    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'pricing'])
-    expect(SALES_HUB_SOURCE).toEqual({ invoices: '/invoices', pricing: '/promotions' })
+    // (owner request, 8 Nov 2026: the page must not get crowded). Orders + Delivery
+    // live under `?tab=orders` (V60 Slice 6).
+    expect([...SALES_HUB_TABS]).toEqual(['invoices', 'orders', 'pricing'])
+    expect(SALES_HUB_SOURCE).toEqual({
+      invoices: '/invoices',
+      orders: '/invoices',
+      pricing: '/promotions',
+    })
     expect(hub).not.toContain('AdvancesContainer')
     // …they live inside the invoices page, under its own lock.
     const container = readFileSync(
@@ -54,8 +59,10 @@ describe('three tabs, built from shared parts', () => {
 
   it('mounts the containers that own those screens and fetches nothing itself', () => {
     expect(hub).toContain('<InvoicesContainer />')
+    expect(hub).toContain('<SalesOrdersContainer />')
     expect(hub).toContain('<PromotionsContainer />')
     expect(hub).toMatch(/const PromotionsContainer = lazy\(/)
+    expect(hub).toMatch(/const SalesOrdersContainer = lazy\(/)
     const dataHooks = [...hub.matchAll(/\buse[A-Z]\w+(?=\()/g)]
       .map((match) => match[0])
       // usePageLook = this person's on-device view choice (no request).

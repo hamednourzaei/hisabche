@@ -23,13 +23,22 @@ import { sourceIdOf } from '../utils/deterministic-id'
 import { IdempotencyUnavailableError } from '../utils/client-request'
 import { supabase } from '../db'
 import {
+  buildSupplierScorecard,
   checkVariantBinding,
   CreatePurchaseOrder,
+  DRAFT_PURCHASE_LINE_INCOMPLETE,
+  evaluateThreeWayMatch,
+  planReordersWithPackRounding,
+  type CreateDraftFromSuggestionsInput,
+  type ReorderDraftPlanResult,
+  type SupplierScorecardRow,
   UpdatePurchaseOrder,
   orderLineTotal,
   receiptUnitCost,
   receiveRefusal,
 } from '@hisabche/validation'
+import { decideApproval, mayPostDocument } from './workflow/approval-gate.domain'
+import { selectAllPages } from '../utils/fetch-all-pages'
 import type { TenancyContext } from './tenancy.service'
 import { costing } from './inventory-costing'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
@@ -615,6 +624,269 @@ export class PurchasingService {
 
     await memoryCache.set(cacheKey, result, 60)
     return result
+  }
+
+  // ─── Slice 10: Pack-rounded draft PO from suggestions ────────
+  async createDraftPurchaseOrdersFromSuggestions(
+    ctx: TenancyContext,
+    input: CreateDraftFromSuggestionsInput,
+    options: { idempotencyKey?: string | null | undefined } = {},
+  ): Promise<{
+    plan: ReorderDraftPlanResult
+    orders: Awaited<ReturnType<PurchasingService['createPurchaseOrder']>>[]
+  }> {
+    const plan = planReordersWithPackRounding(input.suggestions)
+    if (!plan.draftPlan.ok) {
+      throw new ValidationError(
+        `${DRAFT_PURCHASE_LINE_INCOMPLETE}: complete supplier and positive unit price required before drafting`,
+      )
+    }
+
+    const orders: Awaited<ReturnType<PurchasingService['createPurchaseOrder']>>[] = []
+    for (const group of plan.draftPlan.groups) {
+      const orderKey = options.idempotencyKey
+        ? `${options.idempotencyKey}:${group.supplierId}`
+        : undefined
+      const created = await this.createPurchaseOrder(
+        ctx,
+        {
+          supplierId: group.supplierId,
+          orderDate: new Date().toISOString().slice(0, 10),
+          status: 'pending',
+          notes: input.notes,
+          expectedDeliveryDate: input.expectedDeliveryDate,
+          items: group.lines.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            unitPrice: l.unitPrice,
+            totalPrice: orderLineTotal({ quantity: l.quantity, unitPrice: l.unitPrice }),
+          })),
+        },
+        orderKey ? { idempotencyKey: orderKey } : {},
+      )
+      orders.push(created)
+    }
+    return { plan, orders }
+  }
+
+  // ─── Slice 10: Three-way match (PO vs receipt vs invoice) ────
+  async evaluateThreeWayMatchForPo(
+    ctx: TenancyContext,
+    purchaseOrderId: string,
+    supplierInvoiceId?: string,
+  ) {
+    const { workspaceId } = ctx
+
+    const { data: order, error: orderErr } = await supabase
+      .from('purchase_orders')
+      .select(
+        `
+        id, status, invoice_id,
+        items:purchase_order_items(product_id, variant_id, quantity, unit_price)
+      `,
+      )
+      .eq('id', purchaseOrderId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (orderErr) throw new DatabaseError('Failed to load purchase order for match', orderErr)
+    if (!order) throw new NotFoundError('Purchase order')
+
+    const { data: movements, error: mvErr } = await supabase
+      .from('stock_movements')
+      .select('product_id, variant_id, quantity')
+      .eq('workspace_id', workspaceId)
+      .eq('reference_type', 'purchase_order')
+      .eq('reference_id', purchaseOrderId)
+      .eq('type', 'purchase')
+    if (mvErr) throw new DatabaseError('Failed to load receipt movements for match', mvErr)
+
+    const targetInvoiceId =
+      supplierInvoiceId ?? (order as { invoice_id?: string | null }).invoice_id ?? null
+
+    let linkedInvoice: { id: string } | null = null
+    if (targetInvoiceId) {
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('id', targetInvoiceId)
+        .eq('type', 'purchase')
+        .maybeSingle()
+      if (invErr) throw new DatabaseError('Failed to load linked purchase invoice', invErr)
+      linkedInvoice = inv
+    } else {
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('purchase_order_id', purchaseOrderId)
+        .eq('type', 'purchase')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (invErr) throw new DatabaseError('Failed to look up purchase invoice for PO', invErr)
+      linkedInvoice = inv
+    }
+
+    let invoiceLines: Array<{
+      productId: string
+      variantId: string | null
+      quantity: number
+      unitPriceMinor: number
+    }> = []
+    if (linkedInvoice) {
+      const { data: invItems, error: itemErr } = await supabase
+        .from('invoice_items')
+        .select('product_id, variant_id, quantity, unit_price')
+        .eq('invoice_id', linkedInvoice.id)
+      if (itemErr) throw new DatabaseError('Failed to load purchase invoice items', itemErr)
+      invoiceLines = (invItems ?? [])
+        .filter((row: { product_id: string | null }) => Boolean(row.product_id))
+        .map(
+          (row: {
+            product_id: string | null
+            variant_id?: string | null
+            quantity: number
+            unit_price: number
+          }) => ({
+            productId: row.product_id as string,
+            variantId: row.variant_id ?? null,
+            quantity: Number(row.quantity) || 0,
+            unitPriceMinor: Math.round((Number(row.unit_price) || 0) * 100),
+          }),
+        )
+    }
+
+    const poItemsRaw = ((order as { items?: unknown[] }).items ?? []) as Array<{
+      product_id: string
+      variant_id?: string | null
+      quantity: number
+      unit_price: number
+    }>
+
+    const result = evaluateThreeWayMatch({
+      poLines: poItemsRaw.map((i) => ({
+        productId: i.product_id,
+        variantId: i.variant_id ?? null,
+        quantity: Number(i.quantity) || 0,
+        unitPriceMinor: Math.round((Number(i.unit_price) || 0) * 100),
+      })),
+      receiptLines: (movements ?? [])
+        .filter((m: { product_id: string | null }) => Boolean(m.product_id))
+        .map((m: { product_id: string | null; variant_id?: string | null; quantity: number }) => ({
+          productId: m.product_id as string,
+          variantId: m.variant_id ?? null,
+          quantity: Number(m.quantity) || 0,
+        })),
+      invoiceLines,
+    })
+
+    const approvalOutcome = decideApproval({
+      requiresApproval: !result.matched,
+      workflowIds: !result.matched ? ['three_way_match_block'] : [],
+    })
+    const paymentBlocked = !mayPostDocument(approvalOutcome) || !result.mayApprovePayment
+
+    return {
+      ...result,
+      purchaseOrderId,
+      supplierInvoiceId: linkedInvoice?.id ?? null,
+      approvalOutcome,
+      paymentBlocked,
+    }
+  }
+
+  // ─── Slice 10: Supplier scorecard ────────────────────────────
+  async getSupplierScorecard(ctx: TenancyContext): Promise<SupplierScorecardRow[]> {
+    const { workspaceId } = ctx
+
+    const [supRes, ordRes] = await Promise.all([
+      selectAllPages<
+        { id: string; name: string; is_active?: boolean | null },
+        { message: string; code?: string }
+      >((from, to) =>
+        supabase
+          .from('suppliers')
+          .select('id, name, is_active')
+          .eq('workspace_id', workspaceId)
+          .order('name', { ascending: true })
+          .range(from, to),
+      ),
+      selectAllPages<
+        {
+          id: string
+          supplier_id: string | null
+          order_date: string
+          received_at: string | null
+          status: string
+          items: Array<{
+            product_id?: string | null
+            quantity: number
+            unit_price: number
+            total_price: number | null
+          }> | null
+        },
+        { message: string; code?: string }
+      >((from, to) =>
+        supabase
+          .from('purchase_orders')
+          .select(
+            'id, supplier_id, order_date, received_at, status, items:purchase_order_items(product_id, quantity, unit_price, total_price)',
+          )
+          .eq('workspace_id', workspaceId)
+          .neq('status', 'cancelled')
+          .order('order_date', { ascending: false })
+          .range(from, to),
+      ),
+    ])
+
+    if (supRes.error)
+      throw new DatabaseError('Failed to fetch suppliers for scorecard', supRes.error)
+    if (ordRes.error)
+      throw new DatabaseError('Failed to fetch purchase orders for scorecard', ordRes.error)
+
+    const suppliers = supRes.data ?? []
+    const orders = ordRes.data ?? []
+
+    const purchases = orders
+      .filter((o) => Boolean(o.supplier_id))
+      .map((o) => {
+        const listTotalMinor = (o.items ?? []).reduce(
+          (sum, item) =>
+            sum + Math.round((Number(item.unit_price) || 0) * (Number(item.quantity) || 0) * 100),
+          0,
+        )
+        const billedTotalMinor = (o.items ?? []).reduce(
+          (sum, item) =>
+            sum +
+            Math.round(
+              (item.total_price !== null
+                ? Number(item.total_price)
+                : (Number(item.unit_price) || 0) * (Number(item.quantity) || 0)) * 100,
+            ),
+          0,
+        )
+        const qtyTotal = (o.items ?? []).reduce((q, item) => q + (Number(item.quantity) || 0), 0)
+        return {
+          supplierId: o.supplier_id as string,
+          productId: String(o.items?.[0]?.product_id ?? o.id),
+          quantity: qtyTotal > 0 ? qtyTotal : 1,
+          orderedDate: String(o.order_date).slice(0, 10),
+          receivedDate: o.received_at ? String(o.received_at).slice(0, 10) : null,
+          amountMinor: billedTotalMinor,
+          listPriceMinor: listTotalMinor,
+        }
+      })
+
+    return buildSupplierScorecard(
+      suppliers.map((s) => ({
+        supplierId: s.id,
+        name: s.name,
+        active: s.is_active !== false,
+      })),
+      purchases,
+      new Date().toISOString().slice(0, 10),
+    )
   }
 }
 

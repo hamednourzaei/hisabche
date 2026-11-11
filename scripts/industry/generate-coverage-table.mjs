@@ -26,6 +26,7 @@ import {
   CAPABILITIES,
   EVIDENCE,
   INDUSTRIES,
+  INDUSTRY_ACCEPTANCE_TESTS,
   NEW_ONBOARDING_KEYS,
   NO_SOURCE,
   REQUIRED_ONBOARDING,
@@ -39,6 +40,7 @@ const CHECK_ONLY = process.argv.includes('--check')
 const OUT_DIR = 'docs/architecture/universal-core'
 const OUT_MD = `${OUT_DIR}/INDUSTRY-COVERAGE-TABLE.md`
 const OUT_CSV = `${OUT_DIR}/INDUSTRY-COVERAGE-TABLE.csv`
+const OUT_LEVELS_CSV = `${OUT_DIR}/INDUSTRY-SUPPORT-LEVELS.csv`
 const OUT_SUPPORT = 'docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md'
 
 const problems = []
@@ -317,12 +319,78 @@ Every model can still run the universal core (invoices, payments, stock, ledger)
 ${supportLines.join('\n')}
 `
 
+// ------------------------------------------------- V60 three-level industry status
+const profiledKeys = (() => {
+  const keys = new Set()
+  const profileSource = read('packages/validation/src/schemas/industry-profiles.ts')
+  const ovStart = profileSource.indexOf('const OVERRIDES')
+  const ovBody = profileSource.slice(ovStart, profileSource.indexOf('\n}\n', ovStart))
+  for (const m of ovBody.matchAll(/^  ([A-Za-z]+): \{/gm)) keys.add(m[1])
+  for (const presetTrade of [
+    'barber',
+    'beautySalon',
+    'clinic',
+    'education',
+    'repairs',
+    'mechanic',
+    'manufacturing',
+    'bakery',
+    'retail',
+    'grocery',
+    'mobilePhones',
+    'pharmacy',
+    'clothing',
+    'currencyExchange',
+    'jewellery',
+    'hardware',
+    'restaurant',
+    'cafe',
+    'hotel',
+    'wholesale',
+    'consulting',
+    'wedding',
+    'courier',
+    'itServices',
+  ]) {
+    keys.add(presetTrade)
+  }
+  return keys
+})()
+
+const levelsCsvLines = [
+  ['industry_key', 'registered', 'profiled', 'workflow_complete', 'acceptance_tests']
+    .map(csvCell)
+    .join(','),
+]
+
+for (const key of industryKeys) {
+  const registered = true
+  const profiled = profiledKeys.has(key)
+  const testFiles = INDUSTRY_ACCEPTANCE_TESTS[key] ?? []
+  const allTestsExist = testFiles.length > 0 && testFiles.every((file) => exists(file))
+  const workflowComplete = profiled && registered && allTestsExist
+  if (testFiles.length > 0 && !profiled) {
+    problems.push(
+      `INDUSTRY_ACCEPTANCE_TESTS cites "${key}" which is not profiled (violates workflowComplete => profiled)`,
+    )
+  }
+  for (const tf of testFiles) {
+    if (!exists(tf)) problems.push(`missing acceptance test file for "${key}": ${tf}`)
+  }
+  levelsCsvLines.push(
+    [key, String(registered), String(profiled), String(workflowComplete), testFiles.join('; ')]
+      .map(csvCell)
+      .join(','),
+  )
+}
+
 if (problems.length) {
   console.error('COVERAGE TABLE: problems found\n - ' + problems.join('\n - '))
   process.exit(1)
 }
 
 const csv = csvLines.join('\n') + '\n'
+const levelsCsv = levelsCsvLines.join('\n') + '\n'
 
 if (CHECK_ONLY) {
   const stale =
@@ -330,6 +398,8 @@ if (CHECK_ONLY) {
     read(OUT_MD) !== md ||
     !exists(OUT_CSV) ||
     read(OUT_CSV) !== csv ||
+    !exists(OUT_LEVELS_CSV) ||
+    read(OUT_LEVELS_CSV) !== levelsCsv ||
     !exists(OUT_SUPPORT) ||
     read(OUT_SUPPORT) !== supportMd
   if (stale) {
@@ -341,6 +411,7 @@ if (CHECK_ONLY) {
   fs.mkdirSync(path.join(ROOT, OUT_DIR), { recursive: true })
   fs.writeFileSync(path.join(ROOT, OUT_MD), md)
   fs.writeFileSync(path.join(ROOT, OUT_CSV), csv)
+  fs.writeFileSync(path.join(ROOT, OUT_LEVELS_CSV), levelsCsv)
   fs.writeFileSync(path.join(ROOT, OUT_SUPPORT), supportMd)
-  console.log(`Wrote ${rows.length} rows to ${OUT_MD} and ${OUT_CSV}`)
+  console.log(`Wrote ${rows.length} rows and ${industryKeys.size} industry levels to ${OUT_DIR}`)
 }

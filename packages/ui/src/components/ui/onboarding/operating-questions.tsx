@@ -20,10 +20,19 @@ import {
   type OperatingAnswers,
   type OperatingQuestion,
 } from '@hisabche/validation'
+import { useTerminology } from '../../../hooks/use-terminology'
 import { SegmentedControl } from '../segmented-control'
 
 const YES_NO = ['yes', 'no', 'unknown'] as const
 const LOCATIONS = ['single', 'multiple', 'unknown'] as const
+const STAFF_ARRANGEMENTS = [
+  'fixed_salary',
+  'hourly',
+  'commission',
+  'shift',
+  'mixed',
+  'unknown',
+] as const
 
 export interface OperatingQuestionsProps {
   /** The answers to show: the person's own, the trade's suggestions under them. */
@@ -33,13 +42,28 @@ export interface OperatingQuestionsProps {
 }
 
 export function OperatingQuestions({ answers, onAnswer, t }: OperatingQuestionsProps) {
+  const { term, isUnresolved } = useTerminology()
   const questions = operatingQuestionsFor(answers)
   return (
-    <ul className="space-y-3" data-operating-questions>
+    <ul
+      className="space-y-3"
+      data-operating-questions
+      data-terminology-unresolved={isUnresolved ? 'true' : 'false'}
+    >
       {questions.map((question) => {
-        const isLocations = question === 'locations'
-        const values = isLocations ? LOCATIONS : YES_NO
+        const values =
+          question === 'locations'
+            ? LOCATIONS
+            : question === 'staffArrangement'
+              ? STAFF_ARRANGEMENTS
+              : YES_NO
         const current = (answers[question] ?? 'unknown') as (typeof values)[number]
+        const terminologySuffix =
+          question === 'staffArrangement'
+            ? ` (${term('operatorLabelKey', t('common.staff', 'Staff'))})`
+            : question === 'producesGoods'
+              ? ` (${term('itemLabelKey', t('common.item', 'Item'))})`
+              : ''
         return (
           <li
             key={question}
@@ -47,6 +71,7 @@ export function OperatingQuestions({ answers, onAnswer, t }: OperatingQuestionsP
           >
             <span className="text-sm font-medium text-[hsl(var(--fg-primary))]">
               {t(`onboarding.operating.questions.${question}`, question)}
+              {terminologySuffix}
             </span>
             <SegmentedControl
               label={t(`onboarding.operating.questions.${question}`, question)}

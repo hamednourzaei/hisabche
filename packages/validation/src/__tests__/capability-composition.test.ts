@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CAPABILITIES,
   CAPABILITY_KEYS,
+  ENGINES,
   USABLE_CAPABILITIES,
   resolveCapabilities,
   validateCapabilityRegistry,
@@ -61,12 +62,28 @@ describe('the real capability registry', () => {
     }
   })
 
-  it('keeps the capabilities whose chain is whole', () => {
+  it('keeps the capabilities whose chain is whole and enforces engine references', () => {
     expect(CAPABILITY_KEYS.filter((key) => CAPABILITIES[key].status === 'available')).toEqual([
       'measurement',
       'weight_pricing',
       'multi_unit',
     ])
+    expect(CAPABILITIES.recipe_bom.status).toBe('partial')
+    expect(CAPABILITIES.length_pricing.status).toBe('partial')
+    expect(CAPABILITIES.volume_pricing.status).toBe('partial')
+    for (const key of CAPABILITY_KEYS) {
+      const def = CAPABILITIES[key]
+      if (def.engine !== null) {
+        expect(ENGINES[def.engine], `${key}.engine`).toBeDefined()
+      }
+      if (def.status === 'available') {
+        expect(def.engine, `${key} available must name an engine`).not.toBeNull()
+      }
+      if (def.status === 'planned') {
+        expect(def.evidence.sources, key).toEqual([])
+        expect(def.evidence.tests, key).toEqual([])
+      }
+    }
   })
 })
 
@@ -106,10 +123,9 @@ describe('validateCapabilityRegistry catches every kind of fault', () => {
   })
 
   it('a planned capability that carries evidence', () => {
-    // recipe_bom is the planned fixture since V55 P1: batch_expiry became
-    // partial (the FEFO workflow exists — traceability + warehouse receive).
+    // room_nights is a real planned capability (F2: recipe_bom became partial).
     const lying = registryWith({
-      recipe_bom: { evidence: { sources: ['a.ts'], tests: ['b.test.ts'] } },
+      room_nights: { evidence: { sources: ['a.ts'], tests: ['b.test.ts'] } },
     })
     expect(codes(lying)).toContain('EVIDENCE_MISMATCH')
   })
@@ -151,13 +167,13 @@ describe('resolveCapabilities', () => {
   })
 
   it('refuses a planned capability and names it', () => {
-    const result = resolveCapabilities(['recipe_bom', 'multi_unit'])
+    const result = resolveCapabilities(['room_nights', 'multi_unit'])
     expect(result.capabilities).toEqual(['multi_unit'])
-    expect(result.rejected).toEqual(['recipe_bom'])
+    expect(result.rejected).toEqual(['room_nights'])
     expect(result.diagnostics).toContainEqual({
       code: 'CAPABILITY_PLANNED',
-      capability: 'recipe_bom',
-      related: ['recipe_bom'],
+      capability: 'room_nights',
+      related: ['room_nights'],
     })
   })
 

@@ -36,11 +36,15 @@ import {
   CreateInvoice,
   UpdateInvoice,
   InvoiceFilters,
+  applyPrice,
   computeInvoiceMoney,
   computeItemTotalRounded,
   movesStock,
+  quoteGoldItemPrice,
   type AccountRole,
+  type GoldLineSnapshot,
 } from '@hisabche/validation'
+import { fractionDigits } from '@hisabche/formatting'
 import { ledger, type DraftLine } from './accounting'
 import {
   computePackageDeferrals,
@@ -2556,7 +2560,43 @@ export class InvoiceService {
    * this writes, what the stock plan reads and what the costing consumes.
    */
   private withDerivedLineTotals(items: any[], currency: string): any[] {
-    return items.map((item) => ({ ...item, totalPrice: computeItemTotalRounded(item, currency) }))
+    const scale = Math.pow(10, fractionDigits(currency as Parameters<typeof fractionDigits>[0]))
+    return items.map((raw) => {
+      let item = raw
+      const snap = item.goldSnapshot as GoldLineSnapshot | undefined
+      if (snap && Number.isInteger(snap.netWeightMg) && snap.netWeightMg > 0) {
+        const productKey = item.productId || item.productName || 'gold-line'
+        const quote = quoteGoldItemPrice(
+          { productId: productKey, kind: 'sale', quantity: Number(item.quantity) || 1 },
+          {
+            karat: snap.karat as 24 | 22 | 21 | 18 | 14 | 9,
+            netWeightMg: snap.netWeightMg,
+            rateSnapshot: {
+              rate24kMinorPerGram: snap.rate24kMinorPerGram,
+              capturedAt: snap.capturedAt,
+              capturedBy: snap.capturedBy,
+            },
+            makingChargeType: 'fixed',
+            makingChargeValue: snap.makingChargeMinor,
+          },
+          undefined,
+          [],
+          snap.capturedAt,
+        )
+        const [applied] = applyPrice(
+          [{ productId: productKey, quantity: Number(item.quantity) || 1 }],
+          [quote],
+        )
+        const quotedUnitPrice =
+          applied?.unitPrice != null ? Math.round(applied.unitPrice * 100) / scale : item.unitPrice
+        item = {
+          ...item,
+          unitPrice: quotedUnitPrice,
+          ...(applied?.goldSnapshot ? { goldSnapshot: applied.goldSnapshot } : {}),
+        }
+      }
+      return { ...item, totalPrice: computeItemTotalRounded(item, currency) }
+    })
   }
 
   /**
@@ -2582,6 +2622,16 @@ export class InvoiceService {
       product_id: item.productId,
       // Named only when the line carries a variant, so documents without one keep working before the migration.
       ...(item.variantId ? { variant_id: item.variantId } : {}),
+      ...(item.goldSnapshot
+        ? {
+            metal_rate_24k_minor: item.goldSnapshot.rate24kMinorPerGram,
+            metal_purity_karat: item.goldSnapshot.karat,
+            metal_net_weight_mg: item.goldSnapshot.netWeightMg,
+            making_charge_minor: item.goldSnapshot.makingChargeMinor,
+            metal_rate_captured_at: item.goldSnapshot.capturedAt,
+            metal_rate_captured_by: item.goldSnapshot.capturedBy,
+          }
+        : {}),
       product_name: item.productName || '',
       quantity: item.quantity,
       unit: item.unit || 'piece',

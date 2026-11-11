@@ -4,6 +4,11 @@
 // Batches, serial numbers and expiry against real rows.
 // ============================================
 
+import {
+  routeReturnedSerial,
+  routeReturnConditionDisposition,
+  type ReturnCondition,
+} from '@hisabche/validation'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -26,8 +31,10 @@ import {
 const BATCH_COLUMNS =
   'id, product_id, batch_number, expiry_date, manufactured_date, received_qty, remaining_qty, cost_layer_id, warehouse_id, received_on'
 
-const SERIAL_COLUMNS =
+const LEGACY_SERIAL_COLUMNS =
   'id, product_id, serial_number, status, batch_id, cost_layer_id, unit_cost_minor, warehouse_id, received_on, invoice_id, sold_on'
+
+const SERIAL_COLUMNS = `${LEGACY_SERIAL_COLUMNS}, reserved_for_customer_id, reserved_until`
 
 /** A `stock_batches` row as PostgREST returns it. */
 interface BatchRow {
@@ -56,6 +63,8 @@ interface SerialRow {
   received_on: string | null
   invoice_id?: string | null
   sold_on?: string | null
+  reserved_for_customer_id?: string | null
+  reserved_until?: string | null
 }
 
 function mapBatch(raw: BatchRow): StockBatch {
@@ -87,6 +96,8 @@ function mapSerial(raw: SerialRow): SerialUnit {
     // Where a sold unit went — the invoice that handed it over.
     invoiceId: raw.invoice_id ?? null,
     soldOn: raw.sold_on ? String(raw.sold_on).slice(0, 10) : null,
+    reservedForCustomerId: raw.reserved_for_customer_id ?? null,
+    reservedUntil: raw.reserved_until ? String(raw.reserved_until) : null,
   }
 }
 
@@ -434,29 +445,50 @@ export class TraceabilityService {
     ctx: TenancyContext,
     filters: { productId?: string; status?: string; invoiceId?: string } = {},
   ): Promise<SerialUnit[]> {
-    // Every serial (27 Sep 2026): a unit beyond PostgREST's 1000 rows could
-    // not be picked — nor would anyone know it existed.
-    const { data, error } = await selectAllPages((lo, hi) => {
-      let query = supabase
-        .from('stock_serials')
-        .select(SERIAL_COLUMNS)
-        .eq('workspace_id', ctx.workspaceId)
-      if (filters.productId) query = query.eq('product_id', filters.productId)
-      if (filters.invoiceId) query = query.eq('invoice_id', filters.invoiceId)
-      // 'all' = every status (the product page's look-up); default in stock.
-      if (filters.status !== 'all') query = query.eq('status', filters.status ?? 'in_stock')
-      return query.order('received_on').order('id', { ascending: true }).range(lo, hi)
-    })
+    const runQuery = (columns: string) =>
+      selectAllPages((lo, hi) => {
+        let query = supabase
+          .from('stock_serials')
+          .select(columns)
+          .eq('workspace_id', ctx.workspaceId)
+        if (filters.productId) query = query.eq('product_id', filters.productId)
+        if (filters.invoiceId) query = query.eq('invoice_id', filters.invoiceId)
+        // 'all' = every status (the product page's look-up); default in stock.
+        if (filters.status !== 'all') query = query.eq('status', filters.status ?? 'in_stock')
+        return query.order('received_on').order('id', { ascending: true }).range(lo, hi)
+      })
+    let { data, error } = await runQuery(SERIAL_COLUMNS)
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+      ;({ data, error } = await runQuery(LEGACY_SERIAL_COLUMNS))
+    }
     if (error) throw new DatabaseError('Failed to fetch serial numbers', error)
-    return (data ?? []).map(mapSerial)
+    return (data ?? []).map((row) => mapSerial(row as unknown as SerialRow))
   }
 
   /**
-   * Hold a unit for one customer, or release the hold (retail-ops-01). The
-   * status is in the WHERE: only an in-stock unit can be held, only a held one
-   * released, and two people holding the same phone cannot both succeed.
+   * Hold a unit for one customer (optionally expiring at `expiresAt` / `holdMinutes`),
+   * or release the hold (retail-ops-01 + mobile-serial-01).
+   * Uses row-locked `serial_hold_with_expiry` RPC when present so expired holds
+   * auto-release and two competing devices cannot both win the same IMEI.
    */
-  async holdSerial(ctx: TenancyContext, serialId: string, customerId: string | null) {
+  async holdSerial(
+    ctx: TenancyContext,
+    serialId: string,
+    customerId: string | null,
+    options?: {
+      expiresAt?: string | null | undefined
+      holdMinutes?: number | null | undefined
+    },
+  ) {
+    const resolvedExpiresAt =
+      customerId === null
+        ? null
+        : options?.expiresAt
+          ? options.expiresAt
+          : options?.holdMinutes
+            ? new Date(Date.now() + options.holdMinutes * 60_000).toISOString()
+            : null
+
     if (customerId) {
       const { data: customer, error } = await supabase
         .from('customers')
@@ -467,45 +499,175 @@ export class TraceabilityService {
       if (error) throw new DatabaseError('Failed to read the customer', error)
       if (!customer) throw new ValidationError('SERIAL_HOLD_CUSTOMER_NOT_FOUND')
     }
-    const { data, error } = await supabase
+
+    // Prefer the atomic FOR UPDATE database function (`mobile-serial-01-migration.sql`).
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc('serial_hold_with_expiry', {
+      p_workspace_id: ctx.workspaceId,
+      p_serial_id: serialId,
+      p_customer_id: customerId,
+      p_expires_at: resolvedExpiresAt,
+    })
+    if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+      const row = rpcRows[0] as {
+        id: string
+        status: string
+        reserved_for_customer_id: string | null
+        reserved_until: string | null
+      }
+      await this.invalidate(ctx.workspaceId)
+      return {
+        id: row.id,
+        status: row.status,
+        heldForCustomerId: row.reserved_for_customer_id ?? null,
+        reservedUntil: row.reserved_until ?? null,
+      }
+    }
+    if (rpcErr && rpcErr.code !== '42883' && rpcErr.code !== 'PGRST202') {
+      const msg = rpcErr.message ?? ''
+      if (msg.includes('SERIAL_RESERVED_FOR_ANOTHER_CUSTOMER')) {
+        throw new ConflictError('SERIAL_RESERVED_FOR_ANOTHER_CUSTOMER')
+      }
+      if (
+        msg.includes('SERIAL_NOT_IN_STOCK') ||
+        msg.includes('SERIAL_NOT_HELD') ||
+        msg.includes('SERIAL_HOLD_CUSTOMER_NOT_FOUND')
+      ) {
+        throw new ValidationError(msg)
+      }
+      if (msg.includes('SERIAL_NOT_FOUND')) {
+        throw new NotFoundError('Serial')
+      }
+      throw new DatabaseError('Failed to hold the unit', rpcErr)
+    }
+
+    // Pre-migration / unit-mock fallback: release an expired hold first, then CAS on status.
+    const nowIso = new Date().toISOString()
+    if (customerId) {
+      await supabase
+        .from('stock_serials')
+        .update({ status: 'in_stock', reserved_for_customer_id: null, reserved_until: null })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', serialId)
+        .eq('status', 'reserved')
+        .lte('reserved_until', nowIso)
+    }
+
+    const patchWithExpiry = customerId
+      ? {
+          status: 'reserved',
+          reserved_for_customer_id: customerId,
+          ...(resolvedExpiresAt !== null ? { reserved_until: resolvedExpiresAt } : {}),
+        }
+      : { status: 'in_stock', reserved_for_customer_id: null, reserved_until: null }
+
+    let { data, error } = await supabase
       .from('stock_serials')
-      .update(
-        customerId
-          ? { status: 'reserved', reserved_for_customer_id: customerId }
-          : { status: 'in_stock', reserved_for_customer_id: null },
-      )
+      .update(patchWithExpiry)
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', serialId)
       .eq('status', customerId ? 'in_stock' : 'reserved')
-      .select('id, status, reserved_for_customer_id')
+      .select('id, status, reserved_for_customer_id, reserved_until')
       .maybeSingle()
+
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+      ;({ data, error } = await supabase
+        .from('stock_serials')
+        .update(
+          customerId
+            ? { status: 'reserved', reserved_for_customer_id: customerId }
+            : { status: 'in_stock', reserved_for_customer_id: null },
+        )
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', serialId)
+        .eq('status', customerId ? 'in_stock' : 'reserved')
+        .select('id, status, reserved_for_customer_id')
+        .maybeSingle())
+    }
+
     if (error && (error.code === '42703' || error.code === '23514' || error.code === 'PGRST204')) {
-      // retail-ops-01 not run: no column / the old status CHECK.
       throw new ValidationError('SERIAL_HOLD_NOT_READY')
     }
     if (error) throw new DatabaseError('Failed to hold the unit', error)
-    if (!data) throw new ValidationError(customerId ? 'SERIAL_NOT_IN_STOCK' : 'SERIAL_NOT_HELD')
+    if (!data) throw new ConflictError(customerId ? 'SERIAL_NOT_IN_STOCK' : 'SERIAL_NOT_HELD')
     await this.invalidate(ctx.workspaceId)
+    const row = data as {
+      id: string
+      status: string
+      reserved_for_customer_id?: string | null
+      reserved_until?: string | null
+    }
     return {
-      id: data.id as string,
-      status: data.status as string,
-      heldForCustomerId: (data.reserved_for_customer_id as string | null) ?? null,
+      id: row.id,
+      status: row.status,
+      heldForCustomerId: row.reserved_for_customer_id ?? null,
+      reservedUntil: row.reserved_until ?? null,
     }
   }
 
-  /** Who each held unit of a product is held for. Empty before retail-ops-01. */
-  async serialHolds(ctx: TenancyContext, productId: string) {
+  /** Release every expired serial hold in the workspace (`mobile-serial-01`). */
+  async releaseExpiredHolds(ctx: TenancyContext) {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('serial_release_expired_holds', {
+      p_workspace_id: ctx.workspaceId,
+    })
+    if (!rpcErr && Array.isArray(rpcData)) {
+      const releasedIds = (rpcData as Array<{ released_id?: string }>)
+        .map((r) => r.released_id)
+        .filter((v): v is string => typeof v === 'string')
+      await this.invalidate(ctx.workspaceId)
+      return { releasedCount: releasedIds.length, releasedIds }
+    }
+    if (rpcErr && rpcErr.code !== '42883' && rpcErr.code !== 'PGRST202') {
+      throw new DatabaseError('Failed to release expired serial holds', rpcErr)
+    }
+
+    const nowIso = new Date().toISOString()
     const { data, error } = await supabase
       .from('stock_serials')
-      .select('id, reserved_for_customer_id')
+      .update({ status: 'in_stock', reserved_for_customer_id: null, reserved_until: null })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('status', 'reserved')
+      .lte('reserved_until', nowIso)
+      .select('id')
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+      return { releasedCount: 0, releasedIds: [] as string[] }
+    }
+    if (error) throw new DatabaseError('Failed to release expired serial holds', error)
+    const releasedIds = (data ?? []).map((r) => String((r as { id: string }).id))
+    await this.invalidate(ctx.workspaceId)
+    return { releasedCount: releasedIds.length, releasedIds }
+  }
+
+  /** Who each active held unit of a product is held for. Empty before retail-ops-01. */
+  async serialHolds(ctx: TenancyContext, productId: string) {
+    type HoldQueryRow = {
+      id: string
+      reserved_for_customer_id: string
+      reserved_until?: string | null
+    }
+    const primary = await supabase
+      .from('stock_serials')
+      .select('id, reserved_for_customer_id, reserved_until')
       .eq('workspace_id', ctx.workspaceId)
       .eq('product_id', productId)
       .eq('status', 'reserved')
+    let rows = primary.data as HoldQueryRow[] | null
+    let error = primary.error
+    if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+      const legacy = await supabase
+        .from('stock_serials')
+        .select('id, reserved_for_customer_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('product_id', productId)
+        .eq('status', 'reserved')
+      rows = legacy.data as HoldQueryRow[] | null
+      error = legacy.error
+    }
     if (error && (error.code === '42703' || error.code === 'PGRST204')) return []
     if (error) throw new DatabaseError('Failed to read the held units', error)
-    return (data ?? []).map((row) => ({
-      serialId: row.id as string,
-      customerId: row.reserved_for_customer_id as string,
+    return (rows ?? []).map((r) => ({
+      serialId: r.id,
+      customerId: r.reserved_for_customer_id,
+      reservedUntil: r.reserved_until ?? null,
     }))
   }
 
@@ -524,6 +686,21 @@ export class TraceabilityService {
     if (input.serialNumbers.length === 0) throw new ValidationError('SERIAL_COUNT_MISMATCH')
     if (new Set(input.serialNumbers).size !== input.serialNumbers.length) {
       throw new ValidationError('SERIAL_DUPLICATE')
+    }
+
+    // Workspace-wide IMEI uniqueness: an IMEI already belonging to another product
+    // or unit in the workspace is refused cleanly instead of corrupting stock identity.
+    const { data: existingWs, error: dupCheckError } = await supabase
+      .from('stock_serials')
+      .select('serial_number')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('serial_number', input.serialNumbers)
+      .limit(1)
+    if (dupCheckError) {
+      throw new DatabaseError('Failed to check serial uniqueness', dupCheckError)
+    }
+    if ((existingWs ?? []).length > 0) {
+      throw new ConflictError('SERIAL_DUPLICATE')
     }
 
     const { data, error } = await supabase
@@ -634,15 +811,39 @@ export class TraceabilityService {
   ) {
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select('id, type, status')
+      .select('id, type, status, customer_id')
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', input.invoiceId)
       .maybeSingle()
     if (invoiceError) throw new DatabaseError('Failed to read the invoice', invoiceError)
     if (!invoice) throw new NotFoundError('INVOICE_NOT_FOUND')
-    const row = invoice as { type?: string | null; status?: string | null }
+    const row = invoice as {
+      type?: string | null
+      status?: string | null
+      customer_id?: string | null
+    }
     if (row.type === 'purchase') throw new ValidationError('SERIAL_SALE_ONLY')
     if (row.status === 'cancelled') throw new ValidationError('SERIAL_INVOICE_CANCELLED')
+
+    // Refuse any unit with a non-expired hold for a DIFFERENT customer; release matching or expired holds before issuing.
+    const holds = await this.serialHolds(ctx, input.productId)
+    if (holds.length > 0) {
+      const nowMs = Date.now()
+      const units = await this.listSerials(ctx, { productId: input.productId, status: 'all' })
+      const holdMap = new Map(holds.map((h) => [h.serialId, h]))
+      const bySerial = new Map(units.map((u) => [u.serialNumber, u]))
+      for (const serialNumber of input.serialNumbers) {
+        const unit = bySerial.get(serialNumber)
+        if (!unit) continue
+        const hold = holdMap.get(unit.id)
+        if (!hold) continue
+        const expired = Boolean(hold.reservedUntil && Date.parse(hold.reservedUntil) <= nowMs)
+        if (!expired && hold.customerId !== row.customer_id) {
+          throw new ConflictError('SERIAL_RESERVED_FOR_ANOTHER_CUSTOMER')
+        }
+        await this.holdSerial(ctx, unit.id, null)
+      }
+    }
 
     const { data: lines, error: linesError } = await supabase
       .from('invoice_items')
@@ -675,6 +876,190 @@ export class TraceabilityService {
       consumerType: 'invoice',
       consumerId: input.invoiceId,
     })
+  }
+
+  /**
+   * Return a sold IMEI / serial unit: executes financial credit reversal on its original sale
+   * invoice through InvoiceReturnService.createReturn (plus optional refund), and routes the
+   * physical serial unit through `routeReturnedSerial` by physical condition.
+   */
+  async returnSoldSerial(
+    ctx: TenancyContext,
+    serialId: string,
+    input: {
+      conditionCode: ReturnCondition
+      restockChoice?: 'restock' | 'scrap' | undefined
+      returnNumber?: string | undefined
+      returnDate?: string | undefined
+      reasonCode?: string | undefined
+      notes?: string | undefined
+      refundMethod?: 'cash' | 'bank' | undefined
+      refundAmount?: number | undefined
+      clientRequestId?: string | null | undefined
+    },
+  ) {
+    const { data: serialRow, error: serialErr } = await supabase
+      .from('stock_serials')
+      .select('id, product_id, serial_number, status, warehouse_id, invoice_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', serialId)
+      .maybeSingle()
+    if (serialErr) throw new DatabaseError('Failed to read serial unit', serialErr)
+    if (!serialRow) throw new NotFoundError('Serial')
+
+    const unit = serialRow as {
+      id: string
+      product_id: string
+      serial_number: string
+      status: string
+      warehouse_id: string | null
+      invoice_id: string | null
+    }
+    if (unit.status !== 'sold' || !unit.invoice_id) {
+      throw new ValidationError('SERIAL_NOT_SOLD_ON_INVOICE')
+    }
+
+    const { data: lines, error: linesErr } = await supabase
+      .from('invoice_items')
+      .select('id, product_id, quantity')
+      .eq('invoice_id', unit.invoice_id)
+      .eq('product_id', unit.product_id)
+      .order('id', { ascending: true })
+    if (linesErr) throw new DatabaseError('Failed to read original invoice line', linesErr)
+    const originalLine = (lines ?? [])[0] as { id: string } | undefined
+    if (!originalLine) throw new ValidationError('SERIAL_PRODUCT_NOT_ON_INVOICE')
+
+    const disposition = routeReturnConditionDisposition({
+      conditionCode: input.conditionCode,
+      restockChoice: input.restockChoice ?? 'restock',
+    })
+
+    const { InvoiceReturnService } = await import('../sales/invoice-return.service')
+    const returnService = new InvoiceReturnService()
+    const returnDate = input.returnDate ?? today()
+    const returnNumber = input.returnNumber ?? `RET-IMEI-${unit.serial_number.slice(-6)}`
+
+    const returnDocument = await returnService.createReturn(ctx.workspaceId, {
+      originalInvoiceId: unit.invoice_id,
+      userId: ctx.userId,
+      clientRequestId: input.clientRequestId ?? `serial-return-${unit.id}-${returnNumber}`,
+      returnType: 'sale_return',
+      returnNumber,
+      returnDate,
+      reasonCode:
+        input.reasonCode ??
+        (input.conditionCode === 'defective' || input.conditionCode === 'damaged'
+          ? 'defective'
+          : 'other'),
+      notes: input.notes ?? `IMEI ${unit.serial_number} (${input.conditionCode})`,
+      lines: [
+        {
+          originalLineId: originalLine.id,
+          returnQuantity: 1,
+          restockChoice: disposition.restockChoice,
+          reasonCode: (input.reasonCode ??
+            (input.conditionCode === 'defective' || input.conditionCode === 'damaged'
+              ? 'defective'
+              : 'other')) as
+            | 'defective'
+            | 'wrong_item'
+            | 'customer_change_of_mind'
+            | 'damaged_in_transit'
+            | 'expired'
+            | 'other',
+          conditionCode: input.conditionCode,
+        },
+      ],
+    })
+
+    let refund: unknown = null
+    if (
+      input.refundAmount &&
+      input.refundAmount > 0 &&
+      input.refundMethod &&
+      returnDocument &&
+      typeof returnDocument === 'object' &&
+      'id' in returnDocument
+    ) {
+      refund = await returnService.refundReturn(
+        ctx,
+        unit.invoice_id,
+        String((returnDocument as { id: string }).id),
+        {
+          amount: input.refundAmount,
+          method: input.refundMethod,
+          entryDate: returnDate,
+          clientRequestId: input.clientRequestId
+            ? `${input.clientRequestId}:refund`
+            : `serial-refund-${unit.id}-${returnNumber}`,
+        },
+      )
+    }
+
+    const routed = routeReturnedSerial(
+      {
+        serialNumber: unit.serial_number,
+        productId: unit.product_id,
+        status: 'sold',
+        warehouseId: unit.warehouse_id,
+        soldInvoiceId: unit.invoice_id,
+      },
+      input.conditionCode,
+    )
+    const persistedStatus = disposition.restockChoice === 'scrap' ? 'scrapped' : routed.status
+
+    const { data: updatedSerial, error: updateErr } = await supabase
+      .from('stock_serials')
+      .update({
+        status: persistedStatus,
+        invoice_id: null,
+        sold_on: null,
+        reserved_for_customer_id: null,
+        reserved_until: null,
+      })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', unit.id)
+      .eq('status', 'sold')
+      .select('id, serial_number, status, invoice_id')
+      .maybeSingle()
+
+    if (updateErr && (updateErr.code === '42703' || updateErr.code === 'PGRST204')) {
+      const fallback = await supabase
+        .from('stock_serials')
+        .update({
+          status: persistedStatus,
+          invoice_id: null,
+          sold_on: null,
+          reserved_for_customer_id: null,
+        })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', unit.id)
+        .eq('status', 'sold')
+        .select('id, serial_number, status, invoice_id')
+        .maybeSingle()
+      if (fallback.error)
+        throw new DatabaseError('Failed to update returned serial', fallback.error)
+      await this.invalidate(ctx.workspaceId)
+      return {
+        serial: fallback.data,
+        routedStatus: persistedStatus,
+        dispositionBucket: disposition.bucket,
+        originalInvoiceId: unit.invoice_id,
+        returnDocument,
+        refund,
+      }
+    }
+    if (updateErr) throw new DatabaseError('Failed to update returned serial', updateErr)
+
+    await this.invalidate(ctx.workspaceId)
+    return {
+      serial: updatedSerial,
+      routedStatus: persistedStatus,
+      dispositionBucket: disposition.bucket,
+      originalInvoiceId: unit.invoice_id,
+      returnDocument,
+      refund,
+    }
   }
 
   // ─── Expiry ───────────────────────────────────────────────────────────────

@@ -241,3 +241,17 @@ COMMIT;
 -- rpc-not-callable-by-clients.test.ts).
 REVOKE ALL ON FUNCTION public.leave_accrue_month(uuid, uuid, date) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.leave_balance(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Privileges and RLS (same as salon-01). A new Supabase table is born with ALL
+-- for anon/authenticated: without this, the public key could read and write
+-- these rows through PostgREST and skip every capability check. No policy is
+-- created on purpose — only the backend (service_role) reaches them, and it
+-- never deletes (history is kept).
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.leave_policies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.leave_accruals ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.leave_policies, public.leave_accruals
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON public.leave_policies, public.leave_accruals TO service_role;
+

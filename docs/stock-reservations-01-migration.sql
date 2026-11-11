@@ -31,9 +31,9 @@
 --
 -- ROLLBACK (safe — nothing else refers to these objects yet)
 --   DROP FUNCTION IF EXISTS public.stock_available(uuid, uuid, uuid);
---   DROP FUNCTION IF EXISTS public.stock_settle_reservation(uuid, uuid, uuid, numeric, uuid);
---   DROP FUNCTION IF EXISTS public.stock_release_reservation(uuid, uuid, uuid, numeric, uuid);
---   DROP FUNCTION IF EXISTS public.stock_reserve(uuid, uuid, uuid, uuid, numeric, text, uuid, text, timestamptz);
+--   DROP FUNCTION IF EXISTS public.stock_settle_reservation(uuid, uuid, uuid, numeric, text);
+--   DROP FUNCTION IF EXISTS public.stock_release_reservation(uuid, uuid, uuid, numeric, text);
+--   DROP FUNCTION IF EXISTS public.stock_reserve(uuid, uuid, uuid, uuid, numeric, text, uuid, text, timestamptz, uuid, text);
 --   DROP TABLE IF EXISTS public.stock_reservations;
 --
 -- VERIFY: docs/VERIFY-stock-reservations-01.sql
@@ -373,6 +373,18 @@ REVOKE ALL ON FUNCTION public.stock_available(uuid, uuid, uuid) FROM PUBLIC, ano
 REVOKE ALL ON FUNCTION public.stock_reserve(uuid, uuid, uuid, uuid, numeric, text, uuid, text, timestamptz, uuid, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.stock_release_reservation(uuid, uuid, uuid, numeric, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.stock_settle_reservation(uuid, uuid, uuid, numeric, text) FROM PUBLIC, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Privileges and RLS (same as salon-01). A new Supabase table is born with ALL
+-- for anon/authenticated: without this, the public key could read and write
+-- these rows through PostgREST and skip every capability check. No policy is
+-- created on purpose — only the backend (service_role) reaches them, and it
+-- never deletes (history is kept).
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.stock_reservations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.stock_reservations
+  FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON public.stock_reservations TO service_role;
 
 -- Post-migration verification query generated — PENDING HUMAN CONFIRMATION
 -- (see docs/VERIFY-stock-reservations-01.sql)

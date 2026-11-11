@@ -62,6 +62,7 @@ interface ManufacturingViewProps {
   onProduce: () => void
   onEditDefinition: (bom: BOM) => void
   onCompleteWorkOrder: (workOrder: WorkOrder) => void
+  onCancelWorkOrder?: ((workOrder: WorkOrder) => void) | undefined
   onOpenCreateWorkOrder: () => void
   history: ReactNode
   report: ReactNode
@@ -95,6 +96,7 @@ export const ManufacturingView = memo(function ManufacturingView({
   onProduce,
   onEditDefinition,
   onCompleteWorkOrder,
+  onCancelWorkOrder,
   onOpenCreateWorkOrder,
   history,
   report,
@@ -291,18 +293,29 @@ export const ManufacturingView = memo(function ManufacturingView({
         workOrder.status !== 'completed' &&
         workOrder.status !== 'cancelled' &&
         workOrder.product ? (
-          <button
-            type="button"
-            onClick={() => onCompleteWorkOrder(workOrder)}
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium',
-              'border border-[hsl(var(--color-success)/0.4)] text-[hsl(var(--color-success))]',
-              'hover:bg-[hsl(var(--color-success)/0.08)]',
-            )}
-          >
-            <Check className="size-3.5" aria-hidden="true" />
-            {t('manufacturing.workOrders.complete', 'تکمیل')}
-          </button>
+          <div className="flex flex-wrap justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => onCompleteWorkOrder(workOrder)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium',
+                'border border-[hsl(var(--color-success)/0.4)] text-[hsl(var(--color-success))]',
+                'hover:bg-[hsl(var(--color-success)/0.08)]',
+              )}
+            >
+              <Check className="size-3.5" aria-hidden="true" />
+              {t('manufacturing.workOrders.complete', 'تکمیل')}
+            </button>
+            {onCancelWorkOrder ? (
+              <button
+                type="button"
+                onClick={() => onCancelWorkOrder(workOrder)}
+                className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--color-destructive)/0.4)] px-3 py-1.5 text-xs font-medium text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)]"
+              >
+                {t('common.cancel', 'لغو')}
+              </button>
+            ) : null}
+          </div>
         ) : null,
     },
   ]

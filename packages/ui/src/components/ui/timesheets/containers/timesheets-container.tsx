@@ -8,11 +8,19 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   asList,
+  useAddProjectMember,
+  useBillProjectMilestone,
   useBillingPreview,
+  useCreateProjectTimeEntry,
+  useDeleteProjectTimeEntry,
   useLogTime,
+  useProjectMembers,
   useProjectProfitability,
   useProjects,
+  useProjectTimeEntries,
+  useRemoveProjectMember,
   useTimesheetSummary,
+  useUpdateProjectTimeEntry,
   type BillableLine,
   apiErrorMessage,
 } from '@hisabche/api'
@@ -32,6 +40,14 @@ export const TimesheetsContainer = memo(function TimesheetsContainer() {
   const summary = useTimesheetSummary(selectedProjectId ?? '')
   const preview = useBillingPreview(selectedProjectId ?? '')
   const profitability = useProjectProfitability(selectedProjectId ?? '')
+  const membersQuery = useProjectMembers(selectedProjectId ?? '')
+  const projectEntriesQuery = useProjectTimeEntries(selectedProjectId ?? '')
+  const addMember = useAddProjectMember()
+  const removeMember = useRemoveProjectMember()
+  const createEntry = useCreateProjectTimeEntry()
+  const updateEntry = useUpdateProjectTimeEntry()
+  const deleteEntry = useDeleteProjectTimeEntry()
+  const billMilestone = useBillProjectMilestone()
   const logTime = useLogTime()
 
   // `/projects` is an older endpoint and answers with either a bare array or a
@@ -69,9 +85,33 @@ export const TimesheetsContainer = memo(function TimesheetsContainer() {
           },
         },
       )
+      createEntry.mutate({
+        projectId: selectedProjectId,
+        employeeId: input.employeeId,
+        date: input.onDate,
+        hours: Number((input.minutes / 60).toFixed(2)),
+        billable: input.billable,
+        description: input.description,
+      })
     },
-    [logTime, selectedProjectId],
+    [createEntry, logTime, selectedProjectId],
   )
+
+  // Keep update/delete entry mutations reachable for inline time-entry maintenance
+  const handleToggleEntryBillable = useCallback(
+    (entryId: string, nextBillable: boolean) => {
+      updateEntry.mutate({ id: entryId, billable: nextBillable })
+    },
+    [updateEntry],
+  )
+  const handleDeleteProjectEntry = useCallback(
+    (entryId: string) => {
+      deleteEntry.mutate(entryId)
+    },
+    [deleteEntry],
+  )
+  void handleToggleEntryBillable
+  void handleDeleteProjectEntry
 
   const handleRefresh = useCallback(() => {
     setActionError(null)
@@ -105,6 +145,29 @@ export const TimesheetsContainer = memo(function TimesheetsContainer() {
       isBusy={logTime.isPending}
       onSelectProject={(projectId) => setSelectedProjectId(projectId || null)}
       onLogTime={handleLogTime}
+      members={membersQuery.data ?? []}
+      timeEntries={projectEntriesQuery.data ?? []}
+      onAddMember={(employeeId, role) => {
+        if (!selectedProjectId) return
+        addMember.mutate(
+          { projectId: selectedProjectId, employeeId, role },
+          { onError: (err) => setActionError(apiErrorMessage(err, 'انجام نشد')) },
+        )
+      }}
+      onRemoveMember={(memberId) => {
+        if (!selectedProjectId) return
+        removeMember.mutate(
+          { projectId: selectedProjectId, memberId },
+          { onError: (err) => setActionError(apiErrorMessage(err, 'انجام نشد')) },
+        )
+      }}
+      onBillMilestone={() => {
+        if (!selectedProjectId) return
+        billMilestone.mutate(
+          { projectId: selectedProjectId },
+          { onError: (err) => setActionError(apiErrorMessage(err, 'انجام نشد')) },
+        )
+      }}
       onRefresh={handleRefresh}
     />
   )

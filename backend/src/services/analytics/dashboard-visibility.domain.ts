@@ -81,3 +81,38 @@ export function maskDashboardKpis<T extends Record<string, unknown>>(
   }
   return { ...(masked as T), hidden: [...hidden] }
 }
+
+export interface CommandAlertVisibilityCandidate {
+  readonly id: string
+  readonly requiredPermission?: Capability | null | undefined
+  readonly figureGroup?: DashboardFigureGroup | null | undefined
+  readonly amountMinor?: number | null | undefined
+}
+
+/**
+ * Filter and redact Owner Command Center alert cards on the server before returning
+ * KPI/alert payloads to a workspace member lacking the underlying permission.
+ */
+export function filterCommandAlertsByVisibility<T extends CommandAlertVisibilityCandidate>(
+  alerts: readonly T[],
+  holds: (capability: Capability) => boolean,
+): {
+  visible: Array<Omit<T, 'amountMinor'> & { amountMinor: number | null }>
+  hiddenAlertIds: string[]
+} {
+  const hiddenGroups = hiddenDashboardGroups(holds)
+  const visible: Array<Omit<T, 'amountMinor'> & { amountMinor: number | null }> = []
+  const hiddenAlertIds: string[] = []
+
+  for (const alert of alerts) {
+    const blockedByPermission = alert.requiredPermission ? !holds(alert.requiredPermission) : false
+    const blockedByGroup = alert.figureGroup ? hiddenGroups.includes(alert.figureGroup) : false
+    if (blockedByPermission || blockedByGroup) {
+      hiddenAlertIds.push(alert.id)
+      continue
+    }
+    visible.push({ ...alert, amountMinor: alert.amountMinor ?? null })
+  }
+
+  return { visible, hiddenAlertIds }
+}

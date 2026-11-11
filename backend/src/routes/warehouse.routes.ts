@@ -200,6 +200,16 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   const transferActionSchema = z.object({
     action: z.enum(['approve', 'pick', 'ship', 'mark_in_transit', 'receive', 'cancel']),
     reason: z.string().trim().max(300).optional(),
+    receivedLines: z
+      .array(
+        z.object({
+          lineId: z.string().uuid(),
+          receivedQuantity: z.number().nonnegative().max(1e9),
+          reason: z.string().trim().max(240).optional(),
+        }),
+      )
+      .max(100)
+      .optional(),
   })
   const TRANSFER_STATUSES = [
     'requested',
@@ -266,6 +276,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
         const body = transferActionSchema.parse(request.body)
         const data = await transferService.advance(request.tenancy, id, body.action, {
           reason: body.reason,
+          receivedLines: body.receivedLines,
         })
         if (body.action === 'receive') {
           await clearCache('warehouses:*')
