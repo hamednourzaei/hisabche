@@ -3580,7 +3580,40 @@
     "leaveApprove": "Approve leave",
     "leaveReject": "Reject leave",
     "leaveDecideError": "Could not save. Try again.",
-    "leaveAlreadyDecided": "This leave request has already been decided."
+    "leaveAlreadyDecided": "This leave request has already been decided.",
+    "payslip": "Payslip",
+    "payslipLoading": "Preparing",
+    "payslipError": "The payslip download failed.",
+    "balanceAccrued": "Accrued",
+    "balanceConsumed": "Consumed",
+    "balancePending": "Pending",
+    "balanceRemaining": "Remaining",
+    "balanceAfterPending": "Available after pending",
+    "leaveEngineOff": "The leave engine is not switched on yet — define a leave policy first.",
+    "leaveEngineOffLong": "The leave engine is not switched on on this database yet. Run docs/leave-policy-01-migration.sql to enable leave policies and automatic day accrual.",
+    "leaveBalanceError": "The leave balance could not be read.",
+    "leavePolicies": "Leave policies",
+    "addLeavePolicy": "New policy",
+    "leaveAnnualDays": "Days per year",
+    "accrualMethod": "Accrual method",
+    "accrualMonthly": "Monthly (1/12 of the year)",
+    "accrualYearly": "Yearly (January)",
+    "accrualUpfront": "Yearly (hire month)",
+    "leavePolicyDaysInvalid": "Days per year must be a positive multiple of 0.5.",
+    "leavePolicySaveError": "Could not save.",
+    "leavePolicyExists": "A policy for this leave type already exists.",
+    "noLeavePolicies": "No policy yet — write one for each leave type.",
+    "leavePolicyPaid": "Paid",
+    "leavePolicyUnpaid": "Unpaid",
+    "leavePolicyActive": "Active",
+    "leavePolicyInactive": "Off",
+    "accrualRun": "Run the monthly accrual",
+    "accrualRunButton": "Run accrual",
+    "accrualPeriod": "Accrual month",
+    "accrualPeriodPlaceholder": "e.g. 2026-01",
+    "accrualPeriodInvalid": "Write the month as 2026-01.",
+    "accrualDone": "Done: {count} accrual rows written.",
+    "accrualFailed": "The accrual did not run."
   },
   "projects": {
     "title": "Projects",
@@ -4356,7 +4389,15 @@
       "November",
       "December"
     ],
-    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    "weekdaysShort": [
+      "Su",
+      "Mo",
+      "Tu",
+      "We",
+      "Th",
+      "Fr",
+      "Sa"
+    ],
     "prev": "Previous",
     "next": "Next",
     "selectMonth": "Select month",
@@ -11079,7 +11120,8 @@
       "reorder": "Reorder suggestions",
       "deadStock": "Dead stock",
       "shelfMap": "Shelf map",
-      "transfers": "Transfer requests"
+      "transfers": "Transfer requests",
+      "holds": "Holds"
     }
   },
   "accountingHub": {
@@ -12703,6 +12745,43 @@
       "rates": "Rates",
       "positions": "Holdings",
       "remittances": "Hawala"
+    }
+  },
+  "holds": {
+    "filterLabel": "Status",
+    "reserve": "Reserve stock",
+    "reserveTitle": "Reserve stock",
+    "reserveConfirm": "Reserve",
+    "reserveHint": "A reservation is a promise: the held quantity leaves «available», but the warehouse itself moves only when the real sale does — never on the reservation.",
+    "reserved": "Reservation recorded",
+    "reserveFailed": "Could not reserve the stock",
+    "none": "No reservations in this status yet",
+    "product": "Product",
+    "warehouse": "Warehouse",
+    "quantity": "Quantity",
+    "pickWarehouse": "Pick a warehouse",
+    "pickProduct": "Pick a product",
+    "availableNow": "Available now: {available} of {onHand}",
+    "statusLabel": "Status",
+    "createdAt": "Reserved on",
+    "actions": "Work",
+    "settle": "Settle",
+    "release": "Release",
+    "released": "Reservation released",
+    "settled": "Reservation settled",
+    "actionFailed": "That did not go through",
+    "status": {
+      "active": "Active",
+      "settled": "Settled",
+      "released": "Released",
+      "expired": "Expired"
+    },
+    "errors": {
+      "RESERVATION_INSUFFICIENT": "That much is not available to reserve.",
+      "RESERVATION_NO_STOCK": "This product has no stock in this warehouse.",
+      "RESERVATION_NOT_ACTIVE": "This reservation is no longer active.",
+      "RESERVATION_INVALID_QUANTITY": "Invalid quantity.",
+      "WAREHOUSE_MAP_SCHEMA_REQUIRED": "The warehouse map migration has not run yet."
     }
   }
 }

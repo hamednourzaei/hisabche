@@ -90,6 +90,14 @@ const optionalNum = (value: number | string | null | undefined): number | null =
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/** The one bin-to-bin move. Same-warehouse, placed-units-only, atomic. */
+export interface MoveStockBetweenLocations {
+  fromLocationId: string
+  toLocationId: string
+  productId: string
+  quantity: number
+}
+
 export class WarehouseMapService {
   /**
    * The whole map of one warehouse in one payload.
@@ -386,6 +394,64 @@ export class WarehouseMapService {
       productId: input.productId,
       quantity: num(result.quantity ?? input.quantity),
       available: num(result.available),
+    }
+  }
+
+  /**
+   * Move units of ONE product from one bin to another in the SAME warehouse,
+   * in ONE transaction (`storage_move_stock`, docs/storage-bin-transfer-01-migration.sql).
+   *
+   * WHY THE RPC AND NOT TWO `placeStock` CALLS. The two-call path leaves a
+   * window where the units are nowhere — a failure between the calls is real
+   * data loss on a shelf, even though the warehouse total is untouched. The
+   * function does one UPDATE and one UPSERT under row locks, so conservation
+   * is structural: what leaves the source arrives at the destination or
+   * neither happens.
+   *
+   * Same gate as placing — `product.write` — because the warehouse total never
+   * changes here either. Cross-warehouse is `warehouse_transfer_stock`, and the
+   * function refuses it (`STORAGE_MOVE_OTHER_WAREHOUSE`).
+   */
+  async moveStock(
+    ctx: TenancyContext,
+    input: MoveStockBetweenLocations,
+  ): Promise<{ fromLocationId: string; toLocationId: string; productId: string; moved: number }> {
+    const from = await this.locationRow(ctx, input.fromLocationId)
+    const to = await this.locationRow(ctx, input.toLocationId)
+    await assertMayUseWarehouse(ctx, from.warehouse_id, 'WAREHOUSE_NOT_PERMITTED')
+    await assertMayUseWarehouse(ctx, to.warehouse_id, 'WAREHOUSE_NOT_PERMITTED')
+
+    const { data, error } = await supabase.rpc('storage_move_stock', {
+      p_workspace: ctx.workspaceId,
+      p_actor: ctx.userId,
+      p_from: input.fromLocationId,
+      p_to: input.toLocationId,
+      p_product: input.productId,
+      p_quantity: input.quantity,
+    })
+
+    if (error) {
+      const code = /\b([A-Z][A-Z_]{6,})\b/.exec(error.message ?? '')?.[1]
+      // The refusals the screen reads as answers, not server faults — the same
+      // shape `placeStock` maps for its own function.
+      if (
+        code === 'STORAGE_MOVE_EXCEEDS_PLACED' ||
+        code === 'STORAGE_MOVE_EXCEEDS_WAREHOUSE' ||
+        code === 'STORAGE_MOVE_NOTHING_PLACED' ||
+        code === 'STORAGE_MOVE_NO_STOCK' ||
+        code === 'STORAGE_MOVE_OTHER_WAREHOUSE'
+      )
+        throw new ConflictError(code)
+      if (code?.startsWith('STORAGE_MOVE_')) throw new ValidationError(code)
+      throw new DatabaseError('Failed to move the stock between the locations', error)
+    }
+
+    const result = (data ?? {}) as { moved?: number | string }
+    return {
+      fromLocationId: input.fromLocationId,
+      toLocationId: input.toLocationId,
+      productId: input.productId,
+      moved: num(result.moved ?? input.quantity),
     }
   }
 

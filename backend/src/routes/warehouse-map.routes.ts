@@ -7,6 +7,7 @@
 //   POST  /api/warehouses/:id/locations    put a shelf on the plan
 //   PATCH /api/storage-locations/:id       rename, move or retire it
 //   POST  /api/storage-locations/:id/place what a person recorded as sitting there
+//   POST  /api/storage-locations/move      bin-to-bin move of one product, atomic
 //   PUT   /api/storage-locations/:id/auto-shelf  this shelf takes a product's purchases
 //
 // ⚠️ TWO CAPABILITIES, AND THEY ARE DIFFERENT JOBS
@@ -41,6 +42,13 @@ import {
   MAP_MIN_DAYS,
   WarehouseMapService,
 } from '../services/inventory/warehouse-map.service'
+
+const moveStockSchema = z.object({
+  fromLocationId: z.string().uuid(),
+  toLocationId: z.string().uuid(),
+  productId: z.string().uuid(),
+  quantity: z.number().positive(),
+})
 
 export async function warehouseMapRoutes(fastify: FastifyInstance) {
   const service = new WarehouseMapService()
@@ -138,6 +146,25 @@ export async function warehouseMapRoutes(fastify: FastifyInstance) {
         return reply.send(await service.placeStock(request.tenancy, id, body))
       } catch (err) {
         return fail(reply, err, 'Failed to record what is in the location')
+      }
+    },
+  )
+
+  // Bin-to-bin, in ONE transaction (`storage_move_stock`). Same gate as
+  // placing: `product.write` — the warehouse total never changes here either.
+  // The two ids come in the BODY, so the address is one route, not one per
+  // shelf.
+  fastify.post(
+    '/api/storage-locations/move',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = moveStockSchema.parse(request.body)
+        return reply.send(await service.moveStock(request.tenancy, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to move the stock between the locations')
       }
     },
   )

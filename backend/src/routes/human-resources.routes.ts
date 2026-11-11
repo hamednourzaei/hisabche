@@ -17,6 +17,8 @@ import {
   updatePayrollSchema,
   createLeaveSchema,
   updateLeaveSchema,
+  createLeavePolicySchema,
+  updateLeavePolicySchema,
 } from '@hisabche/validation'
 import { HumanResourcesService } from '../services/human-resources.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -530,6 +532,134 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         return reply.send(leave)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to update leave')
+      }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════
+  // LEAVE POLICIES, BALANCE, ACCRUAL — V58 (leave-policy-01)
+  //
+  // The entitlement is policy; the consumption is the approved leave. The
+  // RPCs are backend-only (revoked from anon/authenticated), so these routes
+  // are the only door, and `leave.write` gates everything that writes.
+  // ═══════════════════════════════════════════════════════
+
+  // ─── GET /api/leave-policies ──────────────
+  fastify.get(
+    '/api/leave-policies',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.read')],
+      schema: { response: { 200: toJsonSchema(z.array(z.any())) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await humanResourcesService.listLeavePolicies(request.tenancy))
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch leave policies')
+      }
+    },
+  )
+
+  // ─── POST /api/leave-policies ─────────────
+  fastify.post(
+    '/api/leave-policies',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.write')],
+      schema: {
+        body: toJsonSchema(createLeavePolicySchema),
+        response: { 201: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const data = createLeavePolicySchema.parse(request.body)
+        const policy = await humanResourcesService.createLeavePolicy(request.tenancy, data)
+        return reply.code(201).send(policy)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        return sendFailure(reply, fastify.log, err, 'Failed to create the leave policy')
+      }
+    },
+  )
+
+  // ─── PATCH /api/leave-policies/:id ────────
+  fastify.patch(
+    '/api/leave-policies/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.write')],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        body: toJsonSchema(updateLeavePolicySchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const data = updateLeavePolicySchema.parse(request.body)
+        return reply.send(await humanResourcesService.updateLeavePolicy(request.tenancy, id, data))
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to update the leave policy')
+      }
+    },
+  )
+
+  // ─── GET /api/leaves/balance ─────────────
+  // Registered BEFORE nothing depends on order: Fastify prefers the static
+  // segment `balance` over `/api/leaves/:id`, so this never lands in the id
+  // route.
+  fastify.get(
+    '/api/leaves/balance',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.read')],
+      schema: {
+        querystring: toJsonSchema(
+          z.object({ employeeId: z.string().uuid(), leaveType: z.string().min(1).max(20) }),
+        ),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { employeeId, leaveType } = request.query as {
+          employeeId: string
+          leaveType: string
+        }
+        return reply.send(
+          await humanResourcesService.leaveBalance(request.tenancy, employeeId, leaveType),
+        )
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to read the leave balance')
+      }
+    },
+  )
+
+  // ─── POST /api/leaves/accrue ─────────────
+  // One month, every active employee × active policy. Idempotent inside the
+  // function, so a double-click writes once — the return value says what
+  // changed, not who was looked at.
+  fastify.post(
+    '/api/leaves/accrue',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('leave.write')],
+      schema: {
+        body: toJsonSchema(z.object({ period: z.string().regex(/^\d{4}-\d{2}-01$/) })),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { period } = z.object({ period: z.string() }).parse(request.body)
+        const result = await humanResourcesService.runLeaveAccrual(request.tenancy, period)
+        await clearCache('leaves:*')
+        return reply.send(result)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        return sendFailure(reply, fastify.log, err, 'Failed to run the leave accrual')
       }
     },
   )

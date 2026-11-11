@@ -707,6 +707,29 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
 
   {
     routeFile: 'warehouse-map.routes.ts',
+    route: 'POST /api/storage-locations/move',
+    // One Postgres function, one transaction: one UPDATE on the source and one
+    // UPSERT on the destination under row locks (docs/storage-bin-transfer-01-
+    // migration.sql). Two devices moving the same placement cannot both pass
+    // «the source holds N», and what leaves the source arrives or neither
+    // happens. Repeating the same move lands the same quantity.
+    mechanisms: ['db-function', 'state-idempotent'],
+    evidence: [
+      { file: `${RT}/warehouse-map.routes.ts`, text: "'/api/storage-locations/move'" },
+      {
+        file: `${SVC}/inventory/warehouse-map.service.ts`,
+        text: "supabase.rpc('storage_move_stock'",
+      },
+      { file: 'docs/storage-bin-transfer-01-migration.sql', text: 'FOR UPDATE;' },
+      {
+        file: 'docs/storage-bin-transfer-01-migration.sql',
+        text: 'ON CONFLICT (location_id, product_id)',
+      },
+    ],
+  },
+
+  {
+    routeFile: 'warehouse-map.routes.ts',
     route: 'PUT /api/storage-locations/:id/auto-shelf',
     // One setting row per (warehouse, product), upserted on its key: saving
     // the same choice twice leaves the same row; two choices = the last one.

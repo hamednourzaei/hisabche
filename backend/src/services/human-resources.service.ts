@@ -16,6 +16,8 @@ import {
   UpdatePayroll,
   CreateLeave,
   UpdateLeave,
+  type CreateLeavePolicy,
+  type UpdateLeavePolicy,
 } from '@hisabche/validation'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
@@ -1108,6 +1110,184 @@ export class HumanResourcesService {
     }
 
     return leave
+  }
+
+  // ─── Leave policies & the accrual engine (V58) ─────────────
+  //
+  // The RPCs behind the balances and the accrual run live in
+  // docs/leave-policy-01-migration.sql. The migration revokes them from
+  // anon/authenticated — the backend holds the service key, so these are the
+  // ONLY callers, and the route gates decide who gets to ask.
+  //
+  // `PGRST202`/`42883` mean the migration has not been run. That is a named
+  // state the screen answers («سیاست مرخصی فعال نشده»), not an empty list and
+  // not a bare 500 — the same distinction the warehouse map draws with
+  // `migrated: false`.
+
+  async listLeavePolicies(ctx: TenancyContext) {
+    const { data, error } = await supabase
+      .from('leave_policies')
+      .select(
+        'id, leave_type, annual_days, accrual_method, accrual_day, is_paid, carry_forward_max, is_active, created_at, updated_at',
+      )
+      .eq('workspace_id', ctx.workspaceId)
+      .order('leave_type', { ascending: true })
+
+    if (error) {
+      if (['42P01', 'PGRST205', '42703', 'PGRST204'].includes(error.code ?? '')) {
+        throw new ConflictError('LEAVE_POLICY_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to fetch leave policies', error)
+    }
+
+    return (data ?? []).map((row) => {
+      const r = row as Record<string, unknown>
+      return {
+        id: String(r.id),
+        leaveType: String(r.leave_type),
+        annualDays: Number(r.annual_days) || 0,
+        accrualMethod: String(r.accrual_method ?? 'monthly'),
+        accrualDay: (r.accrual_day as number | null) ?? null,
+        isPaid: r.is_paid !== false,
+        carryForwardMax: (r.carry_forward_max as number | null) ?? null,
+        isActive: r.is_active !== false,
+        createdAt: String(r.created_at ?? ''),
+        updatedAt: String(r.updated_at ?? ''),
+      }
+    })
+  }
+
+  async createLeavePolicy(ctx: TenancyContext, data: CreateLeavePolicy) {
+    const { data: policy, error } = await supabase
+      .from('leave_policies')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        leave_type: data.leaveType,
+        annual_days: data.annualDays,
+        accrual_method: data.accrualMethod,
+        accrual_day: data.accrualDay ?? null,
+        is_paid: data.isPaid,
+        carry_forward_max: data.carryForwardMax ?? null,
+        is_active: data.isActive,
+        created_by: ctx.userId,
+      })
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      // One policy per (workspace, leave type) — the unique index refuses the
+      // second, which the screen reads as «این نوع مرخصی سیاست دارد».
+      if (error.code === '23505') {
+        throw new ConflictError('LEAVE_POLICY_EXISTS')
+      }
+      if (['42P01', 'PGRST205', '42703', 'PGRST204'].includes(error.code ?? '')) {
+        throw new ConflictError('LEAVE_POLICY_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to create the leave policy', error)
+    }
+    if (!policy) throw new DatabaseError('The leave policy did not persist', null)
+
+    await this.invalidateLeaveCache(ctx.workspaceId)
+    return { id: String(policy.id) }
+  }
+
+  async updateLeavePolicy(ctx: TenancyContext, id: string, data: UpdateLeavePolicy) {
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (data.annualDays !== undefined) patch.annual_days = data.annualDays
+    if (data.accrualMethod !== undefined) patch.accrual_method = data.accrualMethod
+    if (data.accrualDay !== undefined) patch.accrual_day = data.accrualDay
+    if (data.isPaid !== undefined) patch.is_paid = data.isPaid
+    if (data.carryForwardMax !== undefined) patch.carry_forward_max = data.carryForwardMax
+    if (data.isActive !== undefined) patch.is_active = data.isActive
+
+    const { data: policy, error } = await supabase
+      .from('leave_policies')
+      .update(patch)
+      .eq('id', id)
+      .eq('workspace_id', ctx.workspaceId)
+      .select('id')
+      .maybeSingle()
+
+    if (error) {
+      if (['42P01', 'PGRST205', '42703', 'PGRST204'].includes(error.code ?? '')) {
+        throw new ConflictError('LEAVE_POLICY_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to update the leave policy', error)
+    }
+    if (!policy) throw new NotFoundError('Leave policy')
+
+    await this.invalidateLeaveCache(ctx.workspaceId)
+    return { id }
+  }
+
+  /**
+   * THE ONE leave balance: accrued (the engine's rows) minus consumed (APPROVED
+   * leaves), with pending shown but never silently subtracted. Computed inside
+   * `leave_balance` so two readers at two moments cannot disagree.
+   */
+  async leaveBalance(ctx: TenancyContext, employeeId: string, leaveType: string) {
+    const { data, error } = await supabase.rpc('leave_balance', {
+      p_workspace: ctx.workspaceId,
+      p_employee: employeeId,
+      p_type: leaveType,
+    })
+
+    if (error) {
+      if (['PGRST202', '42883', '42P01', 'PGRST205'].includes(error.code ?? '')) {
+        throw new ConflictError('LEAVE_POLICY_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to read the leave balance', error)
+    }
+
+    const result = (data ?? {}) as Record<string, unknown>
+    // ⚠️ Unknown is not zero, but an ABSENT engine means zero accrued is the
+    // true answer once the migration is in; the numbers below are the
+    // function's, not guessed here.
+    return {
+      accrued: Number(result.accrued) || 0,
+      consumed: Number(result.consumed) || 0,
+      pending: Number(result.pending) || 0,
+      remaining: Number(result.remaining) || 0,
+      availableAfterPending: Number(result.available_after_pending) || 0,
+      annualDays: (result.annual_days as number | null) ?? null,
+    }
+  }
+
+  /**
+   * Accrue ONE month for every active employee × active policy. Idempotent per
+   * (employee, type, month) inside the function — a retried run or a backfill
+   * never doubles an entitlement. Returns «what changed», not «who was read».
+   */
+  async runLeaveAccrual(ctx: TenancyContext, period: string) {
+    const { data, error } = await supabase.rpc('leave_accrue_month', {
+      p_workspace: ctx.workspaceId,
+      p_actor: ctx.userId,
+      p_period: period,
+    })
+
+    if (error) {
+      if ((error.message ?? '').includes('LEAVE_ACCRUAL_NOT_MONTH_START')) {
+        throw new ValidationError('LEAVE_ACCRUAL_NOT_MONTH_START')
+      }
+      if (['PGRST202', '42883', '42P01', 'PGRST205'].includes(error.code ?? '')) {
+        throw new ConflictError('LEAVE_POLICY_SCHEMA_REQUIRED')
+      }
+      throw new DatabaseError('Failed to run the leave accrual', error)
+    }
+
+    await this.invalidateLeaveCache(ctx.workspaceId)
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      entityType: 'leave_accrual',
+      entityId: period,
+      action: 'created',
+      title: `اجرا شدن موتور مرخصی برای ${period}`,
+      description: `${Number(data) || 0} ردیف نوشته شد`,
+      notify: false,
+    }).catch((err) => console.error('[HumanResourcesService] accrual audit failed:', err))
+
+    return { period, accruedCount: Number(data) || 0 }
   }
 
   // ─── Invalidate Cache ───────────────────────────────────────

@@ -171,6 +171,13 @@ const LEDGER: Record<string, Record<string, Way>> = {
     // second entry. If the entry itself was wrong, the ledger reverses it.
     '/api/payrolls/:id/book': unproven('POST /journal/:id/reverse'),
     '/api/leaves': inert,
+    // V58 (leave-policy-01): the entitlement side. A policy is configuration —
+    // no money and no stock moves when it is written, and switching it off is
+    // its own undo. The accrual run writes idempotent entitlement rows
+    // (unique per employee × type × month); it moves no money and no stock,
+    // and the ONE balance reads only what the policy still grants.
+    '/api/leave-policies': inert,
+    '/api/leaves/accrue': inert,
   },
   'cycle-count.routes.ts': {
     '/api/cycle-counts': unproven('POST /api/cycle-counts/:id/cancel'),
@@ -258,6 +265,8 @@ describe('every way forward has a decided way back', () => {
     // unproven 16 since 10 Nov 2026: «ثبت ضایعات» (corrected by a stock count).
     // 10 Nov 2026 (business packs): +6 unproven (each undone by its own status
     // or retire route), +6 none (final states), +1 inert (rate board is history).
-    expect(counts).toEqual({ proven: 9, unproven: 22, none: 23, inert: 15 })
+    // V58 (leave-policy-01): +2 inert — the entitlement side moves no money
+    // and no stock; a policy's undo is switching it off.
+    expect(counts).toEqual({ proven: 9, unproven: 22, none: 23, inert: 17 })
   })
 })

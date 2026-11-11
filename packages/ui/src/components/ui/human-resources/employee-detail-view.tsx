@@ -30,6 +30,7 @@ import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
 import { PayrollOutcome } from '../team-and-payroll/payroll-outcome'
+import { PayslipDownload } from '../team-and-payroll/payslip-download'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { toIsoDay } from '@hisabche/formatting'
 
@@ -713,8 +714,12 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
                     <span className="truncate text-[hsl(var(--fg-tertiary))]">{p.notes}</span>
                   )}
                 </span>
-                {/* Paid or not, why not, and the two buttons that decide it. */}
-                <PayrollOutcome t={t} row={p} />
+                {/* The PDF as the ledger holds it — and paid or not, why not,
+                    and the two buttons that decide it. */}
+                <span className="flex shrink-0 items-center gap-2">
+                  <PayslipDownload t={t} payrollId={p.id} />
+                  <PayrollOutcome t={t} row={p} />
+                </span>
               </div>
             ))}
           </div>

@@ -3598,7 +3598,40 @@
     "leaveApprove": "تأیید مرخصی",
     "leaveReject": "رد مرخصی",
     "leaveDecideError": "ثبت نشد. دوباره تلاش کنید.",
-    "leaveAlreadyDecided": "درباره‌ی این مرخصی قبلاً تصمیم گرفته شده است."
+    "leaveAlreadyDecided": "درباره‌ی این مرخصی قبلاً تصمیم گرفته شده است.",
+    "payslip": "فیش حقوقی",
+    "payslipLoading": "در حال آماده‌سازی",
+    "payslipError": "دانلود فیش حقوقی انجام نشد.",
+    "balanceAccrued": "اندوخته شده",
+    "balanceConsumed": "استفاده شده",
+    "balancePending": "در انتظار",
+    "balanceRemaining": "باقی‌مانده",
+    "balanceAfterPending": "با احتساب در انتظار",
+    "leaveEngineOff": "موتور مرخصی هنوز فعال نشده — سیاست مرخصی را تعریف کنید.",
+    "leaveEngineOffLong": "موتور مرخصی روی این دیتابیس فعال نشده است. میفگریشن docs/leave-policy-01-migration.sql را اجرا کنید تا سیاست مرخصی و اندوخته‌ی خودکار روزها کار کند.",
+    "leaveBalanceError": "موجودی مرخصی خوانده نشد.",
+    "leavePolicies": "سیاست مرخصی",
+    "addLeavePolicy": "سیاست تازه",
+    "leaveAnnualDays": "روز در سال",
+    "accrualMethod": "روش اندوختن",
+    "accrualMonthly": "ماهانه (از ۱۲ بخش سال)",
+    "accrualYearly": "سالانه (دی‌ماه)",
+    "accrualUpfront": "سالانه (ماه استخدام)",
+    "leavePolicyDaysInvalid": "روزهای سال باید عددی مثبت و مضرب نیم باشد.",
+    "leavePolicySaveError": "ثبت نشد.",
+    "leavePolicyExists": "برای این نوع مرخصی قبلاً سیاست ثبت شده است.",
+    "noLeavePolicies": "هنوز سیاستی ثبت نشده — برای هر نوع مرخصی یکی بنویسید.",
+    "leavePolicyPaid": "با حقوق",
+    "leavePolicyUnpaid": "بدون حقوق",
+    "leavePolicyActive": "فعال",
+    "leavePolicyInactive": "خاموش",
+    "accrualRun": "اجرای اندوخته‌ی ماهانه",
+    "accrualRunButton": "اجرای اندوخته",
+    "accrualPeriod": "ماه اجرا",
+    "accrualPeriodPlaceholder": "مثلاً 2026-01",
+    "accrualPeriodInvalid": "ماه را به شکل ۱۴۰۴-۰۱ یا 2026-01 بنویسید.",
+    "accrualDone": "انجام شد: {count} ردیف اندوخته نوشته شد.",
+    "accrualFailed": "اجرا نشد."
   },
   "projects": {
     "title": "پروژه‌ها",
@@ -4317,7 +4350,15 @@
       "بهمن",
       "اسفند"
     ],
-    "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
+    "weekdaysShort": [
+      "ش",
+      "ی",
+      "د",
+      "س",
+      "چ",
+      "پ",
+      "ج"
+    ],
     "prev": "قبلی",
     "next": "بعدی",
     "selectMonth": "انتخاب ماه",
@@ -11086,7 +11127,8 @@
       "reorder": "پیشنهاد سفارش",
       "deadStock": "کالای راکد",
       "shelfMap": "نقشه قفسه‌ها",
-      "transfers": "درخواست انتقال"
+      "transfers": "درخواست انتقال",
+      "holds": "رزروها"
     }
   },
   "accountingHub": {
@@ -12710,6 +12752,43 @@
       "rates": "نرخ‌ها",
       "positions": "موجودی ارزها",
       "remittances": "حواله"
+    }
+  },
+  "holds": {
+    "filterLabel": "وضعیت",
+    "reserve": "رزرو موجودی",
+    "reserveTitle": "رزرو موجودی",
+    "reserveConfirm": "ثبت رزرو",
+    "reserveHint": "رزرو یک قول است: تعداد رزروشده از «موجود در دسترس» کم می‌شود، اما جابه‌جایی انبار با فروش واقعی انجام می‌شود، نه با رزرو.",
+    "reserved": "رزرو ثبت شد",
+    "reserveFailed": "رزرو ثبت نشد",
+    "none": "هیچ رزروی در این وضعیت ثبت نشده",
+    "product": "کالا",
+    "warehouse": "انبار",
+    "quantity": "تعداد",
+    "pickWarehouse": "انتخاب انبار",
+    "pickProduct": "انتخاب کالا",
+    "availableNow": "موجود در دسترس: {available} از {onHand}",
+    "statusLabel": "وضعیت",
+    "createdAt": "تاریخ رزرو",
+    "actions": "کار",
+    "settle": "تسویه",
+    "release": "آزادسازی",
+    "released": "رزرو آزاد شد",
+    "settled": "رزرو تسویه شد",
+    "actionFailed": "انجام نشد",
+    "status": {
+      "active": "فعال",
+      "settled": "تسویه‌شده",
+      "released": "آزادشده",
+      "expired": "منقضی"
+    },
+    "errors": {
+      "RESERVATION_INSUFFICIENT": "این تعداد برای رزرو در دسترس نیست.",
+      "RESERVATION_NO_STOCK": "این کالا در این انبار موجودی ندارد.",
+      "RESERVATION_NOT_ACTIVE": "این رزرو دیگر فعال نیست.",
+      "RESERVATION_INVALID_QUANTITY": "تعداد نامعتبر است.",
+      "WAREHOUSE_MAP_SCHEMA_REQUIRED": "میفگریشن نقشه انبار اجرا نشده است."
     }
   }
 }

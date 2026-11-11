@@ -165,7 +165,7 @@ function MoveDialog({
       {
         productId,
         fromLocationId: from === UNPLACED ? null : from,
-        fromQuantityAfter: source.quantity - amount,
+        quantity: amount,
         toLocationId: to,
         toQuantityAfter: already + amount,
       },

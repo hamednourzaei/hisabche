@@ -15,6 +15,7 @@ import {
   apiErrorMessage,
   useCreateLeave,
   useDecideLeave,
+  useLeaveBalance,
   useLeaves,
   type Leave,
   type LeaveType,
@@ -155,6 +156,97 @@ export function endOfLeave(startDate: string, days: number): string {
   return `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
 }
 
+/**
+ * THE ONE leave balance, for the leave type the form is working on.
+ *
+ * V58 (leave-policy-01): accrued comes from the accrual engine, consumed is
+ * the APPROVED leave, and pending is shown but never silently subtracted —
+ * the server keeps the three apart, and so does this card.
+ *
+ * The engine not being switched on yet (the migration absent) is a named
+ * state, not an empty number: the card says so and offers no figures. Any
+ * other failure says «خوانده نشد» — a failed read never renders as «no
+ * balance» (§۷٫۳).
+ */
+function LeaveBalanceCard({
+  t,
+  employeeId,
+  leaveType,
+}: {
+  t: (key: string, fallback?: string) => string
+  employeeId: string
+  leaveType: LeaveType
+}) {
+  const balance = useLeaveBalance(employeeId, leaveType)
+
+  if (balance.isError) {
+    const message = apiErrorMessage(balance.error, '')
+    return (
+      <p role="status" className="text-xs text-[hsl(var(--fg-secondary))]">
+        {message.startsWith('LEAVE_POLICY_SCHEMA_REQUIRED')
+          ? t(
+              'hr.leaveEngineOff',
+              'موتور مرخصی هنوز فعال نشده — سیاست مرخصی را تعریف کنید.',
+            )
+          : t('hr.leaveBalanceError', 'موجودی مرخصی خوانده نشد.')}
+      </p>
+    )
+  }
+  if (balance.isLoading || !balance.data) {
+    return <div className="h-10 animate-pulse rounded-xl bg-[hsl(var(--surface-muted))]" />
+  }
+
+  const b = balance.data
+  const cell = 'flex min-w-0 flex-col items-center gap-0.5 rounded-xl bg-[hsl(var(--surface-base))] px-3 py-2'
+  return (
+    <div
+      className="grid grid-cols-2 gap-2 sm:grid-cols-5"
+      data-leave-balance={leaveType}
+    >
+      <span className={cell}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('hr.balanceAccrued', 'اندوخته شده')}
+        </span>
+        <span className="tabular-nums text-sm font-bold text-[hsl(var(--fg-primary))]">
+          {b.accrued}
+        </span>
+      </span>
+      <span className={cell}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('hr.balanceConsumed', 'استفاده شده')}
+        </span>
+        <span className="tabular-nums text-sm font-bold text-[hsl(var(--fg-primary))]">
+          {b.consumed}
+        </span>
+      </span>
+      <span className={cell}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('hr.balancePending', 'در انتظار')}
+        </span>
+        <span className="tabular-nums text-sm font-bold text-[hsl(var(--fg-secondary))]">
+          {b.pending}
+        </span>
+      </span>
+      <span className={cell}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('hr.balanceRemaining', 'باقی‌مانده')}
+        </span>
+        <span className="tabular-nums text-sm font-bold text-[hsl(var(--color-success))]">
+          {b.remaining}
+        </span>
+      </span>
+      <span className={cell}>
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('hr.balanceAfterPending', 'با احتساب در انتظار')}
+        </span>
+        <span className="tabular-nums text-sm font-bold text-[hsl(var(--fg-primary))]">
+          {b.availableAfterPending}
+        </span>
+      </span>
+    </div>
+  )
+}
+
 export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
   t,
   employeeId,
@@ -262,6 +354,9 @@ export const EmployeeLeavePanel = memo(function EmployeeLeavePanel({
           {t('hr.addLeave', 'ثبت مرخصی')}
         </button>
       </div>
+
+      {/* The one balance, for the leave type the form is working on. */}
+      <LeaveBalanceCard t={t} employeeId={employeeId} leaveType={leaveType} />
 
       {open && (
         <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4">

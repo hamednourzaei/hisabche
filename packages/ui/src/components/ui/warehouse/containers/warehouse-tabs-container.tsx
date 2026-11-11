@@ -45,6 +45,7 @@ import {
   WarehouseProductsSection,
   WarehouseShelfMapSection,
 } from '../shelves/warehouse-products-section'
+import { HoldsSection } from '../holds-section'
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
@@ -104,6 +105,8 @@ export const STOCK_SECTIONS = [
   'shelfMap',
   // Smart Location «Pick Request» (10 Nov 2026): the transfer document, wired.
   'transfers',
+  // V58 — stock reservations / ATP: the promises that hold stock back.
+  'holds',
   'reorder',
   'deadStock',
 ] as const
@@ -262,6 +265,8 @@ function WarehouseHub() {
               <WarehouseShelfMapSection />
             ) : section === 'transfers' ? (
               <TransferRequestsSection />
+            ) : section === 'holds' ? (
+              <HoldsSection />
             ) : (
               <WarehouseStockTab />
             )}

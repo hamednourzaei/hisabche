@@ -303,31 +303,42 @@ export function useProductStorageLocations(productId: string | null) {
 /**
  * Move units of one product from one shelf to another in the same warehouse.
  *
- * Two calls of the ONE placing path, in this order: the old shelf goes down
- * first, so the warehouse cap is never exceeded midway. If the second call
- * fails the units are «not on a shelf» — an honest state — and the error is
- * returned; nothing invents a stock figure.
+ * V58 — ONE atomic call when the units are already on a shelf:
+ * `POST /storage-locations/move` → `storage_move_stock` (one transaction, row
+ * locks inside). The old two-call path (down here first, up there second)
+ * had a window where the units were nowhere — a failure between the calls
+ * left a shelf's record wrong on a real device.
+ *
+ * The fallback stays for units that are not on ANY shelf yet: placing them is
+ * the whole move, and the destination's after-count is what the placing path
+ * wants. If even that fails the error is returned; nothing invents a figure.
  */
 export function useMoveProductPlacement() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
       productId: string
+      /** `null` = the units are not on a shelf yet — placing is the whole move. */
       fromLocationId: string | null
-      fromQuantityAfter: number
+      /** How many units move. */
+      quantity: number
       toLocationId: string
+      /** Only read when `fromLocationId` is null: the destination's count after placing. */
       toQuantityAfter: number
     }) => {
       if (input.fromLocationId) {
-        await apiClient.post(`/storage-locations/${input.fromLocationId}/place`, {
+        await apiClient.post(`/storage-locations/move`, {
+          fromLocationId: input.fromLocationId,
+          toLocationId: input.toLocationId,
           productId: input.productId,
-          quantity: input.fromQuantityAfter,
+          quantity: input.quantity,
+        })
+      } else {
+        await apiClient.post(`/storage-locations/${input.toLocationId}/place`, {
+          productId: input.productId,
+          quantity: input.toQuantityAfter,
         })
       }
-      await apiClient.post(`/storage-locations/${input.toLocationId}/place`, {
-        productId: input.productId,
-        quantity: input.toQuantityAfter,
-      })
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: warehouseMapKeys.all })

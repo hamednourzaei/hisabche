@@ -48,6 +48,8 @@ describe('two tabs, built from shared parts', () => {
       'shelfMap',
       // 10 Nov 2026: Smart Location «Pick Request» — the transfer document.
       'transfers',
+      // V58: stock reservations / ATP — the promises that hold stock back.
+      'holds',
       'reorder',
       'deadStock',
     ])

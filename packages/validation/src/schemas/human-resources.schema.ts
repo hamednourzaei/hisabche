@@ -318,3 +318,48 @@ export const updateLeaveSchema = leaveSchema.partial().extend({
 })
 
 export type UpdateLeave = z.infer<typeof updateLeaveSchema>
+
+// ============================================
+// Leave policy (سیاست مرخصی) — V58: what a leave type grants and how it accrues.
+//
+// The entitlement is POLICY (this row); the consumption is the approved leave
+// (the leaves table). One row per workspace + leave type — the unique index
+// `leave_policies_one_per_type` refuses the second one, so the client schema
+// never carries workspaceId or a duplicate type silently.
+// ============================================
+
+export const leavePolicySchema = z.object({
+  id: uuidSchema.optional(),
+  leaveType: z.enum(['annual', 'sick', 'maternity', 'paternity', 'unpaid', 'bereavement', 'other']),
+  /** Half-day steps, the same granularity a leave request has. */
+  annualDays: z
+    .number()
+    .positive()
+    .refine((value) => value * 2 === Math.trunc(value * 2), {
+      message: 'validation.halfDaySteps',
+    }),
+  accrualMethod: z.enum(['monthly', 'yearly', 'upfront']).default('monthly'),
+  /** yearly/upfront: day of month the grant lands (1..28 — February is safe). */
+  accrualDay: z.number().int().min(1).max(28).optional().nullable(),
+  isPaid: z.boolean().default(true),
+  /** NULL = no carry-over allowed; a number caps what carries into next year. */
+  carryForwardMax: z
+    .number()
+    .nonnegative()
+    .refine((value) => value * 2 === Math.trunc(value * 2), {
+      message: 'validation.halfDaySteps',
+    })
+    .optional()
+    .nullable(),
+  isActive: z.boolean().default(true),
+})
+
+export type LeavePolicy = z.infer<typeof leavePolicySchema>
+
+export const createLeavePolicySchema = leavePolicySchema.omit({ id: true })
+
+export type CreateLeavePolicy = z.infer<typeof createLeavePolicySchema>
+
+export const updateLeavePolicySchema = leavePolicySchema.partial().extend({ id: uuidSchema })
+
+export type UpdateLeavePolicy = z.infer<typeof updateLeavePolicySchema>

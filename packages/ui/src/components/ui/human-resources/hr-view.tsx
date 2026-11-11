@@ -22,6 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { exportToCSV } from '../../../lib/export'
 import { useSortFilter } from '../../../hooks/use-sort-filter'
+import { LeavePolicyCard } from './leave-policy-card'
 import { JalaliDatePicker } from '../../ui/jalali-datepicker'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
@@ -681,6 +682,9 @@ export const HumanResourcesView = memo(function HumanResourcesView({
           </div>
         )}
       </div>
+
+      {/* Leave policies + the accrual run — the entitlement side of leave. */}
+      <LeavePolicyCard t={t} />
 
       {/* Pagination */}
       {total > 20 && (

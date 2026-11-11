@@ -848,6 +848,12 @@ export {
   type Leave,
   type CreateLeave,
   type UpdateLeave,
+  leavePolicySchema,
+  createLeavePolicySchema,
+  updateLeavePolicySchema,
+  type LeavePolicy,
+  type CreateLeavePolicy,
+  type UpdateLeavePolicy,
 } from './schemas/human-resources.schema'
 
 // ---------- Projects ----------

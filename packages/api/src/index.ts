@@ -337,11 +337,33 @@ export {
   useLeaves,
   useCreateLeave,
   useDecideLeave,
+  useLeaveBalance,
+  useLeavePolicies,
+  useCreateLeavePolicy,
+  useUpdateLeavePolicy,
+  useRunLeaveAccrual,
   leaveKeys,
   type Leave,
   type LeaveType,
   type CreateLeaveInput,
+  type LeaveBalance,
+  type LeavePolicy,
 } from './hooks/leaves'
+
+// ─── Stock reservations / ATP (V58) ──────────────────────
+export {
+  useAvailableToPromise,
+  useReservations,
+  useReserveStock,
+  useReleaseReservation,
+  useSettleReservation,
+  reservationKeys,
+  type StockReservation,
+  type ReservationStatus,
+  type AvailableToPromise,
+  type ReserveStockInput,
+  type ReserveStockResult,
+} from './hooks/inventory-reservations'
 
 // ─── Permissions ──────────────────────────────────────────
 export {

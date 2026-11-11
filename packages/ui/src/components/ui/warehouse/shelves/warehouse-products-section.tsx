@@ -441,12 +441,11 @@ export function WarehouseShelvesContainer({
           }
           onMove={({ productId, fromShelfId, toShelfId, quantity }) => {
             const product = stock.find((row) => row.id === productId)
-            const from = product?.onShelf[fromShelfId] ?? 0
             const to = product?.onShelf[toShelfId] ?? 0
             return move.mutateAsync({
               productId,
               fromLocationId: fromShelfId,
-              fromQuantityAfter: from - quantity,
+              quantity,
               toLocationId: toShelfId,
               toQuantityAfter: to + quantity,
             })
