@@ -32,6 +32,14 @@ import {
 } from '@hisabche/api'
 import { decodePullPage, decodeSnapshotPage, HSB_CONTENT_TYPE } from '@hisabche/sync/wire'
 import { connectSyncStream, streamUrl, type StreamHandle } from '@hisabche/sync/stream'
+import {
+  clampBackfillPage,
+  planPackBackfill,
+  resolveOfflineSerialSyncConflict,
+  syncEntitiesForPacks,
+  type OfflineSerialConflict,
+  type PackId,
+} from '@hisabche/validation'
 
 import { useCurrencyStore, useWorkspaceStore } from '@hisabche/store'
 
@@ -316,6 +324,7 @@ function writeCursor(workspaceId: string, cursor: number): void {
 
 export interface PullPage {
   changes: Array<{
+    syncVersion?: number | undefined
     entityType: string
     entityId: string
     operation: 'create' | 'update' | 'delete'
@@ -627,13 +636,31 @@ export async function applyChanges(page: PullPage): Promise<number> {
   return written
 }
 
+const PACK_STORAGE_KEY = 'hisabche:installed-packs'
+
+export function getInstalledPacksForSync(): readonly PackId[] {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(PACK_STORAGE_KEY) : null
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as PackId[]
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return ['core']
+}
+
 async function pullDelta(workspaceId: string, from: number): Promise<number> {
   let cursor = from
   let written = 0
+  const entityTypes = syncEntitiesForPacks(getInstalledPacksForSync()).join(',')
   for (let round = 0; round < DELTA_MAX_PAGES; round++) {
     const data = await getSyncBody<PullPage>(
       '/sync/pull',
-      { cursor, limit: DELTA_PAGE },
+      { cursor, limit: DELTA_PAGE, entityTypes },
       decodePullPage,
     )
     if (data.mustRehydrate) return written + (await rehydrate(workspaceId))
@@ -643,6 +670,47 @@ async function pullDelta(workspaceId: string, from: number): Promise<number> {
     cursor = data.nextCursor
     writeCursor(workspaceId, cursor)
     if (!data.hasMore) break
+  }
+  return written
+}
+
+/**
+ * Backfill entities for newly installed packs from cursor 0 up to the shared
+ * cursor C without re-pulling already-installed pack entities.
+ */
+export async function backfillNewlyInstalledPacks(
+  workspaceId: string,
+  previousPacks: readonly PackId[],
+  nextPacks: readonly PackId[],
+): Promise<number> {
+  const sharedCursor = readCursor(workspaceId) ?? 0
+  const plan = planPackBackfill({ sharedCursor, previousPacks, nextPacks })
+  if (plan.kind !== 'delta_backfill') return 0
+
+  let cursor = 0
+  let written = 0
+  const entityParam = plan.entityTypes.join(',')
+  for (let round = 0; round < DELTA_MAX_PAGES; round++) {
+    const data = await getSyncBody<PullPage>(
+      '/sync/pull',
+      { cursor, limit: DELTA_PAGE, entityTypes: entityParam },
+      decodePullPage,
+    )
+    if (data.mustRehydrate) {
+      for (const entity of plan.entityTypes) {
+        if ((DELTA_ENTITIES as readonly string[]).includes(entity)) {
+          written += await snapshotEntity(entity as DeltaEntity)
+        }
+      }
+      return written
+    }
+
+    const { rows, reachedTarget } = clampBackfillPage(data.changes, plan.upToCursor, data.hasMore)
+    if (rows.length > 0) {
+      written += await applyChanges({ ...data, changes: rows })
+    }
+    cursor = data.nextCursor
+    if (reachedTarget) break
   }
   return written
 }
@@ -711,6 +779,50 @@ export const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
 
 function isPermanent(status: number): boolean {
   return status >= 400 && status < 500 && status !== 408 && status !== 429
+}
+
+/**
+ * V61 §2.5 — Two devices sold the same serial offline: flag PENDING_REVIEW
+ * instead of silently overwriting or retrying forever.
+ */
+export function handleSerialSyncConflict(input: {
+  serialNumber: string
+  conflictingInvoiceId: string | null
+}): OfflineSerialConflict | null {
+  return resolveOfflineSerialSyncConflict({
+    serialNumber: input.serialNumber,
+    serverStatus: 'sold',
+    conflictingInvoiceId: input.conflictingInvoiceId,
+  })
+}
+
+export interface OfflineBookingConflict {
+  readonly bookingId: string
+  readonly resourceId: string
+  readonly startAt: string
+  readonly endAt: string
+  readonly conflictState: 'PENDING_REVIEW'
+  readonly reason: 'RESOURCE_SLOT_OVERLAP'
+}
+
+/**
+ * V61 §2.8 — Two devices booked the same resource slot offline: flag
+ * PENDING_REVIEW instead of dropping or double-booking.
+ */
+export function handleBookingSyncConflict(input: {
+  bookingId: string
+  resourceId: string
+  startAt: string
+  endAt: string
+}): OfflineBookingConflict {
+  return {
+    bookingId: input.bookingId,
+    resourceId: input.resourceId,
+    startAt: input.startAt,
+    endAt: input.endAt,
+    conflictState: 'PENDING_REVIEW',
+    reason: 'RESOURCE_SLOT_OVERLAP',
+  }
 }
 
 async function pushEntry(entry: QueueEntry): Promise<void> {
@@ -786,6 +898,58 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
       })
     } else {
       await apiClient.post('/service-delivery/sessions', entry.payload, { headers })
+    }
+    return
+  }
+
+  if ((entry.entity as string) === 'resource_bookings') {
+    const payload = entry.payload as Record<string, unknown>
+    try {
+      await apiClient.post('/resource-bookings', entry.payload, { headers })
+    } catch (error) {
+      if ((error as Partial<ApiError>).status === 409) {
+        const conflict = handleBookingSyncConflict({
+          bookingId: String(payload.id ?? entry.clientId),
+          resourceId: String(payload.resourceId ?? ''),
+          startAt: String(payload.startAt ?? ''),
+          endAt: String(payload.endAt ?? ''),
+        })
+        const err = new Error('RESOURCE_SLOT_OVERLAP') as Error & {
+          permanent: boolean
+          conflict: OfflineBookingConflict
+        }
+        err.permanent = true
+        err.conflict = conflict
+        throw err
+      }
+      throw error
+    }
+    return
+  }
+
+  if (entry.entity === 'stock_serials') {
+    const payload = entry.payload as Record<string, unknown>
+    try {
+      await apiClient.post('/operations/serials/issue', entry.payload, { headers })
+    } catch (error) {
+      const apiErr = error as Partial<ApiError> & { data?: { conflictingInvoiceId?: string } }
+      if (apiErr.status === 409) {
+        const serials = Array.isArray(payload.serialNumbers)
+          ? (payload.serialNumbers as string[])
+          : []
+        const conflict = handleSerialSyncConflict({
+          serialNumber: serials[0] ?? String(payload.serialNumber ?? ''),
+          conflictingInvoiceId: apiErr.data?.conflictingInvoiceId ?? null,
+        })
+        const err = new Error('DUPLICATE_OFFLINE_SERIAL_SALE') as Error & {
+          permanent: boolean
+          conflict: OfflineSerialConflict | null
+        }
+        err.permanent = true
+        err.conflict = conflict
+        throw err
+      }
+      throw error
     }
     return
   }

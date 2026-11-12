@@ -180,6 +180,38 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/audit/revisions/:documentType/:documentId ────────────────────
+  //
+  // V61 B.2.22 — Field-level document revisions (before/after + changed_fields).
+  fastify.get(
+    '/api/audit/revisions/:documentType/:documentId',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { documentType, documentId } = request.params as {
+          documentType: string
+          documentId: string
+        }
+        const revisions = await auditService.listDocumentRevisions(
+          request.tenancy,
+          documentType,
+          documentId,
+        )
+        return reply.send({ revisions })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch document revisions' })
+      }
+    },
+  )
+
   // ═══════════════════════════════════════════════════════════════════════════
   // WRITE LOG
   // ═══════════════════════════════════════════════════════════════════════════

@@ -37,7 +37,8 @@ function isMissingBranchColumn(error: { code?: string; message?: string } | null
   return /branch_id/i.test(error.message ?? '')
 }
 
-const ACCOUNT_COLUMNS = 'id, code, name, type, role, parent_id, is_group, is_active, created_at'
+const ACCOUNT_COLUMNS =
+  'id, code, name, type, role, kind, parent_id, is_group, is_active, created_at'
 
 export interface AccountRow {
   id: string
@@ -45,6 +46,7 @@ export interface AccountRow {
   name: string
   type: AccountRootType
   role: string | null
+  kind: 'standard' | 'memorandum'
   parentId: string | null
   isGroup: boolean
   isActive: boolean
@@ -82,6 +84,7 @@ function mapAccount(raw: Record<string, any>): AccountRow {
     name: raw.name,
     type: raw.type,
     role: raw.role ?? null,
+    kind: raw.kind === 'memorandum' ? 'memorandum' : 'standard',
     parentId: raw.parent_id ?? null,
     isGroup: raw.is_group === true,
     isActive: raw.is_active !== false,
@@ -395,6 +398,13 @@ export class AccountingRepository {
         account_id: line.accountId,
         debit: line.debit,
         credit: line.credit,
+        ...(line.currency ? { currency: line.currency } : {}),
+        ...(line.amountCurrencyMinor !== undefined && line.amountCurrencyMinor !== null
+          ? { amount_currency_minor: line.amountCurrencyMinor }
+          : {}),
+        ...(line.exchangeRate !== undefined && line.exchangeRate !== null
+          ? { exchange_rate: line.exchangeRate }
+          : {}),
       })),
     })
 

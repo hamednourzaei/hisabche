@@ -9,6 +9,8 @@ import { BrowserWindow, app, shell } from 'electron'
 
 import { reportError } from './services/monitoring'
 import { bindUpdaterWindow } from './services/updater'
+import { isPackDeliveryEnabled } from './packs'
+import { APP_PROTOCOL_ORIGIN } from './protocol'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -135,6 +137,8 @@ export function createMainWindow(): BrowserWindow {
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void window.loadURL(process.env.ELECTRON_RENDERER_URL)
+  } else if (isPackDeliveryEnabled()) {
+    void window.loadURL(`${APP_PROTOCOL_ORIGIN}/index.html`)
   } else {
     void window.loadFile(join(__dirname, '../renderer/index.html'))
   }

@@ -1354,6 +1354,8 @@ export {
   useSalesOrder,
   useCreateSalesOrder,
   useConfirmSalesOrder,
+  useAcceptSalesOrderQuote,
+  useDeliverSalesOrder,
   useCancelSalesOrder,
   useFulfillSalesOrder,
   useInvoiceSalesOrder,

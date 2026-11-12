@@ -68,6 +68,9 @@ const SalonSetupSection = lazy(() =>
 const CommissionSection = lazy(() =>
   import('../../business-packs/salon-sections').then((m) => ({ default: m.CommissionSection })),
 )
+const ContractsSection = lazy(() =>
+  import('../contracts-section').then((m) => ({ default: m.ContractsSection })),
+)
 
 export const CUSTOMERS_HUB_TABS = ['customers', 'sessions', 'outreach'] as const
 export type CustomersHubTab = (typeof CUSTOMERS_HUB_TABS)[number]
@@ -133,7 +136,10 @@ function CustomersHub() {
 
   const [active, select] = useHubTab(offered)
   const [role, selectRole] = useHubSection(CUSTOMER_ROLES)
+  const [contractsView, selectContractsView] = useHubSection(['all', 'contracts'] as const)
   const [section, selectSection] = useHubSection(sections)
+  const mayReadContracts = capabilities.can('invoice.read') !== false
+  const isContractsView = mayReadContracts && contractsView === 'contracts'
   const mayReadPay = capabilities.can('payroll.read') !== false
   const sessionSections = SESSION_SECTIONS.filter(
     (sec) => look.shows(hubLookId('sessions', sec)) && (sec !== 'commission' || mayReadPay),
@@ -244,14 +250,37 @@ function CustomersHub() {
             <SegmentedControl
               branch
               label={t('customers.role.label')}
-              options={CUSTOMER_ROLES.map((value) => ({
-                value,
-                label: t(`customers.role.${value}`),
-              }))}
-              value={role}
-              onChange={selectRole}
+              options={[
+                ...CUSTOMER_ROLES.map((value) => ({
+                  value,
+                  label: t(`customers.role.${value}`),
+                })),
+                ...(mayReadContracts
+                  ? [{ value: 'contracts', label: t('customersHub.sections.contracts') }]
+                  : []),
+              ]}
+              value={isContractsView ? 'contracts' : role}
+              onChange={(next) => {
+                if (next === 'contracts') {
+                  selectContractsView('contracts')
+                } else {
+                  selectRole(next as CustomerRole)
+                }
+              }}
             />
-            <CustomersContainer role={role} />
+            {isContractsView ? (
+              <Suspense
+                fallback={
+                  <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
+                    {t('customersHub.loading')}
+                  </p>
+                }
+              >
+                <ContractsSection />
+              </Suspense>
+            ) : (
+              <CustomersContainer role={role} />
+            )}
           </>
         )}
       </div>

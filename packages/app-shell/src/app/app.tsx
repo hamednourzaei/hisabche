@@ -11,11 +11,13 @@
 // the app must paint in under two seconds on a cold start.
 // ============================================
 
-import React, { lazy } from 'react'
+import React, { lazy, useEffect } from 'react'
 import { createHashRouter, Navigate, RouterProvider, useParams } from 'react-router-dom'
 
 import { isPageDisabled } from '@hisabche/ui/menu'
 import { Providers } from './providers'
+import { PackRouteGate } from '@/features/packs/pack-gate'
+import { scheduleIdlePackPrefetch } from '@/features/packs/prefetch'
 import { DesktopTitleBar, useHasDesktopTitleBar } from '@/components/layout/desktop-title-bar'
 import { AppShell } from '@/components/layout/app-shell'
 import { RequireAuth } from '@/features/auth/require-auth'
@@ -126,19 +128,93 @@ const router = createHashRouter([
       { path: 'activities', element: <ActivitiesPage /> },
       { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'approvals', element: <ApprovalsPage /> },
+      {
+        path: 'approvals',
+        element: (
+          <PackRouteGate packId="approvals">
+            <ApprovalsPage />
+          </PackRouteGate>
+        ),
+      },
       { path: 'developers', element: <DevelopersPage /> },
-      { path: 'marketplace', element: gated('/marketplace', '/settings', <MarketplacePage />) },
+      {
+        path: 'marketplace',
+        element: gated(
+          '/marketplace',
+          '/settings',
+          <PackRouteGate packId="marketplace">
+            <MarketplacePage />
+          </PackRouteGate>,
+        ),
+      },
       { path: 'billing', element: <BillingPage /> },
-      { path: 'market-seller', element: gated('/market-seller', '/', <MarketSellerPage />) },
-      { path: 'analysis', element: <AnalysisPage /> },
+      {
+        path: 'market-seller',
+        element: gated(
+          '/market-seller',
+          '/',
+          <PackRouteGate packId="marketplace">
+            <MarketSellerPage />
+          </PackRouteGate>,
+        ),
+      },
+      {
+        path: 'analysis',
+        element: (
+          <PackRouteGate packId="intelligence">
+            <AnalysisPage />
+          </PackRouteGate>
+        ),
+      },
       { path: 'onboarding', element: <OnboardingPage /> },
-      { path: 'manufacturing', element: <ManufacturingPage /> },
-      { path: 'assistant', element: <AssistantPage /> },
-      { path: 'operations', element: <OperationsPage /> },
-      { path: 'stock-count', element: <StockCountPage /> },
-      { path: 'team-and-payroll', element: <TeamAndPayrollPage /> },
-      { path: 'team-and-payroll/:id', element: <EmployeeDetailPage /> },
+      {
+        path: 'manufacturing',
+        element: (
+          <PackRouteGate packId="manufacturing">
+            <ManufacturingPage />
+          </PackRouteGate>
+        ),
+      },
+      {
+        path: 'assistant',
+        element: (
+          <PackRouteGate packId="intelligence">
+            <AssistantPage />
+          </PackRouteGate>
+        ),
+      },
+      {
+        path: 'operations',
+        element: (
+          <PackRouteGate packId="operations">
+            <OperationsPage />
+          </PackRouteGate>
+        ),
+      },
+      {
+        path: 'stock-count',
+        element: (
+          <PackRouteGate packId="operations">
+            <StockCountPage />
+          </PackRouteGate>
+        ),
+      },
+      {
+        path: 'team-and-payroll',
+        element: (
+          <PackRouteGate packId="workforce">
+            <TeamAndPayrollPage />
+          </PackRouteGate>
+        ),
+      },
+      {
+        path: 'team-and-payroll/:id',
+        element: (
+          <PackRouteGate packId="workforce">
+            <EmployeeDetailPage />
+          </PackRouteGate>
+        ),
+      },
       { path: 'audit', element: <AuditPage /> },
 
       { path: 'till', element: <TillPage /> },
@@ -215,6 +291,7 @@ const router = createHashRouter([
 
 export function App() {
   const hasTitleBar = useHasDesktopTitleBar()
+  useEffect(() => scheduleIdlePackPrefetch(() => ['core']), [])
   return (
     <Providers>
       {/* The same tree whether or not the strip is there, so nothing remounts. */}

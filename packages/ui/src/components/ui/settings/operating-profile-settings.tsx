@@ -39,6 +39,7 @@ import {
 import { Button } from '../button'
 import { useToast } from '../toast-provider'
 import { OperatingQuestions } from '../onboarding/operating-questions'
+import { CompositionPlanSummary } from '../onboarding/composition-plan-summary'
 
 export function OperatingProfileSettings() {
   const t = useTranslations()
@@ -145,6 +146,12 @@ export function OperatingProfileSettings() {
       ) : (
         <>
           <OperatingQuestions answers={answers} onAnswer={onAnswer} t={tr} />
+          <CompositionPlanSummary
+            answers={answers}
+            businessType={trade}
+            composition={view?.composition ?? null}
+            t={tr}
+          />
           {mayEdit ? (
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-[hsl(var(--fg-tertiary))]">

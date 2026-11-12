@@ -312,8 +312,10 @@ export const publishableKeyCreateSchema = z
 export type PublishableKeyCreateInput = z.infer<typeof publishableKeyCreateSchema>
 
 export const ORDER_STATUSES = [
+  'quoted',
   'pending',
   'confirmed',
+  'partially_fulfilled',
   'invoiced',
   'paid',
   'fulfilled',
@@ -365,6 +367,9 @@ export const orderCreateSchema = z
         note: z.string().trim().max(500).optional(),
       })
       .strict(),
+    initialStatus: z.enum(['pending', 'quoted']).optional(),
+    quoteExpiresAt: z.string().datetime().optional(),
+    warehouseId: z.string().uuid().optional(),
   })
   .strict()
 export type OrderCreateInput = z.infer<typeof orderCreateSchema>
@@ -390,6 +395,13 @@ export const ORDER_ERROR_CODES = [
   'ORDER_CUSTOMER_PHONE_REQUIRED',
   'ORDER_SOURCE_INVALID',
   'ORDER_TOO_MANY_PENDING',
+  'ORDER_QUOTE_EXPIRED',
+  'ORDER_DELIVERY_EXCEEDS_ORDERED',
+  'ORDER_ITEM_NOT_FOUND',
+  'ORDER_DELIVERY_INVALID_QUANTITY',
+  'ORDER_DELIVERY_IDEMPOTENCY_REQUIRED',
+  'STOCK_RESERVATION_INSUFFICIENT',
+  'STOCK_RESERVATION_NO_STOCK',
 ] as const
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number]
 

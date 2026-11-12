@@ -4,6 +4,7 @@
 // ============================================
 
 import { readStorage, writeStorage, STORAGE_KEYS } from '@hisabche/api'
+import { loadMessages } from '@hisabche/i18n/messages'
 import i18n, { supportedLanguages, type SupportedLanguage } from '@hisabche/i18n'
 
 import { desktopStrings } from './desktop-strings'
@@ -34,6 +35,7 @@ export async function initDesktopI18n(osLocale: string): Promise<SupportedLangua
   const detected = supportedLanguages.find((l) => osLocale.startsWith(l.code.slice(0, 2)))
   const lang: SupportedLanguage = isSupported(stored) ? stored : (detected?.code ?? 'fa-IR')
 
+  await loadMessages(lang, { shellOnly: true })
   await i18n.changeLanguage(lang)
   writeStorage(STORAGE_KEYS.language, lang)
   applyDirection(lang)
@@ -42,6 +44,7 @@ export async function initDesktopI18n(osLocale: string): Promise<SupportedLangua
 
 export async function setDesktopLanguage(lang: SupportedLanguage): Promise<void> {
   writeStorage(STORAGE_KEYS.language, lang)
+  await loadMessages(lang, { shellOnly: true })
   await i18n.changeLanguage(lang)
   applyDirection(lang)
 }

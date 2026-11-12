@@ -44,8 +44,27 @@ export function canMoveRepair(from: RepairStatus, to: RepairStatus): boolean {
   return REPAIR_MOVES[from].includes(to)
 }
 
+export const TICKET_KINDS = ['repair', 'support'] as const
+export type TicketKind = (typeof TICKET_KINDS)[number]
+
+export function isTicketSlaBreached(input: {
+  createdAt: string
+  closedAt: string | null
+  slaHours: number | null | undefined
+  now?: Date
+}): boolean {
+  if (!input.slaHours || input.slaHours <= 0) return false
+  const startMs = Date.parse(input.createdAt)
+  if (!Number.isFinite(startMs)) return false
+  const endMs = input.closedAt ? Date.parse(input.closedAt) : (input.now ?? new Date()).getTime()
+  if (!Number.isFinite(endMs)) return false
+  return endMs - startMs > input.slaHours * 3_600_000
+}
+
 export const repairTicketCreateSchema = z.object({
   customerId: z.string().uuid(),
+  ticketKind: z.enum(TICKET_KINDS).optional(),
+  slaHours: z.number().int().positive().max(8760).nullable().optional(),
   /** The registered unit (IMEI/serial), when the device is one the shop knows. */
   serialId: z.string().uuid().nullable().optional(),
   /** «Samsung A54, blue» — required: the slip must say which device it is. */

@@ -152,6 +152,7 @@ const TIMER_CONSUMERS = new Set([
   'services/sync-stream.ts', // one per workspace, reads only
   'routes/sync-stream.routes.ts', // per-WebSocket, torn down with the socket
   'routes/system-metrics.routes.ts', // metrics sampling
+  'runtime/start-worker.ts', // dedicated worker process polling/claiming via distributedWork
 ])
 
 /** Tests assert on these classes by name; finding one in a test is the point. */

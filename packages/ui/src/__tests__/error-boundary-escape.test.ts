@@ -97,7 +97,9 @@ describe('desktop uses the router’s own mechanism', () => {
 
   it('it renders the SHARED fallback, not a second error screen', () => {
     expect(desktopError).toMatch(/ErrorFallbackView/)
-    expect(desktopError).toMatch(/from '@hisabche\/ui'/)
+    // V62 Slice 2 replaced the root barrel import with a deep subpath import so
+    // the core entry does not eagerly pull every component from @hisabche/ui.
+    expect(desktopError).toMatch(/from '@hisabche\/ui(?:\/[^']+)?'/)
   })
 
   it('signed in lands on the dashboard, signed out on the login screen', () => {

@@ -20,7 +20,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
-import { useCurrencyStore } from '@hisabche/store'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
 import {
   CURRENCY_CODES,
   promotionInputSchema,
@@ -282,13 +282,13 @@ function PromotionForm({
 }) {
   const t = useTranslations('promotions')
   const tCurrency = useTranslations('currency')
-  const primaryCurrency = useCurrencyStore((s) => s.primaryCurrency)
+  const bookCurrency = useBookCurrency() ?? ''
   const save = useSavePromotion()
 
   const [name, setName] = useState('')
   const [kind, setKind] = useState<PromotionInput['kind']>('percentage')
   const [value, setValue] = useState('')
-  const [currency, setCurrency] = useState<string>(primaryCurrency)
+  const [currency, setCurrency] = useState<string>(bookCurrency)
   const [stacking, setStacking] = useState(false)
   const [products, setProducts] = useState<Picked[]>([])
   const [customers, setCustomers] = useState<Picked[]>([])

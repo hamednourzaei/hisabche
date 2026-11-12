@@ -22,6 +22,7 @@ import { FRACTION_DIGITS, formatMoney, type KnownCurrency } from '@hisabche/form
 
 import { translateOr } from '../../../lib/translate-or'
 import { typedNumber } from '../../../lib/typed-number'
+export { typedNumber }
 import { SelectField, type SelectFieldOption, type SelectFieldProps } from '../select-field'
 
 export type Translate = (key: string, fallback?: string) => string

@@ -50,8 +50,9 @@ export interface OrderRow {
 }
 
 const ORDER_COLUMNS =
-  'id, workspace_id, order_number, status, source, customer_name, customer_phone, customer_email, customer_note, customer_id, total, invoice_id, public_token, cancel_reason, created_at, expires_at, confirmed_at, invoiced_at, paid_at, fulfilled_at, cancelled_at'
-const LINE_COLUMNS = 'product_id, product_name, unit, quantity, unit_price, line_total'
+  'id, workspace_id, order_number, status, source, customer_name, customer_phone, customer_email, customer_note, customer_id, total, invoice_id, public_token, cancel_reason, created_at, expires_at, confirmed_at, invoiced_at, paid_at, fulfilled_at, cancelled_at, quote_expires_at, quote_accepted_at, warehouse_id'
+const LINE_COLUMNS =
+  'id, product_id, product_name, unit, quantity, unit_price, line_total, delivered_quantity, reserved_quantity, warehouse_id'
 
 export type OrderWithLines = OrderRow & { items: OrderLine[] }
 
@@ -85,7 +86,14 @@ export const ordersRepository = {
     workspaceId: string,
     orderId: string,
     to: OrderStatus,
-    extra: { reason?: string | null; invoiceId?: string | null; customerId?: string | null } = {},
+    extra: {
+      reason?: string | null
+      invoiceId?: string | null
+      customerId?: string | null
+      actorId?: string | null
+      warehouseId?: string | null
+      allowBackorder?: boolean
+    } = {},
   ): Promise<void> {
     const { error } = await supabase.rpc('transition_sales_order', {
       p_workspace_id: workspaceId,
@@ -94,7 +102,52 @@ export const ordersRepository = {
       p_reason: extra.reason ?? null,
       p_invoice_id: extra.invoiceId ?? null,
       p_customer_id: extra.customerId ?? null,
+      p_actor: extra.actorId ?? null,
+      p_warehouse_id: extra.warehouseId ?? null,
+      p_allow_backorder: extra.allowBackorder ?? false,
     })
+    check(error)
+  },
+
+  async deliverPartial(input: {
+    workspaceId: string
+    actorId: string
+    orderId: string
+    warehouseId: string
+    lines: Array<{ orderItemId: string; quantity: number }>
+    idempotencyKey: string
+    deliveryNoteId?: string | null
+    notes?: string | null
+  }): Promise<Record<string, unknown>> {
+    const { data, error } = await supabase.rpc('deliver_sales_order_partial', {
+      p_workspace_id: input.workspaceId,
+      p_actor: input.actorId,
+      p_order_id: input.orderId,
+      p_warehouse_id: input.warehouseId,
+      p_lines: input.lines,
+      p_idempotency_key: input.idempotencyKey,
+      p_delivery_note_id: input.deliveryNoteId ?? null,
+      p_notes: input.notes ?? null,
+    })
+    check(error)
+    return (data ?? {}) as Record<string, unknown>
+  },
+
+  async markQuoted(
+    workspaceId: string,
+    orderId: string,
+    quoteExpiresAt: string | null,
+    warehouseId: string | null,
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('sales_orders')
+      .update({
+        status: 'quoted',
+        quote_expires_at: quoteExpiresAt,
+        warehouse_id: warehouseId,
+      })
+      .eq('id', orderId)
+      .eq('workspace_id', workspaceId)
     check(error)
   },
 

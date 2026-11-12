@@ -23,12 +23,14 @@ export interface LedgerTotals {
   accountCode: string
   accountName: string
   accountType: AccountRootType
+  kind?: 'standard' | 'memorandum' | undefined
   debit: number
   credit: number
 }
 
 export function toTrialBalance(rows: LedgerTotals[]): TrialBalanceRow[] {
   return rows
+    .filter((row) => row.kind !== 'memorandum')
     .map((row) => {
       const balance = naturalBalance(row.accountType, row.debit, row.credit)
       const net = round2(row.debit - row.credit)

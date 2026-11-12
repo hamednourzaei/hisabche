@@ -74,8 +74,9 @@ describe('where it lives', () => {
     expect(read('apps/web/app/[lang]/(dashboard)/marketplace/page.tsx')).toContain(
       '<MarketplaceContainer initialApp=',
     )
-    expect(read('packages/app-shell/src/app/app.tsx')).toContain(
-      "{ path: 'marketplace', element: gated('/marketplace', '/settings', <MarketplacePage />) }",
+    const appTsx = read('packages/app-shell/src/app/app.tsx').replace(/\s+/g, ' ')
+    expect(appTsx).toContain(
+      "path: 'marketplace', element: gated( '/marketplace', '/settings', <PackRouteGate packId=\"marketplace\"> <MarketplacePage /> </PackRouteGate>",
     )
     expect(read('packages/app-shell/src/features/marketplace/marketplace-page.tsx')).toContain(
       '<MarketplaceContainer initialApp=',

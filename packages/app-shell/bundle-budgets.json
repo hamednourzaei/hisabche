@@ -1,0 +1,14 @@
+{
+  "note": "Populated from §9 shell Vite build + scripts/packs/report.mjs (+10% headroom)",
+  "measuredAt": "2026-11-12T16:10:44Z",
+  "headroomFactor": 1.1,
+  "coreEntryMaxGzipBytes": 129598,
+  "packsMaxGzipBytes": {
+    "approvals": 11901,
+    "intelligence": 578759,
+    "manufacturing": 50965,
+    "marketplace": 11756,
+    "operations": 497666,
+    "workforce": 81271
+  }
+}

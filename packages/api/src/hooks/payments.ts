@@ -406,3 +406,44 @@ export function useCustomerReturnEffects() {
     staleTime: 30_000,
   })
 }
+
+export function useCheques(status?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: [...paymentKeys.all, 'cheques', status] as const,
+    queryFn: async () =>
+      unwrap<Record<string, unknown>[]>(
+        await apiClient.get('/payments/cheques', { params: status ? { status } : undefined }),
+      ),
+    enabled: authReady,
+  })
+}
+
+export function useCreateCheque() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) =>
+      unwrap<Record<string, unknown>>(await apiClient.post('/payments/cheques', input)),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: paymentKeys.all }),
+  })
+}
+
+export function useTransitionCheque() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      status: string
+      endorsed_to_supplier_id?: string
+      note?: string
+    }) =>
+      unwrap<Record<string, unknown>>(
+        await apiClient.post(`/payments/cheques/${input.id}/transition`, {
+          status: input.status,
+          endorsed_to_supplier_id: input.endorsed_to_supplier_id,
+          note: input.note,
+        }),
+      ),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: paymentKeys.all }),
+  })
+}

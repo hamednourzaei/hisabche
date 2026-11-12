@@ -1116,4 +1116,122 @@ export class TraceabilityService {
     if ((data ?? []).length === 0) throw new NotFoundError('Lot trail')
     return data
   }
+
+  /**
+   * V61 §2.5 — Restore exact batches consumed by an invoice when a sale return
+   * restocks a batch-tracked product. Refuses with BATCH_ALLOCATION_HISTORY_MISSING
+   * if allocation history is absent — never guesses a batch.
+   */
+  async restoreBatchesForReturn(
+    ctx: Pick<TenancyContext, 'workspaceId'>,
+    input: {
+      originalInvoiceId: string
+      returnId: string
+      entryDate: string
+      lines: Array<{ productId: string; quantity: number }>
+    },
+  ): Promise<{ restored: Array<{ batchId: string; productId: string; quantity: number }> }> {
+    const productIds = Array.from(new Set(input.lines.map((l) => l.productId).filter(Boolean)))
+    if (productIds.length === 0) return { restored: [] }
+
+    const { data: trackedProducts, error: prodErr } = await supabase
+      .from('products')
+      .select('id, tracking_mode')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', productIds)
+    if (prodErr) throw new DatabaseError('Failed to inspect product tracking modes', prodErr)
+
+    const batchTrackedIds = new Set(
+      (trackedProducts ?? []).filter((p) => p.tracking_mode === 'batch').map((p) => p.id as string),
+    )
+    const batchLines = input.lines.filter((l) => batchTrackedIds.has(l.productId) && l.quantity > 0)
+    if (batchLines.length === 0) return { restored: [] }
+
+    // Idempotency: if returnId already has lot_allocations, do not double restore
+    const { data: existingRestore, error: exErr } = await supabase
+      .from('lot_allocations')
+      .select('id, batch_id, product_id, quantity')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('consumer_type', 'invoice_return')
+      .eq('consumer_id', input.returnId)
+    if (exErr && exErr.code !== '42P01' && exErr.code !== 'PGRST205') {
+      throw new DatabaseError('Failed to check existing return batch restore', exErr)
+    }
+    if ((existingRestore ?? []).length > 0) {
+      return {
+        restored: (existingRestore ?? []).map((r) => ({
+          batchId: String(r.batch_id),
+          productId: String(r.product_id),
+          quantity: Number(r.quantity),
+        })),
+      }
+    }
+
+    const restored: Array<{ batchId: string; productId: string; quantity: number }> = []
+    for (const line of batchLines) {
+      const { data: allocations, error: allocErr } = await supabase
+        .from('lot_allocations')
+        .select('id, batch_id, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('consumer_type', 'invoice')
+        .eq('consumer_id', input.originalInvoiceId)
+        .eq('product_id', line.productId)
+        .not('batch_id', 'is', null)
+        .order('id', { ascending: true })
+      if (allocErr) throw new DatabaseError('Failed to read lot_allocations for return', allocErr)
+      if (!allocations || allocations.length === 0) {
+        throw new ConflictError('BATCH_ALLOCATION_HISTORY_MISSING')
+      }
+
+      const totalAllocated = allocations.reduce((s, a) => s + Number(a.quantity || 0), 0)
+      if (totalAllocated < line.quantity) {
+        throw new ConflictError('BATCH_ALLOCATION_HISTORY_MISSING')
+      }
+
+      let remainingToRestore = line.quantity
+      for (const alloc of allocations) {
+        if (remainingToRestore <= 0) break
+        const batchId = alloc.batch_id as string
+        const chunk = Math.min(remainingToRestore, Number(alloc.quantity || 0))
+        if (chunk <= 0) continue
+
+        const { data: batch, error: batchErr } = await supabase
+          .from('stock_batches')
+          .select('id, remaining_qty, received_qty')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('id', batchId)
+          .single()
+        if (batchErr || !batch) throw new ConflictError('BATCH_ALLOCATION_HISTORY_MISSING')
+
+        const nextRemaining = Math.min(
+          Number(batch.received_qty),
+          Number(batch.remaining_qty) + chunk,
+        )
+        const { error: updErr } = await supabase
+          .from('stock_batches')
+          .update({ remaining_qty: nextRemaining })
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('id', batchId)
+        if (updErr) throw new DatabaseError('Failed to restore batch quantity', updErr)
+
+        const { error: insErr } = await supabase.from('lot_allocations').insert({
+          workspace_id: ctx.workspaceId,
+          product_id: line.productId,
+          batch_id: batchId,
+          consumer_type: 'invoice_return',
+          consumer_id: input.returnId,
+          quantity: chunk,
+          entry_date: input.entryDate,
+        })
+        if (insErr) throw new DatabaseError('Failed to record return lot_allocation', insErr)
+
+        restored.push({ batchId, productId: line.productId, quantity: chunk })
+        remainingToRestore -= chunk
+      }
+    }
+
+    return { restored }
+  }
 }
+
+export const traceabilityService = new TraceabilityService()

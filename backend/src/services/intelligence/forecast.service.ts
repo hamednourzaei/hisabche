@@ -24,8 +24,11 @@ import {
 } from './forecast.domain'
 
 export class ForecastService {
-  /** N3 — projected cash at 7 and 30 days. */
-  async cashForecast(ctx: TenancyContext): Promise<CashForecast> {
+  /** N3 — projected cash at configurable horizon windows (default 7 and 30 days; supports 60/90). */
+  async cashForecast(
+    ctx: TenancyContext,
+    windowDays: readonly number[] = [7, 30],
+  ): Promise<CashForecast> {
     const [receivables, settled, cash] = await Promise.all([
       this.outstandingReceivables(ctx),
       this.settlementHistory(ctx),
@@ -37,6 +40,7 @@ export class ForecastService {
       openingCashMinor: cash,
       receivables,
       delay: averagePaymentDelay(settled),
+      windowDays,
     })
   }
 

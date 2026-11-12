@@ -170,7 +170,14 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'balance', bodyCount: 2 },
       { id: 'overdue', bodyCount: 1 },
     ],
-    related: ['invoices', 'accounting', 'pos', 'campaigns', 'service-delivery'],
+    related: [
+      'invoices',
+      'accounting',
+      'pos',
+      'campaigns',
+      'service-delivery',
+      'contracts-recurring',
+    ],
     outbound: [
       { href: '/features/customer-debt', labelKey: 'landing.featurePage.customerDebt.h1' },
     ],
@@ -465,6 +472,15 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'sandbox', bodyCount: 1 },
     ],
     related: ['permissions', 'data-and-backup', 'invoices', 'ai-assistants'],
+  },
+  {
+    slug: 'contracts-recurring',
+    group: 'sell',
+    sections: [
+      { id: 'overview', bodyCount: 2 },
+      { id: 'billing', bodyCount: 2 },
+    ],
+    related: ['customers', 'invoices'],
   },
 ]
 

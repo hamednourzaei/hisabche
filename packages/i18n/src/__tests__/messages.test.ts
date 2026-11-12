@@ -10,12 +10,11 @@ import { describe, expect, it } from 'vitest'
 import {
   defaultMessageLocale,
   formatMessage,
-  getMessages,
-  messageCatalogs,
   resolveMessage,
   toMessageLocale,
   type MessageCatalog,
 } from '../messages'
+import { getMessages, messageCatalogs } from '../messages-static'
 
 describe('toMessageLocale', () => {
   it.each([

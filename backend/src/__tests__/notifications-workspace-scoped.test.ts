@@ -43,7 +43,7 @@ describe('notifications — workspace boundary', () => {
 
   it('every notification route resolves the workspace, and no read is cached per user', () => {
     const preHandlers = routes.match(/preHandler: \[[^\]]*\]/g) ?? []
-    expect(preHandlers.length).toBe(4)
+    expect(preHandlers.length).toBe(5)
     for (const p of preHandlers) expect(p).toContain('requireWorkspaceContext')
     expect(routes).not.toContain("scope: 'user'")
     expect(routes).not.toMatch(/notificationService\.\w+\(request\.userId/)

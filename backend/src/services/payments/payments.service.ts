@@ -108,6 +108,34 @@ export interface RecordPaymentInput {
 
 const today = (timeZone?: string) => businessDayOf(new Date(), timeZone)
 
+import { decideApproval, mayPostDocument } from '../workflow/approval-gate.domain'
+
+/**
+ * V61 §2.6 — Three-way match payment gate:
+ * A supplier invoice with a mismatch (`mayApprovePayment: false`) is blocked
+ * until an explicit approval workflow instance grants approval.
+ */
+export function checkSupplierPaymentMatchGate(input: {
+  mayApprovePayment: boolean
+  hasApprovedMismatchWorkflow: boolean
+  workflowIds?: string[]
+}): { allowed: boolean; reason?: 'PROCUREMENT_MATCH_PAYMENT_BLOCKED' } {
+  if (input.mayApprovePayment || input.hasApprovedMismatchWorkflow) {
+    return { allowed: true }
+  }
+  const outcome = decideApproval({
+    requiresApproval: true,
+    workflowIds:
+      input.workflowIds && input.workflowIds.length > 0
+        ? input.workflowIds
+        : ['three-way-match-gate'],
+  })
+  if (!mayPostDocument(outcome)) {
+    return { allowed: false, reason: 'PROCUREMENT_MATCH_PAYMENT_BLOCKED' }
+  }
+  return { allowed: true }
+}
+
 export class PaymentsService {
   private readonly repo: PaymentsRepository
 
@@ -253,6 +281,28 @@ export class PaymentsService {
     const invoices = candidates.filter((invoice) =>
       settlesInCurrency(invoice, currency, bookCurrency),
     )
+
+    // V61 §2.6 — Three-way match payment gate: block supplier payment if any
+    // allocated purchase invoice is flagged with a match mismatch without approval.
+    if (input.direction === 'out' && input.partyType === 'supplier' && invoices.length > 0) {
+      const flagged = invoices.find(
+        (inv) => (inv as { matchStatus?: string }).matchStatus === 'mismatch',
+      )
+      if (flagged) {
+        const hasApproval = await this.repo.hasApprovedWorkflow?.(
+          ctx.workspaceId,
+          'purchase_invoice_mismatch',
+          flagged.invoiceId,
+        )
+        const gate = checkSupplierPaymentMatchGate({
+          mayApprovePayment: false,
+          hasApprovedMismatchWorkflow: Boolean(hasApproval),
+        })
+        if (!gate.allowed) {
+          throw new ConflictError(gate.reason!)
+        }
+      }
+    }
 
     // ⚠️ AN INVOICE ADDRESSED BY ID MUST BELONG TO THE PARTY BEING CREDITED.
     //

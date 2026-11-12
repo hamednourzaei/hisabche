@@ -89,8 +89,14 @@ describe('the Windows app can load the images', () => {
       join(SRC, '..', '..', '..', 'apps', 'desktop', 'electron', 'main', 'index.ts'),
       'utf8',
     )
-    expect(main).toContain("img-src 'self' data: blob: https:; ")
-    expect(main).toContain("script-src 'self'; ")
+    const protocol = readFileSync(
+      join(SRC, '..', '..', '..', 'apps', 'desktop', 'electron', 'main', 'protocol.ts'),
+      'utf8',
+    )
+    // V62 Slice 8 moved CSP construction into the shared `buildRendererCsp` helper in protocol.ts.
+    expect(main).toContain('buildRendererCsp(isPackDeliveryEnabled())')
+    expect(protocol).toContain('img-src ${selfOrOrigin} data: blob: https:; ')
+    expect(protocol).toContain('script-src ${selfOrOrigin}; ')
   })
 })
 

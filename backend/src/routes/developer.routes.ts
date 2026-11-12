@@ -223,6 +223,17 @@ export function buildDeveloperRoutes(service: DeveloperService) {
         return reply.send(await service.retryDelivery(request.tenancy, id))
       }),
     )
+
+    // V61 B.2.20 — Declarative plugin manifest validator (no code execution)
+    fastify.post(
+      '/api/developer/plugins/validate-manifest',
+      { preHandler: guard },
+      handle(async (request, reply) => {
+        const { pluginManifestSchema } = await import('@hisabche/validation')
+        const parsed = pluginManifestSchema.parse(request.body)
+        return reply.send({ valid: true, manifest: parsed })
+      }),
+    )
   }
 }
 

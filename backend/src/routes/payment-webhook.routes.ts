@@ -92,4 +92,17 @@ export async function paymentWebhookRoutes(fastify: FastifyInstance) {
       return reply.code(200).send({ received: true, handled: result.success })
     },
   )
+
+  // V61 B.2.12 — Provider-neutral customer payment gateway webhook (BLOCKED_EXTERNAL_CREDENTIAL until configured)
+  fastify.post(
+    '/api/payments/gateway/webhook/:provider',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { provider } = request.params as { provider: string }
+      return reply.code(503).send({
+        status: 'BLOCKED_EXTERNAL_CREDENTIAL',
+        provider,
+        error: 'No customer payment gateway provider credentials configured',
+      })
+    },
+  )
 }

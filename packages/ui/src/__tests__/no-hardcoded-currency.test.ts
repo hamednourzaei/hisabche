@@ -140,4 +140,27 @@ describe('no page, store or schema carries a currency of its own', () => {
     expect(hook).toContain('useBaseCurrency().data?.currency')
     expect(hook).not.toMatch(/\?\?|\|\|/)
   })
+
+  it('V59/V60 panels read the book currency instead of useCurrencyStore primaryCurrency or safeT Persian fallbacks', () => {
+    for (const rel of [
+      'ui/src/components/ui/promotions/gold-rate-board-panel.tsx',
+      'ui/src/components/ui/promotions/price-lists-panel.tsx',
+      'ui/src/components/ui/promotions/promotions-container.tsx',
+      'ui/src/components/ui/customers/contracts-section.tsx',
+      'ui/src/components/ui/dashboard/owner-command-center.tsx',
+      'ui/src/components/ui/invoices/containers/sales-orders-container.tsx',
+      'ui/src/components/ui/invoices/warranties-section.tsx',
+    ]) {
+      const src = code(readFileSync(join(PACKAGES, rel), 'utf8'))
+      expect(src, rel).not.toContain('primaryCurrency')
+    }
+    const goldPanel = code(
+      readFileSync(
+        join(PACKAGES, 'ui/src/components/ui/promotions/gold-rate-board-panel.tsx'),
+        'utf8',
+      ),
+    )
+    expect(goldPanel).not.toContain('safeT')
+    expect(goldPanel).not.toContain('setShKycLimit')
+  })
 })

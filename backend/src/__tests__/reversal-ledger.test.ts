@@ -59,6 +59,8 @@ const LEDGER: Record<string, Record<string, Way>> = {
   'payments.routes.ts': {
     '/': unproven('POST /:id/cancel'),
     '/:id/cancel': inert,
+    '/cheques': unproven('POST /cheques/:id/transition'),
+    '/cheques/:id/transition': inert,
   },
   'transaction.routes.ts': {
     '/api/transactions': unproven('DELETE /api/transactions/:id'),
@@ -68,6 +70,12 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/journal': unproven('POST /journal/:id/reverse'),
     '/journal/:id/post': unproven('POST /journal/:id/reverse'),
     '/journal/:id/reverse': inert,
+    '/overhead-runs': unproven('POST /overhead-runs/:id/reverse'),
+    '/overhead-runs/:id/reverse': inert,
+    '/accrual-schedules': inert,
+    '/accrual-schedules/run': unproven('POST /journal/:id/reverse'),
+    '/chart-templates/apply': inert,
+    '/budget-check': inert,
     '/year-end/close': none('a closed year has no reopening route'),
     '/month-end': none('a closed month has no reopening route'),
   },
@@ -103,7 +111,9 @@ const LEDGER: Record<string, Record<string, Way>> = {
   'orders.routes.ts': {
     '/api/orders': unproven('POST /api/orders/:id/cancel'),
     '/api/orders/:id/confirm': unproven('POST /api/orders/:id/cancel'),
+    '/api/orders/:id/accept-quote': unproven('POST /api/orders/:id/cancel'),
     '/api/orders/:id/cancel': inert,
+    '/api/orders/:id/deliver': none('a posted delivery is final; corrected by credit note/return'),
     '/api/orders/:id/fulfill': none('no route takes a fulfilment back'),
     '/api/orders/:id/invoice': unproven('DELETE /api/invoices/:id'),
   },
@@ -111,9 +121,14 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/purchase-orders': unproven('PATCH /api/purchase-orders/:id'),
     '/api/purchase-orders/from-suggestions': unproven('PATCH /api/purchase-orders/:id'),
     '/api/purchase-orders/:id/receive': none('a goods receipt has no reversing route'),
+    '/api/rfqs': inert,
+    '/api/rfqs/:id/quotations': inert,
+    '/api/quotations/:id/choose': inert,
+    '/api/purchase-contracts/prices': inert,
   },
   'warehouse.routes.ts': {
     '/api/warehouses': proven('DELETE /api/warehouses/:id', 'reverse-guards.test.ts'),
+    '/api/warehouses/consignments': inert,
     '/api/stock-transfers': none('corrected by the opposite transfer, not by removal'),
     '/api/warehouses/:id/assign': inert,
     // 10 Nov 2026: a transfer request is cancelled before it ships; once
@@ -193,6 +208,12 @@ const LEDGER: Record<string, Record<string, Way>> = {
     // and the ONE balance reads only what the policy still grants.
     '/api/leave-policies': inert,
     '/api/leaves/accrue': inert,
+    '/api/expense-claims': inert,
+    '/api/expense-claims/:id/approve': inert,
+    '/api/expense-claims/:id/reject': inert,
+    '/api/expense-claims/:id/reimburse': unproven('POST /journal/:id/reverse'),
+    '/api/employees/:id/documents': inert,
+    '/api/employees/:id/appraisals': inert,
   },
   'cycle-count.routes.ts': {
     '/api/cycle-counts': unproven('POST /api/cycle-counts/:id/cancel'),
@@ -287,6 +308,6 @@ describe('every way forward has a decided way back', () => {
     // repair final bill), +2 none (fx agent settle, repair part consume), +2 inert (repair approve, part release).
     // V60 (Slice 7 & Slice 10): +2 unproven (POST /api/resource-bookings, POST /api/purchase-orders/from-suggestions),
     // +1 inert (POST /api/resource-bookings/:id/release).
-    expect(counts).toEqual({ proven: 9, unproven: 27, none: 25, inert: 21 })
+    expect(counts).toEqual({ proven: 9, unproven: 32, none: 26, inert: 36 })
   })
 })

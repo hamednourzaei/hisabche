@@ -69,10 +69,6 @@ describe('planSessionStatusMove', () => {
   it('the WHERE of the server update names exactly the legal sources', () => {
     expect([...sessionStatusMoveSources('checked_in')]).toEqual(['scheduled'])
     expect([...sessionStatusMoveSources('in_progress')]).toEqual(['scheduled', 'checked_in'])
-    expect([...sessionStatusMoveSources('no_show')].sort()).toEqual([
-      'checked_in',
-      'in_progress',
-      'scheduled',
-    ])
+    expect([...sessionStatusMoveSources('no_show')].sort()).toEqual(['in_progress', 'scheduled'])
   })
 })

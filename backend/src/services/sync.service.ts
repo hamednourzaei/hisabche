@@ -901,6 +901,7 @@ export class SyncService {
     cursor: number,
     limit: number,
     excludeDevice?: string,
+    entityTypes?: readonly SyncEntity[],
   ): Promise<SyncPullResponse> {
     // A cursor older than the oldest surviving log row cannot be replayed —
     // the changes it missed have been pruned. Saying so is the only honest
@@ -909,30 +910,31 @@ export class SyncService {
       return { changes: [], nextCursor: cursor, hasMore: false, mustRehydrate: true }
     }
 
-    // One extra row is fetched purely to learn whether more exist, without a
-    // second COUNT query over the same range.
-    //
-    // ⚠️ N-36 — THE COMMIT HORIZON IS THE ONLY SOURCE (P1).
-    //
-    // `sync_pull_changes` returns only log rows whose writing transaction has
-    // committed (`txid < pg_snapshot_xmin(pg_current_snapshot())`). A direct
-    // read of `sync_change_log` returns everything visible, including ids whose
-    // neighbours are still in flight — which is the exact hazard the horizon
-    // exists to remove.
-    //
-    // So there is deliberately NO fallback here. The fallback used to run
-    // precisely when the horizon answered «nothing yet», i.e. while a writer
-    // was open, and handed back the rows the horizon had just hidden. And an
-    // RPC error was swallowed, so a database without the migration silently
-    // ran the unsafe path forever.
-    //
-    // A missing function is a DEPLOYMENT error, not a data condition: it says
-    // the backend is ahead of the schema. It fails loudly and stays failed.
-    const rpcRes = await supabase.rpc('sync_pull_changes', {
-      p_workspace_id: workspaceId,
-      p_cursor: cursor,
-      p_limit: limit + 1,
-    })
+    const scopedTypes = entityTypes && entityTypes.length > 0 ? [...entityTypes] : null
+    let rpcRes = scopedTypes
+      ? await supabase.rpc('sync_pull_changes_v2', {
+          p_workspace_id: workspaceId,
+          p_cursor: cursor,
+          p_limit: limit + 1,
+          p_entity_types: scopedTypes,
+        })
+      : await supabase.rpc('sync_pull_changes', {
+          p_workspace_id: workspaceId,
+          p_cursor: cursor,
+          p_limit: limit + 1,
+        })
+
+    // Backward-compatibility bridge (V62 §4.6): if sync_pull_changes_v2 is not
+    // yet deployed (42883 / PGRST202), fall back to v1 and filter the page.
+    let usedV1Fallback = !scopedTypes
+    if (scopedTypes && rpcRes.error && isMissingFunction(rpcRes.error)) {
+      usedV1Fallback = true
+      rpcRes = await supabase.rpc('sync_pull_changes', {
+        p_workspace_id: workspaceId,
+        p_cursor: cursor,
+        p_limit: limit + 1,
+      })
+    }
 
     if (rpcRes.error) {
       if (isMissingFunction(rpcRes.error)) {
@@ -946,14 +948,19 @@ export class SyncService {
 
     const rows = (rpcRes.data ?? []) as Record<string, unknown>[]
     const hasMoreRows = rows.length > limit
-    const page = hasMoreRows ? rows.slice(0, limit) : rows
+    const rawPage = hasMoreRows ? rows.slice(0, limit) : rows
 
-    if (page.length === 0) {
+    if (rawPage.length === 0) {
       return { changes: [], nextCursor: cursor, hasMore: false, mustRehydrate: false }
     }
 
-    const changes = await this.hydrate(workspaceId, page, excludeDevice)
-    const nextCursor = Number(page[page.length - 1]?.sync_version ?? cursor)
+    const page =
+      usedV1Fallback && scopedTypes
+        ? rawPage.filter((row) => scopedTypes.includes(row.entity_type as SyncEntity))
+        : rawPage
+
+    const changes = page.length > 0 ? await this.hydrate(workspaceId, page, excludeDevice) : []
+    const nextCursor = Number(rawPage[rawPage.length - 1]?.sync_version ?? cursor)
     const hasMore = hasMoreRows && nextCursor > cursor
 
     return {
@@ -1086,7 +1093,7 @@ export class SyncService {
       const columns = PULL_COLUMNS[type]
       const { data, error } = await supabase
         .from(ENTITY_TABLE[type])
-        .select(columns ? columns.join(', ') : '*')
+        .select(columns ? columns.join(', ') : 'id, workspace_id, version, updated_at')
         .eq('workspace_id', workspaceId)
         .in('id', [...ids])
 

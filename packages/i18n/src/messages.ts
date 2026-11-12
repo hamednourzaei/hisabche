@@ -1,29 +1,33 @@
 // ============================================
-// Hisabche message catalogs — the single source of UI copy.
+// Hisabche message catalogs — dynamic active-locale loader (V62 Slice 3).
 //
 // `packages/ui` is written against next-intl, whose keys are dotted paths into
-// one flat `common.json` per locale. Web loads those catalogs through
-// next-intl's request config; desktop loads them through its next-intl shim.
-// Both read the files in `packages/i18n/messages`, so a string added for one
-// renderer is immediately available to the others.
+// one flat `common.json` per locale. By loading each locale via dynamic
+// `import()`, desktop/mobile bundles emit one lazy chunk per locale instead of
+// bundling all three (2.26 MB) into the entry chunk.
 // ============================================
-
-import af from '../messages/af/common.json'
-import en from '../messages/en/common.json'
-import fa from '../messages/fa/common.json'
 
 /** Locale codes as the web app and the message directories name them. */
 export type MessageLocale = 'fa' | 'af' | 'en'
 
 export type MessageCatalog = Record<string, unknown>
 
-export const messageCatalogs: Record<MessageLocale, MessageCatalog> = {
-  fa: fa as MessageCatalog,
-  af: af as MessageCatalog,
-  en: en as MessageCatalog,
-}
+/**
+ * Web-only top-level namespaces excluded when loading catalogs for the
+ * desktop/mobile shell (`shellOnly: true`). Source JSON files are never edited.
+ */
+export const SHELL_EXCLUDED_NAMESPACES = ['landing', 'docs', 'admin', 'blog', 'oauth'] as const
 
 export const defaultMessageLocale: MessageLocale = 'fa'
+
+const loadedCatalogs = new Map<MessageLocale, MessageCatalog>()
+const inFlightLoads = new Map<MessageLocale, Promise<MessageCatalog>>()
+
+const LOCALE_LOADERS: Record<MessageLocale, () => Promise<{ default: MessageCatalog }>> = {
+  fa: () => import('../messages/fa/common.json') as Promise<{ default: MessageCatalog }>,
+  af: () => import('../messages/af/common.json') as Promise<{ default: MessageCatalog }>,
+  en: () => import('../messages/en/common.json') as Promise<{ default: MessageCatalog }>,
+}
 
 /**
  * Desktop and mobile identify languages as `fa-IR | fa-AF | en`; the catalogs
@@ -45,8 +49,61 @@ export function toMessageLocale(lang: string | null | undefined): MessageLocale 
   }
 }
 
+export function filterShellCatalog(
+  catalog: MessageCatalog,
+  excluded: readonly string[] = SHELL_EXCLUDED_NAMESPACES,
+): MessageCatalog {
+  const excludedSet = new Set(excluded)
+  const filtered: MessageCatalog = {}
+  for (const [key, value] of Object.entries(catalog)) {
+    if (!excludedSet.has(key)) {
+      filtered[key] = value
+    }
+  }
+  return filtered
+}
+
+/** Dynamically load ONLY the active locale catalog and cache it in memory. */
+export async function loadMessages(
+  lang: string | null | undefined,
+  options?: { shellOnly?: boolean },
+): Promise<MessageCatalog> {
+  const locale = toMessageLocale(lang)
+  const cached = loadedCatalogs.get(locale)
+  if (cached) return cached
+
+  const existing = inFlightLoads.get(locale)
+  if (existing) return existing
+
+  const promise = LOCALE_LOADERS[locale]().then((mod) => {
+    const raw = (mod.default ?? mod) as MessageCatalog
+    const catalog = options?.shellOnly ? filterShellCatalog(raw) : raw
+    loadedCatalogs.set(locale, catalog)
+    inFlightLoads.delete(locale)
+    return catalog
+  })
+
+  inFlightLoads.set(locale, promise)
+  return promise
+}
+
+/** Which locales have actually been loaded into memory in this process. */
+export function getLoadedLocales(): readonly MessageLocale[] {
+  return [...loadedCatalogs.keys()]
+}
+
+/** Clear loaded locale cache (test helper). */
+export function resetLoadedMessagesForTests(): void {
+  loadedCatalogs.clear()
+  inFlightLoads.clear()
+}
+
+/**
+ * Synchronous read of a previously loaded locale catalog.
+ * Call `await loadMessages(lang)` during app bootstrap or language switch first.
+ */
 export function getMessages(lang: string | null | undefined): MessageCatalog {
-  return messageCatalogs[toMessageLocale(lang)]
+  return loadedCatalogs.get(toMessageLocale(lang)) ?? {}
 }
 
 /**
@@ -66,6 +123,19 @@ export function resolveMessage(catalog: MessageCatalog, key: string): string | u
   }
 
   return typeof node === 'string' ? node : undefined
+}
+
+/** Strict key lookup that throws when a key is missing. */
+export function requireMessage(
+  catalog: MessageCatalog,
+  key: string,
+  values?: Record<string, string | number | undefined>,
+): string {
+  const template = resolveMessage(catalog, key)
+  if (template === undefined) {
+    throw new Error(`Missing i18n message key: ${key}`)
+  }
+  return formatMessage(template, values)
 }
 
 /** Substitute `{name}` placeholders the way next-intl's ICU subset does. */

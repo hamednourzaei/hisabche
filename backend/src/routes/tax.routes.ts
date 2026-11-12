@@ -227,4 +227,20 @@ export async function taxRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // V61 B.2.11 — Tax invoice template registry
+  fastify.get(
+    '/templates',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const { INVOICE_TEMPLATE_REGISTRY } = await import('@hisabche/validation')
+      return reply.send({ data: INVOICE_TEMPLATE_REGISTRY })
+    },
+  )
 }

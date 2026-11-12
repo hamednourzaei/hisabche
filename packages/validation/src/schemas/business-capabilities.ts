@@ -24,6 +24,9 @@
 //                 dependent must notice.
 // ============================================
 
+import { OFFLINE_ENDPOINT_MATRIX } from './offline-endpoint-matrix'
+import type { PackId } from './feature-packs'
+
 export const ENGINE_KEYS = [
   'sales_invoice',
   'sales_orders',
@@ -50,15 +53,27 @@ export const ENGINE_KEYS = [
 export type EngineKey = (typeof ENGINE_KEYS)[number]
 
 export type EngineOfflineStatus = 'available' | 'partial' | 'online_required' | 'unwired'
+export type EngineOfflineMode = 'local' | 'online_required'
 
 export interface EngineDefinition {
   readonly key: EngineKey
   readonly service: string | null
   readonly localEngine: string | null
+  readonly localEngineRoute: string | null
   readonly clientHook: string | null
   readonly uiHost: string | null
   readonly matrixFeature: string | null
   readonly offlineStatus: EngineOfflineStatus
+  readonly offline: EngineOfflineMode
+  readonly pack: PackId
+}
+
+/** Derive engine offline mode strictly from OFFLINE_ENDPOINT_MATRIX. */
+export function deriveEngineOfflineMode(matrixFeature: string | null): EngineOfflineMode {
+  if (!matrixFeature) return 'online_required'
+  const rows = Object.values(OFFLINE_ENDPOINT_MATRIX).filter(([feat]) => feat === matrixFeature)
+  if (rows.length === 0) return 'online_required'
+  return rows.every(([, status]) => status === 'available') ? 'local' : 'online_required'
 }
 
 export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
@@ -66,186 +81,245 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     key: 'sales_invoice',
     service: 'backend/src/services/invoice.service.ts',
     localEngine: 'packages/local-engine/src/routes/invoices.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/invoices.ts',
     clientHook: 'packages/api/src/hooks/invoices.ts',
     uiHost:
       'packages/ui/src/components/ui/invoice-builder/containers/invoice-builder-container.tsx',
     matrixFeature: 'invoice.create',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('invoice.create'),
+    pack: 'core',
   },
   sales_orders: {
     key: 'sales_orders',
     service: 'backend/src/services/orders/orders.service.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: 'packages/api/src/hooks/orders.ts',
-    uiHost: 'packages/ui/src/components/ui/invoices/containers/sales-hub-container.tsx',
-    matrixFeature: null,
+    uiHost: 'packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx',
+    matrixFeature: 'sales.orders',
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('sales.orders'),
+    pack: 'operations',
   },
   appointments_resources: {
     key: 'appointments_resources',
     service: 'backend/src/services/service-delivery/service-delivery.service.ts',
     localEngine: 'packages/local-engine/src/routes/service-delivery.ts',
-    clientHook: 'packages/api/src/hooks/business-packs.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/service-delivery.ts',
+    clientHook: 'packages/api/src/hooks/universal-core.ts',
     uiHost:
       'packages/ui/src/components/ui/service-delivery/containers/service-delivery-container.tsx',
     matrixFeature: 'operations.service_delivery',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('operations.service_delivery'),
+    pack: 'workforce',
   },
   work_orders_repair: {
     key: 'work_orders_repair',
     service: 'backend/src/services/repair/repair-ticket.service.ts',
     localEngine: 'packages/local-engine/src/routes/service-delivery.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/service-delivery.ts',
     clientHook: 'packages/api/src/hooks/business-packs.ts',
-    uiHost: 'packages/ui/src/components/ui/work-queue/containers/work-queue-container.tsx',
+    uiHost: 'packages/ui/src/components/ui/business-packs/repair-tickets-section.tsx',
     matrixFeature: 'operations.repairs',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('operations.repairs'),
+    pack: 'workforce',
   },
   projects_time: {
     key: 'projects_time',
     service: 'backend/src/services/project.service.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: 'packages/api/src/hooks/projects.ts',
     uiHost: 'packages/ui/src/components/ui/timesheets/containers/timesheets-container.tsx',
     matrixFeature: 'project.manage',
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('project.manage'),
+    pack: 'workforce',
   },
   production_bom: {
     key: 'production_bom',
     service: 'backend/src/services/manufacturing.service.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: 'packages/api/src/hooks/manufacturing.ts',
     uiHost: 'packages/ui/src/components/ui/manufacturing/containers/manufacturing-container.tsx',
     matrixFeature: 'manufacturing.bom',
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('manufacturing.bom'),
+    pack: 'manufacturing',
   },
   procurement: {
     key: 'procurement',
     service: 'backend/src/services/purchasing.service.ts',
     localEngine: 'packages/local-engine/src/routes/purchasing.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/purchasing.ts',
     clientHook: 'packages/api/src/hooks/purchasing.ts',
     uiHost: 'packages/ui/src/components/ui/warehouse/containers/Warehouse-container.tsx',
     matrixFeature: 'purchase.orders',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('purchase.orders'),
+    pack: 'operations',
   },
   delivery_logistics: {
     key: 'delivery_logistics',
     service: 'backend/src/services/transport/transport.service.ts',
     localEngine: null,
-    clientHook: null,
-    uiHost: null,
-    matrixFeature: null,
-    offlineStatus: 'unwired',
+    localEngineRoute: null,
+    clientHook: 'packages/api/src/hooks/universal-core.ts',
+    uiHost: 'packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx',
+    matrixFeature: 'trade.delivery_notes',
+    offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('trade.delivery_notes'),
+    pack: 'operations',
   },
   quality_claims: {
     key: 'quality_claims',
     service: 'backend/src/services/sales/warranty.service.ts',
     localEngine: 'packages/local-engine/src/routes/warranties.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/warranties.ts',
     clientHook: 'packages/api/src/hooks/universal-core.ts',
     uiHost: 'packages/ui/src/components/ui/invoices/warranties-section.tsx',
     matrixFeature: 'trade.warranties',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('trade.warranties'),
+    pack: 'operations',
   },
   contracts_recurring: {
     key: 'contracts_recurring',
-    service: 'backend/src/services/automation/automation.service.ts',
+    service: 'backend/src/routes/contracts.routes.ts',
     localEngine: null,
-    clientHook: 'packages/api/src/hooks/automations.ts',
-    uiHost: null,
-    matrixFeature: null,
+    localEngineRoute: null,
+    clientHook: 'packages/api/src/hooks/contracts.ts',
+    uiHost: 'packages/ui/src/components/ui/customers/contracts-section.tsx',
+    matrixFeature: 'commerce.contracts',
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('commerce.contracts'),
+    pack: 'operations',
   },
   assets_rental: {
     key: 'assets_rental',
     service: 'backend/src/services/assets/assets.service.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: 'packages/api/src/hooks/assets.ts',
     uiHost: 'packages/ui/src/components/ui/assets/containers/assets-container.tsx',
     matrixFeature: null,
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode(null),
+    pack: 'operations',
   },
   agriculture_livestock: {
     key: 'agriculture_livestock',
     service: 'backend/src/routes/agriculture.routes.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: null,
     uiHost: null,
     matrixFeature: null,
     offlineStatus: 'unwired',
+    offline: deriveEngineOfflineMode(null),
+    pack: 'operations',
   },
   costing_ledger: {
     key: 'costing_ledger',
     service: 'backend/src/services/accounting/accounting.service.ts',
     localEngine: 'packages/local-engine/src/routes/accounting.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/accounting.ts',
     clientHook: 'packages/api/src/hooks/accounting.ts',
-    uiHost: 'packages/ui/src/components/ui/analysis/analysis-container.tsx',
+    uiHost: 'packages/ui/src/components/ui/accounting/tabs/IncomeStatementTab.tsx',
     matrixFeature: 'accounting.profit_report',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('accounting.profit_report'),
+    pack: 'core',
   },
   forecast_insights: {
     key: 'forecast_insights',
     service: 'backend/src/services/intelligence/forecast.service.ts',
     localEngine: 'packages/local-engine/src/routes/insights.ts',
-    clientHook: 'packages/api/src/hooks/analysis.ts',
-    uiHost: 'packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx',
+    localEngineRoute: 'packages/local-engine/src/routes/insights.ts',
+    clientHook: 'packages/api/src/hooks/inventory-operations.ts',
+    uiHost: 'packages/ui/src/components/ui/dashboard/owner-command-center.tsx',
     matrixFeature: 'ai.cashflow_forecast',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('ai.cashflow_forecast'),
+    pack: 'intelligence',
   },
   inventory_catalog: {
     key: 'inventory_catalog',
     service: 'backend/src/services/warehouse.service.ts',
     localEngine: 'packages/local-engine/src/routes/variants.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/variants.ts',
     clientHook: 'packages/api/src/hooks/universal-core.ts',
-    uiHost:
-      'packages/ui/src/components/ui/warehouse-detail/containers/warehouse-detail-container.tsx',
+    uiHost: 'packages/ui/src/components/ui/warehouse/product-variants-section.tsx',
     matrixFeature: 'product.variants',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('product.variants'),
+    pack: 'core',
   },
   pricing_rates: {
     key: 'pricing_rates',
     service: 'backend/src/services/pricing/metal-rates.service.ts',
     localEngine: 'packages/local-engine/src/routes/pricing.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/pricing.ts',
     clientHook: 'packages/api/src/hooks/price-lists.ts',
     uiHost: 'packages/ui/src/components/ui/promotions/price-lists-panel.tsx',
     matrixFeature: 'pricing.price_lists',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('pricing.price_lists'),
+    pack: 'core',
   },
   deposits_installments: {
     key: 'deposits_installments',
     service: 'backend/src/services/sales/order-deposit.service.ts',
     localEngine: 'packages/local-engine/src/routes/order-deposits.ts',
-    clientHook: 'packages/api/src/hooks/installments.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/order-deposits.ts',
+    clientHook: 'packages/api/src/hooks/universal-core.ts',
     uiHost: 'packages/ui/src/components/ui/invoices/containers/advances-container.tsx',
     matrixFeature: 'order.deposits',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('order.deposits'),
+    pack: 'operations',
   },
   package_credits: {
     key: 'package_credits',
     service: 'backend/src/routes/package-credits.routes.ts',
     localEngine: 'packages/local-engine/src/routes/package-credits.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/package-credits.ts',
     clientHook: 'packages/api/src/hooks/universal-core.ts',
     uiHost:
       'packages/ui/src/components/ui/service-delivery/containers/service-delivery-container.tsx',
     matrixFeature: 'operations.service_delivery',
     offlineStatus: 'partial',
+    offline: deriveEngineOfflineMode('operations.service_delivery'),
+    pack: 'workforce',
   },
   workforce_payroll: {
     key: 'workforce_payroll',
     service: 'backend/src/routes/human-resources.routes.ts',
     localEngine: 'packages/local-engine/src/routes/payroll.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/payroll.ts',
     clientHook: 'packages/api/src/hooks/payroll.ts',
     uiHost:
-      'packages/ui/src/components/ui/team-and-payroll/containers/team-and-payroll-container.tsx',
+      'packages/ui/src/components/ui/human-resources/containers/employee-detail-container.tsx',
     matrixFeature: 'hr.payroll',
     offlineStatus: 'available',
+    offline: deriveEngineOfflineMode('hr.payroll'),
+    pack: 'workforce',
   },
   approvals_workflow: {
     key: 'approvals_workflow',
     service: 'backend/src/services/workflow.service.ts',
     localEngine: null,
+    localEngineRoute: null,
     clientHook: 'packages/api/src/hooks/use-workflow.ts',
     uiHost: 'packages/ui/src/components/ui/workflow/containers/approvals-container.tsx',
     matrixFeature: 'approvals.workflows',
     offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('approvals.workflows'),
+    pack: 'approvals',
   },
 }
 

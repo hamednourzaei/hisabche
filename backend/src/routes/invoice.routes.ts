@@ -509,4 +509,38 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // V61 B.2.9 — Seller commission on invoices (server-enforced seller scope when not manager/owner)
+  fastify.get(
+    '/api/invoices/seller-commissions',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = (request.query ?? {}) as {
+          sellerEmployeeId?: string
+          ratePercent?: string
+          basis?: 'revenue' | 'margin'
+        }
+        const canViewAll = ['owner', 'admin', 'manager', 'accountant'].includes(
+          request.tenancy.role,
+        )
+        const targetSellerId = canViewAll
+          ? (query.sellerEmployeeId ?? request.tenancy.userId)
+          : request.tenancy.userId
+        const { bundlesConsignmentCommissionService } =
+          await import('../services/commerce/bundles-consignment-commission.service')
+        return reply.send({
+          data: await bundlesConsignmentCommissionService.getSellerCommissions(
+            request.tenancy,
+            targetSellerId,
+            Number(query.ratePercent ?? 5),
+            query.basis === 'margin' ? 'margin' : 'revenue',
+          ),
+        })
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: err.message })
+      }
+    },
+  )
 }

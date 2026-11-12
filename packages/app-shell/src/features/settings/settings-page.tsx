@@ -8,6 +8,12 @@ import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
 import { SelectField, useDisplayBasis } from '@hisabche/ui'
+import { DeviceModulesPanel } from '@hisabche/ui/settings/device-modules-panel'
+import {
+  getInstalledPacks,
+  getPackDeliveryFlag,
+  setInstalledPacks,
+} from '@/features/packs/pack-gate'
 import {
   IndustryProfileSection,
   SettingsHubContainer,
@@ -139,6 +145,12 @@ function DesktopSettings() {
               gone. It called a main-process function that returned `void`, so it
               could report nothing — see `update-section.tsx`. */}
               <UpdateSection />
+              <DeviceModulesPanel
+                installedPacks={getInstalledPacks()}
+                deliveryEnabled={getPackDeliveryFlag() === 'on'}
+                onInstall={(id) => setInstalledPacks([...getInstalledPacks(), id])}
+                onRemove={(id) => setInstalledPacks(getInstalledPacks().filter((p) => p !== id))}
+              />
             </div>
           </div>
         }

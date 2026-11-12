@@ -454,6 +454,102 @@ export async function productRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // V61 B.2.8 — Product bundles / kits
+  fastify.get(
+    '/api/products/:id/bundle-items',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { bundlesConsignmentCommissionService } =
+          await import('../services/commerce/bundles-consignment-commission.service')
+        return reply.send({
+          data: await bundlesConsignmentCommissionService.getBundleItems(request.tenancy, id),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to load bundle items' })
+      }
+    },
+  )
+
+  fastify.put(
+    '/api/products/:id/bundle-items',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { upsertBundleItemsSchema } = await import('@hisabche/validation')
+        const body = upsertBundleItemsSchema.parse(request.body)
+        const { bundlesConsignmentCommissionService } =
+          await import('../services/commerce/bundles-consignment-commission.service')
+        return reply.send({
+          data: await bundlesConsignmentCommissionService.setBundleItems(
+            request.tenancy,
+            id,
+            body.items,
+          ),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to update bundle items' })
+      }
+    },
+  )
+
+  // V61 B.2.21 & B.2.23 — Data-level translations & field-level permissions
+  fastify.patch(
+    '/api/products/:id/translations',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const translations = z
+          .object({
+            fa: z.string().optional(),
+            af: z.string().optional(),
+            en: z.string().optional(),
+          })
+          .parse(request.body)
+        const { supabase } = await import('../db')
+        const { data, error } = await supabase
+          .from('products')
+          .update({ translations, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .select('id, name, translations')
+          .single()
+        if (error || !data) return reply.code(404).send({ error: 'Product not found' })
+        return reply.send({ data })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to update translations' })
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/products/redacted',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { supabase } = await import('../db')
+        const { redactSensitiveFields } = await import('@hisabche/validation')
+        const { capabilitiesOf } = await import('../services/authorization/authorization.domain')
+        const { data, error } = await supabase
+          .from('products')
+          .select('id, name, sell_price, buy_price, cost_price, translations')
+          .eq('workspace_id', request.tenancy.workspaceId)
+        if (error) return reply.code(500).send({ error: 'Failed to fetch products' })
+        const caps = new Set(capabilitiesOf(request.tenancy.role))
+        return reply.send(redactSensitiveFields(data ?? [], caps))
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch redacted products' })
+      }
+    },
+  )
 }
 
 export default productRoutes

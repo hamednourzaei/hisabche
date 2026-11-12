@@ -58,6 +58,7 @@ export type LedgerSourceType =
   | 'fx_trade'
   | 'remittance_payout'
   | 'fx_agent_settlement'
+  | 'overhead_allocation'
   | 'manual'
   | 'reversal'
 

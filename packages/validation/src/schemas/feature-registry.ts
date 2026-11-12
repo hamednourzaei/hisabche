@@ -349,6 +349,7 @@ export const FEATURE_REGISTRY = {
   'hr.payslip': { execution: 'server', plans: ALL, alwaysAllowed: true },
   'operations.repairs': { execution: 'server', plans: ALL },
   'operations.salon_setup': { execution: 'server', plans: ALL },
+  'operations.resource_bookings': { execution: 'local', plans: ALL },
   'hr.commission': { execution: 'server', plans: ALL },
   'finance.currency_exchange': { execution: 'server', plans: ALL },
   'trade.appointments': { execution: 'server', plans: CLOUD },
@@ -369,6 +370,8 @@ export const FEATURE_REGISTRY = {
   'commerce.contracts': { execution: 'server', plans: ALL },
   'purchase.three_way_match': { execution: 'server', plans: ALL },
   'operations.quality': { execution: 'server', plans: ALL },
+  'payments.cheques': { execution: 'server', plans: ALL },
+  'hr.expense_claims': { execution: 'server', plans: ALL },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

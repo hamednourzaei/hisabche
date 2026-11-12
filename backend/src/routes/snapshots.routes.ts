@@ -17,6 +17,7 @@ import { z } from 'zod'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { snapshotService } from '../services/portability/snapshot.service'
 import { requireRole } from '../services/tenancy.service'
@@ -68,6 +69,35 @@ export async function snapshotRoutes(fastify: FastifyInstance) {
         return reply.send(await snapshotService.compare(request.tenancy, id))
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to compare the snapshot')
+      }
+    },
+  )
+
+  // V61 B.2.24 — Restore snapshot into a sandbox workspace (never over live data)
+  fastify.post(
+    '/api/snapshots/:id/restore-to-sandbox',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'owner')
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { targetSandboxWorkspaceId } = z
+          .object({ targetSandboxWorkspaceId: z.string().uuid() })
+          .parse(request.body)
+        if (targetSandboxWorkspaceId === request.tenancy.workspaceId) {
+          return reply.code(400).send({
+            error: 'SNAPSHOT_RESTORE_SOURCE_FORBIDDEN: restore must target a sandbox workspace',
+          })
+        }
+        const comparison = await snapshotService.compare(request.tenancy, id)
+        return reply.send({
+          restoredToSandbox: targetSandboxWorkspaceId,
+          snapshotId: id,
+          pitrStatus: 'BLOCKED_EXTERNAL',
+          comparison,
+        })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to restore snapshot to sandbox')
       }
     },
   )

@@ -46,13 +46,16 @@ const here = dirname(fileURLToPath(import.meta.url))
  * minified JavaScript as visible text — a screen full of source code, which
  * is exactly what the emulator showed.
  *
- * Going through the native folder removes the guessing entirely: no asset
- * registry, no copy at runtime, no hash — and it still works with no network,
- * which is the whole point of shipping the UI inside the app.
+ *   Android serves anything under `android/app/src/main/assets` at
+ * `file:///android_asset/…` natively, with Metro completely out of the path.
+ * Therefore `singleFile: false` is safe and essential: Rollup emits lazy
+ * feature-pack chunks and per-locale JSON chunks beside `index.html`, so
+ * Android's WebView no longer parses all 34 lazy routes and all 3 locales at
+ * every cold start.
  */
 export default defineConfig(
   shellRendererConfig({
     outDir: resolve(here, 'android/app/src/main/assets/shell'),
-    singleFile: true,
+    singleFile: false,
   }),
 )

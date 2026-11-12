@@ -62,7 +62,7 @@
 "education","true","true","false",""
 "laundry","true","false","false",""
 "repairs","true","true","true","backend/src/__tests__/v59-1-repair-routes-http.test.ts"
-"wedding","true","true","true","backend/src/__tests__/v60-http-families.test.ts"
+"wedding","true","true","false",""
 "security","true","false","false",""
 "consulting","true","true","true","backend/src/__tests__/v60-http-families.test.ts"
 "other","true","false","false",""

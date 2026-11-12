@@ -25,6 +25,7 @@
 // TypeScript still checks every call site.
 // ============================================
 
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -33,6 +34,43 @@ import autoprefixer from 'autoprefixer'
 import tailwindcss from 'tailwindcss'
 
 const here = dirname(fileURLToPath(import.meta.url))
+const packMap = JSON.parse(readFileSync(resolve(here, 'pack-map.generated.json'), 'utf8'))
+
+/**
+ * Deterministic chunk grouping derived from `pack-map.generated.json`.
+ * Groups each feature pack's routes/UI, splits locale JSONs per language,
+ * and isolates heavy optional vendor libs without duplicating shared code.
+ */
+function shellManualChunks(id) {
+  const normalized = id.replace(/\\/g, '/')
+
+  for (const [suffix, chunkName] of Object.entries(packMap.localeChunks ?? {})) {
+    if (normalized.endsWith(suffix)) return chunkName
+  }
+
+  for (const [packId, matchers] of Object.entries(packMap.packMatchers ?? {})) {
+    for (const prefix of matchers) {
+      if (normalized.includes(prefix)) return `pack-${packId}`
+    }
+  }
+
+  if (
+    normalized.includes('/node_modules/recharts/') ||
+    normalized.includes('/node_modules/victory-')
+  ) {
+    return 'pack-intelligence'
+  }
+  if (normalized.includes('/node_modules/three/')) {
+    return 'vendor-3d'
+  }
+  if (normalized.includes('/node_modules/html2canvas/')) {
+    return 'vendor-export'
+  }
+  if (normalized.includes('/node_modules/@zxing/')) {
+    return 'vendor-barcode'
+  }
+  return undefined
+}
 
 export const shellRoot = resolve(here, 'src')
 const shims = resolve(shellRoot, 'shims')
@@ -228,9 +266,10 @@ export function shellRendererConfig({ outDir, base = './', singleFile = false })
     build: {
       outDir,
       emptyOutDir: true,
-      // Inlining only works if there is ONE chunk and ONE stylesheet to
-      // inline: a lazy route left as a separate file is a file Metro never
-      // ships, which is the 404 this flag exists to prevent.
+      manifest: true,
+      // `singleFile` is retired for Android because Metro is no longer in the
+      // path (`android/app/src/main/assets/shell` serves relative `./assets/*`
+      // chunks directly). Keep `singleFile` opt-in only if a legacy host needs it.
       ...(singleFile
         ? {
             assetsInlineLimit: Number.MAX_SAFE_INTEGER,
@@ -239,7 +278,7 @@ export function shellRendererConfig({ outDir, base = './', singleFile = false })
         : {}),
       rollupOptions: {
         input: resolve(shellRoot, 'index.html'),
-        ...(singleFile ? { output: { inlineDynamicImports: true } } : {}),
+        output: singleFile ? { inlineDynamicImports: true } : { manualChunks: shellManualChunks },
       },
       chunkSizeWarningLimit: 900,
     },

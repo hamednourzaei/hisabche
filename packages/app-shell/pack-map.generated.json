@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-11-12T13:06:14.458Z",
+  "packIds": [
+    "core",
+    "operations",
+    "manufacturing",
+    "workforce",
+    "approvals",
+    "intelligence",
+    "marketplace"
+  ],
+  "packMatchers": {
+    "operations": [
+      "packages/app-shell/src/features/inventory-ops/",
+      "packages/app-shell/src/features/cycle-count/",
+      "packages/ui/src/components/ui/inventory-ops/",
+      "packages/ui/src/components/ui/cycle-count/",
+      "packages/ui/src/components/ui/invoices/containers/sales-orders-container",
+      "packages/ui/src/components/ui/invoices/containers/advances-container",
+      "packages/ui/src/components/ui/purchasing/"
+    ],
+    "manufacturing": [
+      "packages/app-shell/src/features/manufacturing/",
+      "packages/ui/src/components/ui/manufacturing/"
+    ],
+    "workforce": [
+      "packages/app-shell/src/features/team-and-payroll/",
+      "packages/app-shell/src/features/human-resources/",
+      "packages/ui/src/components/ui/team-and-payroll/",
+      "packages/ui/src/components/ui/human-resources/",
+      "packages/ui/src/components/ui/timesheets/",
+      "packages/ui/src/components/ui/service-delivery/"
+    ],
+    "approvals": [
+      "packages/app-shell/src/features/approvals/",
+      "packages/ui/src/components/ui/workflow/"
+    ],
+    "intelligence": [
+      "packages/app-shell/src/features/analysis/",
+      "packages/app-shell/src/features/ai/",
+      "packages/ui/src/components/ui/analysis/",
+      "packages/ui/src/components/ui/ai/"
+    ],
+    "marketplace": [
+      "packages/app-shell/src/features/marketplace/",
+      "packages/app-shell/src/features/market/",
+      "packages/ui/src/components/ui/marketplace/",
+      "packages/ui/src/components/ui/market/"
+    ]
+  },
+  "localeChunks": {
+    "packages/i18n/messages/fa/common.json": "locale-fa",
+    "packages/i18n/messages/af/common.json": "locale-af",
+    "packages/i18n/messages/en/common.json": "locale-en"
+  }
+}

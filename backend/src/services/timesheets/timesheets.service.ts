@@ -210,6 +210,31 @@ export class TimesheetsService {
     return mapEntry(data)
   }
 
+  async deleteEntry(ctx: TenancyContext, entryId: string): Promise<{ projectId: string }> {
+    const { data: existing, error: readError } = await supabase
+      .from('time_entries')
+      .select(ENTRY_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', entryId)
+      .maybeSingle()
+
+    if (readError) throw new DatabaseError('Failed to read the time entry', readError)
+    if (!existing) throw new NotFoundError('Time entry')
+    if (existing.invoice_id) throw new ConflictError('TIME_ALREADY_INVOICED')
+
+    const { error } = await supabase
+      .from('time_entries')
+      .delete()
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', entryId)
+      .is('invoice_id', null)
+
+    if (error) throw new DatabaseError('Failed to delete the time entry', error)
+
+    await this.invalidate(ctx.workspaceId)
+    return { projectId: String(existing.project_id) }
+  }
+
   async getSummary(ctx: TenancyContext, projectId: string) {
     const [entries, config] = await Promise.all([
       this.listEntries(ctx, { projectId }),

@@ -4018,7 +4018,8 @@
       "bank": "بانکی / حواله",
       "in": "دریافت",
       "out": "پرداخت"
-    }
+    },
+    "fieldRevisions": "تاریخچه تغییرات فیلدها"
   },
   "billing": {
     "limitReached": {
@@ -4355,7 +4356,29 @@
       }
     },
     "brandInitial": "ح",
-    "defaultWorkspaceName": "کسب‌وکار من"
+    "defaultWorkspaceName": "کسب‌وکار من",
+    "composition": {
+      "title": "پلان پیشنهادی سیستم برای کاروبار شما",
+      "subtitle": "بر اساس جواب‌های شما، مسایل، قابلیت‌های آماده، محدودیت‌ها و مینیوی پایه محاسبه شد.",
+      "problemsTitle": "مسایل اساسی شناسایی‌شده",
+      "availableTitle": "آماده و فعال",
+      "partialTitle": "نیمه‌آماده (با محدودیت)",
+      "plannedTitle": "در پلان / پشتیبانی‌نشده",
+      "menuTitle": "مینیوی پایه پیشنهادی",
+      "nextQuestionsTitle": "سوال‌های باز بعدی",
+      "problems": {
+        "P1_customer_revenue_visibility": "P1 — شفافیت مشتری و عاید",
+        "P2_pricing_and_true_cost": "P2 — نرخ‌گذاری و مصرف واقعی",
+        "P3_order_queue_and_capacity": "P3 — صف فرمایش، نوبت و ظرفیت",
+        "P4_stock_and_resource_location": "P4 — موجودی گدام، سریال و جای منابع",
+        "P5_procurement": "P5 — پلان خرید و تطبیق تدارکات",
+        "P6_workforce_productivity": "P6 — کارکرد تیم و ساعات کار",
+        "P7_cash_debt_settlement": "P7 — نقدینگی، قرض و تصفیه قراردادها",
+        "P8_true_profit": "P8 — فایده واقعی به تفکیک پروژه/مرکز هزینه",
+        "P9_quality_warranty_obligations": "P9 — کیفیت، گارانتی و تعهدات SLA",
+        "P10_owner_control": "P10 — کنترل مالک و هشدارهای مدیریتی"
+      }
+    }
   },
   "months": {
     "farvardin": "حمل",
@@ -8283,6 +8306,21 @@
         "step2": "مجری و درصد را وارد و «ثبت نرخ» را بزنید.",
         "step3": "بازه را انتخاب کنید تا کمیسیون هر نفر را ببینید."
       }
+    },
+    "contracts-recurring": {
+      "title": "قراردادها، اشتراک‌ها و کرایه وسایل",
+      "summary": "مدیریت قراردادهای دوره‌ای، ضمانت به‌عنوان قرض، بل یکتا در هر دوره، ثبت تخلف SLA و برگشت وسایل کرایه‌ای.",
+      "seoTitle": "قراردادها، اشتراک‌ها و کرایه وسایل در حسابچه",
+      "overview": {
+        "heading": "تعریف قرارداد و ضمانت",
+        "body1": "هر قرارداد طرف حساب، نوع (خدمات، اشتراک، کرایه)، دوره بل و مبلغ را مشخص می‌کند.",
+        "body2": "پیش‌پرداخت‌ها تا زمان تصفیه به‌عنوان قرض ثبت می‌شوند و پیش از وقت عاید حساب نمی‌شوند."
+      },
+      "billing": {
+        "heading": "بل دوره‌ای و برگشت کرایه",
+        "body1": "صادر کردن بل برای هر کلید دوره یکتا است؛ تکرار درخواست برای همان دوره بل دوگانه نمی‌سازد.",
+        "body2": "در قراردادهای کرایه، برگشت وسیله منبع رزوشده را آزاد می‌کند و حالت سالم یا خراب را ثبت می‌نماید."
+      }
     }
   },
   "ai": {
@@ -8462,7 +8500,12 @@
     "threeWayMatched": "مطابقت مکمل — آماده تائید پرداخت",
     "threeWayBlocked": "تفاوت دیده شد — پرداخت بند است",
     "supplierScorecardTitle": "کارنامه فروشندگان",
-    "supplierScorecardEmpty": "دیتایی برای ارزیابی فروشندگان موجود نیست."
+    "supplierScorecardEmpty": "دیتایی برای ارزیابی فروشندگان موجود نیست.",
+    "receiptQualityTitle": "بررسی کیفیت رسید",
+    "receiptQualityEmpty": "رویداد بررسی برای این رسید ثبت نشده است.",
+    "receiptQualityNotes": "یادداشت بررسی",
+    "receiptQualityPass": "تایید کیفیت",
+    "receiptQualityFail": "رد و قرنطین"
   },
   "productUnits": {
     "add": "افزودن واحد",
@@ -11257,7 +11300,10 @@
       "fulfilled": "تحویل‌شده",
       "loadFailed": "فرمایشات خوانده نشدند",
       "pending": "منتظر",
-      "viewLabel": "بخش فرمایشات و انتقال"
+      "viewLabel": "بخش فرمایشات و انتقال",
+      "backordered": "منتظر موجودی",
+      "acceptQuote": "تأیید پیش‌بل",
+      "deliver": "ثبت تسلیمی"
     },
     "delivery": {
       "tripsTitle": "سفرهای بارچلانی",
@@ -11323,7 +11369,8 @@
     "sections": {
       "followUp": "پیگیری فروش",
       "campaigns": "کمپاین‌ها",
-      "stale": "فرصت‌های راکد"
+      "stale": "فرصت‌های راکد",
+      "contracts": "قراردادها و کرایه"
     },
     "sessionSectionsLabel": "بخش‌های جلسه‌ها",
     "sessionSections": {
@@ -12789,7 +12836,13 @@
     "createFinalBill": "صدور بل نهایی",
     "billCreated": "بل نهایی ترمیم در سیستم فاکتور صادر شد",
     "billFailed": "صدور بل انجام نشد",
-    "billedInvoice": "بل صادر شده"
+    "billedInvoice": "بل صادر شده",
+    "qualityTestingTitle": "آزمایش و کنترل کیفیت ترمیم",
+    "qualityEmpty": "هنوز آزمایشی ثبت نشده است.",
+    "qualityPass": "تایید آزمایش",
+    "qualityFailRework": "رد و کار دوباره",
+    "qualityPassed": "آزمایش کیفیت تایید شد",
+    "qualityRework": "نیاز به کار دوباره ثبت شد"
   },
   "salon": {
     "resourceAdded": "اضافه شد",
@@ -13180,7 +13233,14 @@
     "recoveredGrams": "وزن خالص برآمده (گرام)",
     "secondHandSaved": "خرید طلای مستعمل ثبت شد",
     "secondHandTitle": "خرید طلای مستعمل / شکسته",
-    "systemGrams": "وزن سیستم (گرام)"
+    "systemGrams": "وزن سیستم (گرام)",
+    "rateDate": "تاریخ",
+    "rate24k": "نرخ طلای ۲۴ عیار (فی گرام)",
+    "errors": {
+      "GOLD_KYC_REQUIRED": "برای این مبلغ ثبت هویت مشتری ضروری است",
+      "GOLD_WEIGHT_INVALID": "وزن واردشده معتبر نیست",
+      "GOLD_RECOVERED_EXCEEDS_INPUT": "وزن بازیافتی از وزن ورودی بیشتر بوده نمی‌تواند"
+    }
   },
   "returns": {
     "condition": {
@@ -13255,5 +13315,136 @@
     "bank": "بانک / کارت",
     "cash": "نقدی",
     "credit": "قرضه / اعتباری"
+  },
+  "contracts": {
+    "createTitle": "ثبت قرارداد / کرایه جدید",
+    "noReadAccess": "نقش شما اجازه دیدن قراردادها را ندارد.",
+    "emptyTitle": "قراردادی ثبت نشده است",
+    "emptyDescription": "قراردادهای دوره‌ای، اشتراک یا کرایه تجهیزات را از فورم بالا ثبت کنید.",
+    "loadFailed": "خواندن لست قراردادها انجام نشد.",
+    "created": "قرارداد ثبت شد.",
+    "createFailed": "ثبت قرارداد انجام نشد.",
+    "billedSuccess": "بل دوره با موفقیت صادر شد.",
+    "slaFlagged": "تخلف SLA ثبت شد.",
+    "slaBreached": "تخلف SLA ثبت شده",
+    "slaDefaultReason": "تاخیر در تعهد زمانی SLA",
+    "leaseReturned": "برگشت جنس کرایه‌ای ثبت شد.",
+    "terminated": "قرارداد ختم شد.",
+    "actionFailed": "عملیات قرارداد انجام نشد.",
+    "columns": {
+      "title": "عنوان",
+      "status": "حالت",
+      "amount": "مبلغ دوره",
+      "startDate": "تاریخ شروع",
+      "actions": "عملیات"
+    },
+    "fields": {
+      "title": "عنوان قرارداد",
+      "party": "طرف قرارداد",
+      "amount": "مبلغ دوره‌ای",
+      "deposit": "پیش‌پرداخت / ضمانت",
+      "resource": "منبع / وسیله",
+      "serialId": "شناسه سریال (اختیاری)",
+      "periodKey": "کلید دوره (مثلاً 2026-11)",
+      "slaReason": "دلیل تخلف SLA"
+    },
+    "kind": {
+      "service": "خدمات",
+      "subscription": "اشتراک",
+      "lease": "کرایه / رنتال",
+      "maintenance": "نگهداری و مراقبت"
+    },
+    "period": {
+      "monthly": "ماهانه",
+      "quarterly": "ربع‌وار",
+      "yearly": "سالانه",
+      "one_off": "یک‌باره",
+      "weekly": "هفته‌وار",
+      "annual": "سالانه"
+    },
+    "status": {
+      "active": "فعال",
+      "terminated": "ختم‌شده",
+      "completed": "تکمیل‌شده",
+      "draft": "مسوده",
+      "paused": "متوقف",
+      "expired": "ختم‌شده"
+    },
+    "actions": {
+      "create": "ثبت قرارداد",
+      "billPeriod": "صادر کردن بل دوره",
+      "flagSla": "ثبت تخلف SLA",
+      "leaseReturn": "برگشت کرایه",
+      "terminate": "ختم قرارداد"
+    },
+    "returnCondition": {
+      "good": "سالم",
+      "damaged": "خراب‌شده",
+      "missing_parts": "ناقص",
+      "needs_repair": "نیاز به ترمیم",
+      "defective": "خراب",
+      "incomplete": "ناقص",
+      "sealed": "پلمب / سالم",
+      "opened": "بازشده",
+      "used": "استفاده‌شده"
+    }
+  },
+  "packs": {
+    "core": {
+      "label": "هسته برنامه",
+      "description": "ورود، بل، مشتری، جنس، دخل و همگام‌سازی"
+    },
+    "operations": {
+      "label": "عملیات و گدام پیشرفته",
+      "description": "سفارش فروش، خریداری، شمارش گدام و پیش‌پرداخت"
+    },
+    "manufacturing": {
+      "label": "تولید و فرمول ساخت",
+      "description": "سفارش کار، مواد خام و قیمت تمام‌شد تولید"
+    },
+    "workforce": {
+      "label": "همکاران، معاش و خدمات",
+      "description": "کارمندان، ساعات کاری، ترمیم و نوبت‌دهی"
+    },
+    "approvals": {
+      "label": "تاییدی‌ها و گردش کار",
+      "description": "مراحل تایید اسناد و درخواست‌ها"
+    },
+    "intelligence": {
+      "label": "تحلیل و همکار هوشمند",
+      "description": "پیش‌بینی نقدینگی، چارت‌ها و دستیار"
+    },
+    "marketplace": {
+      "label": "مارکیت و فروشنده",
+      "description": "اتصال به مارکیت و مدیریت فروش آنلاین"
+    },
+    "settings": {
+      "title": "ماژول‌های روی این دستگاه",
+      "subtitle": "بسته‌های قابلیت نصب‌شده یا آماده دریافت روی این دستگاه",
+      "codeOnlyNotice": "حذف یک بسته تنها کود آن را از دستگاه پاک می‌کند؛ معلومات شما محفوظ می‌ماند.",
+      "sizeKb": "{kb} کیلوبایت"
+    },
+    "status": {
+      "installed": "نصب‌شده",
+      "available": "آماده نصب",
+      "downloading": "در حال دانلود",
+      "failed": "ناموفق"
+    },
+    "actions": {
+      "install": "نصب",
+      "remove": "حذف کود",
+      "retry": "کوشش دوباره"
+    },
+    "notices": {
+      "notInstalledTitle": "این ماژول روی دستگاه نصب نیست",
+      "notInstalledBody": "برای نصب این ماژول یک‌بار به انترنت وصل شوید.",
+      "notInPlanTitle": "شامل پلان فعلی شما نیست",
+      "notInPlanBody": "این قابلیت در پلان فعلی تجارت شما فعال نیست.",
+      "notAllowedTitle": "اجازه دسترسی ندارید",
+      "notAllowedBody": "نقش کاربری شما اجازه دیدن این بخش را ندارد."
+    },
+    "onboarding": {
+      "title": "ماژول‌های پیشنهادی برای تجارت شما"
+    }
   }
 }

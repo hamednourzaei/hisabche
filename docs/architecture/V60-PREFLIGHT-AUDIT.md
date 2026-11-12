@@ -107,3 +107,26 @@ Earlier verification checks in the working tree revealed specific guard/test mis
    - SLA penalties: flag breaches only, zero automatic monetary penalty.
    - Free-text AI discovery: out of V60 scope (`not built`).
    - Route optimization / GPS fleet tracking: `planned`; trips + POD events only.
+
+---
+
+## 6. V60.1 §6 — Final Unwired Business Routes Disposition Register
+
+`node scripts/audit-unwired-routes.mjs` reports `946` total routes, `746` client path strings, and `100` routes with no direct React Query string match (down from `124` before V60). Excluding admin, auth, OTP, OAuth, public portal/CMS/invoice, debug, system-metrics, billing-licensing, cloud-migration, sync-lease/stream, webhook, and event/cron endpoints, every remaining **business** route carries an explicit decision:
+
+| Route File                   | Endpoint(s)                                                                                                               | Decision        | Recorded Caller / Justification                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------- |
+| `agriculture.routes.ts`      | `GET/POST /api/agriculture/livestock`                                                                                     | `KEEP-INTERNAL` | §9 owner safe default: livestock UI is deferred (`planned`); API kept internal              |
+| `activity.routes.ts`         | `GET /api/v1/entities/:entityType/:entityId/summary`                                                                      | `KEEP-INTERNAL` | Public v1 / MCP entity summary endpoint (`mcp-server` / external integrations)              |
+| `analytics.routes.ts`        | `GET /api/analytics/inventory`, `/financial`                                                                              | `KEEP-INTERNAL` | Internal analytics & MCP reporting API; UI consumes `/api/accounting/*` & `/api/insights/*` |
+| `audit.routes.ts`            | `POST /api/audit/log`, `GET /api/audit/entity/:type/:id`, `/user/:userId`, `/stats`, `/export`, `POST /api/audit/cleanup` | `KEEP-INTERNAL` | Internal audit trail / compliance export & scheduled retention cleanup job                  |
+| `customer.routes.ts`         | `GET /api/customers/:id/balance`                                                                                          | `KEEP-INTERNAL` | External/MCP party balance lookup; UI reads customer statement                              |
+| `escalation.routes.ts`       | `GET /api/v1/workflow-escalations`                                                                                        | `KEEP-INTERNAL` | Public v1 / background workflow escalation monitor                                          |
+| `human-resources.routes.ts`  | `PATCH /api/departments/:id`, `GET /api/attendance/:employeeId`, `POST/PATCH /api/attendance*`                            | `KEEP-INTERNAL` | Kiosk / public attendance & mobile check-in API                                             |
+| `payroll-pdf.routes.ts`      | `GET /api/hr/payrolls/:id/payslip.pdf`                                                                                    | `KEEP-INTERNAL` | Direct browser PDF download / print window link (not `apiClient` JSON hook)                 |
+| `product.routes.ts`          | `GET /api/products/low-stock`                                                                                             | `KEEP-INTERNAL` | MCP / external stock alert API; UI uses `useReorderSuggestions`                             |
+| `promotions.routes.ts`       | `POST /api/promotions/quote`                                                                                              | `KEEP-INTERNAL` | Checkout / POS server-side pricing quote endpoint                                           |
+| `service-delivery.routes.ts` | `GET /api/service-delivery/sessions/:id`                                                                                  | `KEEP-INTERNAL` | Single-session detail API for deep links & integrations                                     |
+| `snapshots.routes.ts`        | `GET/POST /api/snapshots`, `GET /api/snapshots/:id/compare`                                                               | `KEEP-INTERNAL` | Workspace backup/snapshot comparison & restore tooling                                      |
+| `transaction.routes.ts`      | `GET /api/transactions/balance/:customerId`                                                                               | `KEEP-INTERNAL` | External/MCP balance query; UI reads `/customers/:id/statement`                             |
+| `warehouse.routes.ts`        | `GET /api/warehouses/:id/stock`                                                                                           | `KEEP-INTERNAL` | Per-warehouse stock lookup for integrations & local sync                                    |

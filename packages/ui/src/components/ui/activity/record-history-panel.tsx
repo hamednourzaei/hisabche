@@ -28,6 +28,7 @@
 import { History } from 'lucide-react'
 
 import { formatDate as formatIntlDate } from '@hisabche/formatting'
+import { computeDocumentFieldDiff, type DocumentRevisionRecord } from '@hisabche/validation'
 
 import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
@@ -45,6 +46,7 @@ export interface RecordHistoryPanelProps {
   t: (key: string, fallback: string) => string
   isLoading: boolean
   entries: RecordHistoryEntry[]
+  revisions?: DocumentRevisionRecord[] | undefined
   className?: string | undefined
 }
 
@@ -77,7 +79,13 @@ function formatDateTime(value: string, lang: string): string {
   }
 }
 
-export function RecordHistoryPanel({ t, isLoading, entries, className }: RecordHistoryPanelProps) {
+export function RecordHistoryPanel({
+  t,
+  isLoading,
+  entries,
+  revisions = [],
+  className,
+}: RecordHistoryPanelProps) {
   // The reader's calendar — see the helper above.
   const { lang } = useDateFormat()
 
@@ -134,6 +142,48 @@ export function RecordHistoryPanel({ t, isLoading, entries, className }: RecordH
           ))}
         </ol>
       )}
+
+      {revisions.length > 0 ? (
+        <div className="mt-4 space-y-2 border-t border-[hsl(var(--border-default))] pt-3">
+          <h3 className="text-xs font-semibold text-[hsl(var(--fg-secondary))]">
+            {t('audit.fieldRevisions', 'نسخه‌های سند و تغییرات فیلدها')}
+          </h3>
+          <ol className="space-y-2">
+            {revisions.map((rev) => {
+              const diffs = computeDocumentFieldDiff(rev.before_data, rev.after_data)
+              return (
+                <li
+                  key={rev.id}
+                  className="rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-xs"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-[hsl(var(--fg-primary))]">
+                      v{rev.version} · {rev.changed_fields.join(', ')}
+                    </span>
+                    <time className="tabular-nums text-[hsl(var(--fg-tertiary))]">
+                      {formatDateTime(rev.created_at, lang)}
+                    </time>
+                  </div>
+                  {diffs.length > 0 ? (
+                    <ul className="mt-1.5 space-y-1 text-[hsl(var(--fg-secondary))]">
+                      {diffs.map((d) => (
+                        <li key={d.field} className="flex flex-wrap gap-1.5">
+                          <span className="font-mono">{d.field}:</span>
+                          <span className="line-through opacity-70">{String(d.before ?? '—')}</span>
+                          <span>→</span>
+                          <span className="font-medium text-[hsl(var(--fg-primary))]">
+                            {String(d.after ?? '—')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      ) : null}
     </section>
   )
 }

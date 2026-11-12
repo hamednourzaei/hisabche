@@ -684,4 +684,210 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // ─── V61 B.2.18: EXPENSE CLAIMS ────────────────────────────────────────
+  fastify.get(
+    '/api/expense-claims',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { status } = request.query as { status?: string }
+        const { expenseClaimsService } =
+          await import('../services/human-resources/expense-claims.service')
+        return reply.send({ data: await expenseClaimsService.list(request.tenancy, status) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list expense claims')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/expense-claims',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            employee_id: z.string().uuid(),
+            title: z.string().min(1).max(200),
+            submit: z.boolean().optional(),
+            lines: z
+              .array(
+                z.object({
+                  category: z.string().min(1),
+                  amount_minor: z.number().int().positive(),
+                  currency: z.string().min(3).max(8),
+                  receipt_url: z.string().optional(),
+                  notes: z.string().optional(),
+                }),
+              )
+              .min(1),
+          })
+          .parse(request.body)
+        const { expenseClaimsService } =
+          await import('../services/human-resources/expense-claims.service')
+        return reply
+          .code(201)
+          .send({ data: await expenseClaimsService.createAndSubmit(request.tenancy, body) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to create expense claim')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/expense-claims/:id/approve',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { expenseClaimsService } =
+          await import('../services/human-resources/expense-claims.service')
+        return reply.send({ data: await expenseClaimsService.approve(request.tenancy, id) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to approve expense claim')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/expense-claims/:id/reject',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('payroll.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { reason } = z.object({ reason: z.string().min(1).max(400) }).parse(request.body)
+        const { expenseClaimsService } =
+          await import('../services/human-resources/expense-claims.service')
+        return reply.send({ data: await expenseClaimsService.reject(request.tenancy, id, reason) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to reject expense claim')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/expense-claims/:id/reimburse',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { currency } = z.object({ currency: z.string().min(3).max(8) }).parse(request.body)
+        const { expenseClaimsService } =
+          await import('../services/human-resources/expense-claims.service')
+        return reply.send({
+          data: await expenseClaimsService.reimburse(request.tenancy, id, currency),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to reimburse expense claim')
+      }
+    },
+  )
+
+  // ─── V61 B.2.17: EMPLOYEE FILE, ORG CHART & APPRAISALS ─────────────────
+  fastify.get(
+    '/api/employees/org-chart',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.send({ data: await hrOrgAppraisalService.getOrgChart(request.tenancy) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to load org chart')
+      }
+    },
+  )
+
+  fastify.patch(
+    '/api/employees/:id/reports-to',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { reports_to } = z
+          .object({ reports_to: z.string().uuid().nullable() })
+          .parse(request.body)
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.send({
+          data: await hrOrgAppraisalService.setReportsTo(request.tenancy, id, reports_to),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to update reporting manager')
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/employees/:id/documents',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.send({
+          data: await hrOrgAppraisalService.listDocuments(request.tenancy, id),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list employee documents')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/employees/:id/documents',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { addEmployeeDocumentSchema } = await import('@hisabche/validation')
+        const body = addEmployeeDocumentSchema.parse(request.body)
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.code(201).send({
+          data: await hrOrgAppraisalService.addDocument(request.tenancy, id, body),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to add employee document')
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/employees/:id/appraisals',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.send({
+          data: await hrOrgAppraisalService.listAppraisals(request.tenancy, id),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list appraisals')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/employees/:id/appraisals',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { createAppraisalSchema } = await import('@hisabche/validation')
+        const body = createAppraisalSchema.parse(request.body)
+        const { hrOrgAppraisalService } =
+          await import('../services/human-resources/hr-org-appraisal.service')
+        return reply.code(201).send({
+          data: await hrOrgAppraisalService.createAppraisal(request.tenancy, id, body),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to record appraisal')
+      }
+    },
+  )
 }

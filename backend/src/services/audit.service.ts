@@ -551,6 +551,26 @@ export class AuditService {
     return { seq: Number(row.last_seq), hash: row.last_hash }
   }
 
+  /**
+   * V61 B.2.22: Read append-only field-level document revisions for a workspace record.
+   */
+  async listDocumentRevisions(tenancy: TenancyContext, documentType: string, documentId: string) {
+    const { data, error } = await supabase
+      .from('document_revisions')
+      .select(
+        'id, workspace_id, document_type, document_id, version, actor_id, created_at, before_data, after_data, changed_fields',
+      )
+      .eq('workspace_id', tenancy.workspaceId)
+      .eq('document_type', documentType)
+      .eq('document_id', documentId)
+      .order('version', { ascending: false })
+
+    if (error) {
+      throw new DatabaseError('Failed to fetch document revisions', error)
+    }
+    return data ?? []
+  }
+
   // ─── Invalidate Cache ────────────────────────────────────
   async invalidateCache(userId?: string) {
     await memoryCache.invalidate('audit_list:*')

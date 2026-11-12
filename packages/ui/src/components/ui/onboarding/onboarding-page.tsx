@@ -18,6 +18,7 @@ import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 import { CurrencyPicker } from './currency-picker'
 import { SearchableOptionList } from './searchable-option-list'
 import { OperatingQuestions } from './operating-questions'
+import { CompositionPlanSummary } from './composition-plan-summary'
 import type { OperatingAnswers, OperatingQuestion } from '@hisabche/validation'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -468,12 +469,14 @@ CurrencyStep.displayName = 'CurrencyStep'
 // ─── Step 4: How the business works (adaptive) ────────────────────────────
 
 const OperatingStep = memo(function OperatingStep({
+  businessType,
   answers,
   onAnswer,
   onBack,
   onNext,
   t,
 }: {
+  businessType: string | null
   answers: OperatingAnswers
   onAnswer: (question: OperatingQuestion, answer: string) => void
   onBack: () => void
@@ -493,6 +496,7 @@ const OperatingStep = memo(function OperatingStep({
         className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
       >
         <OperatingQuestions answers={answers} onAnswer={onAnswer} t={t} />
+        <CompositionPlanSummary answers={answers} businessType={businessType} t={t} />
       </div>
       <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
@@ -680,6 +684,7 @@ export const OnboardingPage = memo(function OnboardingPage({
         )}
         {step === 4 && (
           <OperatingStep
+            businessType={businessType}
             answers={operatingAnswers}
             onAnswer={onSetOperatingAnswer}
             onBack={handleBack4}

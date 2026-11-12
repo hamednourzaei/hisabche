@@ -20,7 +20,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { formatNumber } from '@hisabche/formatting'
-import { useCurrencyStore } from '@hisabche/store'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { CURRENCY_CODES, priceListInputSchema, type SavedPriceList } from '@hisabche/validation'
 import {
   apiErrorMessage,
@@ -275,11 +275,11 @@ export function PriceListsPanel() {
 function PriceListForm({ onDone, errorText }: { onDone: () => void; errorText: ErrorText }) {
   const t = useTranslations('priceLists')
   const tCurrency = useTranslations('currency')
-  const primaryCurrency = useCurrencyStore((s) => s.primaryCurrency)
+  const bookCurrency = useBookCurrency() ?? ''
   const save = useSavePriceList()
 
   const [name, setName] = useState('')
-  const [currency, setCurrency] = useState<string>(primaryCurrency)
+  const [currency, setCurrency] = useState<string>(bookCurrency)
   const [validFrom, setValidFrom] = useState('')
   const [validTo, setValidTo] = useState('')
   const [problem, setProblem] = useState<string | null>(null)

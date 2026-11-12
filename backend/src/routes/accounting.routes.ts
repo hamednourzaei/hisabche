@@ -20,7 +20,10 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createAccountSchema,
+  createAccrualScheduleSchema,
   createJournalEntrySchema,
+  overheadPolicySchema,
+  overheadRunSchema,
   periodLockSchema,
   reverseJournalEntrySchema,
   updateAccountSchema,
@@ -830,6 +833,203 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (err) {
         return fail(reply, err, 'Failed to run the month-end package')
+      }
+    },
+  )
+
+  // ─── V61 §2.7 Overhead allocation policy & runs ───────────────────────────
+  fastify.get(
+    '/overhead-policy',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { overheadAllocationService } =
+          await import('../services/accounting/overhead-allocation.service')
+        return reply.send({ policy: await overheadAllocationService.getPolicy(request.tenancy) })
+      } catch (err) {
+        return fail(reply, err, 'Failed to fetch overhead policy')
+      }
+    },
+  )
+
+  fastify.put(
+    '/overhead-policy',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = overheadPolicySchema.parse(request.body)
+        const { overheadAllocationService } =
+          await import('../services/accounting/overhead-allocation.service')
+        return reply.send(await overheadAllocationService.savePolicy(request.tenancy, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save overhead policy')
+      }
+    },
+  )
+
+  fastify.post(
+    '/overhead-runs',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const raw = overheadRunSchema
+          .extend({
+            poolAmountMinor: z.number().int().nullable(),
+            targets: z.array(
+              z.object({
+                dimensionValueId: z.string().uuid(),
+                driverValue: z.number().nullable(),
+              }),
+            ),
+          })
+          .parse(request.body)
+        const { overheadAllocationService } =
+          await import('../services/accounting/overhead-allocation.service')
+        const res = await overheadAllocationService.runAllocation(request.tenancy, raw)
+        return reply.code(res.replay ? 200 : 201).send(res)
+      } catch (err) {
+        return fail(reply, err, 'Failed to run overhead allocation')
+      }
+    },
+  )
+
+  fastify.post(
+    '/overhead-runs/:id/reverse',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { reason, date } = z
+          .object({ reason: z.string().min(1).max(300), date: z.string().optional() })
+          .parse(request.body)
+        const { overheadAllocationService } =
+          await import('../services/accounting/overhead-allocation.service')
+        return reply.send(
+          await overheadAllocationService.reverseRun(request.tenancy, id, reason, date),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to reverse overhead allocation')
+      }
+    },
+  )
+
+  // ─── V61 B.2.4: ACCRUAL / PREPAYMENT SCHEDULES ─────────────────────────
+  fastify.get(
+    '/accrual-schedules',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { accrualSchedulesService } =
+          await import('../services/accounting/accrual-schedules.service')
+        return reply.send({ data: await accrualSchedulesService.list(request.tenancy) })
+      } catch (err) {
+        return fail(reply, err, 'Failed to list accrual schedules')
+      }
+    },
+  )
+
+  fastify.post(
+    '/accrual-schedules',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = createAccrualScheduleSchema.parse(request.body)
+        const { accrualSchedulesService } =
+          await import('../services/accounting/accrual-schedules.service')
+        return reply
+          .code(201)
+          .send({ data: await accrualSchedulesService.create(request.tenancy, body) })
+      } catch (err) {
+        return fail(reply, err, 'Failed to create accrual schedule')
+      }
+    },
+  )
+
+  fastify.post(
+    '/accrual-schedules/run',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { asOfDate } = z
+          .object({ asOfDate: z.string().min(8).max(32).optional() })
+          .parse(request.body ?? {})
+        const { accrualSchedulesService } =
+          await import('../services/accounting/accrual-schedules.service')
+        return reply.send(
+          await accrualSchedulesService.runDue(request.tenancy, asOfDate ?? today()),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to run due accrual schedules')
+      }
+    },
+  )
+
+  // V61 B.2.3 — Apply trade chart-of-accounts template
+  fastify.post(
+    '/chart-templates/apply',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { trade } = z
+          .object({
+            trade: z.enum([
+              'general',
+              'retail',
+              'services',
+              'manufacturing',
+              'exchange',
+              'gold',
+              'pharmacy',
+            ]),
+          })
+          .parse(request.body)
+        const { AccountingService } = await import('../services/accounting')
+        return reply.send(await new AccountingService().applyChartTemplate(request.tenancy, trade))
+      } catch (err) {
+        return fail(reply, err, 'Failed to apply chart template')
+      }
+    },
+  )
+
+  // V61 B.2.6 — Budget warning/block check at posting
+  fastify.post(
+    '/budget-check',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            accountId: z.string().uuid(),
+            dimensionId: z.string().uuid().nullable().optional(),
+            period: z.string().min(4),
+            expenseDeltaMinor: z.number().int().nonnegative(),
+            policy: z.enum(['warn', 'block']).optional(),
+            budgets: z.array(
+              z.object({
+                budgetId: z.string(),
+                accountId: z.string(),
+                dimensionId: z.string().nullable().optional(),
+                period: z.string(),
+                limitMinor: z.number().int().nonnegative(),
+                actualMinor: z.number().int().nonnegative(),
+              }),
+            ),
+          })
+          .parse(request.body)
+        const { evaluateBudgetAtPosting } = await import('@hisabche/validation')
+        const result = evaluateBudgetAtPosting(body)
+        if (result.status === 'block') {
+          return reply.code(409).send({ error: 'BUDGET_EXCEEDED', ...result })
+        }
+        return reply.send(result)
+      } catch (err) {
+        return fail(reply, err, 'Failed to evaluate posting budget')
       }
     },
   )

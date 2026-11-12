@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { NotificationService } from '../services/notification.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import type { NotificationScope } from '../services/notification.service'
@@ -138,6 +139,35 @@ export async function notificationRoutes(fastify: FastifyInstance) {
       } catch (err: any) {
         fastify.log.error('❌ [mark-all-read] Error:', err)
         return reply.code(500).send({ error: 'Failed to update notifications' })
+      }
+    },
+  )
+
+  // V61 B.2.16 — Channel-agnostic messaging outbox (email | sms)
+  fastify.post(
+    '/api/notifications/outbox',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { z } = await import('zod')
+        const body = z
+          .object({
+            channel: z.enum(['email', 'sms']),
+            customerId: z.string().uuid().optional(),
+            recipient: z.string().min(3),
+            templateKey: z.string().min(1),
+            templateParams: z.record(z.unknown()).optional(),
+            idempotencyKey: z.string().min(1),
+          })
+          .parse(request.body)
+        const { messagingOutboxService } =
+          await import('../services/messaging/messaging-outbox.service')
+        return reply.code(202).send({
+          data: await messagingOutboxService.enqueue(request.tenancy, body),
+        })
+      } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to enqueue message' })
       }
     },
   )

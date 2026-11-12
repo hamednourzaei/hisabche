@@ -64,6 +64,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   // matches a pathname (see above); it exists so the article's «باز کردن در
   // برنامه» opens the tab the article is about.
   'customers?tab=sessions': 'service-delivery',
+  'customers?tab=customers&view=contracts': 'contracts-recurring',
 
   // Stock
   warehouse: 'inventory',

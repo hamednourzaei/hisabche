@@ -16,6 +16,8 @@ import {
 } from '@hisabche/validation'
 import { createAuthClient, supabase } from '../db'
 import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { writeProfile } from '../services/profile-write'
 import { WorkspaceService } from '../services/workspace.service'
@@ -913,6 +915,54 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Internal server error' })
+      }
+    },
+  )
+
+  // V61 B.2.25 — Workspace-level 2FA enrollment & recovery code step-up
+  fastify.post(
+    '/api/auth/workspace-2fa/enroll',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            totpSecretRef: z.string().min(1),
+            recoveryCodes: z.array(z.string().min(6)).min(1),
+          })
+          .parse(request.body)
+        const { workspace2faService } =
+          await import('../services/authorization/workspace-2fa.service')
+        return reply.send({
+          data: await workspace2faService.enroll(
+            request.tenancy,
+            body.totpSecretRef,
+            body.recoveryCodes,
+          ),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to enroll workspace 2FA' })
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/auth/workspace-2fa/verify-recovery',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { code } = z.object({ code: z.string().min(4) }).parse(request.body)
+        const { workspace2faService } =
+          await import('../services/authorization/workspace-2fa.service')
+        const res = await workspace2faService.verifyRecoveryCode(request.tenancy, code)
+        if (!res.ok) {
+          return reply.code(res.status).send({ error: res.code, code: res.code })
+        }
+        return reply.send({ verified: true })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to verify recovery code' })
       }
     },
   )

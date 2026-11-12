@@ -14,8 +14,14 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
-import { recordPaymentSchema, cancelPaymentSchema as cancelSchema } from '@hisabche/validation'
+import {
+  recordPaymentSchema,
+  cancelPaymentSchema as cancelSchema,
+  createChequeSchema,
+  transitionChequeSchema,
+} from '@hisabche/validation'
 import { PaymentsService } from '../services/payments'
+import { ChequesService } from '../services/payments/cheques.service'
 import { verifyPaymentPosting } from '../services/core-shadow'
 import {
   IdempotencyUnavailableError,
@@ -310,6 +316,67 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
         return reply.send(await paymentsService.getPartyLedger(request.tenancy, partyType, partyId))
       } catch (err) {
         return fail(reply, err, 'Failed to build the party ledger')
+      }
+    },
+  )
+
+  // ─── V61 B.2.5: CHEQUE LIFECYCLE ─────────────────────────────────────────
+  const chequesService = new ChequesService()
+
+  fastify.get(
+    '/cheques',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { status } = request.query as { status?: string }
+        const data = await chequesService.list(request.tenancy, status)
+        return reply.send({ data })
+      } catch (err) {
+        return fail(reply, err, 'Failed to list cheques')
+      }
+    },
+  )
+
+  fastify.post(
+    '/cheques',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')],
+      schema: {
+        body: toJsonSchema(createChequeSchema),
+        response: { 201: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = createChequeSchema.parse(request.body)
+        const created = await chequesService.create(request.tenancy, body)
+        return reply.code(201).send({ data: created })
+      } catch (err) {
+        return fail(reply, err, 'Failed to create cheque')
+      }
+    },
+  )
+
+  fastify.post(
+    '/cheques/:id/transition',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')],
+      schema: {
+        body: toJsonSchema(transitionChequeSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = transitionChequeSchema.parse(request.body)
+        const updated = await chequesService.transition(request.tenancy, id, body)
+        return reply.send({ data: updated })
+      } catch (err) {
+        return fail(reply, err, 'Failed to transition cheque')
       }
     },
   )

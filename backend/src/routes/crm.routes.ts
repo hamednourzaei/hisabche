@@ -16,6 +16,7 @@ import {
 import { BaseError } from '../errors/base.error'
 import { crm } from '../services/crm'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 
@@ -377,6 +378,58 @@ export async function crmRoutes(fastify: FastifyInstance) {
         return reply.send(await crmService.getCustomerCrm(request.tenancy, customerId))
       } catch (err) {
         return fail(reply, err, 'Failed to fetch customer CRM')
+      }
+    },
+  )
+
+  // V61 B.2.15 — RFM segmentation per currency
+  fastify.get(
+    '/api/crm/rfm',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { supabase } = await import('../db')
+        const { baseCurrencyOf } = await import('../services/base-currency')
+        const { computeCustomerRfmByCurrency } = await import('@hisabche/validation')
+        const [custRes, invRes, bookCurrency] = await Promise.all([
+          supabase.from('customers').select('id').eq('workspace_id', request.tenancy.workspaceId),
+          supabase
+            .from('invoices')
+            .select('customer_id, currency, issue_date, total, status')
+            .eq('workspace_id', request.tenancy.workspaceId)
+            .neq('status', 'cancelled'),
+          baseCurrencyOf(request.tenancy.workspaceId),
+        ])
+        if (custRes.error || invRes.error) {
+          return reply.code(500).send({ error: 'Failed to load RFM data' })
+        }
+        const customerIds = (custRes.data ?? []).map((c: { id: string }) => c.id)
+        const invoices = (invRes.data ?? [])
+          .filter((i: { customer_id: string | null }) => Boolean(i.customer_id))
+          .map(
+            (i: {
+              customer_id: string
+              currency: string | null
+              issue_date: string
+              total: number
+            }) => ({
+              customerId: i.customer_id,
+              currency: i.currency ?? bookCurrency ?? 'AFN',
+              date: String(i.issue_date ?? new Date().toISOString()).slice(0, 10),
+              totalMinor: Math.round(Number(i.total ?? 0) * 100),
+            }),
+          )
+        const todayIso = new Date().toISOString().slice(0, 10)
+        return reply.send({
+          data: computeCustomerRfmByCurrency(
+            customerIds,
+            invoices,
+            todayIso,
+            bookCurrency ?? 'AFN',
+          ),
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to compute RFM segmentation')
       }
     },
   )

@@ -48,6 +48,7 @@ import { registerWarrantiesRoutes } from './routes/warranties'
 import { registerOrderDepositsRoutes } from './routes/order-deposits'
 import { registerPackageCreditsRoutes } from './routes/package-credits'
 import { registerServiceDeliveryRoutes } from './routes/service-delivery'
+import { registerBookingsRoutes } from './routes/bookings'
 import { registerTaxRoutes } from './routes/tax'
 import { registerWarehouseRoutes } from './routes/warehouses'
 import { registerWorkspaceProfileRoutes } from './routes/workspace-profile'
@@ -120,6 +121,7 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerOrderDepositsRoutes(router)
   registerPackageCreditsRoutes(router)
   registerServiceDeliveryRoutes(router)
+  registerBookingsRoutes(router)
   registerTaxRoutes(router)
 
   return {

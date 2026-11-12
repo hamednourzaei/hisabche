@@ -4,6 +4,10 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "sideEffects": [
+    "**/*.css",
+    "./src/index.ts"
+  ],
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
@@ -93,8 +97,11 @@
     "./blog/blog-article-view": "./src/components/ui/blog/blog-article-view.tsx",
     "./toast-provider": "./src/components/ui/toast-provider.tsx",
     "./error-boundary": "./src/components/ui/error-boundary.tsx",
+    "./barcode/camera-host": "./src/lib/barcode/camera-host.ts",
+    "./print/printer-host": "./src/lib/print/printer-host.ts",
     "./utils": "./src/lib/utils.ts",
     "./settings/settings-page": "./src/components/ui/settings/settings-page.tsx",
+    "./settings/device-modules-panel": "./src/components/ui/settings/device-modules-panel.tsx",
     "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
     "./components/ui/warehouse/containers/warehouse-container": "./src/components/ui/warehouse/containers/warehouse-container.tsx",
     "./components/ui/invoices/containers/invoices-container": "./src/components/ui/invoices/containers/invoices-container.tsx",

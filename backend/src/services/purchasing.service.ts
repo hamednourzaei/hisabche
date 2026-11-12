@@ -54,7 +54,7 @@ const PO_MINIMAL = 'id, supplier_id, status, order_date'
 
 const PO_ITEM_COLUMNS =
   'id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price'
-const PO_ITEM_MINIMAL = 'id, product_id, variant_id, quantity, unit_price'
+const PO_ITEM_MINIMAL = 'id, product_id, variant_id, quantity, unit_price, total_price'
 
 export class PurchasingService {
   // ─── Cache ───────────────────────────────────────────────────
@@ -81,7 +81,7 @@ export class PurchasingService {
         `
         ${PO_MINIMAL},
         supplier:suppliers(id, name, phone, email),
-        items:purchase_order_items(${PO_ITEM_MINIMAL}, product:products(id, name, unit))
+        items:purchase_order_items(id, product_id, variant_id, quantity, unit_price, total_price)
       `,
       )
       .eq('workspace_id', ctx.workspaceId)
@@ -367,15 +367,19 @@ export class PurchasingService {
    * Receiving is idempotent per order line, so a retry after a lost response
    * does not receive the same goods twice.
    */
-  async receiveGoods(ctx: TenancyContext, id: string) {
-    const { workspaceId, userId } = ctx
+  async receiveGoods(
+    ctx: TenancyContext,
+    id: string,
+    input?: { lines?: Array<{ itemId: string; quantity: number }> },
+  ) {
+    const { workspaceId } = ctx
 
     const { data: order, error } = await supabase
       .from('purchase_orders')
       .select(
         `
         id, status, order_date,
-        items:purchase_order_items(id, product_id, variant_id, quantity, unit_price, total_price)
+        items:purchase_order_items(id, product_id, variant_id, quantity, received_quantity, unit_price, total_price)
       `,
       )
       .eq('id', id)
@@ -385,23 +389,57 @@ export class PurchasingService {
     if (error) throw new DatabaseError('Failed to fetch purchase order', error)
     if (!order) throw new NotFoundError('Purchase order')
 
-    // ⚠️ CLAIM THE TRANSITION BEFORE MOVING ANY STOCK (#142, 26 Sep 2026).
-    //
-    // Nothing here checked the status, and the status was written LAST. A
-    // second «receive» — a double-click, a retry after a lost response, or two
-    // devices — ran the whole method again: cost layers are idempotent
-    // (`ON CONFLICT DO NOTHING` on the source line), but the `stock_movements`
-    // insert is not, so the goods arrived twice on the shelf. Now the status
-    // flips first, conditioned on the status just read: exactly one caller's
-    // update matches a row, every other one finds nothing and is refused.
     const priorStatus = String((order as { status?: unknown }).status ?? '')
-    const refusal = receiveRefusal(priorStatus)
+    const refusal = priorStatus === 'partially_received' ? null : receiveRefusal(priorStatus)
     if (refusal) throw new ConflictError(refusal)
+
+    const items =
+      (
+        order as {
+          items?: Array<{
+            id: string
+            product_id: string
+            variant_id?: string | null
+            quantity: number
+            received_quantity?: number | null
+            unit_price: number
+            total_price: number | null
+          }>
+        }
+      ).items ?? []
+
+    const requestedMap = new Map<string, number>()
+    if (input?.lines && input.lines.length > 0) {
+      for (const reqLine of input.lines) {
+        const item = items.find((i) => i.id === reqLine.itemId)
+        if (!item) throw new NotFoundError('Purchase order item')
+        const already = Number(item.received_quantity ?? 0)
+        if (reqLine.quantity <= 0 || already + reqLine.quantity > Number(item.quantity)) {
+          throw new ConflictError('PURCHASE_OVER_RECEIPT_REFUSED')
+        }
+        requestedMap.set(item.id, (requestedMap.get(item.id) ?? 0) + reqLine.quantity)
+      }
+    } else {
+      for (const item of items) {
+        const remaining = Number(item.quantity) - Number(item.received_quantity ?? 0)
+        if (remaining > 0) requestedMap.set(item.id, remaining)
+      }
+    }
+
+    const allFullyReceived = items.every((item) => {
+      const nextReceived = Number(item.received_quantity ?? 0) + (requestedMap.get(item.id) ?? 0)
+      return nextReceived >= Number(item.quantity)
+    })
+    const targetStatus = allFullyReceived ? 'received' : 'partially_received'
 
     const receivedAt = new Date().toISOString()
     const { data: claimed, error: claimError } = await supabase
       .from('purchase_orders')
-      .update({ status: 'received', received_at: receivedAt, updated_at: receivedAt })
+      .update({
+        status: targetStatus,
+        ...(allFullyReceived ? { received_at: receivedAt } : {}),
+        updated_at: receivedAt,
+      })
       .eq('id', id)
       .eq('workspace_id', workspaceId)
       .eq('status', priorStatus)
@@ -413,30 +451,42 @@ export class PurchasingService {
     if (!claimed) throw new ConflictError('PURCHASE_ORDER_ALREADY_RECEIVED')
 
     try {
-      await this.moveReceivedGoods(ctx, id, order)
+      await this.moveReceivedGoods(ctx, id, order, requestedMap)
+      for (const item of items) {
+        const delta = requestedMap.get(item.id) ?? 0
+        if (delta > 0) {
+          await supabase
+            .from('purchase_order_items')
+            .update({ received_quantity: Number(item.received_quantity ?? 0) + delta })
+            .eq('id', item.id)
+            .eq('workspace_id', workspaceId)
+        }
+      }
     } catch (moveError) {
-      // The stock did not (fully) arrive, so the order must not say it did.
-      // A status write, not a compensating DELETE: the cost layers already
-      // written are keyed by source line, so the retry reuses them.
       await supabase
         .from('purchase_orders')
         .update({ status: priorStatus, received_at: null, updated_at: new Date().toISOString() })
         .eq('id', id)
         .eq('workspace_id', workspaceId)
-        .eq('status', 'received')
+        .eq('status', targetStatus)
       throw moveError
     }
 
-    // The goods arrived; the purchase invoice that pays for them posts the
-    // actual. Holding the reservation too would count the same money twice.
-    await budgets.release(ctx, 'purchase_order', id)
+    if (allFullyReceived) {
+      await budgets.release(ctx, 'purchase_order', id)
+    }
 
     await this.invalidate(workspaceId)
     return claimed
   }
 
   /** Cost layers + stock movements for a claimed receipt. Only `receiveGoods` calls this. */
-  private async moveReceivedGoods(ctx: TenancyContext, id: string, order: object) {
+  private async moveReceivedGoods(
+    ctx: TenancyContext,
+    id: string,
+    order: object,
+    requestedMap?: Map<string, number>,
+  ) {
     const { workspaceId, userId } = ctx
     const items = ((order as any).items ?? []) as Array<{
       id: string
@@ -451,7 +501,7 @@ export class PurchasingService {
     const entryDate = String((order as any).order_date ?? new Date().toISOString()).slice(0, 10)
 
     for (const item of items) {
-      const quantity = Number(item.quantity) || 0
+      const quantity = requestedMap ? (requestedMap.get(item.id) ?? 0) : Number(item.quantity) || 0
       if (!item.product_id || quantity <= 0) continue
 
       const unitCost = receiptUnitCost(item)
@@ -466,35 +516,22 @@ export class PurchasingService {
         entryDate,
         sourceType: 'purchase_order',
         sourceId: id,
-        sourceLine: item.id,
+        sourceLine: `${item.id}:${entryDate}`,
       })
     }
 
-    // ─── PHASE C — record the arrival as a stock movement ────────────────────
-    //
-    // Receiving a purchase order used to write NO movement row at all. It
-    // recorded a cost layer and then copied the layer's on-hand figure onto
-    // `products.quantity`. So `stock_movements` — which the architecture calls
-    // the source of truth for inventory — did not contain purchase receipts,
-    // and any report built from it was missing every arrival of goods.
-    //
-    // The cost layer still records what the goods COST; that is the costing
-    // core's job and it keeps it. This records that they ARRIVED, which is a
-    // different fact and now has exactly one home.
-    //
-    // `products.quantity` is no longer written here: the projection trigger
-    // maintains it from these rows. Writing both would add the arrival twice.
     if (items.length > 0) {
       const movements = items
-        .filter((item) => item.product_id)
+        .filter(
+          (item) =>
+            item.product_id &&
+            (requestedMap ? (requestedMap.get(item.id) ?? 0) > 0 : Number(item.quantity) > 0),
+        )
         .map((item) => ({
           product_id: item.product_id,
-          // variant-stock-01: the variant the line buys arrives onto the SAME
-          // variant. Named only when set, so legacy lines keep working before
-          // the migration.
           ...(item.variant_id ? { variant_id: item.variant_id } : {}),
           type: 'purchase',
-          quantity: Number(item.quantity) || 0,
+          quantity: requestedMap ? (requestedMap.get(item.id) ?? 0) : Number(item.quantity) || 0,
           reference_type: 'purchase_order',
           reference_id: id,
           workspace_id: workspaceId,

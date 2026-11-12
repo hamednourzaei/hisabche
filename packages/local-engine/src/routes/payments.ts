@@ -31,7 +31,7 @@ import {
   validateAllocations,
   type OpenInvoice,
 } from '@hisabche/validation'
-import { ConflictError, NotFoundError, ValidationError } from '../errors'
+import { ConflictError, NotFoundError, OfflineNotAvailableError, ValidationError } from '../errors'
 import { assertPeriodOpen, branchOfInvoices, reverseLedgerEntry } from './local-ledger'
 import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
@@ -141,6 +141,11 @@ export function registerPaymentRoutes(router: Router): void {
     // `usePayments` hands it straight to a list. An object here broke the
     // customer page offline.
     return rows.map(mapPayment)
+  })
+
+  // ─── GET /payments/cheques (server-only) ────────────────────
+  router.get('/payments/cheques', () => {
+    throw new OfflineNotAvailableError('payments.cheques')
   })
 
   // ─── GET /payments/:id ──────────────────────────────────────

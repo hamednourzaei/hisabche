@@ -75,6 +75,7 @@ describe('operationalProfileOf', () => {
     expect(await operationalProfileOf('ws')).toEqual({
       configurable: false,
       dna: null,
+      composition: null,
       version: 0,
       onboarding: null,
     })
@@ -155,5 +156,18 @@ describe('setOnboardingProgress', () => {
   ])('refuses %j without writing', async (bad) => {
     await expect(setOnboardingProgress('ws', bad)).rejects.toThrow('ONBOARDING_PROGRESS_INVALID')
     expect(state.updates).toHaveLength(0)
+  })
+
+  it('operationalProfileOf returns the computed composition plan alongside stored DNA', async () => {
+    state.row = {
+      operational_dna: DNA,
+      operational_dna_version: 2,
+      onboarding_progress: null,
+    }
+    const view = await operationalProfileOf('ws')
+    expect(view.dna).toEqual(DNA)
+    expect(view.composition).not.toBeNull()
+    expect(view.composition?.problems.length).toBeGreaterThan(0)
+    expect(view.composition?.plan.capabilities.capabilities.length).toBeGreaterThan(0)
   })
 })

@@ -298,6 +298,14 @@ function resetWorld() {
     order.status = args.p_to
     return null
   })
+  db.rpc('deliver_sales_order_partial', (args: Row) => {
+    const order = db
+      .rows('sales_orders')
+      .find((o) => o.id === args.p_order_id && o.workspace_id === args.p_workspace_id)
+    if (!order) throw new Error('ORDER_NOT_FOUND')
+    order.status = 'partially_fulfilled'
+    return { status: 'delivered', delivery_id: fakeId('del'), order_status: 'partially_fulfilled' }
+  })
   db.seed('delivery_notes', [])
   db.seed('courier_deliveries', [])
   db.seed('business_events', [])
@@ -391,6 +399,40 @@ describe('V60 §8 — 4 promoted family HTTP E2E acceptance workflows', () => {
     })
     expect(fulfillRes.statusCode).toBe(200)
 
+    // V61 §2.4: partial delivery + backorder derivation check
+    const partialOrderRes = await app.inject({
+      method: 'POST',
+      url: '/api/orders',
+      headers: headersOf(OWNER, SHOP, 'ws-ord-0002'),
+      payload: {
+        customer: { name: 'Karim Wholesale', phone: '0799000111' },
+        items: [{ productId: PROD, quantity: 4 }],
+      },
+    })
+    expect(partialOrderRes.statusCode).toBe(201)
+    const partialOrderId = partialOrderRes.json().id as string
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/orders/${partialOrderId}/confirm`,
+      headers: headersOf(OWNER, SHOP, 'ws-conf-0002'),
+      payload: { allowBackorder: true },
+    })
+
+    const partialItemId =
+      db.rows('sales_order_items').find((i) => i.order_id === partialOrderId)?.id ?? partialOrderId
+    const partialDelivRes = await app.inject({
+      method: 'POST',
+      url: `/api/orders/${partialOrderId}/deliver`,
+      headers: headersOf(OWNER, SHOP, 'ws-deliv-0001'),
+      payload: {
+        warehouseId: WH,
+        idempotencyKey: 'ws-deliv-0001',
+        lines: [{ orderItemId: partialItemId, quantity: 1 }],
+      },
+    })
+    expect([200, 201]).toContain(partialDelivRes.statusCode)
+
     // Cross-tenant isolation: stranger workspace sees 0 wholesale orders
     const crossList = await app.inject({
       method: 'GET',
@@ -419,29 +461,11 @@ describe('V60 §8 — 4 promoted family HTTP E2E acceptance workflows', () => {
         date: '2026-11-11T00:00:00.000Z',
         hours: 3,
         billable: true,
+        hourlyRate: 150_000,
         description: 'Tax compliance review',
       },
     })
     expect(logTime.statusCode).toBe(201)
-
-    // ⚠️ KNOWN DEFECT (reported, owner decision): the project screen's entries live in
-    // `project_time_entries`, while billing reads `time_entries`. Billable time
-    // therefore has to be logged through the timesheets route until the two stores
-    // are merged. This asserts the path that billing actually reads today.
-    const logBillable = await app.inject({
-      method: 'POST',
-      url: '/api/operations/timesheets',
-      headers: headersOf(OWNER, SHOP),
-      payload: {
-        projectId: PROJ_1,
-        employeeId: EMP_1,
-        onDate: '2026-11-11',
-        minutes: 180,
-        billable: true,
-        description: 'Tax compliance review',
-      },
-    })
-    expect([200, 201]).toContain(logBillable.statusCode)
 
     // A project with no billing configuration is NON-BILLABLE by design; the owner
     // says how it is billed first (same route the timesheets screen uses).
@@ -464,7 +488,7 @@ describe('V60 §8 — 4 promoted family HTTP E2E acceptance workflows', () => {
 
     const profitRes = await app.inject({
       method: 'GET',
-      url: '/api/accounting/profit-report/cost-objects?dimension=project',
+      url: '/api/accounting/profit-report/cost-objects?from=2026-01-01&to=2026-12-31&currency=AFN',
       headers: headersOf(OWNER, SHOP),
     })
     expect(profitRes.statusCode).toBe(200)
@@ -521,7 +545,7 @@ describe('V60 §8 — 4 promoted family HTTP E2E acceptance workflows', () => {
       method: 'POST',
       url: `/api/contracts/${contractId}/lease-return`,
       headers: headersOf(OWNER, SHOP),
-      payload: { condition: 'resellable', notes: 'Clean return' },
+      payload: { conditionCode: 'used', notes: 'Clean return' },
     })
     expect(leaseReturn.statusCode).toBe(200)
   })

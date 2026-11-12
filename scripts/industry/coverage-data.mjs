@@ -935,9 +935,11 @@ export const INDUSTRIES = [
 ]
 
 /**
- * V60 Slice 5 — End-to-end HTTP / integration acceptance tests mapped by canonical IndustryKey.
+ * V60.1 — End-to-end HTTP / integration acceptance tests mapped by canonical IndustryKey.
  * A trade is marked `workflowComplete: true` ONLY when every cited file exists on disk AND
- * `profiled: true` (`OVERRIDES` or explicit trade DNA preset) AND `registered: true` (`INDUSTRY_KEYS`).
+ * is recorded as `passed` in `docs/architecture/industry/acceptance-results.json` AND
+ * `profiled: true` AND `registered: true`.
+ * Note: `wedding` (events venue) stays `profiled` until a dedicated events-venue acceptance test exists.
  */
 export const INDUSTRY_ACCEPTANCE_TESTS = {
   retail: [
@@ -955,6 +957,5 @@ export const INDUSTRY_ACCEPTANCE_TESTS = {
   manufacturing: ['backend/src/__tests__/manufacturing-page-500s.test.ts'],
   wholesale: ['backend/src/__tests__/v60-http-families.test.ts'],
   consulting: ['backend/src/__tests__/v60-http-families.test.ts'],
-  wedding: ['backend/src/__tests__/v60-http-families.test.ts'],
   courier: ['backend/src/__tests__/v60-http-families.test.ts'],
 }

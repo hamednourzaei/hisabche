@@ -37,6 +37,11 @@ import {
 
 const ROOT = process.cwd()
 const CHECK_ONLY = process.argv.includes('--check')
+const resultsArgIndex = process.argv.indexOf('--results')
+const RESULTS_PATH =
+  resultsArgIndex >= 0 && process.argv[resultsArgIndex + 1]
+    ? process.argv[resultsArgIndex + 1]
+    : 'docs/architecture/industry/acceptance-results.json'
 const OUT_DIR = 'docs/architecture/universal-core'
 const OUT_MD = `${OUT_DIR}/INDUSTRY-COVERAGE-TABLE.md`
 const OUT_CSV = `${OUT_DIR}/INDUSTRY-COVERAGE-TABLE.csv`
@@ -46,6 +51,16 @@ const OUT_SUPPORT = 'docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md'
 const problems = []
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8')
 const exists = (relative) => fs.existsSync(path.join(ROOT, relative))
+const readResults = () => {
+  const full = path.isAbsolute(RESULTS_PATH) ? RESULTS_PATH : path.join(ROOT, RESULTS_PATH)
+  if (!fs.existsSync(full)) return null
+  try {
+    const parsed = JSON.parse(fs.readFileSync(full, 'utf8'))
+    return parsed && typeof parsed === 'object' ? (parsed.results ?? {}) : null
+  } catch {
+    return null
+  }
+}
 
 function lineOf(anchor) {
   if (!exists(anchor.file)) {
@@ -357,6 +372,7 @@ const profiledKeys = (() => {
   return keys
 })()
 
+const acceptanceResults = readResults()
 const levelsCsvLines = [
   ['industry_key', 'registered', 'profiled', 'workflow_complete', 'acceptance_tests']
     .map(csvCell)
@@ -368,7 +384,11 @@ for (const key of industryKeys) {
   const profiled = profiledKeys.has(key)
   const testFiles = INDUSTRY_ACCEPTANCE_TESTS[key] ?? []
   const allTestsExist = testFiles.length > 0 && testFiles.every((file) => exists(file))
-  const workflowComplete = profiled && registered && allTestsExist
+  const allTestsPassed =
+    acceptanceResults !== null &&
+    testFiles.length > 0 &&
+    testFiles.every((file) => acceptanceResults[file]?.status === 'passed')
+  const workflowComplete = profiled && registered && allTestsExist && allTestsPassed
   if (testFiles.length > 0 && !profiled) {
     problems.push(
       `INDUSTRY_ACCEPTANCE_TESTS cites "${key}" which is not profiled (violates workflowComplete => profiled)`,

@@ -355,6 +355,23 @@ export class PaymentsRepository {
     return rates
   }
 
+  async hasApprovedWorkflow(
+    workspaceId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('workflow_instances')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .eq('status', 'approved')
+      .limit(1)
+    if (error) return false
+    return (data ?? []).length > 0
+  }
+
   async openInvoicesByIds(
     workspaceId: string,
     invoiceIds: readonly string[],

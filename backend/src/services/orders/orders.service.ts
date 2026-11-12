@@ -11,7 +11,13 @@
 // ============================================
 
 import { businessDayOf } from '../../utils/local-day'
-import type { OrderCreateInput, OrderStatus, StorefrontSettings } from '@hisabche/validation'
+import type {
+  OrderConfirmInput,
+  OrderCreateInput,
+  OrderDeliveryCreateInput,
+  OrderStatus,
+  StorefrontSettings,
+} from '@hisabche/validation'
 
 import { holds } from '../authorization'
 import { CustomerService } from '../customer.service'
@@ -98,6 +104,14 @@ export function createOrdersService(
       items: input.order.items,
       createdBy: input.createdBy,
     })
+    if (input.order.initialStatus === 'quoted' && !created.replay) {
+      await repo.markQuoted(
+        input.workspaceId,
+        created.orderId,
+        input.order.quoteExpiresAt ?? null,
+        input.order.warehouseId ?? null,
+      )
+    }
     const order = await repo.get(input.workspaceId, created.orderId)
     if (!order) throw new OrderError('ORDER_NOT_FOUND')
     return { order, replay: created.replay }
@@ -158,18 +172,48 @@ export function createOrdersService(
 
     // ─── the lifecycle ───────────────────────────────────────────────────────
 
-    async confirm(ctx: TenancyContext, id: string) {
-      await repo.transition(ctx.workspaceId, id, 'confirmed')
+    async confirm(ctx: TenancyContext, id: string, options: Partial<OrderConfirmInput> = {}) {
+      await repo.transition(ctx.workspaceId, id, 'confirmed', {
+        actorId: ctx.userId,
+        warehouseId: options.warehouseId ?? null,
+        allowBackorder: options.allowBackorder ?? false,
+      })
       return mustGet(ctx, id)
     },
 
+    async acceptQuote(ctx: TenancyContext, id: string, options: Partial<OrderConfirmInput> = {}) {
+      const current = await mustGet(ctx, id)
+      if (current.status !== 'quoted') throw new OrderError('ORDER_TRANSITION_INVALID')
+      await repo.transition(ctx.workspaceId, id, 'confirmed', {
+        actorId: ctx.userId,
+        warehouseId: options.warehouseId ?? null,
+        allowBackorder: options.allowBackorder ?? false,
+      })
+      return mustGet(ctx, id)
+    },
+
+    async deliverPartial(ctx: TenancyContext, id: string, input: OrderDeliveryCreateInput) {
+      const result = await repo.deliverPartial({
+        workspaceId: ctx.workspaceId,
+        actorId: ctx.userId,
+        orderId: id,
+        warehouseId: input.warehouseId,
+        lines: input.lines,
+        idempotencyKey: input.idempotencyKey,
+        deliveryNoteId: input.deliveryNoteId ?? null,
+        notes: input.notes ?? null,
+      })
+      const order = await mustGet(ctx, id)
+      return { order, delivery: result }
+    },
+
     async cancel(ctx: TenancyContext, id: string, reason: string | null) {
-      await repo.transition(ctx.workspaceId, id, 'cancelled', { reason })
+      await repo.transition(ctx.workspaceId, id, 'cancelled', { reason, actorId: ctx.userId })
       return mustGet(ctx, id)
     },
 
     async fulfill(ctx: TenancyContext, id: string) {
-      await repo.transition(ctx.workspaceId, id, 'fulfilled')
+      await repo.transition(ctx.workspaceId, id, 'fulfilled', { actorId: ctx.userId })
       return mustGet(ctx, id)
     },
 
@@ -184,7 +228,9 @@ export function createOrdersService(
       options: { customerId?: string | undefined } = {},
     ) {
       const order = await mustGet(ctx, id)
-      if (order.status !== 'confirmed') throw new OrderError('ORDER_TRANSITION_INVALID')
+      if (order.status !== 'confirmed' && order.status !== 'partially_fulfilled') {
+        throw new OrderError('ORDER_TRANSITION_INVALID')
+      }
 
       let customerId = options.customerId ?? order.customer_id
       if (!customerId) {

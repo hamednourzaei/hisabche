@@ -13,6 +13,7 @@ import { useTranslations } from 'next-intl'
 import { toIsoDay } from '@hisabche/formatting'
 import {
   apiErrorMessage,
+  useAcceptSalesOrderQuote,
   useCancelSalesOrder,
   useConfirmSalesOrder,
   useCourierDeliveries,
@@ -20,6 +21,7 @@ import {
   useCreateDeliveryNote,
   useCreateFreightTrip,
   useCreateSalesOrder,
+  useDeliverSalesOrder,
   useDeliveryNotes,
   useFreightTrips,
   useFulfillSalesOrder,
@@ -34,6 +36,7 @@ import {
   type SalesOrderRow,
 } from '@hisabche/api'
 
+import { deriveOrderLineQuantities } from '@hisabche/validation'
 import { useHubSection } from '../../hub-tabs'
 import { Button } from '../../button'
 import { Input } from '../../input'
@@ -80,6 +83,8 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
   const ordersQuery = useSalesOrders(statusFilter ? { status: statusFilter } : undefined)
   const createOrder = useCreateSalesOrder()
   const confirmOrder = useConfirmSalesOrder()
+  const acceptQuote = useAcceptSalesOrderQuote()
+  const deliverOrder = useDeliverSalesOrder()
   const cancelOrder = useCancelSalesOrder()
   const fulfillOrder = useFulfillSalesOrder()
   const invoiceOrder = useInvoiceSalesOrder()
@@ -129,7 +134,26 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
       id: 'status',
       labelKey: 'common.status',
       labelFallback: 'وضعیت',
-      render: (row) => <span className="text-xs">{row.status}</span>,
+      render: (row) => {
+        const backorderTotal = (row.items ?? []).reduce(
+          (sum, line) =>
+            sum +
+            deriveOrderLineQuantities({
+              orderedQuantity: Number(line.quantity ?? 0),
+              reservedQuantity: Number(line.reserved_quantity ?? 0),
+              deliveredQuantity: Number(line.delivered_quantity ?? 0),
+            }).backorderedQuantity,
+          0,
+        )
+        return (
+          <span className="text-xs">
+            {row.status}
+            {backorderTotal > 0
+              ? ` (${t('salesHub.orders.backordered', 'کسری')}: ${backorderTotal})`
+              : ''}
+          </span>
+        )
+      },
     },
     {
       id: 'total',
@@ -150,6 +174,17 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
       locked: true,
       render: (row) => (
         <div className="flex flex-wrap justify-end gap-1">
+          {row.status === 'quoted' ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={acceptQuote.isPending}
+              onClick={() => acceptQuote.mutate({ id: row.id }, { onError: onActionError })}
+            >
+              {t('salesHub.orders.acceptQuote', 'تایید پیش‌فاکتور')}
+            </Button>
+          ) : null}
           {row.status === 'pending' ? (
             <Button
               type="button"
@@ -159,6 +194,38 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
               onClick={() => confirmOrder.mutate(row.id, { onError: onActionError })}
             >
               {t('salesHub.orders.confirm', 'تایید')}
+            </Button>
+          ) : null}
+          {(row.status === 'confirmed' || row.status === 'partially_fulfilled') &&
+          row.warehouse_id &&
+          (row.items ?? []).some(
+            (l) => l.id && Number(l.quantity) > Number(l.delivered_quantity ?? 0),
+          ) ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={deliverOrder.isPending}
+              onClick={() => {
+                const lines = (row.items ?? [])
+                  .filter((l) => l.id && Number(l.quantity) > Number(l.delivered_quantity ?? 0))
+                  .map((l) => ({
+                    orderItemId: l.id!,
+                    quantity: Number(l.quantity) - Number(l.delivered_quantity ?? 0),
+                  }))
+                if (lines.length === 0 || !row.warehouse_id) return
+                deliverOrder.mutate(
+                  {
+                    id: row.id,
+                    warehouseId: row.warehouse_id,
+                    idempotencyKey: `ui-del-${row.id}-${Date.now()}`,
+                    lines,
+                  },
+                  { onError: onActionError },
+                )
+              }}
+            >
+              {t('salesHub.orders.deliver', 'تحویل')}
             </Button>
           ) : null}
           {row.status === 'confirmed' ? (

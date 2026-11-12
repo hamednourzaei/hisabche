@@ -465,6 +465,47 @@ export class InvoiceReturnService {
     // Invalidate financial and dashboard caches
     await invalidateMoneyCaches(workspaceId)
 
+    // V61 §2.5: Restore exact batches for restocked batch-tracked lines
+    if (data && typeof data === 'object' && 'id' in data) {
+      const restocked = input.lines.filter(
+        (l) => (l.restockChoice ?? 'restock') === 'restock' && l.returnQuantity > 0,
+      )
+      if (restocked.length > 0) {
+        const { data: itemRows } = await this.db
+          .from('invoice_items')
+          .select('id, product_id')
+          .eq('workspace_id', workspaceId)
+          .in(
+            'id',
+            restocked.map((l) => l.originalLineId),
+          )
+        const productByLine = new Map<string, string>(
+          (itemRows ?? [])
+            .filter((r: { id: string; product_id: string | null }) => Boolean(r.product_id))
+            .map((r: { id: string; product_id: string }) => [r.id, r.product_id]),
+        )
+        const linesWithProduct = restocked
+          .map((l) => ({
+            productId: productByLine.get(l.originalLineId),
+            quantity: l.returnQuantity,
+          }))
+          .filter((l): l is { productId: string; quantity: number } => Boolean(l.productId))
+
+        if (linesWithProduct.length > 0) {
+          const { traceabilityService } = await import('../traceability/traceability.service')
+          await traceabilityService.restoreBatchesForReturn(
+            { workspaceId },
+            {
+              originalInvoiceId: input.originalInvoiceId,
+              returnId: String((data as { id: string }).id),
+              entryDate: input.returnDate,
+              lines: linesWithProduct,
+            },
+          )
+        }
+      }
+    }
+
     // The invoice's own history is where a person looks for «who returned this, and why».
     if (input.userId && data && typeof data === 'object' && 'id' in data) {
       const made = data as { id: string; grandTotalMinor?: number; deductionMinor?: number }

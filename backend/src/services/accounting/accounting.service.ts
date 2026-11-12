@@ -1275,4 +1275,24 @@ export class AccountingService implements LedgerPort {
     /* istanbul ignore next — the loop either returns or throws */
     throw new ConflictError('JOURNAL_ENTRY_NUMBER_CONFLICT')
   }
+
+  /**
+   * V61 B.2.3: Apply a trade chart-of-accounts template via ensureAccountsForRoles.
+   * Refuses if the workspace already has any journal entries. Applying twice is a no-op.
+   */
+  async applyChartTemplate(
+    ctx: TenancyContext,
+    trade: import('@hisabche/validation').ChartTradeKey,
+  ) {
+    const existing = await this.repo.listEntries(ctx.workspaceId, { limit: 1 })
+    if (existing.entries.length > 0) {
+      throw new ConflictError('COA_TEMPLATE_ALREADY_HAS_POSTINGS')
+    }
+    const { CHART_TEMPLATES_BY_TRADE } = await import('@hisabche/validation')
+    const template = CHART_TEMPLATES_BY_TRADE[trade]
+    return this.ensureAccountsForRoles(
+      ctx,
+      template.map((t) => t.role),
+    )
+  }
 }

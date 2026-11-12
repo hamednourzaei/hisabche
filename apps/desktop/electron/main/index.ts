@@ -11,6 +11,8 @@ import { registerIpcHandlers } from './ipc/register'
 import { createMainWindow } from './window'
 import { initCrashReporting } from './services/monitoring'
 import { initNetworkLog } from './services/network-log'
+import { getDesktopPackStore, isPackDeliveryEnabled } from './packs'
+import { buildRendererCsp, registerAppProtocolHandler, registerAppProtocolScheme } from './protocol'
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ⚠️ WHERE THE LOCAL DATABASE LIVES — PINNED, NOT DERIVED.
@@ -39,6 +41,10 @@ import { initNetworkLog } from './services/network-log'
 // ═══════════════════════════════════════════════════════════════════════════
 app.setPath('userData', join(app.getPath('appData'), '@hisabche', 'desktop'))
 
+if (isPackDeliveryEnabled()) {
+  registerAppProtocolScheme()
+}
+
 // One instance only — a second launch focuses the existing window.
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -51,18 +57,7 @@ function applyContentSecurityPolicy(): void {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [
-          "default-src 'self'; " +
-            "script-src 'self'; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            // https: for images only — product images, app icons and screenshots
-            // live in public storage. Without it every one of them was blocked in
-            // the packaged Windows app (3 Oct 2026). An image cannot run code;
-            // script-src stays 'self'.
-            "img-src 'self' data: blob: https:; " +
-            "font-src 'self' data:; " +
-            "connect-src 'self' https: wss:;",
-        ],
+        'Content-Security-Policy': [buildRendererCsp(isPackDeliveryEnabled())],
       },
     })
   })
@@ -84,6 +79,15 @@ app.whenReady().then(() => {
   initCrashReporting()
   initDatabase()
   registerIpcHandlers()
+
+  if (isPackDeliveryEnabled()) {
+    const packStore = getDesktopPackStore()
+    registerAppProtocolHandler({
+      bundledRoot: join(__dirname, '../renderer'),
+      packStore,
+      getBuildId: () => packStore.readInstalled()?.coreBuildId ?? null,
+    })
+  }
 
   // Dev serves the renderer over http, where a strict CSP breaks HMR.
   if (app.isPackaged) applyContentSecurityPolicy()

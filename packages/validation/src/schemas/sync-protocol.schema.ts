@@ -228,11 +228,32 @@ export type SyncPushResponse = z.infer<typeof syncPushResponseSchema>
 
 export const MAX_PULL_PAGE = 500
 
+export const syncEntityTypesQuerySchema = z.preprocess((val) => {
+  if (val === undefined || val === null || val === '') return undefined
+  if (Array.isArray(val)) {
+    const flat = val
+      .flatMap((v) => String(v).split(','))
+      .map((s) => s.trim())
+      .filter(Boolean)
+    return flat.length > 0 ? flat : undefined
+  }
+  if (typeof val === 'string') {
+    const parts = val
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    return parts.length > 0 ? parts : undefined
+  }
+  return val
+}, z.array(syncEntitySchema).min(1).optional())
+
 export const syncPullRequestSchema = z.object({
   cursor: syncCursorSchema.default(0),
   limit: z.coerce.number().int().positive().max(MAX_PULL_PAGE).default(MAX_PULL_PAGE),
   /** Lets the caller skip the echoes of its own writes. */
   deviceId: z.string().min(1).max(128).optional(),
+  /** Optional entity filter derived from installed feature packs. */
+  entityTypes: syncEntityTypesQuerySchema,
 })
 
 export type SyncPullRequest = z.infer<typeof syncPullRequestSchema>

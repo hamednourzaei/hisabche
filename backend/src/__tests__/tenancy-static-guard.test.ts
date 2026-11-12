@@ -19,7 +19,7 @@
 // ============================================
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
@@ -291,5 +291,30 @@ describe('user_id is never the tenancy boundary for shared business data', () =>
     // fallback in disguise, silently wrong for half the routes.
     expect(code).toMatch(/scope:\s*CacheScope/)
     expect(code).not.toMatch(/tenancy\?\.workspaceId\s*\|\|/)
+  })
+
+  it('new V61 migrations declare workspace_id as NOT NULL on every new table', () => {
+    const v61Migrations = [
+      '../../../docs/sales-orders-02-migration.sql',
+      '../../../docs/overhead-allocation-01-migration.sql',
+      '../../../docs/document-revisions-01-migration.sql',
+      '../../../docs/approval-policy-01-migration.sql',
+      '../../../docs/cheques-01-migration.sql',
+      '../../../docs/accrual-schedules-01-migration.sql',
+      '../../../docs/bundles-consignment-commission-01-migration.sql',
+      '../../../docs/rfq-purchase-contracts-01-migration.sql',
+      '../../../docs/messaging-outbox-01-migration.sql',
+      '../../../docs/hr-org-appraisal-01-migration.sql',
+      '../../../docs/customer-payment-gateway-01-migration.sql',
+      '../../../docs/workspace-2fa-01-migration.sql',
+    ]
+    for (const rel of v61Migrations) {
+      const sql = readFileSync(resolve(__dirname, rel), 'utf8')
+      const workspaceCols = sql.match(/\bworkspace_id\s+uuid[^\n,]*/gi) ?? []
+      expect(workspaceCols.length).toBeGreaterThan(0)
+      for (const col of workspaceCols) {
+        expect(col.toUpperCase()).toContain('NOT NULL')
+      }
+    }
   })
 })

@@ -9,8 +9,27 @@ services:
     # Was /health — a path the API does not serve publicly (401).
     healthCheckPath: /ready
     autoDeploy: true
+    # Scale to >= 2 instances in production for zero-downtime deploys and failover.
+    # numInstances: 2
     envVars:
       - key: NODE_VERSION
         value: 22.22.0
       - key: NODE_ENV
         value: production
+      - key: PROCESS_ROLE
+        value: api
+
+  - type: worker
+    name: hisabche-worker
+    runtime: node
+    rootDir: .
+    buildCommand: bash render-build.sh
+    startCommand: cd backend && ./node_modules/.bin/tsx src/runtime/start-worker.ts
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      - key: PROCESS_ROLE
+        value: worker

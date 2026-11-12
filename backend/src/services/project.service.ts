@@ -19,6 +19,27 @@ import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
+import { TimesheetsService } from './timesheets/timesheets.service'
+import type { TimeEntry } from './timesheets/billing.domain'
+
+const timesheetsService = new TimesheetsService()
+
+function toProjectTimeEntryView(entry: TimeEntry, workspaceId: string) {
+  return {
+    id: entry.id,
+    project_id: entry.projectId,
+    task_id: entry.taskId,
+    employee_id: entry.employeeId,
+    date: entry.onDate,
+    hours: Math.round((entry.minutes / 60) * 100) / 100,
+    description: entry.description || null,
+    billable: entry.billable,
+    hourly_rate:
+      entry.rateMinor === null || entry.rateMinor === undefined ? null : entry.rateMinor / 100,
+    invoice_id: entry.invoiceId,
+    workspace_id: workspaceId,
+  }
+}
 
 // ✅ Column Selection Constants
 const PROJECT_LIST_COLUMNS =
@@ -405,111 +426,62 @@ export class ProjectService {
     return { success: true }
   }
 
-  // ─── Time Entries ────────────────────────────────────────────
+  // ─── Time Entries (delegated to canonical TimesheetsService / time_entries) ─
   async listTimeEntries(ctx: TenancyContext, projectId: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getTimeEntriesCacheKey(workspaceId, projectId)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
-    const { data, error } = await supabase
-      .from('project_time_entries')
-      .select(TIME_ENTRY_MINIMAL)
-      .eq('project_id', projectId)
-      .eq('workspace_id', workspaceId)
-      .order('date', { ascending: false })
-
-    if (error) throw new DatabaseError('Failed to fetch time entries', error)
-
-    const result = data || []
+    const entries = await timesheetsService.listEntries(ctx, { projectId })
+    const result = entries.map((entry) => toProjectTimeEntryView(entry, workspaceId))
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
   }
 
   async createTimeEntry(ctx: TenancyContext, data: CreateTimeEntry) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, data.projectId)
-    const { data: entry, error } = await supabase
-      .from('project_time_entries')
-      .insert({
-        project_id: data.projectId,
-        task_id: data.taskId || null,
-        employee_id: data.employeeId,
-        date: data.date,
-        hours: data.hours,
-        description: data.description || null,
-        billable: data.billable,
-        hourly_rate: data.hourlyRate,
-        workspace_id: workspaceId,
-        user_id: userId,
-      })
-      .select(TIME_ENTRY_COLUMNS)
-      .single()
+    const entry = await timesheetsService.logTime(ctx, {
+      projectId: data.projectId,
+      taskId: data.taskId || null,
+      employeeId: data.employeeId,
+      onDate: data.date,
+      minutes: Math.max(1, Math.round(Number(data.hours) * 60)),
+      billable: data.billable,
+      rateMinor: data.hourlyRate == null ? null : Math.round(data.hourlyRate * 100),
+      description: data.description || '',
+    })
 
-    if (error || !entry) throw new DatabaseError('Failed to create time entry', error)
-
-    // ✅ Invalidate cache
     await this.invalidateTimeCache(workspaceId, data.projectId)
-
-    return entry
+    return toProjectTimeEntryView(entry, workspaceId)
   }
 
   async updateTimeEntry(ctx: TenancyContext, id: string, data: UpdateTimeEntry) {
-    const { workspaceId, userId } = ctx
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.hours !== undefined) updates.hours = data.hours
-    if (data.description !== undefined) updates.description = data.description
-    if (data.billable !== undefined) updates.billable = data.billable
-    if (data.hourlyRate !== undefined) updates.hourly_rate = data.hourlyRate
+    const { workspaceId } = ctx
+    const entry = await timesheetsService.updateEntry(ctx, id, {
+      minutes: data.hours === undefined ? undefined : Math.max(1, Math.round(data.hours * 60)),
+      billable: data.billable,
+      rateMinor:
+        data.hourlyRate === undefined
+          ? undefined
+          : data.hourlyRate === null
+            ? null
+            : Math.round(data.hourlyRate * 100),
+      description: data.description,
+    })
 
-    // ✅ گرفتن projectId قبل از به‌روزرسانی
-    const { data: existing } = await supabase
-      .from('project_time_entries')
-      .select('project_id')
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .single()
-
-    const { data: entry, error } = await supabase
-      .from('project_time_entries')
-      .update(updates)
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .select(TIME_ENTRY_COLUMNS)
-      .single()
-
-    if (error || !entry) throw new DatabaseError('Failed to update time entry', error)
-
-    if (existing) {
-      await this.invalidateTimeCache(workspaceId, existing.project_id)
-    }
-
-    return entry
+    if (entry.projectId) await this.assertProjectOwned(entry.projectId, workspaceId)
+    await this.invalidateTimeCache(workspaceId, entry.projectId)
+    return toProjectTimeEntryView(entry, workspaceId)
   }
 
   async deleteTimeEntry(ctx: TenancyContext, id: string) {
-    const { workspaceId, userId } = ctx
-    const { data: existing } = await supabase
-      .from('project_time_entries')
-      .select('project_id')
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-      .single()
-
-    const { error } = await supabase
-      .from('project_time_entries')
-      .delete()
-      .eq('id', id)
-      .eq('workspace_id', workspaceId)
-
-    if (error) throw new DatabaseError('Failed to delete time entry', error)
-
-    if (existing) {
-      await this.invalidateTimeCache(workspaceId, existing.project_id)
-    }
-
+    const { workspaceId } = ctx
+    const deleted = await timesheetsService.deleteEntry(ctx, id)
+    await this.invalidateTimeCache(workspaceId, deleted.projectId)
     return { success: true }
   }
 

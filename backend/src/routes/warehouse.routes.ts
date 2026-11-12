@@ -409,6 +409,46 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // V61 B.2.10 — Consignment lots (in/out)
+  fastify.get(
+    '/api/warehouses/consignments',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { bundlesConsignmentCommissionService } =
+          await import('../services/commerce/bundles-consignment-commission.service')
+        return reply.send({
+          data: await bundlesConsignmentCommissionService.listConsignmentLots(request.tenancy),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to list consignment lots' })
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/warehouses/consignments',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('stock.adjust')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { createConsignmentLotSchema } = await import('@hisabche/validation')
+        const body = createConsignmentLotSchema.parse(request.body)
+        const { bundlesConsignmentCommissionService } =
+          await import('../services/commerce/bundles-consignment-commission.service')
+        return reply.code(201).send({
+          data: await bundlesConsignmentCommissionService.createConsignmentLot(
+            request.tenancy,
+            body,
+          ),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to create consignment lot' })
+      }
+    },
+  )
 }
 
 export default warehouseRoutes

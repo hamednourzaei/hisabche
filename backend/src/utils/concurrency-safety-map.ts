@@ -1220,6 +1220,28 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/accept-quote',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('transition_sales_order'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/:id/deliver',
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      {
+        file: `${SVC}/orders/orders.repository.ts`,
+        text: "rpc('deliver_sales_order_partial'",
+      },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
     route: 'POST /api/orders/:id/cancel',
     mechanisms: ['db-function'],
     evidence: [
@@ -1716,6 +1738,115 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'POST /api/warranty-claims',
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${SVC}/quality/quality.service.ts`, text: 'async submitWarrantyClaim' }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'PUT /overhead-policy',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/accounting/overhead-allocation.service.ts`, text: 'async savePolicy' },
+    ],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /overhead-runs',
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${SVC}/accounting/overhead-allocation.service.ts`, text: 'async runAllocation' },
+    ],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /overhead-runs/:id/reverse',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      { file: `${SVC}/accounting/overhead-allocation.service.ts`, text: 'async reverseRun' },
+    ],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /accrual-schedules',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/accounting/accrual-schedules.service.ts`, text: 'async create' }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /accrual-schedules/run',
+    mechanisms: ['idempotency-key'],
+    evidence: [{ file: `${SVC}/accounting/accrual-schedules.service.ts`, text: 'async runDue' }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /chart-templates/apply',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${RT}/accounting.routes.ts`, text: "'/chart-templates/apply'" }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /budget-check',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${RT}/accounting.routes.ts`, text: "'/budget-check'" }],
+  },
+  {
+    routeFile: 'payments.routes.ts',
+    route: 'POST /cheques',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/payments/cheques.service.ts`, text: 'async create' }],
+  },
+  {
+    routeFile: 'payments.routes.ts',
+    route: 'POST /cheques/:id/transition',
+    mechanisms: ['conditional-update'],
+    evidence: [{ file: `${SVC}/payments/cheques.service.ts`, text: 'async transition' }],
+  },
+  {
+    routeFile: 'warehouse.routes.ts',
+    route: 'POST /api/warehouses/consignments',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${RT}/warehouse.routes.ts`, text: "'/api/warehouses/consignments'" }],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/rfqs',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/purchasing/rfq-contracts.service.ts`, text: 'async createRfq' }],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/rfqs/:id/quotations',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/purchasing/rfq-contracts.service.ts`, text: 'async addQuotation' }],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/quotations/:id/choose',
+    mechanisms: ['conditional-update'],
+    evidence: [
+      { file: `${SVC}/purchasing/rfq-contracts.service.ts`, text: 'async chooseQuotation' },
+    ],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/purchase-contracts/prices',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      {
+        file: `${SVC}/purchasing/rfq-contracts.service.ts`,
+        text: 'async upsertPurchaseContractPrice',
+      },
+    ],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'PUT /api/products/:id/bundle-items',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${RT}/product.routes.ts`, text: "'/api/products/:id/bundle-items'" }],
+  },
+  {
+    routeFile: 'product.routes.ts',
+    route: 'PATCH /api/products/:id/translations',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${RT}/product.routes.ts`, text: "'/api/products/:id/translations'" }],
   },
 ]
 

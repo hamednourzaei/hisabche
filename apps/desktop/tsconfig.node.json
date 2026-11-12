@@ -5,6 +5,11 @@
     "lib": ["ES2022"],
     "module": "ES2022",
     "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@hisabche/app-bridge/packs-node": ["../../packages/app-bridge/src/packs/store.ts"],
+      "@hisabche/app-bridge/packs-verify": ["../../packages/app-bridge/src/packs/verify.ts"]
+    },
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,

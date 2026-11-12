@@ -16,7 +16,13 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { ORDER_STATUSES, orderCreateSchema, storefrontSettingsSchema } from '@hisabche/validation'
+import {
+  ORDER_STATUSES,
+  orderConfirmSchema,
+  orderCreateSchema,
+  orderDeliveryCreateSchema,
+  storefrontSettingsSchema,
+} from '@hisabche/validation'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -111,7 +117,28 @@ export function buildOrdersRoutes(orders: OrdersService) {
       { preHandler: write },
       handle(async (request, reply) => {
         const { id } = idParams.parse(request.params)
-        return reply.send(await orders.confirm(request.tenancy, id))
+        const opts = orderConfirmSchema.parse(request.body ?? {})
+        return reply.send(await orders.confirm(request.tenancy, id, opts))
+      }),
+    )
+
+    fastify.post(
+      '/api/orders/:id/accept-quote',
+      { preHandler: write },
+      handle(async (request, reply) => {
+        const { id } = idParams.parse(request.params)
+        const opts = orderConfirmSchema.parse(request.body ?? {})
+        return reply.send(await orders.acceptQuote(request.tenancy, id, opts))
+      }),
+    )
+
+    fastify.post(
+      '/api/orders/:id/deliver',
+      { preHandler: write },
+      handle(async (request, reply) => {
+        const { id } = idParams.parse(request.params)
+        const body = orderDeliveryCreateSchema.parse(request.body)
+        return reply.send(await orders.deliverPartial(request.tenancy, id, body))
       }),
     )
 

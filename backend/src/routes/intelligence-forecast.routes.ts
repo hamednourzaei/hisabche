@@ -30,7 +30,24 @@ export async function intelligenceForecastRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        return reply.send(await service.cashForecast(request.tenancy))
+        const { horizon, windows } = (request.query || {}) as {
+          horizon?: string
+          windows?: string
+        }
+        let windowDays: number[] = [7, 30]
+        if (windows) {
+          const parsed = windows
+            .split(',')
+            .map((v) => Number(v.trim()))
+            .filter((n) => Number.isInteger(n) && n > 0 && n <= 365)
+          if (parsed.length > 0) windowDays = parsed
+        } else if (horizon) {
+          const h = Number(horizon)
+          if (Number.isInteger(h) && (h === 30 || h === 60 || h === 90 || (h > 0 && h <= 365))) {
+            windowDays = [7, h]
+          }
+        }
+        return reply.send(await service.cashForecast(request.tenancy, windowDays))
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to compute the cash forecast' })

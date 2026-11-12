@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   onboardingProgressSchema,
   operationalDnaSchema,
+  type CompositionPlan,
   type OnboardingProgress,
   type OperationalDna,
 } from '@hisabche/validation'
@@ -103,6 +104,7 @@ export function useSaveWorkspaceProfile() {
 export interface OperationalProfileView {
   configurable: boolean
   dna: OperationalDna | null
+  composition: CompositionPlan | null
   version: number
   onboarding: OnboardingProgress | null
 }
@@ -117,9 +119,15 @@ function parseOperationalView(value: unknown): OperationalProfileView | null {
   if (typeof record.configurable !== 'boolean') return null
   const dna = operationalDnaSchema.safeParse(record.dna)
   const onboarding = onboardingProgressSchema.safeParse(record.onboarding)
+  const rawComposition = record.composition
+  const composition =
+    rawComposition && typeof rawComposition === 'object'
+      ? (rawComposition as CompositionPlan)
+      : null
   return {
     configurable: record.configurable,
     dna: record.dna != null && dna.success ? dna.data : null,
+    composition,
     version: typeof record.version === 'number' ? record.version : 0,
     onboarding: record.onboarding != null && onboarding.success ? onboarding.data : null,
   }

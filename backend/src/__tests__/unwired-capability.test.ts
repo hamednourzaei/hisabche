@@ -461,10 +461,10 @@ const REGISTER: Capability[] = [
     status: 'WRITTEN_NOT_WIRED',
   },
   {
-    id: '#34 Scheduled reports',
-    file: 'services/reporting/scheduled-reports.service.ts',
-    symbols: [],
-    note: NOTHING_REACHES_IT,
+    id: 'Customer payment gateway adapter',
+    file: 'services/payments/customer-gateway.service.ts',
+    symbols: ['verifyGatewayHmacSignature'],
+    note: 'V61 Part B adapter + HMAC webhook verification; awaits live provider credentials and route wiring.',
     status: 'WRITTEN_NOT_WIRED',
   },
 ]

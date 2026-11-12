@@ -855,6 +855,10 @@
           {
             "heading": "Several devices, one account",
             "body": "If you are on the till and someone else is in the stockroom, you each work on your own device, and after syncing everyone sees the same stock and the same balances — including from the browser."
+          },
+          {
+            "heading": "Multiple devices, one set of books",
+            "body": "If you are at the counter while a teammate is in the warehouse, each works on their own device and after syncing everyone sees one consistent view of stock and balances."
           }
         ],
         "faq": [
@@ -4014,7 +4018,8 @@
       "bank": "Bank / transfer",
       "in": "In",
       "out": "Out"
-    }
+    },
+    "fieldRevisions": "Field Revision History"
   },
   "billing": {
     "limitReached": {
@@ -4351,7 +4356,29 @@
       }
     },
     "brandInitial": "H",
-    "defaultWorkspaceName": "My business"
+    "defaultWorkspaceName": "My business",
+    "composition": {
+      "title": "Composed business plan for your operation",
+      "subtitle": "Computed from your answers: applicable problems, ready capabilities, honest limits, and base menu.",
+      "problemsTitle": "Identified business problems",
+      "availableTitle": "Available",
+      "partialTitle": "Partial (with limits)",
+      "plannedTitle": "Planned / Unsupported",
+      "menuTitle": "Suggested base navigation",
+      "nextQuestionsTitle": "Open follow-up questions",
+      "problems": {
+        "P1_customer_revenue_visibility": "P1 — Customer & revenue visibility",
+        "P2_pricing_and_true_cost": "P2 — Pricing & true cost",
+        "P3_order_queue_and_capacity": "P3 — Order queue & capacity",
+        "P4_stock_and_resource_location": "P4 — Stock & resource location",
+        "P5_procurement": "P5 — Procurement & three-way match",
+        "P6_workforce_productivity": "P6 — Workforce productivity & time",
+        "P7_cash_debt_settlement": "P7 — Cash, debt & settlement",
+        "P8_true_profit": "P8 — True profit by cost object",
+        "P9_quality_warranty_obligations": "P9 — Quality, warranty & SLA obligations",
+        "P10_owner_control": "P10 — Owner control & command alerts"
+      }
+    }
   },
   "status": {
     "excellent": "Excellent",
@@ -8279,6 +8306,21 @@
         "step2": "Enter the provider and percentage and press «Set rate».",
         "step3": "Choose the period to see each person’s commission."
       }
+    },
+    "contracts-recurring": {
+      "title": "Contracts, Subscriptions & Equipment Leases",
+      "summary": "Manage recurring contracts, liability deposits, idempotent period billing, SLA breach flags, and lease asset returns.",
+      "seoTitle": "Contracts, Subscriptions & Equipment Leases — Hisabche",
+      "overview": {
+        "heading": "Contracts and security deposits",
+        "body1": "Each contract defines the party, kind (service, subscription, or lease), billing period, and recurring amount.",
+        "body2": "Security deposits stay recorded as liabilities until earned and are never recognized as revenue early."
+      },
+      "billing": {
+        "heading": "Period billing and lease return",
+        "body1": "Period billing is idempotent per contract and period key, preventing duplicate invoices on retries.",
+        "body2": "Returning a leased asset releases its exclusive resource booking and records the return inspection condition."
+      }
     }
   },
   "ai": {
@@ -8458,7 +8500,12 @@
     "threeWayMatched": "Full match — ready for payment approval",
     "threeWayBlocked": "Mismatch found — payment blocked",
     "supplierScorecardTitle": "Supplier scorecard",
-    "supplierScorecardEmpty": "No supplier history available yet."
+    "supplierScorecardEmpty": "No supplier history available yet.",
+    "receiptQualityTitle": "Receipt quality inspection",
+    "receiptQualityEmpty": "No quality events recorded for this receipt.",
+    "receiptQualityNotes": "Inspection notes",
+    "receiptQualityPass": "Pass quality",
+    "receiptQualityFail": "Fail & quarantine"
   },
   "productUnits": {
     "add": "Add unit",
@@ -11253,7 +11300,10 @@
       "fulfilled": "Fulfilled",
       "loadFailed": "Failed to load orders",
       "pending": "Pending",
-      "viewLabel": "Orders & delivery"
+      "viewLabel": "Orders & delivery",
+      "backordered": "Backordered",
+      "acceptQuote": "Accept Quote",
+      "deliver": "Record Delivery"
     },
     "delivery": {
       "tripsTitle": "Freight trips",
@@ -11319,7 +11369,8 @@
     "sections": {
       "followUp": "Follow Up",
       "campaigns": "Campaigns",
-      "stale": "Stale opportunities"
+      "stale": "Stale opportunities",
+      "contracts": "Contracts & Leases"
     },
     "sessionSectionsLabel": "Session sections",
     "sessionSections": {
@@ -12785,7 +12836,13 @@
     "createFinalBill": "Create Final Bill",
     "billCreated": "Final repair invoice created",
     "billFailed": "Failed to create repair invoice",
-    "billedInvoice": "Billed Invoice"
+    "billedInvoice": "Billed Invoice",
+    "qualityTestingTitle": "Repair quality testing",
+    "qualityEmpty": "No quality checks recorded yet.",
+    "qualityPass": "Pass testing",
+    "qualityFailRework": "Fail & rework",
+    "qualityPassed": "Quality check passed",
+    "qualityRework": "Marked for rework"
   },
   "salon": {
     "resourceAdded": "Added",
@@ -13176,7 +13233,14 @@
     "recoveredGrams": "Recovered weight (g)",
     "secondHandSaved": "Second-hand purchase saved",
     "secondHandTitle": "Second-hand purchase",
-    "systemGrams": "System weight (g)"
+    "systemGrams": "System weight (g)",
+    "rateDate": "Date",
+    "rate24k": "24K rate (per gram)",
+    "errors": {
+      "GOLD_KYC_REQUIRED": "Customer identity (KYC) is required above threshold",
+      "GOLD_WEIGHT_INVALID": "Invalid weight",
+      "GOLD_RECOVERED_EXCEEDS_INPUT": "Recovered weight cannot exceed input weight"
+    }
   },
   "returns": {
     "condition": {
@@ -13251,5 +13315,136 @@
     "bank": "Bank transfer",
     "cash": "Cash",
     "credit": "Credit"
+  },
+  "contracts": {
+    "createTitle": "New contract / lease",
+    "noReadAccess": "Your role does not have permission to view contracts.",
+    "emptyTitle": "No contracts yet",
+    "emptyDescription": "Create recurring service, subscription, or equipment lease contracts above.",
+    "loadFailed": "Failed to load contracts.",
+    "created": "Contract created.",
+    "createFailed": "Failed to create contract.",
+    "billedSuccess": "Period invoice billed.",
+    "slaFlagged": "SLA breach flagged.",
+    "slaBreached": "SLA breached",
+    "slaDefaultReason": "SLA response window exceeded",
+    "leaseReturned": "Lease asset return recorded.",
+    "terminated": "Contract terminated.",
+    "actionFailed": "Contract action failed.",
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "amount": "Period amount",
+      "startDate": "Start date",
+      "actions": "Actions"
+    },
+    "fields": {
+      "title": "Contract title",
+      "party": "Customer / Party",
+      "amount": "Recurring amount",
+      "deposit": "Security deposit",
+      "resource": "Resource / Equipment",
+      "serialId": "Serial ID (optional)",
+      "periodKey": "Period key (e.g. 2026-11)",
+      "slaReason": "SLA breach reason"
+    },
+    "kind": {
+      "service": "Service",
+      "subscription": "Subscription",
+      "lease": "Lease / Rental",
+      "maintenance": "Maintenance"
+    },
+    "period": {
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly",
+      "one_off": "One-off",
+      "weekly": "Weekly",
+      "annual": "Annual"
+    },
+    "status": {
+      "active": "Active",
+      "terminated": "Terminated",
+      "completed": "Completed",
+      "draft": "Draft",
+      "paused": "Paused",
+      "expired": "Expired"
+    },
+    "actions": {
+      "create": "Create contract",
+      "billPeriod": "Bill period",
+      "flagSla": "Flag SLA",
+      "leaseReturn": "Return lease",
+      "terminate": "Terminate"
+    },
+    "returnCondition": {
+      "good": "Good",
+      "damaged": "Damaged",
+      "missing_parts": "Missing parts",
+      "needs_repair": "Needs repair",
+      "defective": "Defective",
+      "incomplete": "Incomplete",
+      "sealed": "Sealed / Intact",
+      "opened": "Opened",
+      "used": "Used"
+    }
+  },
+  "packs": {
+    "core": {
+      "label": "Core App",
+      "description": "Sign-in, invoices, customers, products, till, and sync"
+    },
+    "operations": {
+      "label": "Operations & Inventory",
+      "description": "Sales orders, purchasing, stock count, and deposits"
+    },
+    "manufacturing": {
+      "label": "Manufacturing & BOM",
+      "description": "Work orders, bills of materials, and production cost"
+    },
+    "workforce": {
+      "label": "Team, Payroll & Service",
+      "description": "Employees, timesheets, repairs, and bookings"
+    },
+    "approvals": {
+      "label": "Approvals & Workflows",
+      "description": "Document approval policies and review queue"
+    },
+    "intelligence": {
+      "label": "Analysis & Assistant",
+      "description": "Cashflow forecast, charts, and AI assistant"
+    },
+    "marketplace": {
+      "label": "Marketplace & Seller",
+      "description": "Marketplace storefront and seller management"
+    },
+    "settings": {
+      "title": "Modules on this device",
+      "subtitle": "Feature packs installed or available for this device",
+      "codeOnlyNotice": "Removing a pack deletes code only; your business data stays on this device.",
+      "sizeKb": "{kb} KB"
+    },
+    "status": {
+      "installed": "Installed",
+      "available": "Available",
+      "downloading": "Downloading",
+      "failed": "Failed"
+    },
+    "actions": {
+      "install": "Install",
+      "remove": "Remove code",
+      "retry": "Retry"
+    },
+    "notices": {
+      "notInstalledTitle": "Module not installed on this device",
+      "notInstalledBody": "Connect once to install this module.",
+      "notInPlanTitle": "Not included in your plan",
+      "notInPlanBody": "This module is not active in your workspace plan.",
+      "notAllowedTitle": "Access not allowed",
+      "notAllowedBody": "Your role does not have permission to open this module."
+    },
+    "onboarding": {
+      "title": "Suggested modules for your business"
+    }
   }
 }

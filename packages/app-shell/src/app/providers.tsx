@@ -15,7 +15,9 @@ import {
 } from '@hisabche/api'
 import React, { useEffect, useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { registerCameraScanner, registerReceiptPrinterHost, ToastProvider } from '@hisabche/ui'
+import { registerCameraScanner } from '@hisabche/ui/barcode/camera-host'
+import { registerReceiptPrinterHost } from '@hisabche/ui/print/printer-host'
+import { ToastProvider } from '@hisabche/ui/toast-provider'
 import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'

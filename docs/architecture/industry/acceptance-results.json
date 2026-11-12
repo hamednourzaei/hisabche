@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-11-12T10:23:00.634Z",
+  "commit": "0b68fe4ead78f4a01513bfa14f4377de8565a32c",
+  "results": {
+    "backend/src/__tests__/http-e2e-business-day.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/financial-flows-e2e.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/service-delivery-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/manufacturing-page-500s.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    },
+    "backend/src/__tests__/v60-http-families.test.ts": {
+      "status": "passed",
+      "date": "2026-11-12"
+    }
+  }
+}

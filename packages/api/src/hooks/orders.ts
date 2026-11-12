@@ -45,6 +45,9 @@ export interface SalesOrderItemRow {
   product_id?: string | null
   product_name: string
   quantity: string | number
+  delivered_quantity?: string | number
+  reserved_quantity?: string | number
+  warehouse_id?: string | null
   unit_price: string | number
   line_total: string | number
 }
@@ -56,6 +59,7 @@ export interface SalesOrderRow {
   customer_id?: string | null
   customer_name?: string | null
   customer_phone?: string | null
+  warehouse_id?: string | null
   currency?: string | null
   total: string | number
   invoice_id?: string | null
@@ -107,9 +111,63 @@ export function useCreateSalesOrder() {
 export function useConfirmSalesOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) =>
-      (await apiClient.post(`/orders/${id}/confirm`, {})).data as SalesOrderRow,
+    mutationFn: async (
+      input: string | { id: string; warehouseId?: string; allowBackorder?: boolean },
+    ) => {
+      const id = typeof input === 'string' ? input : input.id
+      const body =
+        typeof input === 'string'
+          ? {}
+          : {
+              ...(input.warehouseId ? { warehouseId: input.warehouseId } : {}),
+              ...(input.allowBackorder !== undefined
+                ? { allowBackorder: input.allowBackorder }
+                : {}),
+            }
+      return (await apiClient.post(`/orders/${id}/confirm`, body)).data as SalesOrderRow
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useAcceptSalesOrderQuote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; warehouseId?: string; allowBackorder?: boolean }) =>
+      (
+        await apiClient.post(`/orders/${input.id}/accept-quote`, {
+          ...(input.warehouseId ? { warehouseId: input.warehouseId } : {}),
+          ...(input.allowBackorder !== undefined ? { allowBackorder: input.allowBackorder } : {}),
+        })
+      ).data as SalesOrderRow,
+    onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+  })
+}
+
+export function useDeliverSalesOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      id: string
+      warehouseId: string
+      idempotencyKey: string
+      deliveryNoteId?: string
+      notes?: string
+      lines: Array<{ orderItemId: string; quantity: number }>
+    }) =>
+      (
+        await apiClient.post(`/orders/${input.id}/deliver`, {
+          warehouseId: input.warehouseId,
+          idempotencyKey: input.idempotencyKey,
+          ...(input.deliveryNoteId ? { deliveryNoteId: input.deliveryNoteId } : {}),
+          ...(input.notes ? { notes: input.notes } : {}),
+          lines: input.lines,
+        })
+      ).data as { order: SalesOrderRow; delivery: Record<string, unknown> },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orderKeys.all })
+      qc.invalidateQueries({ queryKey: ['products'] })
+    },
   })
 }
 

@@ -205,6 +205,12 @@ export function registerSerialsRoutes(router: Router): void {
       const entryDate = today()
       let costMinor = 0
       for (const serialNumber of serialNumbers) {
+        const alreadySoldElsewhere = db.get<{ id: string }>(
+          "SELECT id FROM stock_serials WHERE workspace_id = ? AND serial_number = ? AND product_id != ? AND status = 'sold' AND deleted_at IS NULL",
+          [ctx.workspaceId, serialNumber, productId],
+        )
+        if (alreadySoldElsewhere) throw new ConflictError('SERIAL_NOT_IN_STOCK')
+
         const row = db.get<SerialRow>(
           'SELECT * FROM stock_serials WHERE workspace_id = ? AND product_id = ? AND serial_number = ? AND deleted_at IS NULL',
           [ctx.workspaceId, productId, serialNumber],

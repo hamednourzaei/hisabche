@@ -40,3 +40,7 @@ export * from './push-order'
 
 // Bytes across a JSON channel (Android WebView) — see the file header.
 export { base64ToBytes, bytesToBase64 } from './base64'
+
+// Pure pack manifest & install planner (safe for both Electron and React Native).
+export * from './packs/manifest'
+export * from './packs/plan'

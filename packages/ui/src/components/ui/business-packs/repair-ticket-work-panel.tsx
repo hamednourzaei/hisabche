@@ -6,6 +6,9 @@ import {
   useApproveRepairTicket,
   useConsumeRepairPart,
   useCreateRepairBill,
+  useMyCapabilities,
+  useQualityEvents,
+  useRecordQualityEvent,
   useReleaseRepairPart,
   useRepairTicket,
 } from '@hisabche/api'
@@ -54,6 +57,10 @@ export function RepairTicketWorkPanel({
   const consumePart = useConsumeRepairPart()
   const releasePart = useReleaseRepairPart()
   const createBill = useCreateRepairBill()
+  const capabilities = useMyCapabilities()
+  const canInspect = capabilities.can('inventory.configure') === true
+  const qualityEvents = useQualityEvents({ sourceType: 'repair', sourceId: ticketId })
+  const recordQuality = useRecordQualityEvent()
   const warehouses = useWarehouseOptions()
   const goods = useProductOptions('goods')
 
@@ -343,6 +350,76 @@ export function RepairTicketWorkPanel({
             {t('repairs.billedInvoice', 'فاکتور صادر شده')}:{' '}
             <span className="font-mono">{ticket.invoiceId}</span>
           </p>
+        ) : null}
+      </div>
+
+      <div className="border-t border-[hsl(var(--border-default))] pt-3 space-y-2">
+        <h5 className="text-xs font-semibold text-[hsl(var(--fg-primary))]">
+          {t('repairs.qualityTestingTitle', 'آزمایش و کنترل کیفیت تعمیر')}
+        </h5>
+        {qualityEvents.isError ? (
+          <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+            {t('repairs.loadFailed', 'رسید تعمیر خوانده نشد.')}
+          </p>
+        ) : (qualityEvents.data ?? []).length === 0 ? (
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+            {t('repairs.qualityEmpty', 'هنوز آزمایشی ثبت نشده است.')}
+          </p>
+        ) : (
+          <ul className="space-y-1 text-xs text-[hsl(var(--fg-secondary))]">
+            {(qualityEvents.data ?? []).slice(0, 5).map((ev) => (
+              <li key={ev.id}>
+                {ev.event_kind}
+                {ev.notes ? ` — ${ev.notes}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
+        {!closed && canInspect ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={recordQuality.isPending}
+              onClick={() =>
+                recordQuality.mutate(
+                  {
+                    sourceType: 'repair',
+                    sourceId: ticket.id,
+                    eventKind: 'pass',
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.success(t('repairs.qualityPassed', 'آزمایش کیفیت تایید شد')),
+                    onError: fail(t('repairs.moveFailed', 'انجام نشد')),
+                  },
+                )
+              }
+            >
+              {t('repairs.qualityPass', 'تایید آزمایش')}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={recordQuality.isPending}
+              onClick={() =>
+                recordQuality.mutate(
+                  {
+                    sourceType: 'repair',
+                    sourceId: ticket.id,
+                    eventKind: 'rework',
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.success(t('repairs.qualityRework', 'نیاز به بازکاری ثبت شد')),
+                    onError: fail(t('repairs.moveFailed', 'انجام نشد')),
+                  },
+                )
+              }
+            >
+              {t('repairs.qualityFailRework', 'رد و بازکاری')}
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>

@@ -22,7 +22,10 @@ import {
   useCashForecast,
   useCreateDraftPurchaseOrdersFromSuggestions,
   useDeadStock,
+  useMyCapabilities,
   usePurchaseOrders,
+  useQualityEvents,
+  useRecordQualityEvent,
   useReorderSuggestions,
   useShiftHistory,
   useStaleOpportunities,
@@ -255,8 +258,12 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
             placeholder={tr('ops.selectPoForMatch', 'انتخاب سفارش خرید')}
             searchable
           />
-          {selectedPoId && threeWayMatch.data ? (
-            <div className="mt-2 space-y-1 text-xs">
+          {selectedPoId && threeWayMatch.isError ? (
+            <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
+              {apiErrorMessage(threeWayMatch.error, tr('ops.loadFailed', 'این بخش خوانده نشد.'))}
+            </p>
+          ) : selectedPoId && threeWayMatch.data ? (
+            <div className="mt-2 space-y-2 text-xs">
               <p className="font-medium">
                 {threeWayMatch.data.matched
                   ? tr('ops.threeWayMatched', 'تطبیق کامل — آماده تأیید پرداخت')
@@ -267,6 +274,7 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
                   {m.code}: {m.detail}
                 </p>
               ))}
+              <ReceiptQualitySection poId={selectedPoId} t={t} />
             </div>
           ) : null}
         </div>
@@ -293,6 +301,82 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function ReceiptQualitySection({ poId, t }: { poId: string; t: OpsSectionProps['t'] }) {
+  const tr = translator(t)
+  const capabilities = useMyCapabilities()
+  const canInspect = capabilities.can('inventory.configure') === true
+  const events = useQualityEvents({ sourceType: 'receipt', sourceId: poId })
+  const recordQuality = useRecordQualityEvent()
+  const [notes, setNotes] = useState('')
+
+  return (
+    <div className="border-t border-[hsl(var(--border-default))] pt-2 space-y-1.5">
+      <div className="font-medium text-[hsl(var(--fg-primary))]">
+        {tr('ops.receiptQualityTitle', 'بازرسی کیفیت رسید')}
+      </div>
+      {events.isError ? (
+        <p role="alert" className="text-[hsl(var(--color-destructive))]">
+          {apiErrorMessage(events.error, tr('ops.loadFailed', 'این بخش خوانده نشد.'))}
+        </p>
+      ) : (events.data ?? []).length === 0 ? (
+        <p className="text-[hsl(var(--fg-tertiary))]">
+          {tr('ops.receiptQualityEmpty', 'رویداد بازرسی برای این رسید ثبت نشده است.')}
+        </p>
+      ) : (
+        <ul className="space-y-0.5 text-[11px] text-[hsl(var(--fg-secondary))]">
+          {(events.data ?? []).slice(0, 3).map((ev) => (
+            <li key={ev.id}>
+              {ev.event_kind}
+              {ev.notes ? ` — ${ev.notes}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+      {canInspect ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={tr('ops.receiptQualityNotes', 'یادداشت بازرسی')}
+            className="h-7 rounded border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-xs"
+          />
+          <button
+            type="button"
+            disabled={recordQuality.isPending}
+            onClick={() =>
+              recordQuality.mutate({
+                sourceType: 'receipt',
+                sourceId: poId,
+                eventKind: 'pass',
+                ...(notes.trim() ? { notes: notes.trim() } : {}),
+              })
+            }
+            className="h-7 rounded border border-[hsl(var(--border-default))] px-2 text-xs"
+          >
+            {tr('ops.receiptQualityPass', 'تایید کیفیت')}
+          </button>
+          <button
+            type="button"
+            disabled={recordQuality.isPending}
+            onClick={() =>
+              recordQuality.mutate({
+                sourceType: 'receipt',
+                sourceId: poId,
+                eventKind: 'fail',
+                ...(notes.trim() ? { notes: notes.trim() } : {}),
+              })
+            }
+            className="h-7 rounded border border-[hsl(var(--color-destructive))] px-2 text-xs text-[hsl(var(--color-destructive))]"
+          >
+            {tr('ops.receiptQualityFail', 'رد و قرنطینه')}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

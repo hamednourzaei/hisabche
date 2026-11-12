@@ -196,7 +196,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
         })
       }
 
-      const { cursor, limit, deviceId } = parsed.data
+      const { cursor, limit, deviceId, entityTypes } = parsed.data
       const workspaceId = request.tenancy.workspaceId
 
       if (!workspaceId) return reply.code(403).send({ error: 'no_workspace' })
@@ -204,7 +204,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
       const started = Date.now()
 
       try {
-        const result = await syncService.pull(workspaceId, cursor, limit, deviceId)
+        const result = await syncService.pull(workspaceId, cursor, limit, deviceId, entityTypes)
         const binary = wantsBinary(request.headers.accept)
         const hsb = binary ? encodePullPage(result) : null
 

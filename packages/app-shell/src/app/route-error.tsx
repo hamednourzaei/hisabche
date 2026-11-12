@@ -24,7 +24,7 @@
 
 import { useEffect } from 'react'
 import { useNavigate, useRouteError } from 'react-router-dom'
-import { ErrorFallbackView, type EscapeDestination } from '@hisabche/ui'
+import { ErrorFallbackView, type EscapeDestination } from '@hisabche/ui/error-boundary'
 
 export function RouteErrorBoundary() {
   const error = useRouteError()

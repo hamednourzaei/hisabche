@@ -29,6 +29,8 @@ import {
   registerInstanceAdminRoutes,
   registerSystemMetricsRoutes,
 } from './routes/system-metrics.routes'
+import { pressureMonitor } from './runtime/pressure'
+import { isWriteBlocked } from './runtime/service-mode'
 import { startInstanceHeartbeat } from './services/instance-registry'
 import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
@@ -267,6 +269,36 @@ server.addHook('onRequest', async (request, reply) => {
   inflightRequests += 1
   countedInflight.add(request)
   reply.raw.once('close', () => releaseInflight(request))
+
+  const pathOnly = request.url.split('?')[0]
+  if (
+    request.method !== 'OPTIONS' &&
+    pathOnly !== '/ready' &&
+    pathOnly !== '/health' &&
+    pathOnly !== '/metrics'
+  ) {
+    const pressure = pressureMonitor.snapshot()
+    if (pressure.overloaded) {
+      reply.header('Retry-After', String(pressure.retryAfterSeconds))
+      return reply.status(503).send({
+        error: 'SERVICE_OVERLOADED',
+        reason: pressure.reason,
+        retryAfterSeconds: pressure.retryAfterSeconds,
+      })
+    }
+    if (
+      isWriteBlocked() &&
+      (request.method === 'POST' ||
+        request.method === 'PUT' ||
+        request.method === 'PATCH' ||
+        request.method === 'DELETE')
+    ) {
+      return reply.status(503).send({
+        error: 'SERVICE_READ_ONLY',
+        message: 'Primary database is temporarily unavailable; writes are paused',
+      })
+    }
+  }
 })
 
 server.addHook('onResponse', async (request, reply) => {

@@ -146,6 +146,7 @@ export function useLogTime() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: timesheetKeys.summary(variables.projectId) })
       queryClient.invalidateQueries({ queryKey: timesheetKeys.preview(variables.projectId) })
+      queryClient.invalidateQueries({ queryKey: ['project-time-entries', variables.projectId] })
     },
   })
 }

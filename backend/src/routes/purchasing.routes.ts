@@ -158,7 +158,19 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await purchasingService.receiveGoods(request.tenancy, id)
+        const body = z
+          .object({
+            lines: z
+              .array(z.object({ itemId: z.string().uuid(), quantity: z.number().positive() }))
+              .optional(),
+          })
+          .optional()
+          .parse(request.body ?? {})
+        const result = await purchasingService.receiveGoods(
+          request.tenancy,
+          id,
+          body?.lines ? { lines: body.lines } : undefined,
+        )
         await clearCache(`purchase-order:${id}`)
         await clearCache('purchase-orders:*')
         return reply.send(result)
@@ -254,6 +266,105 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
         return reply.send(scorecard)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to compute supplier scorecard')
+      }
+    },
+  )
+
+  // V61 B.2.13 & B.2.14 — RFQs, supplier quotations, long-term purchase contract prices
+  fastify.get(
+    '/api/rfqs',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        return reply.send({ data: await rfqContractsService.listRfqs(request.tenancy) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list RFQs')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/rfqs',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { createRfqSchema } = await import('@hisabche/validation')
+        const body = createRfqSchema.parse(request.body)
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        return reply.code(201).send({
+          data: await rfqContractsService.createRfq(request.tenancy, body.title),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to create RFQ')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/rfqs/:id/quotations',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { createQuotationSchema } = await import('@hisabche/validation')
+        const body = createQuotationSchema.parse(request.body)
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        return reply.code(201).send({
+          data: await rfqContractsService.addQuotation(request.tenancy, id, body),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to submit quotation')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/quotations/:id/choose',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        const todayIso = new Date().toISOString().slice(0, 10)
+        return reply.send({
+          data: await rfqContractsService.chooseQuotation(request.tenancy, id, todayIso),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to convert quotation to PO')
+      }
+    },
+  )
+
+  fastify.get(
+    '/api/purchase-contracts/prices',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { supplierId } = request.query as { supplierId?: string }
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        return reply.send({
+          data: await rfqContractsService.listPurchaseContractPrices(request.tenancy, supplierId),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list contract prices')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/purchase-contracts/prices',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { createPurchaseContractPriceSchema } = await import('@hisabche/validation')
+        const body = createPurchaseContractPriceSchema.parse(request.body)
+        const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
+        return reply.code(201).send({
+          data: await rfqContractsService.upsertPurchaseContractPrice(request.tenancy, body),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to save contract price')
       }
     },
   )

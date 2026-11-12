@@ -26,6 +26,9 @@ import {
 } from '../services/render-scaling'
 
 import { createSampler, type SystemSample } from '../utils/system-metrics'
+import { pressureMonitor } from '../runtime/pressure'
+import { getServiceModeState } from '../runtime/service-mode'
+import { parseProcessRole } from '../runtime/role'
 
 export const METRICS_INTERVAL_MS = 2000
 export const MAX_STREAMS = 20
@@ -64,6 +67,24 @@ export function registerSystemMetricsRoutes(server: FastifyInstance, inflight: (
     // A 1 s window: 250 ms was noisy next to Task Manager's 1–2 s average.
     await new Promise((resolve) => setTimeout(resolve, 1000))
     return sample()
+  })
+
+  // V61 C.4.8 — Authenticated operational metrics (RED + pressure + service mode)
+  server.get('/metrics', { preHandler: [authenticate, platformAdminGuard] }, async () => {
+    const pressure = pressureMonitor.snapshot()
+    const serviceMode = getServiceModeState()
+    return {
+      role: parseProcessRole(),
+      serviceMode: serviceMode.mode,
+      primaryWritable: serviceMode.primaryWritable,
+      replicaLagExceeded: serviceMode.replicaLagExceeded,
+      eventLoopDelayMs: pressure.eventLoopDelayMs,
+      heapUsedBytes: pressure.heapUsedBytes,
+      rssBytes: pressure.rssBytes,
+      overloaded: pressure.overloaded,
+      inflight: inflight(),
+      uptimeSeconds: Math.round(process.uptime()),
+    }
   })
 
   server.get('/api/system/metrics/stream', (request, reply) => {

@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query'
 import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import type { DocumentRevisionRecord, DocumentRevisionType } from '@hisabche/validation'
 
 export interface AuditEntry {
   id: string
@@ -100,5 +101,21 @@ export function useRecordHistory(entityType?: string, entityId?: string) {
       return asList<AuditEntry>(body?.history, `/audit/workspace/${entityType}`)
     },
     enabled: authReady && !!entityType && !!entityId,
+  })
+}
+
+/** V61 B.2.22 — field-level document revisions (before/after + changed_fields). */
+export function useDocumentRevisions(documentType?: DocumentRevisionType, documentId?: string) {
+  const authReady = useAuthReady()
+
+  return useQuery({
+    queryKey: [...auditTrailKeys.all, 'revisions', documentType, documentId] as const,
+    queryFn: async () => {
+      const body = unwrap<{ revisions: DocumentRevisionRecord[] }>(
+        await apiClient.get(`/audit/revisions/${documentType}/${documentId}`),
+      )
+      return asList<DocumentRevisionRecord>(body?.revisions, `/audit/revisions/${documentType}`)
+    },
+    enabled: authReady && !!documentType && !!documentId,
   })
 }

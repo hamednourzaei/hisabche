@@ -15,6 +15,7 @@ import {
   AVAILABLE_CAPABILITIES,
   CAPABILITIES,
   CAPABILITY_KEYS,
+  deriveEngineOfflineMode,
   ENGINE_KEYS,
   ENGINES,
   USABLE_CAPABILITIES,
@@ -168,14 +169,79 @@ describe('capability-has-consumer guard', () => {
 
     for (const key of ENGINE_KEYS) {
       const e = ENGINES[key]
-      for (const file of [e.service, e.localEngine, e.clientHook, e.uiHost]) {
+      for (const file of [e.service, e.localEngine, e.localEngineRoute, e.clientHook, e.uiHost]) {
         if (!file) continue
         expect(
           existsSync(resolve(REPO_ROOT, stripQuery(file))),
           `ENGINES.${key} missing file on disk: ${file}`,
         ).toBe(true)
       }
+      expect(e.offline, `ENGINES.${key} offline mismatch`).toBe(
+        deriveEngineOfflineMode(e.matrixFeature),
+      )
     }
     expect(CAPABILITY_KEYS.length).toBeGreaterThanOrEqual(37)
+  })
+
+  it('V61 §2.1 registry truth: clientHook calls engine route, uiHost imports hook, and unregistered engine hooks fail', () => {
+    const extractExportedHooks = (hookSrc: string): string[] => {
+      const names: string[] = []
+      const re = /export\s+(?:function|const)\s+(use[A-Za-z0-9_]+)/g
+      let m: RegExpExecArray | null
+      while ((m = re.exec(hookSrc)) !== null) {
+        names.push(m[1]!)
+      }
+      return names
+    }
+
+    const endpointPrefixesForFeature = (matrixFeature: string): string[] => {
+      return Object.entries(OFFLINE_ENDPOINT_MATRIX)
+        .filter(([, [feat]]) => feat === matrixFeature)
+        .map(([methodAndPath]) => {
+          const pathOnly = methodAndPath.split(' ')[1] ?? ''
+          return pathOnly.split('/:x')[0]!
+        })
+        .filter((p) => p.length > 1)
+    }
+
+    const registeredHooks = new Set<string>()
+    for (const key of ENGINE_KEYS) {
+      const e = ENGINES[key]
+      if (e.clientHook) registeredHooks.add(stripQuery(e.clientHook))
+      if (!e.clientHook || !e.matrixFeature) continue
+
+      const hookSrc = readFileSync(resolve(REPO_ROOT, stripQuery(e.clientHook)), 'utf8')
+      const prefixes = endpointPrefixesForFeature(e.matrixFeature)
+      if (prefixes.length > 0) {
+        const callsRoute = prefixes.some((prefix) => hookSrc.includes(prefix))
+        expect(
+          callsRoute,
+          `ENGINES.${key}.clientHook (${e.clientHook}) does not reference any route prefix for ${e.matrixFeature}: ${prefixes.join(', ')}`,
+        ).toBe(true)
+      }
+
+      if (e.uiHost) {
+        const uiSrc = readFileSync(resolve(REPO_ROOT, stripQuery(e.uiHost)), 'utf8')
+        const exportedHooks = extractExportedHooks(hookSrc)
+        const importedByUi = exportedHooks.some((h) => uiSrc.includes(h))
+        expect(
+          importedByUi,
+          `ENGINES.${key}.uiHost (${e.uiHost}) does not import any exported hook from ${e.clientHook}`,
+        ).toBe(true)
+      }
+    }
+
+    // Specific V61 §1.2 checks: delivery_logistics & contracts_recurring must be wired truthfully
+    expect(ENGINES.delivery_logistics.clientHook).toBe('packages/api/src/hooks/universal-core.ts')
+    expect(ENGINES.delivery_logistics.uiHost).toBe(
+      'packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx',
+    )
+    expect(ENGINES.contracts_recurring.clientHook).toBe('packages/api/src/hooks/contracts.ts')
+    expect(ENGINES.contracts_recurring.uiHost).toBe(
+      'packages/ui/src/components/ui/customers/contracts-section.tsx',
+    )
+
+    // Injection test: a hook file calling /contracts must be registered in ENGINES
+    expect(registeredHooks.has('packages/api/src/hooks/contracts.ts')).toBe(true)
   })
 })

@@ -155,4 +155,46 @@ export async function customReportRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // V61 B.2.19 — Wire ScheduledReportsService
+  fastify.post(
+    '/api/custom-reports/scheduled/trigger',
+    { preHandler: REPORTS },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const body = z
+          .object({
+            scheduleId: z.string().min(1),
+            savedViewId: z.string().min(1),
+            reportName: z.string().min(1),
+            cadence: z.enum(['daily', 'weekly', 'monthly']),
+            recipients: z.array(z.string().email()).min(1),
+            slotDate: z.string().min(8),
+            htmlContent: z.string().min(1),
+          })
+          .parse(request.body)
+        const { ScheduledReportsService } =
+          await import('../services/reporting/scheduled-reports.service')
+        const svc = new ScheduledReportsService()
+        return reply.send(
+          await svc.triggerDelivery(
+            request.tenancy.workspaceId,
+            {
+              id: body.scheduleId,
+              workspaceId: request.tenancy.workspaceId,
+              savedViewId: body.savedViewId,
+              reportName: body.reportName,
+              cadence: body.cadence,
+              recipients: body.recipients,
+              isActive: true,
+            },
+            body.slotDate,
+            body.htmlContent,
+          ),
+        )
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to trigger scheduled report')
+      }
+    },
+  )
 }

@@ -100,6 +100,9 @@ export interface DraftLine {
   debit: number
   credit: number
   description?: string | undefined
+  currency?: string | null | undefined
+  amountCurrencyMinor?: number | null | undefined
+  exchangeRate?: number | null | undefined
 }
 
 export interface LedgerAccountFacts {
@@ -107,6 +110,7 @@ export interface LedgerAccountFacts {
   type: AccountRootType
   isGroup: boolean
   isActive: boolean
+  kind?: 'standard' | 'memorandum' | undefined
 }
 
 export type LedgerRuleCode =
@@ -453,6 +457,44 @@ export function entryNumberYear(entryNumber: string | null): number | null {
 export function entryNumberSequence(entryNumber: string | null): number {
   const match = /^JV-\d{4}-(\d{6})$/.exec(entryNumber ?? '')
   return match ? Number(match[1]) : 0
+}
+
+export function validateJournalCurrencyAndMemorandum(
+  lines: readonly DraftLine[],
+  accounts: ReadonlyMap<string, LedgerAccountFacts>,
+):
+  | { ok: true }
+  | { ok: false; code: 'JOURNAL_LINE_FX_MISMATCH' | 'JOURNAL_MEMORANDUM_MIXED_FORBIDDEN' } {
+  let hasStandard = false
+  let hasMemorandum = false
+
+  for (const line of lines) {
+    const acc = accounts.get(line.accountId)
+    if (acc?.kind === 'memorandum') hasMemorandum = true
+    else if (acc) hasStandard = true
+
+    if (line.currency) {
+      if (
+        line.amountCurrencyMinor === null ||
+        line.amountCurrencyMinor === undefined ||
+        line.exchangeRate === null ||
+        line.exchangeRate === undefined ||
+        line.exchangeRate <= 0
+      ) {
+        return { ok: false, code: 'JOURNAL_LINE_FX_MISMATCH' }
+      }
+      const bookAmount = Math.max(line.debit, line.credit)
+      const expected = (Math.abs(line.amountCurrencyMinor) / 100) * line.exchangeRate
+      if (Math.abs(expected - bookAmount) > 0.05) {
+        return { ok: false, code: 'JOURNAL_LINE_FX_MISMATCH' }
+      }
+    }
+  }
+
+  if (hasStandard && hasMemorandum) {
+    return { ok: false, code: 'JOURNAL_MEMORANDUM_MIXED_FORBIDDEN' }
+  }
+  return { ok: true }
 }
 
 export type { AccountRole }

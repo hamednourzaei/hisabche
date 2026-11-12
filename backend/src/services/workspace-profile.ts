@@ -28,10 +28,12 @@
 
 import {
   canonicalIndustryTypes,
+  composeBusinessSolution,
   onboardingProgressSchema,
   operationalDnaSchema,
   resolveBusinessProfile,
   type BusinessProfile,
+  type CompositionPlan,
   type IndustryKey,
   type OnboardingProgress,
   type OperationalDna,
@@ -139,6 +141,8 @@ export interface WorkspaceOperationalProfile {
   /** False until docs/operational-profile-01-migration.sql has run. */
   readonly configurable: boolean
   readonly dna: OperationalDna | null
+  /** Computed composition plan (P1–P10, capabilities, presentation); never stored in DB. */
+  readonly composition: CompositionPlan | null
   /** 0 = never declared. The next save must name this number. */
   readonly version: number
   readonly onboarding: OnboardingProgress | null
@@ -147,6 +151,7 @@ export interface WorkspaceOperationalProfile {
 const NOT_CONFIGURED: WorkspaceOperationalProfile = {
   configurable: false,
   dna: null,
+  composition: null,
   version: 0,
   onboarding: null,
 }
@@ -176,9 +181,11 @@ export async function operationalProfileOf(
   // A stored value that no longer parses is reported as absent, not repaired.
   const dna = operationalDnaSchema.safeParse(row.operational_dna)
   const onboarding = onboardingProgressSchema.safeParse(row.onboarding_progress)
+  const validDna = row.operational_dna == null || !dna.success ? null : dna.data
   return {
     configurable: true,
-    dna: row.operational_dna == null || !dna.success ? null : dna.data,
+    dna: validDna,
+    composition: validDna ? composeBusinessSolution(validDna) : null,
     version: row.operational_dna_version ?? 0,
     onboarding: row.onboarding_progress == null || !onboarding.success ? null : onboarding.data,
   }
