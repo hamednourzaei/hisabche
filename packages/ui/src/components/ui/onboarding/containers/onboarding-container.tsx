@@ -26,7 +26,7 @@ import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
 import {
   inferOperationalDna,
   primaryIndustryKeyOf,
-  suggestedOperatingAnswers,
+  suggestedOperatingAnswersFor,
   type OnboardingProgress,
   type OperatingAnswers,
 } from '@hisabche/validation'
@@ -108,12 +108,22 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   // V55: the ONE canonical primary-industry decision (registry order, explicit
   // primary wins) — the same rule `resolveBusinessProfile` applies on the
   // server. Insertion order is never an accidental primary-industry rule.
+  const selectedTrades = useMemo(
+    () =>
+      businessType
+        ? businessType
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [],
+    [businessType],
+  )
   const primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined
-  // The trade's suggestion under the person's own answers: what the wizard
-  // shows AND what the DNA is inferred from.
+  // EVERY selected activity pre-fills its own answers (V64 §5): the wizard and
+  // the inferred DNA must never see only the primary trade.
   const operatingAnswers = useMemo<OperatingAnswers>(
-    () => ({ ...suggestedOperatingAnswers(primaryTrade), ...ownAnswers }),
-    [primaryTrade, ownAnswers],
+    () => ({ ...suggestedOperatingAnswersFor(selectedTrades), ...ownAnswers }),
+    [selectedTrades, ownAnswers],
   )
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const saveBookCurrency = useSetBaseCurrency()
@@ -189,22 +199,19 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
    * books and a generic environment.
    */
   const handleComplete = useCallback(async () => {
-    const selected = businessType
-      ? businessType
-          .split(',')
-          .map((id) => id.trim())
-          .filter(Boolean)
-      : []
+    const selected = selectedTrades
 
     if (!defaultCurrency) {
       toast.error(tOriginal('onboarding.currencyRequired'))
       return
     }
 
-    // Infer DNA deterministically from the user's choices. The trade is the
-    // canonical primary — never `selected[0]` (V55 defect A).
+    // Infer DNA deterministically from the user's choices. EVERY selected
+    // activity contributes; the primary only decides vocabulary (V64 §5).
     const inferredDna = inferOperationalDna({
       tradeKey: primaryTrade,
+      tradeKeys: selectedTrades,
+      primaryTradeKey: primaryTrade,
       ...operatingAnswers,
     })
     setOperationalDna(inferredDna)
@@ -296,6 +303,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     operational,
     operatingAnswers,
     primaryTrade,
+    selectedTrades,
     saveOperationalDna,
     saveOnboardingProgress,
     defaultCurrency,

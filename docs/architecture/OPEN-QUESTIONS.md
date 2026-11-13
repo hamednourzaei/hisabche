@@ -83,3 +83,14 @@ This document records architectural decisions, assumptions, and known unknowns e
    `.exe`/`.apk`.
 5. **227 rows remain `unproven`.** That is the honest backlog, not a verdict. Any
    row that moves to `SERVER_ONLY` needs a `reason@file:line` first.
+
+---
+
+## 7. (13 Nov 2026) Two product decisions are still the owner's — `OPEN-DECISIONS.md`
+
+Questions that are _product_ decisions rather than architecture questions now live in
+`docs/architecture/OPEN-DECISIONS.md`, each with a stable ID, the code that would change, and an
+explicit `Blocks: none` so that a pending answer cannot stop a test run. Today it holds `D-01` (three
+business-size bands versus the five-band scale) and `D-02` (the 53 exported hooks with no consumer).
+This file keeps the architecture questions that already have an answer; it does not repeat those
+two.

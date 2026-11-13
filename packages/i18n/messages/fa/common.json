@@ -4379,7 +4379,7 @@
     "welcomeDesc": "در چند مرحله کوتاه حسابچه را برای کسب‌وکار شما آماده می‌کنیم.",
     "start": "شروع",
     "businessType": "نوع کسب‌وکار",
-    "storeSize": "اندازه فروشگاه",
+    "storeSize": "اندازه کسب‌وکار",
     "defaultCurrency": "ارز پیش‌فرض",
     "ready": "همه چیز آماده است",
     "readyDesc": "حسابچه با موفقیت پیکربندی شد.",
@@ -4391,12 +4391,12 @@
     "restaurant": "رستوران",
     "service": "خدماتی",
     "other": "سایر",
-    "smallStore": "فروشگاه کوچک",
-    "smallStoreDesc": "۱-۲ کارمند",
-    "mediumStore": "فروشگاه متوسط",
-    "mediumStoreDesc": "۳-۱۰ کارمند",
-    "largeStore": "کسب‌وکار بزرگ",
-    "largeStoreDesc": "۱۰+ کارمند",
+    "smallStore": "کوچک",
+    "smallStoreDesc": "۱-۲ نفر",
+    "mediumStore": "متوسط",
+    "mediumStoreDesc": "۳-۱۰ نفر",
+    "largeStore": "بزرگ",
+    "largeStoreDesc": "۱۰+ نفر",
     "title": "راه‌اندازی",
     "searchBusiness": "کسب‌وکارت را جست‌وجو کن",
     "noBusinessMatch": "موردی پیدا نشد",
@@ -4430,7 +4430,9 @@
         "rentsOutAssets": "آیا تجهیزات، اتاق یا دارایی را به صورت ساعتی/روزانه کرایه می‌دهید؟",
         "worksAtCustomerSite": "آیا خدمات یا ارسال در محل مشتری یا در مسیر انجام می‌شود؟",
         "billsRecurring": "آیا قراردادها یا حق‌الاشتراک دوره‌ای (ماهانه/سالانه) صادر می‌کنید؟",
-        "needsApprovals": "آیا قبل از ثبت نهایی یا پرداخت به تأیید مدیر نیاز دارید؟"
+        "needsApprovals": "آیا قبل از ثبت نهایی یا پرداخت به تأیید مدیر نیاز دارید؟",
+        "branches": "چند شعبه داری؟",
+        "warehouses": "چند انبار داری؟"
       },
       "answers": {
         "yes": "بله",
@@ -4442,7 +4444,14 @@
         "hourly": "ساعتی",
         "commission": "درصدی (کمیسیون)",
         "shift": "شیفتی",
-        "mixed": "ترکیبی"
+        "mixed": "ترکیبی",
+        "branch_single": "یک شعبه",
+        "branch_multiple": "چند شعبه",
+        "branch_unknown": "نمی‌دانم",
+        "warehouse_none": "انبار ندارم",
+        "warehouse_single": "یک انبار",
+        "warehouse_multiple": "چند انبار",
+        "warehouse_unknown": "نمی‌دانم"
       },
       "gaps": {
         "unitTrackingUnresolved": "نحوه ردیابی واحد کالا (تک‌شماره/سری/بسته) هنوز مشخص نشده است.",
@@ -12910,7 +12919,30 @@
     "selectPackage": "انتخاب بسته"
   },
   "firstValue": {
-    "title": "راهنمای راه‌اندازی سریع"
+    "title": "راهنمای راه‌اندازی سریع",
+    "unavailable": "وضعیت کسب‌وکار خوانده نشد؛ کمی بعد دوباره تلاش کن.",
+    "catalogue": {
+      "goodsTitle": "اولین کالا را ثبت کن",
+      "goodsDesc": "کالایی که می‌فروشی را با قیمت و واحدش اضافه کن.",
+      "serviceTitle": "اولین خدمت را ثبت کن",
+      "serviceDesc": "کاری که انجام می‌دهی را با قیمتش اضافه کن.",
+      "mixedTitle": "اولین کالا یا خدمت را ثبت کن",
+      "mixedDesc": "یکی از چیزهایی که می‌فروشی را اضافه کن؛ بقیه بعداً."
+    },
+    "party": {
+      "title": "اولین مشتری را ثبت کن",
+      "desc": "کسی که برایش سند صادر می‌کنی."
+    },
+    "appointment": {
+      "title": "اولین نوبت را ثبت کن",
+      "desc": "وقت مشتری را برای خدمت رزرو کن."
+    },
+    "document": {
+      "saleTitle": "اولین فروش را ثبت کن",
+      "saleDesc": "یک فاکتور واقعی صادر کن تا حساب‌وکتاب شروع شود.",
+      "jobTitle": "اولین سفارش تعمیر را ثبت کن",
+      "jobDesc": "کار مشتری را با قطعات و دستمزد ثبت کن."
+    }
   },
   "guide": {
     "badge": "راهنمای کاربری",
@@ -13987,7 +14019,7 @@
       "BATCH_RETURN_RESTORE_MISSING": "مرجوعی به همان سری/بچ برنمی‌گردد.",
       "SERVER_ONLY_NO_OFFLINE_ENGINE": "فقط با اینترنت کار می‌کند.",
       "COST_LAYERS_ARE_PRODUCT_KEYED": "بهای تمام‌شده برای کل کالا حساب می‌شود، نه برای هر مدل.",
-      "OFFLINE_SERIAL_IDENTITY_MISSING": "شماره سریال بدون اینترنت ثبت نمی‌شود.",
+      "SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY": "رزرو یک کالای سریال‌دار و برگشت آن فقط با اینترنت انجام می‌شود.",
       "CORE_CHARGE_NOT_APPLIED": "هزینه‌ی قطعه‌ی کهنه (core charge) روی فاکتور اعمال نمی‌شود.",
       "LINE_PRICING_FROM_PURITY_NOT_WIRED": "قیمت خط از عیار به‌طور خودکار حساب نمی‌شود.",
       "MAKING_CHARGE_NOT_COMPUTED_ON_LINE": "اجرت ساخت روی خط فاکتور حساب نمی‌شود.",

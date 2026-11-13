@@ -32,7 +32,7 @@ import {
   inferOperationalDna,
   operatingAnswersSchema,
   primaryIndustryKeyOf,
-  suggestedOperatingAnswers,
+  suggestedOperatingAnswersFor,
   type OperatingAnswers,
   type OperatingQuestion,
 } from '@hisabche/validation'
@@ -61,11 +61,15 @@ export function OperatingProfileSettings() {
   // V55: the canonical primary trade, not `businessTypes[0]` — the same rule
   // the wizard and the profile resolver apply.
   const trade = primaryIndustryKeyOf(workspace.data?.businessTypes ?? []) ?? undefined
+  // V65 · V64 §5: EVERY selected activity contributes. Saving this screen used
+  // to re-infer the DNA from the primary trade alone, so a shop that also
+  // repairs lost the workshop's axes the first time someone pressed «ذخیره».
+  const trades = useMemo(() => workspace.data?.businessTypes ?? [], [workspace.data?.businessTypes])
   const stored = operational.data?.onboarding?.answers.operating
-  // The answers last saved for this business, the trade's suggestion under them.
+  // The answers last saved for this business, every trade's suggestion under them.
   const base = useMemo<OperatingAnswers>(
-    () => ({ ...suggestedOperatingAnswers(trade), ...(stored ?? {}) }),
-    [trade, stored],
+    () => ({ ...suggestedOperatingAnswersFor(trades), ...(stored ?? {}) }),
+    [trades, stored],
   )
   const [edits, setEdits] = useState<OperatingAnswers>({})
   const answers = useMemo<OperatingAnswers>(() => ({ ...base, ...edits }), [base, edits])
@@ -87,7 +91,12 @@ export function OperatingProfileSettings() {
     if (!view) return
     setSaving(true)
     try {
-      const dna = inferOperationalDna({ tradeKey: trade, ...answers })
+      const dna = inferOperationalDna({
+        tradeKey: trade,
+        tradeKeys: trades,
+        primaryTradeKey: trade,
+        ...answers,
+      })
       const saved = await saveDna(dna, view.version)
       if (saved === null) {
         toast.error(tr('settings.operatingProfile.notConfigured'))

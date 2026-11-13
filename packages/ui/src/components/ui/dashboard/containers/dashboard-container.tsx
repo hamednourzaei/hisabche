@@ -238,6 +238,7 @@ export function DashboardContainer() {
         hasCustomers={hasCustomers}
         hasInvoices={hasInvoices}
         hasSessions={hasSessions}
+        unavailable={prods.isError || custs.isError || invs.isError}
         className="mb-6"
       />
 

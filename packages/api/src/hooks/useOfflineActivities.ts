@@ -1,195 +1,140 @@
-// packages/ui/src/hooks/activity/useOfflineActivities.ts
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+// ============================================
+// packages/api/src/hooks/useOfflineActivities.ts
+//
+// V65: this file was copied from `packages/ui/src/hooks/activity/` and kept a
+// header pointing at that path — a comment that named a different file, and a
+// second implementation of the same hook living beside it. There is now ONE
+// implementation; the UI path re-exports this one.
+//
+// ⚠️ THE NAME IS THE ONLY THING «OFFLINE» ABOUT IT. There is no local activity
+// store: the old one was a `Map` in memory whose every method was a TODO, so it
+// returned nothing, lost everything on refresh, and made the feed look empty
+// offline instead of saying it could not be read (docs/HISABCHE_ARCHITECTURE.md
+// §652 records the same finding). This hook therefore reports connectivity and
+// reads the real server feed; it does NOT claim the feed works offline.
+//
+// `activity.ts` owns the query and the mark-read mutations — this file adds no
+// second fetch path, no second cache, and no placeholder user id.
+// ============================================
+
+import { useCallback, useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-// ❌ حذف import از @hisabche/db
-// import { database } from "@hisabche/db";
-import { useActivities, activityKeys } from '@hisabche/api'
 
-// ─── Local Activity Service (بدون WatermelonDB) ──────────────────────────
+import {
+  activityKeys,
+  useActivities,
+  useMarkAllAsRead,
+  useMarkAsRead,
+  useUnreadCount,
+  type ActivityFilter,
+  type ActivityGroupDto,
+} from './activity'
 
-class OfflineActivityService {
-  private static instance: OfflineActivityService
-  private storage: Map<string, any> = new Map()
-
-  static getInstance() {
-    if (!this.instance) {
-      this.instance = new OfflineActivityService()
-    }
-    return this.instance
-  }
-
-  async getLocalActivities(filters?: { type?: string; unread?: boolean }): Promise<any[]> {
-    // TODO: با IndexedDB جایگزین کنید
-    return []
-  }
-
-  async markAsRead(ids: string[]): Promise<void> {
-    // TODO: با IndexedDB جایگزین کنید
-  }
-
-  async markAllAsRead(userId: string): Promise<void> {
-    // TODO: با IndexedDB جایگزین کنید
-  }
-
-  async syncActivities(userId: string): Promise<void> {
-    // TODO: با IndexedDB جایگزین کنید
-  }
+export interface OfflineActivitySyncStatus {
+  isSyncing: boolean
+  /** When a sync actually completed. `null` = never in this session. */
+  lastSynced: Date | null
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
+export interface OfflineActivitiesResult {
+  activities: ActivityGroupDto[]
+  isLoading: boolean
+  isOffline: boolean
+  syncStatus: OfflineActivitySyncStatus
+  sync: () => Promise<void>
+  markAsRead: (ids: string[]) => Promise<void>
+  markAllAsRead: () => Promise<void>
+  /** `null` = not read yet or the read failed. Never `0` for an unknown count. */
+  unreadCount: number | null
+}
 
-export function useOfflineActivities(filters?: { type?: string; unread?: boolean }) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== 'undefined' ? !navigator.onLine : false,
-  )
-  const [syncStatus, setSyncStatus] = useState<{
-    isSyncing: boolean
-    lastSynced: Date | null
-    pendingCount: number
-  }>({
-    isSyncing: false,
-    lastSynced: null,
-    pendingCount: 0,
-  })
+/** Connectivity as the browser reports it. Not a queue, not a cache. */
+function useIsOnline(): boolean {
+  const [online, setOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true)
 
   useEffect(() => {
-    const goOnline = () => setIsOffline(false)
-    const goOffline = () => setIsOffline(true)
-
+    const goOnline = () => setOnline(true)
+    const goOffline = () => setOnline(false)
     window.addEventListener('online', goOnline)
     window.addEventListener('offline', goOffline)
-
     return () => {
       window.removeEventListener('online', goOnline)
       window.removeEventListener('offline', goOffline)
     }
   }, [])
 
-  const { data: remoteActivities = [], isLoading: remoteLoading } = useActivities(filters)
+  return online
+}
 
-  const [localActivities, setLocalActivities] = useState<any[]>([])
-  const [localLoading, setLocalLoading] = useState(true)
+/**
+ * The activity feed, plus an honest answer about connectivity.
+ *
+ * The feed refreshes on remount after `staleTime` and after a mark-as-read (see
+ * the note at the top of `activity.ts` — this repository deliberately does not
+ * poll it). `sync` is the same refresh, callable by hand or when the browser
+ * comes back online.
+ */
+export function useOfflineActivities(filters?: ActivityFilter): OfflineActivitiesResult {
+  const queryClient = useQueryClient()
+  const online = useIsOnline()
+  const { data: activities = [], isLoading, refetch } = useActivities(filters)
+  // The counted source is the server's, not a sum over whatever page is loaded.
+  const { data: unread } = useUnreadCount()
+  const { mutateAsync: markRead } = useMarkAsRead()
+  const { mutateAsync: markAllRead } = useMarkAllAsRead()
 
-  const loadLocalActivities = useCallback(async () => {
-    try {
-      const service = OfflineActivityService.getInstance()
-      const activities = await service.getLocalActivities(filters)
-      setLocalActivities(activities)
-    } catch (error) {
-      console.error('Failed to load local activities:', error)
-    } finally {
-      setLocalLoading(false)
-    }
-  }, [filters])
-
-  useEffect(() => {
-    loadLocalActivities()
-  }, [loadLocalActivities])
+  const [syncStatus, setSyncStatus] = useState<OfflineActivitySyncStatus>({
+    isSyncing: false,
+    lastSynced: null,
+  })
 
   const sync = useCallback(async () => {
-    if (isOffline) return
-
-    setSyncStatus((prev) => ({ ...prev, isSyncing: true }))
-
+    setSyncStatus((previous) => ({ ...previous, isSyncing: true }))
     try {
-      const service = OfflineActivityService.getInstance()
-      await service.syncActivities('current-user-id')
-
-      setSyncStatus((prev) => ({
-        ...prev,
-        isSyncing: false,
-        lastSynced: new Date(),
-      }))
-
-      queryClient.invalidateQueries({ queryKey: activityKeys.all })
-      await loadLocalActivities()
-    } catch (error) {
-      console.error('Sync failed:', error)
-      setSyncStatus((prev) => ({ ...prev, isSyncing: false }))
+      // `unread` and the tab counts hang under `all`, so one invalidation
+      // refreshes the badge and the lists together.
+      await queryClient.invalidateQueries({ queryKey: activityKeys.all })
+      await refetch()
+      setSyncStatus({ isSyncing: false, lastSynced: new Date() })
+    } catch {
+      setSyncStatus((previous) => ({ ...previous, isSyncing: false }))
     }
-  }, [isOffline, queryClient, loadLocalActivities])
+  }, [queryClient, refetch])
 
   useEffect(() => {
-    if (!isOffline) {
-      sync()
+    // Registered unconditionally: while the browser is offline this listener is
+    // the one that must exist. (Gating it on `online` meant it was attached only
+    // after the reconnect event had already fired, so nothing ever refreshed.)
+    const goOnline = () => {
+      void sync()
     }
-  }, [isOffline, sync])
+    window.addEventListener('online', goOnline)
+    return () => window.removeEventListener('online', goOnline)
+  }, [sync])
 
-  useEffect(() => {
-    if (isOffline) return
-    const interval = setInterval(sync, 30000)
-    return () => clearInterval(interval)
-  }, [isOffline, sync])
-
-  const activities = useMemo(() => {
-    if (isOffline || !remoteActivities.length) {
-      return localActivities
-    }
-
-    const merged = [...remoteActivities]
-    const remoteIds = new Set(remoteActivities.map((a: any) => a.id))
-
-    for (const local of localActivities) {
-      if (!remoteIds.has(local.id)) {
-        merged.push(local)
-      }
-    }
-
-    return merged.sort(
-      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    )
-  }, [remoteActivities, localActivities, isOffline])
-
+  // A failed mark-as-read propagates to the caller: it is not silently dropped,
+  // and it is not retried into a local queue that does not exist.
   const markAsRead = useCallback(
     async (ids: string[]) => {
-      try {
-        const service = OfflineActivityService.getInstance()
-        await service.markAsRead(ids)
-        await loadLocalActivities()
-
-        if (!isOffline) {
-          await fetch('/api/v1/activities/mark-read', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids }),
-          })
-        }
-      } catch (error) {
-        console.error('Failed to mark as read:', error)
-      }
+      await markRead(ids)
     },
-    [isOffline, loadLocalActivities],
+    [markRead],
   )
 
   const markAllAsRead = useCallback(async () => {
-    try {
-      const service = OfflineActivityService.getInstance()
-      await service.markAllAsRead('current-user-id')
-      await loadLocalActivities()
-
-      if (!isOffline) {
-        await fetch('/api/v1/activities/mark-all-read', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-    } catch (error) {
-      console.error('Failed to mark all as read:', error)
-    }
-  }, [isOffline, loadLocalActivities])
+    await markAllRead(undefined)
+  }, [markAllRead])
 
   return {
     activities,
-    isLoading: remoteLoading || localLoading,
-    isOffline,
+    isLoading,
+    isOffline: !online,
     syncStatus,
     sync,
     markAsRead,
     markAllAsRead,
+    unreadCount: unread ?? null,
   }
 }

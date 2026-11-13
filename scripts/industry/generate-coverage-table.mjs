@@ -335,40 +335,36 @@ ${supportLines.join('\n')}
 `
 
 // ------------------------------------------------- V60 three-level industry status
+//
+// «profiled» is DERIVED, never listed. It means «the inference engine carries a
+// trade-specific rule for this key» — a profile override, a hint set, or the
+// regulated/pricing table in `operational-dna.ts`.
+//
+// This used to be a hand-written array beside the derivation, and it had already
+// drifted: it named `hotel`, which is not a registry key, and it missed nothing
+// only by luck. A trade rule that is not a registry key is not a profile.
 const profiledKeys = (() => {
   const keys = new Set()
   const profileSource = read('packages/validation/src/schemas/industry-profiles.ts')
   const ovStart = profileSource.indexOf('const OVERRIDES')
   const ovBody = profileSource.slice(ovStart, profileSource.indexOf('\n}\n', ovStart))
   for (const m of ovBody.matchAll(/^  ([A-Za-z]+): \{/gm)) keys.add(m[1])
-  for (const presetTrade of [
-    'barber',
-    'beautySalon',
-    'clinic',
-    'education',
-    'repairs',
-    'mechanic',
-    'manufacturing',
-    'bakery',
-    'retail',
-    'grocery',
-    'mobilePhones',
-    'pharmacy',
-    'clothing',
-    'currencyExchange',
-    'jewellery',
-    'hardware',
-    'restaurant',
-    'cafe',
-    'hotel',
-    'wholesale',
-    'consulting',
-    'wedding',
-    'courier',
-    'itServices',
-  ]) {
-    keys.add(presetTrade)
+
+  const dnaSource = read('packages/validation/src/schemas/operational-dna.ts')
+  for (const m of dnaSource.matchAll(/const [A-Z_]+_TRADES = new Set\(\[([^\]]*)\]\)/g)) {
+    for (const key of m[1].matchAll(/'([A-Za-z]+)'/g)) keys.add(key[1])
   }
+  for (const tableName of ['TRADE_REGULATED', 'TRADE_PRICING']) {
+    const start = dnaSource.indexOf(`const ${tableName}`)
+    if (start < 0) {
+      problems.push(`missing ${tableName} in operational-dna.ts`)
+      continue
+    }
+    const body = dnaSource.slice(start, dnaSource.indexOf('\n}\n', start))
+    for (const m of body.matchAll(/^  ([A-Za-z]+): /gm)) keys.add(m[1])
+  }
+
+  for (const key of [...keys]) if (!industryKeys.has(key)) keys.delete(key)
   return keys
 })()
 

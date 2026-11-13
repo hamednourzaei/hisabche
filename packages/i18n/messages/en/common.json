@@ -4368,7 +4368,7 @@
     "welcomeDesc": "Let's configure your workspace in a few simple steps.",
     "start": "Get Started",
     "businessType": "Business Type",
-    "storeSize": "Store Size",
+    "storeSize": "Business size",
     "defaultCurrency": "Default Currency",
     "ready": "All set!",
     "readyDesc": "Hisabche is configured successfully.",
@@ -4380,12 +4380,12 @@
     "restaurant": "Restaurant",
     "service": "Service",
     "other": "Other",
-    "smallStore": "Small Store",
-    "smallStoreDesc": "1-2 employees",
-    "mediumStore": "Medium Store",
-    "mediumStoreDesc": "3-10 employees",
-    "largeStore": "Large Business",
-    "largeStoreDesc": "10+ employees",
+    "smallStore": "Small",
+    "smallStoreDesc": "1–2 people",
+    "mediumStore": "Medium",
+    "mediumStoreDesc": "3–10 people",
+    "largeStore": "Large",
+    "largeStoreDesc": "10+ people",
     "title": "Setup",
     "searchBusiness": "Search for your business",
     "noBusinessMatch": "Nothing found",
@@ -4419,7 +4419,9 @@
         "rentsOutAssets": "Do you rent or lease out equipment, rooms, or assets?",
         "worksAtCustomerSite": "Is work performed on customer site or along a delivery route?",
         "billsRecurring": "Do you issue recurring contract or subscription invoices?",
-        "needsApprovals": "Do purchases or postings require manager approval?"
+        "needsApprovals": "Do purchases or postings require manager approval?",
+        "branches": "How many branches?",
+        "warehouses": "How many warehouses?"
       },
       "answers": {
         "yes": "Yes",
@@ -4431,7 +4433,14 @@
         "hourly": "Hourly",
         "commission": "Commission",
         "shift": "Shift-based",
-        "mixed": "Mixed"
+        "mixed": "Mixed",
+        "branch_single": "One branch",
+        "branch_multiple": "Several branches",
+        "branch_unknown": "Don't know",
+        "warehouse_none": "No warehouse",
+        "warehouse_single": "One warehouse",
+        "warehouse_multiple": "Several warehouses",
+        "warehouse_unknown": "Don't know"
       },
       "gaps": {
         "unitTrackingUnresolved": "Unit tracking method has not been chosen yet.",
@@ -12910,7 +12919,30 @@
     "selectPackage": "Select package"
   },
   "firstValue": {
-    "title": "Quick Setup Guide"
+    "title": "Quick Setup Guide",
+    "unavailable": "Could not read your business state — try again in a moment.",
+    "catalogue": {
+      "goodsTitle": "Add your first product",
+      "goodsDesc": "The thing you sell, with its price and unit.",
+      "serviceTitle": "Add your first service",
+      "serviceDesc": "The work you do, with its price.",
+      "mixedTitle": "Add your first product or service",
+      "mixedDesc": "One of the things you sell — the rest can wait."
+    },
+    "party": {
+      "title": "Add your first customer",
+      "desc": "The party your documents name."
+    },
+    "appointment": {
+      "title": "Book your first appointment",
+      "desc": "Reserve a customer's time for a service."
+    },
+    "document": {
+      "saleTitle": "Record your first sale",
+      "saleDesc": "A real invoice starts the books.",
+      "jobTitle": "Record your first repair order",
+      "jobDesc": "The customer's job, with parts and labour."
+    }
   },
   "guide": {
     "badge": "User Guide",
@@ -13987,7 +14019,7 @@
       "BATCH_RETURN_RESTORE_MISSING": "A return does not go back to its own batch.",
       "SERVER_ONLY_NO_OFFLINE_ENGINE": "Works online only.",
       "COST_LAYERS_ARE_PRODUCT_KEYED": "Cost is kept per product, not per variant.",
-      "OFFLINE_SERIAL_IDENTITY_MISSING": "Serial numbers cannot be recorded offline.",
+      "SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY": "Holding a serialized unit, and returning it, work online only.",
       "CORE_CHARGE_NOT_APPLIED": "Core charges are not applied on the invoice.",
       "LINE_PRICING_FROM_PURITY_NOT_WIRED": "Line price is not computed from purity automatically.",
       "MAKING_CHARGE_NOT_COMPUTED_ON_LINE": "Making charge is not computed on the line.",

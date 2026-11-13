@@ -1,0 +1,1076 @@
+{
+  "generatedAt": "2026-11-13T10:27:49.506Z",
+  "head": "fa4fd32f9f75307015de1988dc8f4c927870f165",
+  "acceptanceCommit": "fa4fd32f9f75307015de1988dc8f4c927870f165",
+  "evidenceFresh": true,
+  "acceptanceWorktreeDirty": true,
+  "limitations": [
+    "EVIDENCE_NOT_ON_COMMITTED_TREE",
+    "POSTGRES_EVIDENCE_MISSING",
+    "BROWSER_VERIFICATION_NOT_RUN"
+  ],
+  "counts": {
+    "registered": 67,
+    "profiled": 37,
+    "workflowVerified": 13,
+    "sellable": 0,
+    "notYetSellable": 67,
+    "postgresEvidence": 0,
+    "browserEvidence": 0
+  },
+  "industries": [
+    {
+      "key": "retail",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": [
+        "backend/src/__tests__/http-e2e-business-day.test.ts",
+        "backend/src/__tests__/financial-flows-e2e.test.ts"
+      ],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "wholesale",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v60-http-families.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "grocery",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/http-e2e-business-day.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "bakery",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "butcher",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "restaurant",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "cafe",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "fruitVegetable",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "dairy",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "nuts",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "spices",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "jewellery",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v59-1-gold-routes-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "watches",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "currencyExchange",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v59-1-exchange-gl-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "clothing",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v59-1-clothing-routes-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "fabric",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "fabricRoll",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "shoes",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "carpet",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "tailoring",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "mobilePhones",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v59-1-mobile-serials-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "computers",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "computerComponents",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "electronics",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "itServices",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "hardware",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "buildingMaterials",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "paint",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "timber",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "glass",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "construction",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "manufacturing",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/manufacturing-page-500s.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "autoParts",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "carDealer",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "mechanic",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "fuel",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "furniture",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "kitchenware",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "homeAppliances",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "stationery",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "toys",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "giftShop",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "pharmacy",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "cosmetics",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "clinic",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "barber",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/service-delivery-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "beautySalon",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/service-delivery-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "optician",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "agriculture",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "livestock",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "seedsFertilizer",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "flowers",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "transport",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "freightTransport",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "passengerTransport",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "courier",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v60-http-families.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "travelAgency",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "realEstate",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "printing",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "photography",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "education",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "laundry",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "repairs",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v59-1-repair-routes-http.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "wedding",
+      "status": "PARTIALLY_SUPPORTED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "security",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    },
+    {
+      "key": "consulting",
+      "status": "WORKFLOW_VERIFIED",
+      "sellable": false,
+      "registered": true,
+      "profiled": true,
+      "workflowComplete": true,
+      "tests": ["backend/src/__tests__/v60-http-families.test.ts"],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": ["POSTGRES_EVIDENCE", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+    },
+    {
+      "key": "other",
+      "status": "REGISTERED",
+      "sellable": false,
+      "registered": true,
+      "profiled": false,
+      "workflowComplete": false,
+      "tests": [],
+      "postgresEvidence": false,
+      "browserEvidence": false,
+      "missingEvidence": [
+        "OPERATIONAL_DNA_PROFILE",
+        "FAMILY_WORKFLOW_TEST",
+        "POSTGRES_EVIDENCE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
+    }
+  ]
+}

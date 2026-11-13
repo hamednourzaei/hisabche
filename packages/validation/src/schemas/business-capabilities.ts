@@ -668,8 +668,15 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     // (`assignSerialsToSale`, guarded per unit) names the IMEIs ON that invoice,
     // the invoice-detail screen picks them from stock, and cancelling the
     // invoice releases them (`releaseClaims`). Not a call inside
-    // `InvoiceService.create` — by design, not by omission. What remains:
-    limitations: ['OFFLINE_SERIAL_IDENTITY_MISSING'],
+    // `InvoiceService.create` — by design, not by omission.
+    //
+    // What remains — and V65 corrected this from `OFFLINE_SERIAL_IDENTITY_MISSING`,
+    // which was FALSE: the device names and issues units offline
+    // (`GET`/`POST /operations/serials`, `POST /operations/serials/issue` are
+    // `available` in OFFLINE_ENDPOINT_MATRIX, implemented by
+    // `packages/local-engine/src/routes/serials.ts`). A HOLD on a unit and a
+    // serial RETURN are the two that are still `online_required`.
+    limitations: ['SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY'],
   },
   auto_fitments: {
     key: 'auto_fitments',

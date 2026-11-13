@@ -867,6 +867,16 @@ export {
   type EntitySummary,
 } from './hooks/activity'
 
+// ─── Offline activities ────────────────────────────────
+// V65: ONE implementation, in the package that owns the query and the
+// mutations. `packages/ui/src/hooks/activity/useOfflineActivities.ts` re-exports
+// this; it used to hold a second 308-line copy that invented its own DTOs.
+export {
+  useOfflineActivities,
+  type OfflineActivitiesResult,
+  type OfflineActivitySyncStatus,
+} from './hooks/useOfflineActivities'
+
 // ─── Activity Types (از فایل types) ──────────────────────
 export type {
   ActivityDto,

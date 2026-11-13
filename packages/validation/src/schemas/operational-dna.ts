@@ -601,13 +601,27 @@ export function resolveDnaCapabilities(dna: OperationalDna): ResolvedBusinessCon
 
 // ─── Operating Characteristics to DNA Resolver ───────────────────────
 export interface OperationalInferenceInput {
+  /** The single activity (the legacy call shape). */
   readonly tradeKey?: string | undefined
+  /**
+   * EVERY selected activity (V64 §5). When two or more are given, the DNA is
+   * composed from all of them: `resolveCapabilityPlan` matches concrete axis
+   * values, so dropping an activity would silently switch its modules off.
+   * `tradeKey` is ignored when this has two or more entries.
+   */
+  readonly tradeKeys?: readonly string[] | undefined
+  /** Which selected activity controls vocabulary and display order. */
+  readonly primaryTradeKey?: string | undefined
   readonly holdsStock?: 'yes' | 'no' | 'unknown' | undefined
   readonly producesGoods?: 'yes' | 'no' | 'unknown' | undefined
   readonly sellsOnCredit?: 'yes' | 'no' | 'unknown' | undefined
   readonly hasPointOfSale?: 'yes' | 'no' | 'unknown' | undefined
   readonly hasStaff?: 'yes' | 'no' | 'unknown' | undefined
   readonly staffArrangement?: StaffArrangement | undefined
+  /** How many branches run the business (V65; legacy name: `locations`). */
+  readonly branches?: BranchScope | undefined
+  /** How many warehouses hold the stock — `none` is a real answer (V65). */
+  readonly warehouses?: WarehouseScope | undefined
   readonly locations?: 'single' | 'multiple' | 'unknown' | undefined
   readonly takesAppointments?: 'yes' | 'no' | 'unknown' | undefined
   readonly deliversCoursesOrPackages?: 'yes' | 'no' | 'unknown' | undefined
@@ -627,14 +641,38 @@ export interface OperationalInferenceInput {
   readonly regulatedDomain?: RegulatedDomain | undefined
 }
 
+// Trades whose compliance gap the DNA must SHOW. A regulated domain creates a
+// setup gap — it never grants a clinical or KYC capability.
+const TRADE_REGULATED: Readonly<Record<string, RegulatedDomain>> = {
+  pharmacy: 'PRESCRIPTION',
+  clinic: 'HEALTH_RECORDS',
+  currencyExchange: 'FINANCIAL_KYC',
+  restaurant: 'FOOD_SAFETY',
+  bakery: 'FOOD_SAFETY',
+  cafe: 'FOOD_SAFETY',
+  hotel: 'FOOD_SAFETY',
+}
+
+// What each trade actually sells ON: weight for gold, length for cloth, area
+// for glass. A plain unit price would be wrong for all three.
+const TRADE_PRICING: Readonly<Record<string, readonly PricingBasis[]>> = {
+  jewellery: ['WEIGHT', 'RATE_BOARD'],
+  currencyExchange: ['RATE_BOARD'],
+  clothing: ['UNIT', 'LENGTH'],
+  hardware: ['UNIT', 'LENGTH', 'AREA'],
+}
+
 /**
  * Derives an 8-axis Operational DNA from actual operational characteristics
  * rather than guessing or defaulting blindly to RETAIL_STORE.
  *
  * If characteristics are unknown or purely generic, it produces a safe GENERIC profile
  * without forcing inventory or appointments.
+ *
+ * ⚠️ ONE ACTIVITY. `inferOperationalDna` is the entry point: when a business
+ * runs several, it calls this once per activity and COMPOSES the results.
  */
-export function inferOperationalDna(input: OperationalInferenceInput): OperationalDna {
+function inferSingleTradeDna(input: OperationalInferenceInput): OperationalDna {
   // ⚠️ AN ANSWER BEATS THE TRADE. The trade only fills a question the person
   // left unanswered: a barber who says «no appointments» is a walk-in shop.
   // (Until 8 Nov 2026 the trade won, so a «no» could not be given.)
@@ -748,9 +786,14 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
   else if (isRepairDriven) customer.push('SERVICE_ASSET_PROFILE')
   else customer.push('STANDARD_PARTY')
 
-  // 7. Topology
+  // 7. Topology — a branch and a warehouse are DIFFERENT facts (V64 §6.2):
+  // two warehouses imply nothing about branches and a second branch implies
+  // nothing about warehouses. `branches` is the V65 name for the question;
+  // `locations` is the stored answer from before it was asked this way and
+  // still counts when the new one was never given.
+  const branchScope = input.branches ?? input.locations
   const topology: OperationalTopology[] = []
-  if (input.locations === 'multiple') {
+  if (branchScope === 'multiple') {
     topology.push('MULTI_BRANCH')
   } else if (isAppointmentDriven) {
     topology.push('RESOURCE_CAPACITY')
@@ -758,6 +801,12 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
     topology.push('SEAT_OR_ROOM_BASED')
   } else {
     topology.push('SINGLE_LOCATION')
+  }
+  if (input.warehouses === 'multiple') topology.push('WAREHOUSE_NETWORK')
+  // «one location» cannot stand beside a branch or warehouse network.
+  if (topology.length > 1) {
+    const withoutSingleLocation = topology.filter((value) => value !== 'SINGLE_LOCATION')
+    topology.splice(0, topology.length, ...withoutSingleLocation)
   }
 
   // 8. Terminology
@@ -810,22 +859,6 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
   const atCustomerSite = said('worksAtCustomerSite')
   const recurring = said('billsRecurring')
   const approvals = said('needsApprovals')
-
-  const TRADE_REGULATED: Readonly<Record<string, RegulatedDomain>> = {
-    pharmacy: 'PRESCRIPTION',
-    clinic: 'HEALTH_RECORDS',
-    currencyExchange: 'FINANCIAL_KYC',
-    restaurant: 'FOOD_SAFETY',
-    bakery: 'FOOD_SAFETY',
-    cafe: 'FOOD_SAFETY',
-    hotel: 'FOOD_SAFETY',
-  }
-  const TRADE_PRICING: Readonly<Record<string, readonly PricingBasis[]>> = {
-    jewellery: ['WEIGHT', 'RATE_BOARD'],
-    currencyExchange: ['RATE_BOARD'],
-    clothing: ['UNIT', 'LENGTH'],
-    hardware: ['UNIT', 'LENGTH', 'AREA'],
-  }
 
   const derivedPricing: PricingBasis[] = input.pricingBasis
     ? [...input.pricingBasis]
@@ -911,6 +944,141 @@ export function inferOperationalDna(input: OperationalInferenceInput): Operation
   }
 }
 
+// ─── Multi-activity composition (V65 · V64 §5) ───────────────────────
+//
+// A business can run more than one activity. `resolveCapabilityPlan` matches
+// CONCRETE axis values (`COUNTER_POS`, `JOB_TICKET`, `SPARE_PARTS`, …), so a
+// composed DNA must UNION every activity's axes — collapsing them into a
+// combined value would silently switch modules off. The primary activity
+// decides vocabulary and display order only; it never erases another one.
+//
+// Scalar axes (custody, execution site, recurrence, approval depth, regulated
+// domain) hold ONE value by schema. The primary activity wins, then the first
+// activity that answered. That is the only information the schema can carry;
+// a genuine conflict is recorded here rather than guessed into a new enum.
+
+const uniqueInOrder = <T>(values: readonly T[]): T[] => {
+  const out: T[] = []
+  for (const value of values) if (!out.includes(value)) out.push(value)
+  return out
+}
+
+/** Drop «could not be resolved» once ANY activity resolved the axis. */
+const concreteOr = <T extends string>(values: readonly T[]): T[] => {
+  const concrete = values.filter((value) => value !== 'UNRESOLVED')
+  return concrete.length > 0 ? concrete : [...values]
+}
+
+function composeUnitTracking(parts: readonly OperationalDna[]): UnitTracking | undefined {
+  let serial = false
+  let expiry = false
+  let answered = false
+  for (const part of parts) {
+    if (part.unitTracking === 'SERIAL_NUMBERS') {
+      serial = true
+      answered = true
+    } else if (part.unitTracking === 'EXPIRY_DATES') {
+      expiry = true
+      answered = true
+    } else if (part.unitTracking === 'BOTH') {
+      serial = true
+      expiry = true
+      answered = true
+    } else if (part.unitTracking === 'NONE') {
+      answered = true
+    }
+  }
+  if (!answered) return undefined
+  if (serial && expiry) return 'BOTH'
+  if (serial) return 'SERIAL_NUMBERS'
+  if (expiry) return 'EXPIRY_DATES'
+  return 'NONE'
+}
+
+function composeOperationalDna(parts: readonly OperationalDna[]): OperationalDna {
+  const primary = parts[0]
+  if (!primary) throw new Error('composeOperationalDna needs at least one activity')
+
+  const union = <T>(read: (dna: OperationalDna) => readonly T[]): T[] =>
+    uniqueInOrder(parts.flatMap((part) => [...read(part)]))
+
+  const customerValues = uniqueInOrder(union((dna) => dna.customer))
+  const topologyValues = uniqueInOrder(union((dna) => dna.topology))
+  const pricingValues = concreteOr(union((dna) => dna.pricingBasis ?? []))
+  const unitTracking = composeUnitTracking(parts)
+
+  const assetCustody = parts.map((part) => part.assetCustody).find((value) => value !== undefined)
+  const executionSite = parts.map((part) => part.executionSite).find((value) => value !== undefined)
+  const recurrence = parts.map((part) => part.recurrence).find((value) => value !== undefined)
+  const approvalDepth = parts.map((part) => part.approvalDepth).find((value) => value !== undefined)
+  const regulatedDomain = parts
+    .map((part) => part.regulatedDomain)
+    .find((value) => value !== undefined)
+
+  return {
+    version: primary.version,
+    offering: concreteOr(union((dna) => dna.offering)),
+    intake: union((dna) => dna.intake),
+    inventory: concreteOr(union((dna) => dna.inventory)),
+    settlement: union((dna) => dna.settlement),
+    workforce: concreteOr(union((dna) => dna.workforce)),
+    // Two different party kinds are the EXISTING combined value — never the
+    // first activity's, which would tell a salon+shop business it has no
+    // wholesalers or students.
+    customer: customerValues.length > 1 ? ['MIXED_PROFILE'] : customerValues,
+    topology:
+      topologyValues.length > 1
+        ? topologyValues.filter((value) => value !== 'SINGLE_LOCATION')
+        : topologyValues,
+    ...(primary.terminology ? { terminology: primary.terminology } : {}),
+    ...(unitTracking ? { unitTracking } : {}),
+    ...(pricingValues.length > 0 ? { pricingBasis: pricingValues } : {}),
+    ...(assetCustody ? { assetCustody } : {}),
+    ...(executionSite ? { executionSite } : {}),
+    ...(recurrence ? { recurrence } : {}),
+    ...(approvalDepth ? { approvalDepth } : {}),
+    ...(regulatedDomain ? { regulatedDomain } : {}),
+    ...(primary.archetypeHint ? { archetypeHint: primary.archetypeHint } : {}),
+  }
+}
+
+/**
+ * THE entry point. One activity behaves exactly as before; two or more are
+ * composed so no selected activity disappears from the plan, the menu or the
+ * first-value guidance. `primaryTradeKey` (falling back to the first selected)
+ * decides vocabulary only, never entitlement.
+ */
+export function inferOperationalDna(input: OperationalInferenceInput): OperationalDna {
+  const selected = uniqueInOrder(
+    (input.tradeKeys ?? (input.tradeKey ? [input.tradeKey] : [])).filter((key) => key.length > 0),
+  )
+  if (selected.length <= 1) {
+    return inferSingleTradeDna({
+      ...input,
+      tradeKey: selected[0],
+      tradeKeys: undefined,
+      primaryTradeKey: undefined,
+    })
+  }
+
+  const primaryKey =
+    input.primaryTradeKey && selected.includes(input.primaryTradeKey)
+      ? input.primaryTradeKey
+      : selected[0]!
+  const ordered = [primaryKey, ...selected.filter((key) => key !== primaryKey)]
+
+  return composeOperationalDna(
+    ordered.map((tradeKey) =>
+      inferSingleTradeDna({
+        ...input,
+        tradeKey,
+        tradeKeys: undefined,
+        primaryTradeKey: undefined,
+      }),
+    ),
+  )
+}
+
 // ─── Adaptive operating questions (V54 5.3) ──────────────────────────
 // The few questions that decide the DNA. Every answer is optional: «unknown»
 // leaves the trade's own default in place. Which questions are SHOWN depends
@@ -937,19 +1105,32 @@ export const YES_NO_QUESTIONS = [
   'needsApprovals',
 ] as const
 export type YesNoQuestion = (typeof YES_NO_QUESTIONS)[number]
-export type OperatingQuestion = YesNoQuestion | 'locations' | 'staffArrangement'
+export type OperatingQuestion =
+  | YesNoQuestion
+  | 'staffArrangement'
+  | 'branches'
+  | 'warehouses'
+  /** Legacy name for `branches`; still read from answers saved before V65. */
+  | 'locations'
 
 export type LocationScope = 'single' | 'multiple' | 'unknown'
+export type BranchScope = LocationScope
+/** `none` is an ANSWER, not a missing one: a service business has no warehouse. */
+export type WarehouseScope = 'none' | 'single' | 'multiple' | 'unknown'
 
 export type OperatingAnswers = {
   readonly [K in YesNoQuestion]?: YesNo | undefined
 } & {
+  readonly branches?: BranchScope | undefined
+  readonly warehouses?: WarehouseScope | undefined
+  /** Legacy — read when `branches` was never asked. */
   readonly locations?: LocationScope | undefined
   readonly staffArrangement?: StaffArrangement | undefined
 }
 
 export const yesNoSchema = z.enum(['yes', 'no', 'unknown'])
 export const locationScopeSchema = z.enum(['single', 'multiple', 'unknown'])
+export const warehouseScopeSchema = z.enum(['none', 'single', 'multiple', 'unknown'])
 
 export const operatingAnswersSchema = z
   .object({
@@ -969,6 +1150,8 @@ export const operatingAnswersSchema = z
     hasStaff: yesNoSchema.optional(),
     needsApprovals: yesNoSchema.optional(),
     staffArrangement: staffArrangementEnum.optional(),
+    branches: locationScopeSchema.optional(),
+    warehouses: warehouseScopeSchema.optional(),
     locations: locationScopeSchema.optional(),
   })
   .strict()
@@ -987,6 +1170,33 @@ const WHOLESALE_TRADES = new Set(['wholesale'])
 const CONSULTING_TRADES = new Set(['consulting', 'itServices'])
 const COURIER_TRADES = new Set(['courier'])
 const RENTAL_TRADES = new Set(['wedding'])
+
+const DNA_HINT_SETS: readonly ReadonlySet<string>[] = [
+  APPOINTMENT_TRADES,
+  PACKAGE_TRADES,
+  REPAIR_TRADES,
+  PRODUCER_TRADES,
+  COUNTER_TRADES,
+  SERIAL_TRADES,
+  EXPIRY_TRADES,
+  WHOLESALE_TRADES,
+  CONSULTING_TRADES,
+  COURIER_TRADES,
+  RENTAL_TRADES,
+]
+
+/**
+ * Every trade the inference engine carries a trade-specific rule for. A rule is
+ * a PRE-FILLED DEFAULT, never a support claim — the generated coverage table
+ * derives «profiled» from this instead of a hand-written list that could drift.
+ */
+export function tradesWithDnaHints(): readonly string[] {
+  const keys = new Set<string>()
+  for (const set of DNA_HINT_SETS) for (const key of set) keys.add(key)
+  for (const key of Object.keys(TRADE_REGULATED)) keys.add(key)
+  for (const key of Object.keys(TRADE_PRICING)) keys.add(key)
+  return [...keys].sort()
+}
 
 /**
  * What the trade suggests for each question — the wizard's pre-filled answer.
@@ -1027,6 +1237,25 @@ export function suggestedOperatingAnswers(tradeKey: string | undefined): Operati
 }
 
 /**
+ * The pre-filled answers for EVERY selected activity (V64 §5). A «yes» from any
+ * activity wins, because pre-filling «no» would hide a module the business
+ * actually needs. The person can still answer «no» — and that answer beats
+ * every suggestion in `inferOperationalDna`.
+ */
+export function suggestedOperatingAnswersFor(tradeKeys: readonly string[]): OperatingAnswers {
+  const out: { -readonly [K in YesNoQuestion]?: YesNo } = {}
+  for (const tradeKey of tradeKeys) {
+    const suggestion = suggestedOperatingAnswers(tradeKey)
+    for (const question of YES_NO_QUESTIONS) {
+      const value = suggestion[question]
+      if (value === undefined) continue
+      if (value === 'yes' || out[question] === undefined) out[question] = value
+    }
+  }
+  return out
+}
+
+/**
  * The questions to SHOW, given the answers so far (the trade's suggestions
  * merged in). Production and the counter only matter to a business that keeps
  * stock; every other question is always asked.
@@ -1038,10 +1267,12 @@ export function operatingQuestionsFor(answers: OperatingAnswers): OperatingQuest
   const isRepair = answers.takesJobTicketsOrRepairs === 'yes'
   const isProducer = answers.producesGoods === 'yes'
   const canRentAssets = !isAppointment && !isPackage && !isProducer
+  const multipleBranches = (answers.branches ?? answers.locations) === 'multiple'
   const needsControl =
     answers.hasStaff === 'yes' ||
     answers.sellsOnCredit === 'yes' ||
-    answers.locations === 'multiple'
+    multipleBranches ||
+    answers.warehouses === 'multiple'
 
   return [
     'takesAppointments',
@@ -1065,7 +1296,8 @@ export function operatingQuestionsFor(answers: OperatingAnswers): OperatingQuest
     'hasStaff',
     ...(answers.hasStaff === 'yes' ? (['staffArrangement'] as const) : []),
     ...(needsControl || answers.needsApprovals !== undefined ? (['needsApprovals'] as const) : []),
-    'locations',
+    'branches',
+    'warehouses',
   ]
 }
 

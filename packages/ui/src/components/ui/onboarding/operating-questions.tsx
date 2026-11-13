@@ -11,6 +11,12 @@
 // a business that keeps stock. Every answer can stay «نمی‌دانم»; the trade's
 // own default then applies.
 //
+// V65 · V64 §6.2: a BRANCH and a WAREHOUSE are two different facts. This used
+// to ask one question (`locations`) that meant both, and every answer label was
+// the branch wording. They are now asked separately, and a warehouse can be
+// answered «none» — a service business has no warehouse and must not be nudged
+// to create one.
+//
 // ⚠️ The answers SUGGEST a menu and defaults. They grant or remove no
 // permission and change no recorded document.
 // ============================================
@@ -23,16 +29,32 @@ import {
 import { useTerminology } from '../../../hooks/use-terminology'
 import { SegmentedControl } from '../segmented-control'
 
-const YES_NO = ['yes', 'no', 'unknown'] as const
-const LOCATIONS = ['single', 'multiple', 'unknown'] as const
-const STAFF_ARRANGEMENTS = [
-  'fixed_salary',
-  'hourly',
-  'commission',
-  'shift',
-  'mixed',
-  'unknown',
-] as const
+interface AnswerOption {
+  readonly value: string
+  readonly labelKey: string
+}
+
+const optionsOf = (values: readonly string[], prefix: string): readonly AnswerOption[] =>
+  values.map((value) => ({ value, labelKey: `${prefix}.${value}` }))
+
+const YES_NO = optionsOf(['yes', 'no', 'unknown'], 'onboarding.operating.answers')
+const BRANCHES = optionsOf(['single', 'multiple', 'unknown'], 'onboarding.operating.answers.branch')
+const WAREHOUSES = optionsOf(
+  ['none', 'single', 'multiple', 'unknown'],
+  'onboarding.operating.answers.warehouse',
+)
+const STAFF_ARRANGEMENTS = optionsOf(
+  ['fixed_salary', 'hourly', 'commission', 'shift', 'mixed', 'unknown'],
+  'onboarding.operating.answers',
+)
+
+function optionsFor(question: OperatingQuestion): readonly AnswerOption[] {
+  // `locations` is the legacy name of `branches`; a stored answer still reads.
+  if (question === 'branches' || question === 'locations') return BRANCHES
+  if (question === 'warehouses') return WAREHOUSES
+  if (question === 'staffArrangement') return STAFF_ARRANGEMENTS
+  return YES_NO
+}
 
 export interface OperatingQuestionsProps {
   /** The answers to show: the person's own, the trade's suggestions under them. */
@@ -51,13 +73,8 @@ export function OperatingQuestions({ answers, onAnswer, t }: OperatingQuestionsP
       data-terminology-unresolved={isUnresolved ? 'true' : 'false'}
     >
       {questions.map((question) => {
-        const values =
-          question === 'locations'
-            ? LOCATIONS
-            : question === 'staffArrangement'
-              ? STAFF_ARRANGEMENTS
-              : YES_NO
-        const current = (answers[question] ?? 'unknown') as (typeof values)[number]
+        const options = optionsFor(question)
+        const current = (answers[question] ?? 'unknown') as string
         const terminologySuffix =
           question === 'staffArrangement'
             ? ` (${term('operatorLabelKey', t('common.staff', 'Staff'))})`
@@ -75,9 +92,9 @@ export function OperatingQuestions({ answers, onAnswer, t }: OperatingQuestionsP
             </span>
             <SegmentedControl
               label={t(`onboarding.operating.questions.${question}`, question)}
-              options={values.map((value) => ({
-                value,
-                label: t(`onboarding.operating.answers.${value}`, value),
+              options={options.map((option) => ({
+                value: option.value,
+                label: t(option.labelKey, option.value),
               }))}
               value={current}
               onChange={(value) => onAnswer(question, value)}

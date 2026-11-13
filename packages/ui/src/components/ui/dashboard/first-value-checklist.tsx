@@ -1,13 +1,21 @@
 // ============================================
 // packages/ui/src/components/ui/dashboard/first-value-checklist.tsx
 //
-// V54.0 Phase 5.7 — Archetype-Aware First Value Experience
-// Derives setup progress directly from real business data.
+// V54.0 Phase 5.7 — First Value Experience.
+// V65 · V64 §7: the STEPS come from the domain (`firstValueSteps`), never from
+// an industry switch here. This component used to key on `archetypeHint` and
+// fall through to RETAIL, so a consultant or a clinic was told to add a product
+// and open the warehouse. It now renders whatever the DNA + capability plan say.
+//
+// ⚠️ A read that FAILED is said, not shown as «not done»: pass `unavailable`
+// and the card reports that it could not read the business instead of quietly
+// claiming nothing has been created.
 // ============================================
 
 import React, { memo, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { CheckCircle2, Circle, ArrowRight, Sparkles } from 'lucide-react'
+import { CheckCircle2, Circle, ArrowRight, Sparkles, AlertCircle } from 'lucide-react'
+import { firstValueSteps, type FirstValueCompletion } from '@hisabche/validation'
 import { useOperationalDna } from '../../../hooks/use-operational-dna'
 import { useLocalePush } from '../../../hooks/use-locale-push'
 import { cn } from '../../../lib/utils'
@@ -17,156 +25,70 @@ export interface FirstValueChecklistProps {
   hasCustomers: boolean
   hasInvoices: boolean
   hasSessions?: boolean
+  /** At least one core read failed: do not present the steps as pending. */
+  unavailable?: boolean
   className?: string
 }
 
-interface ChecklistItem {
-  id: string
-  titleKey: string
-  descKey: string
-  route: string
-  completed: boolean
-}
+type TranslationKey = Parameters<ReturnType<typeof useTranslations>>[0]
 
 export const FirstValueChecklist = memo(function FirstValueChecklist({
   hasProducts,
   hasCustomers,
   hasInvoices,
   hasSessions = false,
+  unavailable = false,
   className,
 }: FirstValueChecklistProps) {
   const t = useTranslations()
   const push = useLocalePush()
   const { resolution } = useOperationalDna()
-  const archetype = resolution.dna.archetypeHint || 'RETAIL_STORE'
 
-  const items: ChecklistItem[] = useMemo(() => {
-    switch (archetype) {
-      case 'NAIL_TECH_BEAUTY':
-        return [
-          {
-            id: 'service',
-            titleKey: 'firstValue.salon.step1Title',
-            descKey: 'firstValue.salon.step1Desc',
-            route: '/warehouse?tab=products&new=service',
-            completed: hasProducts,
-          },
-          {
-            id: 'client',
-            titleKey: 'firstValue.salon.step2Title',
-            descKey: 'firstValue.salon.step2Desc',
-            route: '/customers?new=true',
-            completed: hasCustomers,
-          },
-          {
-            id: 'session',
-            titleKey: 'firstValue.salon.step3Title',
-            descKey: 'firstValue.salon.step3Desc',
-            route: '/customers?tab=sessions',
-            completed: hasSessions,
-          },
-          {
-            id: 'invoice',
-            titleKey: 'firstValue.salon.step4Title',
-            descKey: 'firstValue.salon.step4Desc',
-            route: '/invoices/new',
-            completed: hasInvoices,
-          },
-        ]
-      case 'LANGUAGE_TEACHER':
-        return [
-          {
-            id: 'package',
-            titleKey: 'firstValue.edu.step1Title',
-            descKey: 'firstValue.edu.step1Desc',
-            route: '/warehouse?tab=products&new=package',
-            completed: hasProducts,
-          },
-          {
-            id: 'student',
-            titleKey: 'firstValue.edu.step2Title',
-            descKey: 'firstValue.edu.step2Desc',
-            route: '/customers?new=true',
-            completed: hasCustomers,
-          },
-          {
-            id: 'enroll',
-            titleKey: 'firstValue.edu.step3Title',
-            descKey: 'firstValue.edu.step3Desc',
-            route: '/invoices/new',
-            completed: hasInvoices,
-          },
-        ]
-      case 'SERVICE_REPAIR':
-        return [
-          {
-            id: 'parts',
-            titleKey: 'firstValue.repair.step1Title',
-            descKey: 'firstValue.repair.step1Desc',
-            route: '/warehouse?tab=products',
-            completed: hasProducts,
-          },
-          {
-            id: 'customer',
-            titleKey: 'firstValue.repair.step2Title',
-            descKey: 'firstValue.repair.step2Desc',
-            route: '/customers?new=true',
-            completed: hasCustomers,
-          },
-          {
-            id: 'order',
-            titleKey: 'firstValue.repair.step3Title',
-            descKey: 'firstValue.repair.step3Desc',
-            route: '/invoices/new',
-            completed: hasInvoices,
-          },
-        ]
-      case 'RETAIL_STORE':
-      default:
-        return [
-          {
-            id: 'product',
-            titleKey: 'firstValue.retail.step1Title',
-            descKey: 'firstValue.retail.step1Desc',
-            route: '/warehouse?tab=products&new=product',
-            completed: hasProducts,
-          },
-          {
-            id: 'customer',
-            titleKey: 'firstValue.retail.step2Title',
-            descKey: 'firstValue.retail.step2Desc',
-            route: '/customers?new=true',
-            completed: hasCustomers,
-          },
-          {
-            id: 'sale',
-            titleKey: 'firstValue.retail.step3Title',
-            descKey: 'firstValue.retail.step3Desc',
-            route: '/invoices/new',
-            completed: hasInvoices,
-          },
-        ]
+  const items = useMemo(() => {
+    const done: Record<FirstValueCompletion, boolean> = {
+      products: hasProducts,
+      customers: hasCustomers,
+      invoices: hasInvoices,
+      sessions: hasSessions,
     }
-  }, [archetype, hasProducts, hasCustomers, hasInvoices, hasSessions])
+    return firstValueSteps(resolution.dna, resolution.activeModules).map((step) => ({
+      ...step,
+      completed: done[step.completesOn],
+    }))
+  }, [
+    resolution.dna,
+    resolution.activeModules,
+    hasProducts,
+    hasCustomers,
+    hasInvoices,
+    hasSessions,
+  ])
 
-  const completedCount = items.filter((i) => i.completed).length
-  const isAllComplete = completedCount === items.length
+  const completedCount = items.filter((item) => item.completed).length
+  const isAllComplete = items.length > 0 && completedCount === items.length
+
+  if (unavailable) {
+    return (
+      <div
+        role="alert"
+        className={cn(
+          'flex items-center gap-2 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 text-sm text-[hsl(var(--fg-secondary))]',
+          className,
+        )}
+      >
+        <AlertCircle className="size-4 shrink-0 text-[hsl(var(--color-warning))]" />
+        {t('firstValue.unavailable' as TranslationKey)}
+      </div>
+    )
+  }
 
   if (isAllComplete) {
     return null
   }
 
-  const safeT = (key: string, fallback: string): string => {
-    try {
-      const v = t(key as Parameters<typeof t>[0])
-      return v && v !== key ? v : fallback
-    } catch {
-      return fallback
-    }
-  }
-
   return (
     <div
+      data-first-value-checklist={resolution.dna.archetypeHint ?? 'GENERIC_BUSINESS'}
       className={cn(
         'rounded-2xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--surface-elevated))] p-5 shadow-sm',
         className,
@@ -176,7 +98,7 @@ export const FirstValueChecklist = memo(function FirstValueChecklist({
         <div className="flex items-center gap-2">
           <Sparkles className="size-5 text-[hsl(var(--color-primary))]" />
           <h3 className="font-bold text-[hsl(var(--fg-primary))]">
-            {safeT('firstValue.title', 'راهنمای راه‌اندازی سریع')}
+            {t('firstValue.title' as TranslationKey)}
           </h3>
         </div>
         <span className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-3 py-1 text-xs font-semibold text-[hsl(var(--color-primary))]">
@@ -199,9 +121,9 @@ export const FirstValueChecklist = memo(function FirstValueChecklist({
           >
             <div className="flex items-center gap-3">
               {item.completed ? (
-                <CheckCircle2 className="size-5 text-[hsl(var(--color-success))]" />
+                <CheckCircle2 className="size-5 shrink-0 text-[hsl(var(--color-success))]" />
               ) : (
-                <Circle className="size-5 text-[hsl(var(--fg-secondary))]" />
+                <Circle className="size-5 shrink-0 text-[hsl(var(--fg-secondary))]" />
               )}
               <div>
                 <p
@@ -210,12 +132,17 @@ export const FirstValueChecklist = memo(function FirstValueChecklist({
                     item.completed && 'line-through',
                   )}
                 >
-                  {safeT(item.titleKey, item.id)}
+                  {t(item.titleKey as TranslationKey)}
                 </p>
+                {!item.completed && (
+                  <p className="text-xs text-[hsl(var(--fg-secondary))]">
+                    {t(item.descKey as TranslationKey)}
+                  </p>
+                )}
               </div>
             </div>
             {!item.completed && (
-              <ArrowRight className="size-4 text-[hsl(var(--color-primary))] ms-2" />
+              <ArrowRight className="size-4 shrink-0 text-[hsl(var(--color-primary))] ms-2 rtl:rotate-180" />
             )}
           </button>
         ))}
