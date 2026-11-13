@@ -20,12 +20,11 @@ import {
   type ProjectBillingConfig,
   type TimeEntry,
 } from './billing.domain'
-import type { DbRow } from '../../utils/db-row'
 
 const ENTRY_COLUMNS =
   'id, project_id, task_id, employee_id, on_date, minutes, billable, rate_minor, invoice_id, description'
 
-function mapEntry(raw: DbRow): TimeEntry {
+function mapEntry(raw: Record<string, any>): TimeEntry {
   return {
     id: raw.id,
     projectId: raw.project_id,

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-13T11:37:55.936Z",
-  "head": "ac7b0400c6badf70f3b910f4332b644f24d17b3c",
+  "generatedAt": "2026-11-13T18:59:42.666Z",
+  "head": "d7ece62d92c6d3a86c4afc1473390acf775dc427",
   "acceptanceCommit": "ac7b0400c6badf70f3b910f4332b644f24d17b3c",
-  "evidenceFresh": true,
+  "evidenceFresh": false,
   "acceptanceWorktreeDirty": true,
   "criteria": [
     {
@@ -77,6 +77,7 @@
     }
   ],
   "limitations": [
+    "ACCEPTANCE_EVIDENCE_STALE",
     "EVIDENCE_NOT_ON_COMMITTED_TREE",
     "POSTGRES_EVIDENCE_MISSING",
     "BROWSER_VERIFICATION_NOT_RUN",
@@ -127,6 +128,7 @@
         "ONBOARDING_JOURNEY",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -159,6 +161,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -192,6 +195,7 @@
         "REPORTING_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -227,6 +231,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -263,6 +268,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -298,6 +304,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -333,6 +340,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -369,6 +377,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -405,6 +414,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -441,6 +451,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -476,6 +487,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -510,6 +522,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -545,6 +558,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -579,6 +593,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -612,6 +627,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -647,6 +663,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -682,6 +699,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -717,6 +735,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -753,6 +772,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -788,6 +808,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -821,6 +842,7 @@
         "REPORTING_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -856,6 +878,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -891,6 +914,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -926,6 +950,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -961,6 +986,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -996,6 +1022,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1031,6 +1058,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1067,6 +1095,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1102,6 +1131,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1138,6 +1168,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1174,6 +1205,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1209,6 +1241,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1244,6 +1277,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1279,6 +1313,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1314,6 +1349,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1349,6 +1385,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1385,6 +1422,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1421,6 +1459,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1457,6 +1496,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1493,6 +1533,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1529,6 +1570,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1565,6 +1607,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1599,6 +1642,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1635,6 +1679,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1670,6 +1715,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1702,6 +1748,7 @@
         "REPORTING_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1734,6 +1781,7 @@
         "REPORTING_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1770,6 +1818,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1806,6 +1855,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1842,6 +1892,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1878,6 +1929,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1914,6 +1966,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1950,6 +2003,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -1986,6 +2040,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2022,6 +2077,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2055,6 +2111,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2091,6 +2148,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2127,6 +2185,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2163,6 +2222,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2199,6 +2259,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2234,6 +2295,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2270,6 +2332,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2303,6 +2366,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2338,6 +2402,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2374,6 +2439,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2406,6 +2472,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     },
@@ -2441,6 +2508,7 @@
         "RETURNS_PROOF",
         "POSTGRES_JOURNEY",
         "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
         "EVIDENCE_NOT_ON_COMMITTED_TREE"
       ]
     }

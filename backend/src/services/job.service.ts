@@ -1,4 +1,3 @@
-import type { DbRow } from '../utils/db-row'
 // ============================================
 // backend/src/services/job.service.ts — Optimized v2.2
 // FIXED: TypeScript types for job object
@@ -13,7 +12,7 @@ export interface Job {
   id: string
   job_type: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  payload: DbRow
+  payload: Record<string, any>
   scheduled_at: string
   max_retries: number
   retry_count: number

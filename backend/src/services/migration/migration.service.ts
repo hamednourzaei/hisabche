@@ -119,7 +119,6 @@ import {
   type Finding,
   type ReconciliationLine,
 } from './migration.validate'
-import type { DbRow } from '../../utils/db-row'
 
 /* ─── Shapes the route and the UI share ───────────────────────────────────── */
 
@@ -171,7 +170,7 @@ const COLUMNS =
   'dry_run, reconciliation, rows_scanned, rows_created, rows_updated, rows_skipped, created_by, ' +
   'created_at, completed_at, error_code'
 
-function mapJob(raw: DbRow): MigrationJob {
+function mapJob(raw: Record<string, any>): MigrationJob {
   return {
     id: raw.id,
     entity: raw.entity,

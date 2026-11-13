@@ -23,7 +23,6 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { PaymentsService } from '../payments'
 import { round2 } from '../payments'
-import type { DbRow } from '../../utils/db-row'
 
 const COLUMNS = 'id, name, phone, email, address, notes, is_active, created_at, updated_at'
 
@@ -39,7 +38,7 @@ export interface Supplier {
   updatedAt: string | null
 }
 
-function mapSupplier(raw: DbRow): Supplier {
+function mapSupplier(raw: Record<string, any>): Supplier {
   return {
     id: raw.id,
     name: raw.name ?? '',

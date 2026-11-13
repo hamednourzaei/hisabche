@@ -24,7 +24,6 @@ import {
   type DepreciationEntry,
   type DepreciationMethod,
 } from './depreciation.domain'
-import type { DbRow } from '../../utils/db-row'
 
 const ASSET_COLUMNS =
   'id, name, asset_account_id, expense_account_id, accumulated_account_id, cost_minor, salvage_minor, method, periods, period_months, declining_factor, first_period_on, prorata_from, acquired_on, disposed_on, disposal_proceeds_minor, source_invoice_id'
@@ -45,7 +44,7 @@ export interface FixedAsset {
   accumulatedAccountId: string | null
 }
 
-function mapAsset(raw: DbRow): FixedAsset {
+function mapAsset(raw: Record<string, any>): FixedAsset {
   return {
     id: raw.id,
     name: raw.name,

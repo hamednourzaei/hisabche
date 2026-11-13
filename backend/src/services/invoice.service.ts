@@ -858,7 +858,9 @@ export class InvoiceService {
       throw new DatabaseError('Failed to look up the request', error)
     }
     const row = rowOf(data)
-    return row ? Object.assign(row, { id: String(row.id) }) : null
+    // A COPY: `Object.assign(row, …)` mutated the object the client returned and broke the
+    // write that followed (13 Nov 2026, invoice-line-total-derived).
+    return row ? { ...row, id: String(row.id) } : null
   }
 
   /**

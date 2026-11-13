@@ -26,7 +26,6 @@ import {
   type TaxableLine,
 } from './tax.domain'
 import { detectDrift, type TaxDrift, type TaxSnapshot } from './tax.snapshot'
-import type { DbRow } from '../../utils/db-row'
 
 const COMPONENT_COLUMNS =
   'id, label_key, computation, treatment, rate, included_in_price, compounds_on, is_withholding, account_id, is_active'
@@ -34,7 +33,7 @@ const COMPONENT_COLUMNS =
 const RULE_COLUMNS =
   'id, component_ids, product_id, category_id, party_tax_category, valid_from, valid_to, priority'
 
-function mapComponent(raw: DbRow): TaxComponent {
+function mapComponent(raw: Record<string, any>): TaxComponent {
   return {
     id: raw.id,
     labelKey: raw.label_key,
@@ -48,7 +47,7 @@ function mapComponent(raw: DbRow): TaxComponent {
   }
 }
 
-function mapRule(raw: DbRow): TaxRule {
+function mapRule(raw: Record<string, any>): TaxRule {
   return {
     id: raw.id,
     componentIds: (raw.component_ids as string[]) ?? [],

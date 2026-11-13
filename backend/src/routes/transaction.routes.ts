@@ -26,7 +26,6 @@ import {
   isMissingIdempotencySupport,
   readClientRequestId,
 } from '../utils/client-request'
-import type { DbRow } from '../utils/db-row'
 
 // ─── Types ────────────────────────────────────────────────
 interface CreateTransactionBody {
@@ -104,7 +103,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         // minor units so a few hundred rows do not drift by cents — a customer
         // statement that disagrees with the invoice by one afghani is a phone
         // call. Converted here and converted back at the response edge.
-        const transactions: LedgerTxn[] = (data ?? []).map((row: DbRow) => ({
+        const transactions: LedgerTxn[] = (data ?? []).map((row: Record<string, any>) => ({
           type: row.type,
           amountMinor: Math.round((Number(row.amount) || 0) * 100),
           at: String(row.created_at ?? ''),

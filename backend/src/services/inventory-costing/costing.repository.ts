@@ -17,7 +17,6 @@ import type { TenancyContext } from '../tenancy.service'
 import type { CostLayer, CostingMethod, NegativeStockPolicy } from './costing.domain'
 import type { IssueRequest, IssueResult, ReceiptRequest, ValuationRow } from './costing.port'
 import type { StockPosition } from './unvalued-stock.domain'
-import type { DbRow } from '../../utils/db-row'
 
 export interface InventorySettings {
   costingMethod: CostingMethod
@@ -52,7 +51,7 @@ export function domainErrorCode(error: unknown): string | null {
   return /\b([A-Z][A-Z_]{6,})\b/.exec(message)?.[1] ?? null
 }
 
-function mapLayer(raw: DbRow): CostLayer {
+function mapLayer(raw: Record<string, any>): CostLayer {
   return {
     id: raw.id,
     productId: raw.product_id,
@@ -220,7 +219,7 @@ export class CostingRepository {
       throw new DatabaseError('Failed to read the cost layers of the receipt', error)
     }
     return (data ?? []).filter(
-      (layer: DbRow) =>
+      (layer: Record<string, any>) =>
         layer.voided_at === null && Number(layer.remaining_qty) < Number(layer.received_qty),
     ).length
   }
@@ -252,7 +251,7 @@ export class CostingRepository {
 
     if (error) throw new DatabaseError('Failed to value inventory', error)
 
-    return (data ?? []).map((row: DbRow) => ({
+    return (data ?? []).map((row: Record<string, any>) => ({
       productId: row.product_id,
       productName: row.product_name,
       onHand: Number(row.on_hand) || 0,

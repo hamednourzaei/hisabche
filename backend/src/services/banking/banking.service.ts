@@ -27,7 +27,6 @@ import {
   type BookEntry,
   type StatementLine,
 } from './reconciliation.domain'
-import type { DbRow } from '../../utils/db-row'
 
 /**
  * J2 — does this error mean `bank_statement_lines.matched_kind` has not been
@@ -42,7 +41,7 @@ function isMissingMatchedKind(error: { code?: string; message?: string } | null)
   return /matched_kind/i.test(error.message ?? '')
 }
 
-function mapLine(raw: DbRow): StatementLine {
+function mapLine(raw: Record<string, any>): StatementLine {
   return {
     id: raw.id,
     externalRef: raw.external_ref ?? null,
@@ -98,7 +97,7 @@ export class BankingService {
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch statements', error)
 
-    return (data ?? []).map((row: DbRow) => ({
+    return (data ?? []).map((row: Record<string, any>) => ({
       id: row.id,
       accountId: row.account_id,
       statementDate: String(row.statement_date ?? '').slice(0, 10),
@@ -278,8 +277,8 @@ export class BankingService {
       return entries
     }
 
-    for (const row of (journals.data ?? []) as DbRow[]) {
-      const lines = (row.journal_lines ?? []) as DbRow[]
+    for (const row of (journals.data ?? []) as Record<string, any>[]) {
+      const lines = (row.journal_lines ?? []) as Record<string, any>[]
 
       // The entry's effect ON THIS ACCOUNT, not its total. A four-line entry
       // that moves 500 through the bank and 500 through two other accounts
@@ -470,7 +469,9 @@ export class BankingService {
     )
     if (reconciled.length === 0) return []
 
-    const entryIds = [...new Set(reconciled.map((row: DbRow) => String(row.matched_to)))]
+    const entryIds = [
+      ...new Set(reconciled.map((row: Record<string, any>) => String(row.matched_to))),
+    ]
     const otherAccount = new Map<string, string | null>()
     const CHUNK = 200
     for (let index = 0; index < entryIds.length; index += CHUNK) {
@@ -512,7 +513,7 @@ export class BankingService {
     }
 
     const history: CategoryHistory[] = []
-    for (const row of reconciled as Array<DbRow>) {
+    for (const row of reconciled as Array<Record<string, any>>) {
       const accountId = otherAccount.get(String(row.matched_to))
       const account = accountId ? accounts.get(accountId) : undefined
       if (!accountId || !account) continue
@@ -552,7 +553,7 @@ export class BankingService {
     if (error || !data) return new Map()
 
     return learnPatterns(
-      data.map((row: DbRow) => ({
+      data.map((row: Record<string, any>) => ({
         description: String(row.description ?? ''),
         counterpartyId: String(row.matched_party),
       })),
@@ -694,7 +695,7 @@ export class BankingService {
     if (journalError) throw new DatabaseError('Failed to fetch the journal entry', journalError)
     if (!journal) return null
 
-    const lines = ((journal as DbRow).journal_lines ?? []) as DbRow[]
+    const lines = ((journal as Record<string, any>).journal_lines ?? []) as Record<string, any>[]
 
     const netMinor = lines.reduce(
       (sum, line) =>
@@ -705,10 +706,10 @@ export class BankingService {
     return {
       id: journal.id,
       kind: 'journal',
-      onDate: String((journal as DbRow).date ?? '').slice(0, 10),
+      onDate: String((journal as Record<string, any>).date ?? '').slice(0, 10),
       amountMinor: netMinor,
-      reference: (journal as DbRow).entry_number ?? journal.id,
-      partyName: (journal as DbRow).description ?? null,
+      reference: (journal as Record<string, any>).entry_number ?? journal.id,
+      partyName: (journal as Record<string, any>).description ?? null,
     }
   }
 
@@ -772,8 +773,8 @@ export class BankingService {
     // J2.6 — un-matching is the documented way to release a reconciled line,
     // and it is exactly the act that must leave a trace. It had none.
     this.audit(ctx, 'unreconcile', statementLineId, {
-      previousMatchedTo: (before as DbRow)?.matched_to ?? null,
-      previousMatchedKind: (before as DbRow)?.matched_kind ?? null,
+      previousMatchedTo: (before as Record<string, any>)?.matched_to ?? null,
+      previousMatchedKind: (before as Record<string, any>)?.matched_kind ?? null,
     })
 
     await this.invalidate(ctx.workspaceId)

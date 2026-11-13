@@ -11,7 +11,6 @@ import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
 import { baseCurrencyOf } from './base-currency'
-import type { DbRow } from '../utils/db-row'
 
 // ✅ Type for response
 interface AIResponse {
@@ -19,7 +18,7 @@ interface AIResponse {
   confidence: number
   sources: { type: string; description: string }[]
   suggestions: string[]
-  data: DbRow
+  data: Record<string, any>
 }
 
 export class AIService {

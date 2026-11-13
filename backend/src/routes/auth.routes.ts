@@ -30,7 +30,6 @@ import {
   sessionBody,
   wantsCookieTransport,
 } from '../utils/refresh-cookie'
-import type { DbRow } from '../utils/db-row'
 
 // ─── Types ──────────────────────────────────────────────────
 type JsonSchema = Record<string, unknown>
@@ -865,7 +864,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
 
         // ۱. به‌روزرسانی user_metadata
-        const metadataUpdate: DbRow = {}
+        const metadataUpdate: Record<string, any> = {}
         if (body.fullName !== undefined) metadataUpdate.full_name = body.fullName
         if (body.businessName !== undefined) metadataUpdate.business_name = body.businessName
 
@@ -876,7 +875,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
 
         // ۲. به‌روزرسانی جدول profiles
-        const profileUpdate: DbRow = {
+        const profileUpdate: Record<string, any> = {
           updated_at: new Date().toISOString(),
         }
         if (body.fullName !== undefined) profileUpdate.full_name = body.fullName

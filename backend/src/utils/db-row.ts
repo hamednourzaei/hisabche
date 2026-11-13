@@ -21,3 +21,8 @@ export function rowsOf(value: unknown): DbRow[] {
 export function rowOf(value: unknown): DbRow | null {
   return isRow(value) ? value : null
 }
+
+/** A stored value as text, or null when the column is empty. */
+export function rowText(value: unknown): string | null {
+  return value === null || value === undefined ? null : String(value)
+}

@@ -24,12 +24,11 @@ import {
   type RuleEntity,
   type RuleFacts,
 } from './rules.domain'
-import type { DbRow } from '../../utils/db-row'
 
 const COLUMNS =
   'id, workspace_id, name, entity, conditions, actions, priority, active, stop_on_match, created_at, updated_at'
 
-function mapRule(raw: DbRow): BusinessRule {
+function mapRule(raw: Record<string, any>): BusinessRule {
   return {
     id: raw.id,
     workspaceId: raw.workspace_id,

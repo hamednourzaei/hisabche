@@ -9,9 +9,8 @@
 
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
-import type { DbRow } from '../../utils/db-row'
 
-type Row = DbRow
+type Row = Record<string, any>
 
 const PAGE = 1000
 
