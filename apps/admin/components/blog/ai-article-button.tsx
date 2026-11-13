@@ -13,7 +13,7 @@
 // ⚠️ Every failure says WHICH stage and WHY (the server's own reason). A
 // pipeline that is not set up — no AI provider, the content-intelligence
 // scripts not run — is said in words, not shown as an endless spinner.
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Sparkles } from 'lucide-react'
 import { apiErrorMessage } from '@hisabche/api'
@@ -73,10 +73,13 @@ export function AiArticleButton({
   const { stage, generate, cancel } = useGenerateArticle()
   const working = WORKING.includes(stage)
 
-  // Load the prompt in force into the textarea once it arrives.
-  useEffect(() => {
-    if (stored.data) setPrompt(stored.data.prompt)
-  }, [stored.data])
+  // Load the prompt in force into the textarea once it arrives — during render, against
+  // the last answer taken, not in an effect.
+  const [promptFrom, setPromptFrom] = useState(stored.data)
+  if (stored.data && stored.data !== promptFrom) {
+    setPromptFrom(stored.data)
+    setPrompt(stored.data.prompt)
+  }
 
   const openDialog = () => {
     setSubject(topic.trim())

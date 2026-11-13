@@ -500,7 +500,7 @@ export class ProjectService {
       return
     }
 
-    const progress = projectProgress(tasks.map((t: any) => String(t.status)))
+    const progress = projectProgress(tasks.map((t) => String(t.status)))
 
     await supabase
       .from('projects')

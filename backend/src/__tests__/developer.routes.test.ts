@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { developerRoutes } from '../routes/developer.routes'
 
 vi.mock('../middleware/auth.middleware', () => ({
-  authenticate: async (request: any) => {
+  authenticate: async (request: Record<string, unknown>) => {
     request.user = { id: '00000000-0000-0000-0000-000000000002' }
   },
 }))
 
 vi.mock('../middleware/workspace.middleware', () => ({
-  requireWorkspaceContext: async (request: any) => {
+  requireWorkspaceContext: async (request: Record<string, unknown>) => {
     request.tenancy = {
       workspaceId: '00000000-0000-0000-0000-000000000001',
       userId: '00000000-0000-0000-0000-000000000002',

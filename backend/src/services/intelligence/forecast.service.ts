@@ -22,6 +22,7 @@ import {
   type CashForecast,
   type StaleOpportunity,
 } from './forecast.domain'
+import { rowsOf, rowText } from '../../utils/db-row'
 
 export class ForecastService {
   /** N3 — projected cash at configurable horizon windows (default 7 and 30 days; supports 60/90). */
@@ -88,13 +89,13 @@ export class ForecastService {
 
     if (error) throw new DatabaseError('Failed to read receivables', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
+    return rowsOf(data).map((row) => ({
       invoiceId: String(row.id),
       // Minor units, so the forecast never adds floats.
       outstandingMinor: Math.round(
         ((Number(row.total) || 0) - (Number(row.paid_amount) || 0)) * 100,
       ),
-      dueDate: row.due_date ?? null,
+      dueDate: rowText(row.due_date),
     }))
   }
 
@@ -112,14 +113,14 @@ export class ForecastService {
 
     if (error) throw new DatabaseError('Failed to read settlement history', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
-      dueDate: row.due_date ?? null,
+    return rowsOf(data).map((row) => ({
+      dueDate: rowText(row.due_date),
       // ⚠️ `updated_at` is a PROXY for the settlement date, and an imperfect
       // one — editing a settled invoice moves it. It is what
       // `settlementDate()` in @hisabche/validation already uses, so the
       // forecast agrees with the «تاریخ تسویه» column rather than inventing a
       // second answer. Open gap 8 tracks replacing both with a real timestamp.
-      settledAt: row.updated_at ?? null,
+      settledAt: rowText(row.updated_at),
     }))
   }
 
@@ -140,7 +141,7 @@ export class ForecastService {
 
     if (error || !data || data.length === 0) return 0
 
-    const accountIds = data.map((row: Record<string, any>) => String(row.id))
+    const accountIds = rowsOf(data).map((row) => String(row.id))
 
     // Every row (27 Sep 2026): the large .limit() was cut to 1000 by PostgREST, and this feeds a total.
     const { data: lines, error: linesError } = await selectAllPages((lo, hi) =>

@@ -30,6 +30,8 @@ import {
   sessionBody,
   wantsCookieTransport,
 } from '../utils/refresh-cookie'
+import { rowOf, rowText, type DbRow } from '../utils/db-row'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 // ─── Types ──────────────────────────────────────────────────
 type JsonSchema = Record<string, unknown>
@@ -66,8 +68,26 @@ interface SanitizedUser {
  * `z.any().optional()` is a ZodOptional around a ZodAny — without unwrapping,
  * the typeName is `ZodOptional` and every such field was typed as `string`.
  */
-function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean } {
-  let inner = schema
+/** The parts of a zod node this converter reads — `_def` is zod's own internal shape. */
+interface ZodNode {
+  _def?: {
+    typeName?: string
+    innerType?: unknown
+    schema?: unknown
+    type?: unknown
+    checks?: Array<{ kind?: string }>
+  }
+  shape?: Record<string, unknown>
+}
+
+function zodNode(value: unknown): ZodNode | null {
+  return typeof value === 'object' && value !== null ? (value as ZodNode) : null
+}
+
+const ZOD_WRAPPERS = new Set(['ZodOptional', 'ZodNullable', 'ZodDefault', 'ZodEffects'])
+
+function unwrap(schema: unknown): { inner: ZodNode | null; optional: boolean; nullable: boolean } {
+  let inner = zodNode(schema)
   let optional = false
   let nullable = false
 
@@ -76,14 +96,11 @@ function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean
   // ends up unconstrained — harmless, but it also hid the union underneath, so
   // a nullable field was typed `string` and ajv rejected `null` with a 400
   // before the handler ever ran.
-  while (
-    inner?._def?.typeName === 'ZodOptional' ||
-    inner?._def?.typeName === 'ZodNullable' ||
-    inner?._def?.typeName === 'ZodDefault' ||
-    inner?._def?.typeName === 'ZodEffects'
-  ) {
-    if (inner._def.typeName === 'ZodEffects') {
-      inner = inner._def.schema
+  for (;;) {
+    const def = inner?._def
+    if (!def?.typeName || !ZOD_WRAPPERS.has(def.typeName)) break
+    if (def.typeName === 'ZodEffects') {
+      inner = zodNode(def.schema)
       continue
     }
 
@@ -95,9 +112,9 @@ function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean
     // account never set one») reached the client as an empty string, which is
     // «they set it to nothing». The header could not tell the two apart, and
     // neither could the prompt that asks the owner to fill it in.
-    if (inner._def.typeName === 'ZodNullable') nullable = true
-    else if (inner._def.typeName !== 'ZodDefault') optional = true
-    inner = inner._def.innerType
+    if (def.typeName === 'ZodNullable') nullable = true
+    else if (def.typeName !== 'ZodDefault') optional = true
+    inner = zodNode(def.innerType)
   }
 
   return { inner, optional, nullable }
@@ -151,11 +168,11 @@ function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
 /** One zod node, as JSON Schema. Recursive — see `toJsonSchema`. */
 function describe(schema: unknown): JsonSchema {
   const { inner, nullable } = unwrap(schema)
-  const typeName = (inner as any)?._def?.typeName as string | undefined
+  const typeName = inner?._def?.typeName
   const type = jsonTypeOf(typeName)
 
   if (typeName === 'ZodObject') {
-    const shape = ((inner as any).shape || {}) as Record<string, unknown>
+    const shape = inner?.shape ?? {}
     const required: string[] = []
 
     const properties = Object.fromEntries(
@@ -182,11 +199,11 @@ function describe(schema: unknown): JsonSchema {
   if (typeName === 'ZodArray') {
     // Without `items` the array serializes as empty — the same defect as a
     // property-less object, one container out.
-    return { type: 'array', items: describe((inner as any)._def?.type) }
+    return { type: 'array', items: describe(inner?._def?.type) }
   }
 
   const isEmail =
-    typeName === 'ZodString' && (inner as any)._def?.checks?.some((c: any) => c.kind === 'email')
+    typeName === 'ZodString' && inner?._def?.checks?.some((c) => c.kind === 'email') === true
 
   // `ZodAny`/`ZodUnknown` deliberately get no `type`: constraining them to
   // `string` is what made `details` (an arbitrary validation payload)
@@ -239,7 +256,7 @@ async function getProfile(userId: string): Promise<{
 
 // ─── Helper: Sanitize user (ترکیب auth.users + profiles) ──
 function sanitizeUser(
-  authUser: any,
+  authUser: SupabaseUser,
   profile?: {
     full_name: string | null
     business_name: string | null
@@ -255,7 +272,7 @@ function sanitizeUser(
 ): SanitizedUser {
   return {
     id: authUser.id,
-    email: authUser.email,
+    email: authUser.email ?? '',
     role,
     fullName: profile?.full_name || authUser.user_metadata?.full_name || '',
     businessName: profile?.business_name || authUser.user_metadata?.business_name || null,
@@ -297,7 +314,7 @@ async function resolveSoleRole(userId: string): Promise<string | null> {
   // error would be a fail-open guess.
   if (error) return null
 
-  return data?.length === 1 ? ((data[0] as any).role ?? null) : null
+  return data?.length === 1 ? rowText(rowOf(data[0])?.role) : null
 }
 
 // ─── Routes ─────────────────────────────────────────────────
@@ -720,7 +737,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = (request as any).userId
+        const userId = request.userId
 
         const { data, error } = await supabase.auth.admin.getUserById(userId)
 
@@ -840,7 +857,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const userId = (request as any).userId
+        const userId = request.userId
         const body = updateProfileSchema.parse(request.body)
 
         // ⚠️ ONLY A WORKSPACE OWNER MAY CHANGE THE INDUSTRY.
@@ -857,14 +874,14 @@ export async function authRoutes(fastify: FastifyInstance) {
             .eq('user_id', userId)
           if (memberError) throw memberError
           const hasMemberships = memberships && memberships.length > 0
-          const isOwner = memberships?.some((m: any) => m.role === 'owner')
+          const isOwner = memberships?.some((m) => m.role === 'owner')
           if (hasMemberships && !isOwner) {
             return reply.code(403).send({ error: 'INDUSTRY_OWNER_ONLY' })
           }
         }
 
         // ۱. به‌روزرسانی user_metadata
-        const metadataUpdate: Record<string, any> = {}
+        const metadataUpdate: DbRow = {}
         if (body.fullName !== undefined) metadataUpdate.full_name = body.fullName
         if (body.businessName !== undefined) metadataUpdate.business_name = body.businessName
 
@@ -875,7 +892,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
 
         // ۲. به‌روزرسانی جدول profiles
-        const profileUpdate: Record<string, any> = {
+        const profileUpdate: DbRow = {
           updated_at: new Date().toISOString(),
         }
         if (body.fullName !== undefined) profileUpdate.full_name = body.fullName
@@ -918,7 +935,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         await clearCache(`auth-me:${userId}:*`)
 
         return reply.send({
-          user: sanitizeUser(authUser?.user || (request as any).user, profile, role),
+          user: sanitizeUser(authUser?.user || request.user, profile, role),
         })
       } catch (err) {
         if (err instanceof z.ZodError) {

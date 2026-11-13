@@ -64,6 +64,7 @@ import { invalidateMoneyCaches } from '../utils/money-cache'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
+import type { DbRow } from '../utils/db-row'
 
 // ⚠️ NO `notes`. `boms.notes` is in the validation contract but no migration in
 // docs/ ever created the column (base schema: id, product_id, version,
@@ -1271,7 +1272,7 @@ export class ManufacturingService {
     })
     if (error) throw this.readFailure('Failed to build the manufacturing report', error)
 
-    const raw = (data ?? {}) as Record<string, any>
+    const raw = (data ?? {}) as DbRow
     const totals = (raw.totals ?? {}) as Record<string, unknown>
     const report: ProductionReport = {
       from: range.from,

@@ -102,7 +102,7 @@ const BankContainerContent = memo(function BankContainerContent({
         },
       })
     },
-    [reconcile],
+    [reconcile, t],
   )
 
   const handleRefresh = useCallback(() => {

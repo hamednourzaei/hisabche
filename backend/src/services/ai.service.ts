@@ -11,6 +11,7 @@ import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
 import { baseCurrencyOf } from './base-currency'
+import type { DbRow } from '../utils/db-row'
 
 // ✅ Type for response
 interface AIResponse {
@@ -18,7 +19,7 @@ interface AIResponse {
   confidence: number
   sources: { type: string; description: string }[]
   suggestions: string[]
-  data: Record<string, any>
+  data: DbRow
 }
 
 export class AIService {
@@ -114,12 +115,12 @@ export class AIService {
     const monthInvoices = monthResult.data || []
     const lastMonthInvoices = lastMonthResult.data || []
 
-    const todayTotal = todayInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
+    const todayTotal = todayInvoices.reduce((s: number, i) => s + Number(i.total), 0)
     const todayPaid = todayInvoices
-      .filter((i: any) => i.status === 'paid')
-      .reduce((s: number, i: any) => s + Number(i.total), 0)
-    const monthTotal = monthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
-    const lastMonthTotal = lastMonthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
+      .filter((i) => i.status === 'paid')
+      .reduce((s: number, i) => s + Number(i.total), 0)
+    const monthTotal = monthInvoices.reduce((s: number, i) => s + Number(i.total), 0)
+    const lastMonthTotal = lastMonthInvoices.reduce((s: number, i) => s + Number(i.total), 0)
 
     // ✅ محاسبه رشد
     const growth = lastMonthTotal > 0 ? ((monthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0
@@ -162,19 +163,19 @@ export class AIService {
       }
     }
 
-    const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
-    const outOfStock = products.filter((p: any) => Number(p.quantity) === 0)
-    const totalQuantity = products.reduce((s: number, p: any) => s + Number(p.quantity), 0)
+    const lowStock = products.filter((p) => Number(p.quantity) <= Number(p.min_stock_level))
+    const outOfStock = products.filter((p) => Number(p.quantity) === 0)
+    const totalQuantity = products.reduce((s: number, p) => s + Number(p.quantity), 0)
 
     let answer = `تعداد کل محصولات: ${products.length}. `
     answer += `مجموع موجودی: ${totalQuantity.toLocaleString()} عدد. `
 
     if (lowStock.length > 0) {
-      const names = lowStock.map((p: any) => p.name).join('، ')
+      const names = lowStock.map((p) => p.name).join('، ')
       answer += `⚠️ ${lowStock.length} محصول با موجودی کم: ${names}. `
     }
     if (outOfStock.length > 0) {
-      const names = outOfStock.map((p: any) => p.name).join('، ')
+      const names = outOfStock.map((p) => p.name).join('، ')
       answer += `❌ ${outOfStock.length} محصول تمام شده: ${names}. `
     }
     if (lowStock.length === 0 && outOfStock.length === 0) {
@@ -232,13 +233,13 @@ export class AIService {
     const totalUnpaid = Object.values(debtMap).reduce((s, v) => s + v, 0)
 
     const topDebtors = customers
-      .map((c: any) => ({
+      .map((c) => ({
         ...c,
         totalDebt: debtMap[c.id] || 0,
         openingBalance: Number(c.opening_balance) || 0,
       }))
-      .filter((c: any) => c.totalDebt > 0 || c.openingBalance > 0)
-      .sort((a: any, b: any) => b.totalDebt + b.openingBalance - (a.totalDebt + a.openingBalance))
+      .filter((c) => c.totalDebt > 0 || c.openingBalance > 0)
+      .sort((a, b) => b.totalDebt + b.openingBalance - (a.totalDebt + a.openingBalance))
       .slice(0, 5)
 
     let answer = `تعداد مشتریان فعال: ${totalCustomers}. `
@@ -247,7 +248,7 @@ export class AIService {
     }
     if (topDebtors.length > 0) {
       const names = topDebtors
-        .map((c: any) => `${c.full_name} (${(c.totalDebt + c.openingBalance).toLocaleString()})`)
+        .map((c) => `${c.full_name} (${(c.totalDebt + c.openingBalance).toLocaleString()})`)
         .join('، ')
       answer += `بیشترین بدهکاران: ${names}.`
     } else {

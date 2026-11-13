@@ -35,6 +35,14 @@ import {
 import type { ScreenModel } from './journey-screens'
 import { journeyState, type InvoiceLabels } from './journey-state'
 
+/** Scroll the page so the journey sits at `progress` (0–1) of its scroll span. */
+function scrollJourneyTo(wrap: HTMLElement | null, progress: number): void {
+  if (!wrap) return
+  const span = wrap.offsetHeight - window.innerHeight
+  const top = wrap.getBoundingClientRect().top + window.scrollY
+  window.scrollTo({ top: top + progress * span, behavior: 'smooth' })
+}
+
 export interface JourneyStop {
   id: string
   title: string
@@ -198,13 +206,7 @@ export function JourneyStage(props: JourneyStageProps) {
     props.locale,
   ])
 
-  const goTo = (progress: number) => {
-    const wrap = wrapRef.current
-    if (!wrap) return
-    const span = wrap.offsetHeight - window.innerHeight
-    const top = wrap.getBoundingClientRect().top + window.scrollY
-    window.scrollTo({ top: top + progress * span, behavior: 'smooth' })
-  }
+  const goTo = (progress: number) => scrollJourneyTo(wrapRef.current, progress)
   const send = (event: JourneyEvent) =>
     goTo(journeyReduce(spanProgress(wrapRef.current), event, stops.length))
   const travel = (index: number) => goTo(progressForBeat(index, stops.length))
@@ -242,22 +244,25 @@ export function JourneyStage(props: JourneyStageProps) {
     if (match && match[1]) {
       const targetBeat = parseInt(match[1], 10)
       if (!Number.isNaN(targetBeat) && targetBeat >= 0 && targetBeat < beats) {
-        timer = window.setTimeout(() => travel(targetBeat), 120)
+        timer = window.setTimeout(
+          () => scrollJourneyTo(wrapRef.current, progressForBeat(targetBeat, stops.length)),
+          120,
+        )
       }
     }
     return () => {
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [beats])
+  }, [beats, stops.length])
 
   // Expose window.__journey debug hook per v2 spec Section 10
   useEffect(() => {
     if (typeof window === 'undefined') return
     ;(window as unknown as { __journey?: unknown }).__journey = {
       getProgress: () => spanProgress(wrapRef.current),
-      setProgress: (p: number) => goTo(p),
+      setProgress: (p: number) => scrollJourneyTo(wrapRef.current, p),
       getBeat: () => beat,
-      setBeat: (b: number) => travel(b),
+      setBeat: (b: number) => scrollJourneyTo(wrapRef.current, progressForBeat(b, stops.length)),
       getSnapshot: () => journeyAt(spanProgress(wrapRef.current), stops.length),
       getAnalyticsHistory: () => getJourneyAnalyticsHistory(),
     }

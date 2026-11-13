@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 
@@ -48,12 +48,10 @@ export function ServersClient() {
   const t = useTranslations()
   const { data, isError, refetch } = useAdminInstances()
   const instances = data?.instances ?? []
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (instances.length === 0) return
-    if (!selectedId || !instances.some((i) => i.id === selectedId)) setSelectedId(instances[0]!.id)
-  }, [instances, selectedId])
+  const [chosenId, setSelectedId] = useState<string | null>(null)
+  // The admin's choice while that server still exists; otherwise the first one.
+  const selectedId =
+    chosenId && instances.some((i) => i.id === chosenId) ? chosenId : (instances[0]?.id ?? null)
 
   if (isError) {
     return <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />

@@ -11,7 +11,8 @@
 // anyone holding it. The panel says so where the link is made.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
+import { linkOrigin, noSubscription } from '../../../lib/browser-facts'
 import { useLocale, useTranslations } from 'next-intl'
 import { Copy, Link2 } from 'lucide-react'
 import {
@@ -47,12 +48,7 @@ export function CustomerPortalPanel({ customerId }: { customerId: string }) {
 
   // The public page lives on the website; a packaged desktop app runs from
   // file://, so the public site is the link's home there. Read in an effect.
-  const [origin, setOrigin] = useState('')
-  useEffect(() => {
-    setOrigin(
-      window.location.protocol.startsWith('http') ? window.location.origin : 'https://hisabche.com',
-    )
-  }, [])
+  const origin = useSyncExternalStore(noSubscription, linkOrigin, () => '')
   const urlFor = (token: string) => `${origin}${localizePath(`/portal/${token}`, locale)}`
 
   const status = (links.error as { response?: { status?: number } } | null)?.response?.status

@@ -54,7 +54,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         const filters = querySchema.parse(raw)
         const result = await notificationService.list(scopeOf(request), filters)
         return reply.send(result)
-      } catch (err: any) {
+      } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to read notifications' })
       }
@@ -75,7 +75,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
       try {
         const count = await notificationService.getUnreadCount(scopeOf(request))
         return reply.send({ count })
-      } catch (err: any) {
+      } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to read notifications' })
       }
@@ -101,8 +101,8 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         await clearCache(`notifications:${request.userId}:*`)
         await clearCache(`notifications-unread:${request.userId}:*`)
         return reply.send({ success: true, count: updated.length })
-      } catch (err: any) {
-        fastify.log.error('❌ [mark-read] Error:', err)
+      } catch (err) {
+        fastify.log.error({ err }, '❌ [mark-read] Error')
 
         // ✅ خطای Validation را با جزئیات برگردان
         if (err instanceof z.ZodError) {
@@ -130,8 +130,8 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         await clearCache(`notifications:${request.userId}:*`)
         await clearCache(`notifications-unread:${request.userId}:*`)
         return reply.send({ success: true })
-      } catch (err: any) {
-        fastify.log.error('❌ [mark-all-read] Error:', err)
+      } catch (err) {
+        fastify.log.error({ err }, '❌ [mark-all-read] Error')
         return reply.code(500).send({ error: 'Failed to update notifications' })
       }
     },
@@ -159,7 +159,7 @@ export async function notificationRoutes(fastify: FastifyInstance) {
         return reply.code(202).send({
           data: await messagingOutboxService.enqueue(request.tenancy, body),
         })
-      } catch (err: any) {
+      } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to enqueue message' })
       }

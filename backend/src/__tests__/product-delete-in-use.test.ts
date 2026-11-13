@@ -37,7 +37,7 @@ vi.mock('../services/authorization/scope.service', () => ({
   scopes: { assertMay: async () => undefined },
 }))
 
-const ctx = { workspaceId: 'ws', userId: 'u', role: 'owner' } as any
+const ctx = { workspaceId: 'ws', userId: 'u', role: 'owner' } as never
 
 beforeEach(() => {
   usage = {}

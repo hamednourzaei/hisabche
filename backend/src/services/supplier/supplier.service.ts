@@ -23,6 +23,7 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { PaymentsService } from '../payments'
 import { round2 } from '../payments'
+import { rowText, type DbRow } from '../../utils/db-row'
 
 const COLUMNS = 'id, name, phone, email, address, notes, is_active, created_at, updated_at'
 
@@ -38,17 +39,17 @@ export interface Supplier {
   updatedAt: string | null
 }
 
-function mapSupplier(raw: Record<string, any>): Supplier {
+function mapSupplier(raw: DbRow): Supplier {
   return {
-    id: raw.id,
-    name: raw.name ?? '',
-    phone: raw.phone ?? '',
-    email: raw.email ?? '',
-    address: raw.address ?? null,
-    notes: raw.notes ?? '',
+    id: String(raw.id),
+    name: rowText(raw.name) ?? '',
+    phone: rowText(raw.phone) ?? '',
+    email: rowText(raw.email) ?? '',
+    address: rowText(raw.address),
+    notes: rowText(raw.notes) ?? '',
     isActive: raw.is_active !== false,
-    createdAt: raw.created_at ?? null,
-    updatedAt: raw.updated_at ?? null,
+    createdAt: rowText(raw.created_at),
+    updatedAt: rowText(raw.updated_at),
   }
 }
 

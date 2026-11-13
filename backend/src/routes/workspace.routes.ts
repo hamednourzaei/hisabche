@@ -22,7 +22,6 @@ import { requireActiveSubscriptionForWorkspaceParam } from '../middleware/subscr
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { PlanLimitError } from '../services/plan-limits.service'
-import type { ZodTypeAny } from 'zod'
 import { toJsonSchema } from '../utils/json-schema'
 
 export async function workspaceRoutes(fastify: FastifyInstance) {

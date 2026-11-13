@@ -14,6 +14,7 @@ import {
   type TableColumn,
 } from '../data-table'
 import type { Product } from '../../../lib/warehouse/warehouse-types'
+import Image from 'next/image'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WarehouseProductList v7 — shared DataTable
@@ -87,7 +88,8 @@ function useProductColumns(
             {/* The cover (first gallery image). Fixed size so the row never
                 jumps when it loads; empty alt — the name beside it says it. */}
             {product.imageUrl ? (
-              <img
+              <Image
+                unoptimized
                 src={product.imageUrl}
                 alt=""
                 width={32}

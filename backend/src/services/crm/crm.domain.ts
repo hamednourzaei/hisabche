@@ -102,19 +102,21 @@ export interface Opportunity {
 const list = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
 
 /** snake_case row → camelCase. Missing this once made every CRM date render «-». */
-export function toInteraction(raw: Record<string, any>): Interaction {
+export function toInteraction(raw: Record<string, unknown>): Interaction {
+  const text = (value: unknown): string | null =>
+    value === null || value === undefined ? null : String(value)
   return {
-    id: raw.id,
-    customerId: raw.customer_id ?? null,
-    type: raw.type ?? null,
-    subject: raw.subject ?? null,
-    content: raw.content ?? null,
-    interactionDate: raw.interaction_date ?? null,
-    createdAt: raw.created_at ?? null,
-    status: raw.status ?? 'pending',
-    publicToken: raw.public_token ?? null,
-    employeeId: raw.employee_id ?? null,
-    employeeName: raw.employee_name ?? null,
+    id: String(raw.id),
+    customerId: text(raw.customer_id),
+    type: text(raw.type) as Interaction['type'],
+    subject: text(raw.subject),
+    content: text(raw.content),
+    interactionDate: text(raw.interaction_date),
+    createdAt: text(raw.created_at),
+    status: (text(raw.status) ?? 'pending') as Interaction['status'],
+    publicToken: text(raw.public_token),
+    employeeId: text(raw.employee_id),
+    employeeName: text(raw.employee_name),
     customers: list<CustomerRef>(raw.customers_snapshot),
     statusHistory: list<StatusChange>(raw.status_history),
     // An absent entry means «not attempted yet» — distinct from a recorded failure.
@@ -127,18 +129,20 @@ export function toInteraction(raw: Record<string, any>): Interaction {
  * the client type (and UI) read `customerId` / `expectedCloseDate` — both were
  * always undefined on the client.
  */
-export function toOpportunity(raw: Record<string, any>): Opportunity {
+export function toOpportunity(raw: Record<string, unknown>): Opportunity {
+  const text = (value: unknown): string | null =>
+    value === null || value === undefined ? null : String(value)
   return {
-    id: raw.id,
-    customerId: raw.customer_id ?? null,
-    title: raw.title ?? '',
-    description: raw.description ?? '',
-    stage: raw.stage ?? 'lead',
+    id: String(raw.id),
+    customerId: text(raw.customer_id),
+    title: text(raw.title) ?? '',
+    description: text(raw.description) ?? '',
+    stage: (text(raw.stage) ?? 'lead') as Opportunity['stage'],
     value: Number(raw.value) || 0,
     probability: Number(raw.probability) || 0,
-    expectedCloseDate: raw.expected_close_date ?? null,
-    createdAt: raw.created_at ?? null,
-    updatedAt: raw.updated_at ?? null,
+    expectedCloseDate: text(raw.expected_close_date),
+    createdAt: text(raw.created_at),
+    updatedAt: text(raw.updated_at),
   }
 }
 

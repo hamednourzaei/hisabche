@@ -99,7 +99,7 @@ export function cacheMiddleware(options: CacheOptions) {
       reply.header('X-Cache', 'MISS')
 
       const originalSend = reply.send.bind(reply)
-      reply.send = function (payload: any) {
+      reply.send = function (payload?: unknown) {
         if (reply.statusCode === 200) {
           cacheService.set(cacheKey, payload, ttl).catch(() => {})
         }

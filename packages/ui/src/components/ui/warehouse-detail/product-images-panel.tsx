@@ -26,6 +26,7 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { Button } from '../button'
+import Image from 'next/image'
 
 type T = (key: string, fallback?: string) => string
 
@@ -242,7 +243,8 @@ function ImageTile({
   return (
     <li className="space-y-1.5">
       <div className="relative">
-        <img
+        <Image
+          unoptimized
           src={image.url}
           alt={image.altText}
           width={160}

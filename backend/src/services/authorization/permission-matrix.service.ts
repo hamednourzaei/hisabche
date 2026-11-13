@@ -50,6 +50,7 @@ import {
   type Capability,
   type WorkspaceRole,
 } from './authorization.domain'
+import { rowOf, rowsOf, rowText, type DbRow } from '../../utils/db-row'
 
 /** The three roles the static table actually enforces. */
 const ENFORCED_ROLES: readonly WorkspaceRole[] = ['owner', 'manager', 'seller'] as const
@@ -154,11 +155,11 @@ export class PermissionMatrixService {
     if (permError) throw new DatabaseError('Failed to fetch permissions', permError)
 
     const permissionCodeById = new Map<string, string>()
-    for (const row of (permRows ?? []) as Record<string, any>[]) {
-      permissionCodeById.set(row.id, row.code)
+    for (const row of rowsOf(permRows)) {
+      permissionCodeById.set(String(row.id), String(row.code))
     }
 
-    const roleIds = ((roleRows ?? []) as Record<string, any>[]).map((r) => r.id)
+    const roleIds = rowsOf(roleRows).map((r) => String(r.id))
 
     const grantedByRole = new Map<string, Set<string>>()
     if (roleIds.length > 0) {
@@ -169,26 +170,30 @@ export class PermissionMatrixService {
 
       if (grantError) throw new DatabaseError('Failed to fetch role permissions', grantError)
 
-      for (const row of (grantRows ?? []) as Record<string, any>[]) {
-        const code = permissionCodeById.get(row.permission_id)
+      for (const row of rowsOf(grantRows)) {
+        const code = permissionCodeById.get(String(row.permission_id))
         if (!code) continue
-        const set = grantedByRole.get(row.role_id) ?? new Set<string>()
+        const roleId = String(row.role_id)
+        const set = grantedByRole.get(roleId) ?? new Set<string>()
         set.add(code)
-        grantedByRole.set(row.role_id, set)
+        grantedByRole.set(roleId, set)
       }
     }
 
-    const roles: MatrixRole[] = ((roleRows ?? []) as Record<string, any>[]).map((row) => ({
-      id: row.id,
-      code: row.code ?? '',
-      name: row.name ?? row.code ?? '',
-      description: row.description ?? null,
-      isSystem: row.is_system === true,
-      isEnforcedBase: isEnforcedRole(row.code ?? ''),
-      workspaceId: row.workspace_id ?? null,
-      isCustom: row.workspace_id === ctx.workspaceId,
-      isTemplate: !row.workspace_id && !isEnforcedRole(row.code ?? ''),
-    }))
+    const roles: MatrixRole[] = rowsOf(roleRows).map((row) => {
+      const code = rowText(row.code) ?? ''
+      return {
+        id: String(row.id),
+        code,
+        name: rowText(row.name) ?? code,
+        description: rowText(row.description),
+        isSystem: row.is_system === true,
+        isEnforcedBase: isEnforcedRole(code),
+        workspaceId: rowText(row.workspace_id),
+        isCustom: row.workspace_id === ctx.workspaceId,
+        isTemplate: !row.workspace_id && !isEnforcedRole(code),
+      }
+    })
 
     const cells: MatrixCell[] = []
     // This workspace's changes to owner / manager / seller, read once.
@@ -292,7 +297,8 @@ export class PermissionMatrixService {
     // (workspace_role_capabilities), never to `role_permissions` — the system
     // roles are global rows, and a grant there would change every business on
     // the platform. The same effective set is what requireCapability enforces.
-    const roleCode = String((role as Record<string, any>).code ?? '')
+    const roleRow = rowOf(role) ?? {}
+    const roleCode = String(roleRow.code ?? '')
     if (isEnforcedRole(roleCode)) {
       const scope = capabilitiesForLevel(module, 'full')
       const wantedSet = new Set(capabilitiesForLevel(module, input.level))
@@ -316,7 +322,7 @@ export class PermissionMatrixService {
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
         entityType: 'role',
-        entityId: String((role as Record<string, any>).id),
+        entityId: String(roleRow.id),
         action: 'permissions_changed',
         title: `دسترسی نقش ${roleCode} در بخش ${module.key} تغییر کرد`,
         metadata: {
@@ -339,7 +345,7 @@ export class PermissionMatrixService {
     // owner/manager/seller fell through to `role_permissions` — including the
     // platform's shared profiles. One owner changing «حسابدار» changed it for
     // every business on the platform.
-    if ((role as Record<string, any>).workspace_id !== ctx.workspaceId) {
+    if (rowOf(role)?.workspace_id !== ctx.workspaceId) {
       throw new ValidationError(
         'PERMISSION_TEMPLATE_READONLY: this is a shared template; make your own role from it.',
       )
@@ -356,7 +362,7 @@ export class PermissionMatrixService {
     if (permError) throw new DatabaseError('Failed to fetch permissions', permError)
 
     const idByCode = new Map<string, string>()
-    for (const row of (permRows ?? []) as Record<string, any>[]) idByCode.set(row.code, row.id)
+    for (const row of rowsOf(permRows)) idByCode.set(String(row.code), String(row.id))
 
     // A capability with no `permissions` row means phase-e-01 has not been run
     // (or was run against an older capability list). Refused loudly: writing a
@@ -445,7 +451,7 @@ export class PermissionMatrixService {
     // Only a role this business made can be given to a person. A base role is
     // the membership itself, and a shared template grants nothing here — it
     // used to be «assignable» and changed no behaviour at all.
-    const assigned = role as Record<string, any> & { workspace_id?: string | null }
+    const assigned = rowOf(role) ?? {}
     if (assigned.workspace_id !== undefined && assigned.workspace_id !== ctx.workspaceId) {
       throw new ValidationError(
         'PERMISSION_ROLE_NOT_ASSIGNABLE: choose a role made in this business.',
@@ -462,7 +468,7 @@ export class PermissionMatrixService {
         .is('workspace_id', null)
         .in('code', [...ENFORCED_ROLES])
 
-      const baseIds = ((baseRoles ?? []) as Record<string, any>[]).map((r) => r.id)
+      const baseIds = rowsOf(baseRoles).map((r) => String(r.id))
 
       let query = supabase
         .from('user_roles')
@@ -664,7 +670,7 @@ export class PermissionMatrixService {
 
     if (error) throw new DatabaseError('Failed to fetch role members', error)
 
-    const userIds = ((data ?? []) as Record<string, any>[]).map((r) => r.user_id)
+    const userIds = rowsOf(data).map((r) => String(r.user_id))
     if (userIds.length === 0) return []
 
     // Employees carry the display name; a member with no employee record is
@@ -675,15 +681,17 @@ export class PermissionMatrixService {
       .eq('workspace_id', ctx.workspaceId)
       .in('user_id', userIds)
 
-    const byUser = new Map<string, Record<string, any>>()
-    for (const row of (employees ?? []) as Record<string, any>[]) byUser.set(row.user_id, row)
+    const byUser = new Map<string, DbRow>()
+    for (const row of rowsOf(employees)) byUser.set(String(row.user_id), row)
 
     return userIds.map((userId) => {
       const employee = byUser.get(userId)
       return {
         userId,
-        name: employee ? `${employee.first_name ?? ''} ${employee.last_name ?? ''}`.trim() : null,
-        position: employee?.position ?? null,
+        name: employee
+          ? `${rowText(employee.first_name) ?? ''} ${rowText(employee.last_name) ?? ''}`.trim()
+          : null,
+        position: rowText(employee?.position),
       }
     })
   }

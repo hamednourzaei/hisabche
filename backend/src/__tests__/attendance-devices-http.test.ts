@@ -123,6 +123,12 @@ const as = (user: { token: string }, shop = SHOP) => ({
 let caller = 0
 const address = () => `10.9.${(++caller >> 8) & 255}.${caller & 255}`
 
+/** What POST /api/attendance-devices answers — the fields these tests read, plus the rest. */
+type RegisteredDevice = Row & {
+  device: Row & { id: string; keyPrefix: string; timeZoneSource?: string }
+  key: string
+}
+
 async function register(body: Record<string, unknown> = {}, user = OWNER, shop = SHOP) {
   const res = await app.inject({
     method: 'POST',
@@ -130,7 +136,7 @@ async function register(body: Record<string, unknown> = {}, user = OWNER, shop =
     headers: as(user, shop),
     payload: { name: 'Front door', ...body },
   })
-  return { status: res.statusCode, body: res.json() as Row, raw: res.payload }
+  return { status: res.statusCode, body: res.json<RegisteredDevice>(), raw: res.payload }
 }
 
 const send = (key: string | undefined, body: unknown) =>

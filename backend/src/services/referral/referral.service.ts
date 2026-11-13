@@ -212,7 +212,7 @@ export class ReferralService {
 
       // Which paid period is this? The first one also opens the 12-month
       // window and marks the referral active.
-      const alreadyEarned = await this.repo.countEarnedPeriods(referral.id)
+      const alreadyEarned = await this.repo.countEarnedPeriods(String(referral.id))
       const periodIndex = alreadyEarned + 1
 
       const listMinor = this.listPriceMinor(input.plan, input.interval)
@@ -254,14 +254,14 @@ export class ReferralService {
       // makes this referral «active». Written only when a row was actually
       // inserted, so a retry does not move the window forward.
       if (inserted && !referral.first_paid_at) {
-        await this.repo.markFirstPayment(referral.id, {
+        await this.repo.markFirstPayment(String(referral.id), {
           first_paid_at: input.periodStart,
           commission_ends_at: commissionEndsAt(input.periodStart),
         })
       }
 
       if (inserted && periodIndex === 1) {
-        await this.repo.markDiscountUsed(referral.id, input.periodStart)
+        await this.repo.markDiscountUsed(String(referral.id), input.periodStart)
       }
     } catch (error) {
       console.error('[ReferralService] payment credit failed:', error)

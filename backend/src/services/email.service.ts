@@ -13,6 +13,7 @@ import {
   enqueueEmail,
   type SendResult,
 } from './email-outbox'
+import { errorText } from '../utils/error-text'
 
 // ─── Initialize Resend ──────────────────────────────────────────
 //
@@ -402,8 +403,8 @@ const emailQueue: {
   to: string
   subject: string
   html: string
-  resolve: (value: any) => void
-  reject: (error: any) => void
+  resolve: (value: SendResult) => void
+  reject: (error: unknown) => void
 }[] = []
 let isProcessingQueue = false
 
@@ -471,8 +472,8 @@ export const emailService = {
       console.log('[EMAIL] ✅ Sent! ID:', data?.id)
       console.log('[EMAIL] ====== SEND END ======')
       return { success: true, id: data?.id }
-    } catch (err: any) {
-      console.error('[EMAIL] ❌ Exception:', err?.message || err)
+    } catch (err) {
+      console.error('[EMAIL] ❌ Exception:', errorText(err))
       return { success: false, error: err }
     }
   },

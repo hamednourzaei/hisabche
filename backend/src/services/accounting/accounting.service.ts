@@ -732,7 +732,7 @@ export class AccountingService implements LedgerPort {
     const cached = await memoryCache.get<ReturnType<typeof trialBalanceTotals> & { rows: unknown }>(
       cacheKey,
     )
-    if (cached) return cached as any
+    if (cached) return cached
 
     const [totals, currency, books] = await Promise.all([
       this.repo.ledgerTotals(ctx.workspaceId, fromDate, toDate, branchIds),

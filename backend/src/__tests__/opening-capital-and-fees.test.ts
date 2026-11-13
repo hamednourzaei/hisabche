@@ -70,7 +70,7 @@ vi.mock('../services/accounting', () => ({
   },
 }))
 
-const ctx = { workspaceId: 'ws-1', userId: 'user-1', role: 'owner' } as any
+const ctx = { workspaceId: 'ws-1', userId: 'user-1', role: 'owner' } as never
 const ENTRY = '77777777-7777-4777-8777-777777777777'
 const TILL = '11111111-1111-4111-8111-111111111111'
 const INVOICE = '22222222-2222-4222-8222-222222222222'
@@ -341,7 +341,7 @@ describe('PaymentsService.recordPayment — with a fee', () => {
       method: 'cash',
       allocations: [{ invoiceId: INVOICE, amount: 100 }],
       ...over,
-    }) as any
+    }) as never
   const service = async (repo: ReturnType<typeof fakeRepo>) =>
     new (await import('../services/payments/payments.service')).PaymentsService(repo as any)
 

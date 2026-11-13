@@ -111,16 +111,17 @@ function seed(withFunction: boolean) {
       const byParty = new Map<string, { has_sale: boolean; has_purchase: boolean }>()
       for (const row of db.rows('invoices')) {
         if (row.workspace_id !== args.p_workspace || !row.customer_id) continue
-        const seen = byParty.get(row.customer_id) ?? { has_sale: false, has_purchase: false }
+        const customerId = String(row.customer_id)
+        const seen = byParty.get(customerId) ?? { has_sale: false, has_purchase: false }
         if (row.type === 'purchase') seen.has_purchase = true
         else seen.has_sale = true
-        byParty.set(row.customer_id, seen)
+        byParty.set(customerId, seen)
       }
       return [...byParty.entries()]
         .map(([customer_id, flags]) => ({ customer_id, ...flags }))
         .sort((a, b) => (a.customer_id < b.customer_id ? -1 : 1))
-        .filter((row) => !args.p_after || row.customer_id > args.p_after)
-        .slice(0, args.p_limit)
+        .filter((row) => !args.p_after || row.customer_id > String(args.p_after))
+        .slice(0, Number(args.p_limit))
     })
   }
 }

@@ -21,6 +21,7 @@ import {
   type BranchScope,
   type BranchTreeNode,
 } from './branch.domain'
+import { rowOf, rowsOf, rowText } from '../../utils/db-row'
 
 const COLUMNS =
   'id, workspace_id, code, name, parent_branch_id, is_active, created_at, manager_employee_id'
@@ -45,17 +46,18 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
   )
 }
 
-function mapBranch(raw: Record<string, any>): Branch {
+function mapBranch(value: unknown): Branch {
+  const raw = rowOf(value) ?? {}
   return {
-    id: raw.id,
-    workspaceId: raw.workspace_id,
-    code: raw.code,
-    name: raw.name,
-    parentBranchId: raw.parent_branch_id ?? null,
+    id: String(raw.id),
+    workspaceId: String(raw.workspace_id),
+    code: String(raw.code ?? ''),
+    name: String(raw.name ?? ''),
+    parentBranchId: rowText(raw.parent_branch_id),
     isActive: raw.is_active !== false,
     // `undefined` when the column has not been migrated in yet; normalised to
     // null so callers never have to distinguish "no manager" from "no column".
-    managerEmployeeId: raw.manager_employee_id ?? null,
+    managerEmployeeId: rowText(raw.manager_employee_id),
   }
 }
 
@@ -93,7 +95,7 @@ export class BranchService {
 
     if (error) throw new DatabaseError('Failed to fetch branches', error)
 
-    const branches = ((data ?? []) as Record<string, any>[]).map(mapBranch)
+    const branches = rowsOf(data).map(mapBranch)
     await memoryCache.set(cacheKey, branches, 300)
     return branches
   }
@@ -154,7 +156,7 @@ export class BranchService {
     if (error) throw new DatabaseError('Failed to create branch', error)
 
     await this.invalidate(ctx.workspaceId)
-    return mapBranch(data as unknown as Record<string, any>)
+    return mapBranch(data)
   }
 
   async update(
@@ -225,7 +227,7 @@ export class BranchService {
     if (error) throw new DatabaseError('Failed to update branch', error)
 
     await this.invalidate(ctx.workspaceId)
-    return mapBranch(data as unknown as Record<string, any>)
+    return mapBranch(data)
   }
 
   /**
@@ -330,23 +332,24 @@ export class BranchService {
       return byBranch
     }
 
-    for (const row of (data ?? []) as Record<string, any>[]) {
+    for (const row of rowsOf(data)) {
       // PostgREST returns the embed as an object for a to-one relationship and
       // an array when it cannot tell; both shapes are handled rather than
       // assumed.
-      const raw = Array.isArray(row.employees) ? row.employees[0] : row.employees
+      const raw = rowOf(Array.isArray(row.employees) ? row.employees[0] : row.employees)
       if (!raw || !row.branch_id) continue
 
-      const list = byBranch.get(row.branch_id) ?? []
+      const branchId = String(row.branch_id)
+      const list = byBranch.get(branchId) ?? []
       list.push({
-        id: raw.id,
-        employeeCode: raw.employee_code ?? null,
-        firstName: raw.first_name ?? '',
-        lastName: raw.last_name ?? '',
-        position: raw.position ?? null,
+        id: String(raw.id),
+        employeeCode: rowText(raw.employee_code),
+        firstName: rowText(raw.first_name) ?? '',
+        lastName: rowText(raw.last_name) ?? '',
+        position: rowText(raw.position),
         isPrimary: row.is_primary === true,
       })
-      byBranch.set(row.branch_id, list)
+      byBranch.set(branchId, list)
     }
 
     for (const list of byBranch.values()) {
@@ -372,8 +375,11 @@ export class BranchService {
 
     if (error) throw new DatabaseError('Failed to fetch branch managers', error)
 
-    for (const row of (data ?? []) as Record<string, any>[]) {
-      names.set(row.id, `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim())
+    for (const row of rowsOf(data)) {
+      names.set(
+        String(row.id),
+        `${rowText(row.first_name) ?? ''} ${rowText(row.last_name) ?? ''}`.trim(),
+      )
     }
 
     return names

@@ -24,7 +24,7 @@ let rpcResponse: {
 } | null = null
 
 vi.mock('../db', () => {
-  const q: any = new Proxy({}, { get: () => () => q })
+  const q = new Proxy({}, { get: () => () => q })
   const supabase = { from: () => q, rpc: async () => rpcResponse ?? { data: null, error: null } }
   return { supabase, default: supabase }
 })
@@ -35,8 +35,8 @@ vi.mock('../services/credit-limit', () => ({
 
 import { InvoiceService } from '../services/invoice.service'
 
-const manager = { workspaceId: 'w-1', userId: 'u-1', role: 'manager' } as any
-const seller = { workspaceId: 'w-1', userId: 'u-2', role: 'seller' } as any
+const manager = { workspaceId: 'w-1', userId: 'u-1', role: 'manager' } as never
+const seller = { workspaceId: 'w-1', userId: 'u-2', role: 'seller' } as never
 
 const check = (
   ctx: any,

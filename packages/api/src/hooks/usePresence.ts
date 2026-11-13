@@ -40,10 +40,8 @@ export function usePresence(
   const role = identity?.role
 
   useEffect(() => {
-    if (!authReady || !workspaceId || !userId) {
-      setMembers([])
-      return
-    }
+    // Not subscribed: nothing is shown (derived below), no setState here.
+    if (!authReady || !workspaceId || !userId) return
 
     const handle = subscribeToPresence(
       workspaceId,
@@ -61,10 +59,9 @@ export function usePresence(
     // resubscribe on each one.
   }, [authReady, workspaceId, userId, name, email, role])
 
-  const visible = canSee ? members : []
-
-  return useMemo(
-    () => ({ members: visible, onlineIds: new Set(visible.map((m) => m.userId)) }),
-    [visible],
-  )
+  const active = authReady && Boolean(workspaceId) && Boolean(userId)
+  return useMemo(() => {
+    const visible = canSee && active ? members : []
+    return { members: visible, onlineIds: new Set(visible.map((m) => m.userId)) }
+  }, [canSee, active, members])
 }

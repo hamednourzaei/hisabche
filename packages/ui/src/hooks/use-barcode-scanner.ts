@@ -12,7 +12,7 @@
 // ============================================
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import { createScanDetector, type BarcodeScan } from '../lib/barcode/scan-detector'
 import { loadScannerConfig, SCANNER_SETTINGS_EVENT } from '../lib/barcode/scanner-settings'
@@ -50,7 +50,10 @@ export function useBarcodeScanner(
   options: UseBarcodeScannerOptions = {},
 ): void {
   const onScanRef = useRef(onScan)
-  onScanRef.current = onScan
+  // After render, not during it.
+  useLayoutEffect(() => {
+    onScanRef.current = onScan
+  })
   const enabled = options.enabled !== false
 
   useEffect(() => {

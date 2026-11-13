@@ -147,7 +147,7 @@ function registerRpcs() {
     return inserted
   })
 
-  db.rpc('activity_get_unread_count', (args: any) => {
+  db.rpc('activity_get_unread_count', (args) => {
     const { p_workspace, p_user } = args
     const acts = db
       .rows('activities')
@@ -157,7 +157,7 @@ function registerRpcs() {
     return acts.filter((a) => !readIds.has(a.id)).length
   })
 
-  db.rpc('activity_get_filter_counts', (args: any) => {
+  db.rpc('activity_get_filter_counts', (args) => {
     const { p_workspace, p_user } = args
     const acts = db
       .rows('activities')

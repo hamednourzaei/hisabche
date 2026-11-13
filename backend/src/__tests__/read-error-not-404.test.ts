@@ -19,7 +19,7 @@ vi.mock('../services/authorization/scope.service', () => ({
   scopes: { assertMay: async () => undefined },
 }))
 
-const ctx = { workspaceId: 'ws-bug002', userId: 'u', role: 'owner' } as any
+const ctx = { workspaceId: 'ws-bug002', userId: 'u', role: 'owner' } as never
 
 describe('ProductService.getById', () => {
   it('no row (PGRST116) is a 404', async () => {

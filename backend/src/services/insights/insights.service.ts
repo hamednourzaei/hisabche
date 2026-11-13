@@ -29,6 +29,7 @@ import {
   type LineForReview,
   type PeriodTotals,
 } from './insights.domain'
+import { rowOf, rowsOf, rowText } from '../../utils/db-row'
 
 /** A period's totals with its profit — null when the cost behind it is incomplete. */
 export type PeriodSummary = PeriodTotals & {
@@ -197,14 +198,14 @@ export class InsightsService {
       costByLine.set(key, current)
     }
 
-    const lines: LineForReview[] = (items.data ?? []).map((item: any) => {
+    const lines: LineForReview[] = rowsOf(items.data).map((item) => {
       const cost = costByLine.get(`${item.invoice_id}:${item.product_id}`)
 
       return {
-        invoiceId: item.invoice_id,
-        invoiceNumber: item.invoice?.invoice_number ?? item.invoice_id,
-        productId: item.product_id ?? '',
-        productLabel: item.product_name ?? '',
+        invoiceId: String(item.invoice_id),
+        invoiceNumber: rowText(rowOf(item.invoice)?.invoice_number) ?? String(item.invoice_id),
+        productId: rowText(item.product_id) ?? '',
+        productLabel: rowText(item.product_name) ?? '',
         revenue: Number(item.total_price) || 0,
         cost: cost?.amount ?? 0,
         discountPercent: Number(item.discount) || 0,

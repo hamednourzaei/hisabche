@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useAdjustOnChange } from '../../hooks/use-adjust-on-change'
 
 interface JalaliDatePickerProps {
   value: string
@@ -280,7 +281,7 @@ export function JalaliDatePicker({
   const panelRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
+  useAdjustOnChange([value, isGregorian], () => {
     if (!value) return
     const parts = value.split('-').map(Number)
     const gy = parts[0],
@@ -299,11 +300,11 @@ export function JalaliDatePicker({
       setMonth(j.month)
       setSelectedDay(j.day)
     }
-  }, [value, isGregorian])
+  })
 
-  useEffect(() => {
+  useAdjustOnChange([isOpen], () => {
     if (!isOpen) setPickerMode('days')
-  }, [isOpen])
+  })
 
   useEffect(() => {
     if (!isOpen) return

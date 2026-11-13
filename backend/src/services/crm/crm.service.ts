@@ -185,10 +185,10 @@ export class CrmService {
         recordedBy,
         new Date().toISOString(),
       )
-      const row = await this.repo.updateTask(task.id, task.workspace_id, {
+      const row = await this.repo.updateTask(String(task.id), String(task.workspace_id), {
         customer_outcomes: next,
       })
-      await this.invalidate(task.workspace_id)
+      await this.invalidate(String(task.workspace_id))
       return toInteraction(row)
     } catch (error) {
       this.rethrow(error)
@@ -215,7 +215,7 @@ export class CrmService {
     const history = (
       Array.isArray(task.status_history) ? task.status_history : []
     ) as StatusChange[]
-    const row = await this.repo.updateTask(task.id, task.workspace_id, {
+    const row = await this.repo.updateTask(String(task.id), String(task.workspace_id), {
       status,
       status_history: appendStatus(history, status, changedBy, new Date().toISOString()),
       // Reassignment travels with the status so the two can never disagree.
@@ -228,7 +228,7 @@ export class CrmService {
     })
     // The workspace comes from the row, so a change through a public link
     // clears the owner's cached list too.
-    await this.invalidate(task.workspace_id)
+    await this.invalidate(String(task.workspace_id))
     // The NEW owner of the task is the one who needs telling, not the old one.
     await this.notifyStatusChange(
       assignee ? { ...task, employee_id: assignee.employeeId } : task,

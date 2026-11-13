@@ -20,7 +20,10 @@ const OWNER = { id: fakeId('owner'), token: 'miginv-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__migInvFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__migInvFakeDb,
+)
 
 const AHMAD = fakeId('customer')
 const TEA = fakeId('product')
@@ -38,7 +41,7 @@ const SALES = [
 ].join('\n')
 
 interface CreateCall {
-  body: Record<string, any>
+  body: Record<string, unknown>
   branchId: string | null
   requestId: string | null
 }
@@ -85,7 +88,10 @@ function resetWorld() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__migInvFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__migInvFakeDb = createFakeDb(
+    db,
+    users,
+  )
   db.unique('migration_records', ['workspace_id', 'source_entity_type', 'source_identity'])
 
   ;({ IMPORT_LIMITS } = await import('../services/migration'))

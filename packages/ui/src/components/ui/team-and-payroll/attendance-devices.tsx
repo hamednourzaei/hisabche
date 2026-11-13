@@ -20,7 +20,7 @@
 // ⚠️ Closed = not fetched: the registry is read only while the panel is open.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Copy } from 'lucide-react'
 import {
@@ -49,6 +49,7 @@ import { useToast } from '../toast-provider'
 import { AttendanceHeldDialog } from './attendance-held-dialog'
 import { useActionAvailability } from '../../../lib/capability'
 import { CloudRequiredNotice } from '../cloud-required-notice'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 /** Server refusals this panel can explain. Anything else gets the general sentence. */
 export const ATTENDANCE_DEVICE_ERROR_CODES = [
@@ -604,11 +605,11 @@ function DeviceIdentityDialog({
   const [failure, setFailure] = useState<string | null>(null)
 
   const deviceId = device?.id ?? null
-  useEffect(() => {
+  useAdjustOnChange([deviceId], () => {
     setNumber('')
     setEmployeeId('')
     setFailure(null)
-  }, [deviceId])
+  })
 
   const nameOf = (id: string) => employees.find((person) => person.id === id)?.name ?? null
   const options = employees.map((person) => ({ value: person.id, label: person.name || '—' }))

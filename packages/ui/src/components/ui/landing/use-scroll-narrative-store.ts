@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,30 +218,27 @@ function detachScrollTracking(): void {
 
 // ─── React Hooks ──────────────────────────────────────────────────────────────
 
+// The singleton is replaced (never mutated) on every section or progress change, so it is
+// its own snapshot. Hydration renders the initial state the server rendered.
+function subscribeNarrative(onChange: () => void): () => void {
+  const onSection = () => onChange()
+  const onProgress = () => onChange()
+  sectionListeners.add(onSection)
+  progressListeners.add(onProgress)
+  attachScrollTracking()
+  return () => {
+    sectionListeners.delete(onSection)
+    progressListeners.delete(onProgress)
+    detachScrollTracking()
+  }
+}
+
 export function useScrollNarrative(): ScrollState {
-  const [state, setState] = useState<ScrollState>(scrollState)
-
-  useEffect(() => {
-    setState(scrollState)
-
-    const onSection = (s: ScrollState) => setState(s)
-    const onProgress = (p: number) => {
-      setState((prev) => ({ ...prev, progress: p }))
-    }
-
-    sectionListeners.add(onSection)
-    progressListeners.add(onProgress)
-
-    attachScrollTracking()
-
-    return () => {
-      sectionListeners.delete(onSection)
-      progressListeners.delete(onProgress)
-      detachScrollTracking()
-    }
-  }, [])
-
-  return state
+  return useSyncExternalStore(
+    subscribeNarrative,
+    () => scrollState,
+    () => INITIAL_STATE,
+  )
 }
 
 export function useActiveSection(): Pick<ScrollState, 'activeSection' | 'narrativeState'> {

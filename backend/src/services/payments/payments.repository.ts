@@ -20,18 +20,19 @@ import type {
   PartyPaymentRow,
   PartyReturnRow,
 } from '@hisabche/validation'
+import { rowOf, rowsOf, rowText } from '../../utils/db-row'
 
 const PAGE = 1000
 
 /** Reads a query page by page until a short page; stops on the first error. */
-async function readAll(
+async function readAll<Row>(
   label: string,
   page: (
     from: number,
     to: number,
-  ) => PromiseLike<{ data: Record<string, any>[] | null; error: { message: string } | null }>,
-): Promise<Record<string, any>[]> {
-  const rows: Record<string, any>[] = []
+  ) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
+): Promise<Row[]> {
+  const rows: Row[] = []
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await page(from, from + PAGE - 1)
     if (error) throw new DatabaseError(`Failed to fetch ${label}`, error)
@@ -138,25 +139,27 @@ export function domainErrorCode(error: unknown): string | null {
   return /\b([A-Z][A-Z_]{6,})\b/.exec(message)?.[1] ?? null
 }
 
-function mapPayment(raw: Record<string, any>): PaymentRow {
+function mapPayment(value: unknown): PaymentRow {
+  const raw = rowOf(value) ?? {}
   return {
-    id: raw.id,
-    paymentNumber: raw.payment_number ?? null,
-    direction: raw.direction,
-    partyType: raw.party_type,
-    partyId: raw.party_id ?? null,
+    id: String(raw.id),
+    paymentNumber: rowText(raw.payment_number),
+    // The table's CHECK constraints keep these three to their unions.
+    direction: raw.direction as PaymentDirection,
+    partyType: raw.party_type as PartyType,
+    partyId: rowText(raw.party_id),
     amount: Number(raw.amount) || 0,
-    currency: raw.currency ?? 'AFN',
-    method: raw.method ?? 'cash',
+    currency: rowText(raw.currency) ?? 'AFN',
+    method: rowText(raw.method) ?? 'cash',
     entryDate: String(raw.entry_date ?? '').slice(0, 10),
-    reference: raw.reference ?? '',
-    notes: raw.notes ?? '',
-    status: raw.status ?? 'posted',
-    journalEntryId: raw.journal_entry_id ?? null,
-    createdAt: raw.created_at ?? null,
-    allocations: (raw.allocations ?? []).map((a: Record<string, any>) => ({
-      id: a.id,
-      invoiceId: a.invoice_id,
+    reference: rowText(raw.reference) ?? '',
+    notes: rowText(raw.notes) ?? '',
+    status: (rowText(raw.status) ?? 'posted') as PaymentRow['status'],
+    journalEntryId: rowText(raw.journal_entry_id),
+    createdAt: rowText(raw.created_at),
+    allocations: rowsOf(raw.allocations).map((a) => ({
+      id: String(a.id),
+      invoiceId: String(a.invoice_id),
       amount: Number(a.amount) || 0,
     })),
   }
@@ -627,7 +630,7 @@ export class PaymentsRepository {
     const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
 
     const [invoices, payments] = await Promise.all([
-      readAll('party invoices', (from, to) =>
+      readAll<PartyInvoiceRow>('party invoices', (from, to) =>
         supabase
           .from('invoices')
           .select('id, invoice_number, type, status, total, paid_amount, date, due_date, currency')
@@ -638,7 +641,7 @@ export class PaymentsRepository {
           .order('id', { ascending: true })
           .range(from, to),
       ),
-      readAll('party payments', (from, to) =>
+      readAll<PartyPaymentRow>('party payments', (from, to) =>
         supabase
           .from('payments')
           .select('id, payment_number, direction, amount, entry_date, currency, method, reference')
@@ -654,9 +657,7 @@ export class PaymentsRepository {
     // Sale returns of this customer's invoices. They credit the customer in the
     // ledger, so the statement and the balance must see them.
     const returns =
-      partyType === 'customer'
-        ? await this.returnsOfInvoices(workspaceId, invoices as PartyInvoiceRow[])
-        : []
+      partyType === 'customer' ? await this.returnsOfInvoices(workspaceId, invoices) : []
 
     // Only customers carry an opening balance (customers.opening_balance).
     let openingBalance = 0
@@ -672,8 +673,8 @@ export class PaymentsRepository {
     }
 
     return {
-      invoices: invoices as PartyInvoiceRow[],
-      payments: payments as PartyPaymentRow[],
+      invoices,
+      payments,
       returns,
       openingBalance,
     }
@@ -779,27 +780,29 @@ export class PaymentsRepository {
 
   /** A customer's sale returns, wherever the caller has no invoice list yet (the balance). */
   async saleReturnsOfCustomer(workspaceId: string, customerId: string): Promise<PartyReturnRow[]> {
-    const invoices = await readAll('customer invoices for returns', (from, to) =>
-      supabase
-        .from('invoices')
-        .select('id, currency')
-        .eq('workspace_id', workspaceId)
-        .eq('customer_id', customerId)
-        .eq('type', 'sale')
-        .neq('status', 'cancelled')
-        .order('id', { ascending: true })
-        .range(from, to),
+    const invoices = await readAll<{ id: string; currency?: string }>(
+      'customer invoices for returns',
+      (from, to) =>
+        supabase
+          .from('invoices')
+          .select('id, currency')
+          .eq('workspace_id', workspaceId)
+          .eq('customer_id', customerId)
+          .eq('type', 'sale')
+          .neq('status', 'cancelled')
+          .order('id', { ascending: true })
+          .range(from, to),
     )
-    return this.returnsOfInvoices(workspaceId, invoices as Array<{ id: string; currency?: string }>)
+    return this.returnsOfInvoices(workspaceId, invoices)
   }
 
   /** Every line of the given invoices, in chunks of ids and pages of rows. */
   async invoiceLines(workspaceId: string, invoiceIds: string[]) {
-    const lines: Record<string, any>[] = []
+    const lines: PartyLineRow[] = []
     for (let i = 0; i < invoiceIds.length; i += 200) {
       const chunk = invoiceIds.slice(i, i + 200)
       lines.push(
-        ...(await readAll('invoice lines', (from, to) =>
+        ...(await readAll<PartyLineRow>('invoice lines', (from, to) =>
           supabase
             .from('invoice_items')
             .select('invoice_id, product_id, product_name, unit, unit_label, quantity, total_price')
@@ -810,6 +813,6 @@ export class PaymentsRepository {
         )),
       )
     }
-    return lines as PartyLineRow[]
+    return lines
   }
 }

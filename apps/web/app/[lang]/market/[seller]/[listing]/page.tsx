@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { setRequestLocale } from 'next-intl/server'
@@ -111,8 +112,11 @@ export default async function MarketListingPage({ params }: { params: Params }) 
               />
             ) : (
               item.images.map((image, index) => (
-                <img
+                // A seller's image can be on any host, outside `images.remotePatterns`:
+                // served as is (`unoptimized`), the same <img> as before.
+                <Image
                   key={image.url}
+                  unoptimized
                   src={image.url}
                   alt={image.altText || item.title}
                   width={640}

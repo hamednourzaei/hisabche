@@ -891,7 +891,7 @@ export class BillingService {
   }
 
   // ─── Private: Map snake_case to camelCase ────────────────────
-  private mapSubscription(raw: any): Subscription {
+  private mapSubscription(raw: SubscriptionRow): Subscription {
     return {
       id: raw.id,
       userId: raw.user_id,
@@ -910,6 +910,25 @@ export class BillingService {
       updatedAt: raw.updated_at,
     }
   }
+}
+
+/** A `subscriptions` row, in the column names the mapper reads. */
+interface SubscriptionRow {
+  id?: Subscription['id']
+  user_id: Subscription['userId']
+  plan: Subscription['plan']
+  status: Subscription['status']
+  is_trial?: boolean | null
+  trial_used?: boolean | null
+  trial_started_at: Subscription['trialStartedAt']
+  trial_ends_at: Subscription['trialEndsAt']
+  period_start: Subscription['periodStart']
+  period_end: Subscription['periodEnd']
+  cancel_at_period_end: Subscription['cancelAtPeriodEnd']
+  stripe_customer_id?: Subscription['stripeCustomerId']
+  stripe_subscription_id?: Subscription['stripeSubscriptionId']
+  created_at?: Subscription['createdAt']
+  updated_at?: Subscription['updatedAt']
 }
 
 export default BillingService

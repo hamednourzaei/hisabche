@@ -27,11 +27,14 @@ interface Props {
 export const InviteModal = memo(function InviteModal({ open, onClose, workspaceId }: Props) {
   const tOriginal = useTranslations()
 
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
 
-    return v && v !== key ? v : (fallback ?? key)
-  }
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
 
   // ✅ safeT wrapper
 

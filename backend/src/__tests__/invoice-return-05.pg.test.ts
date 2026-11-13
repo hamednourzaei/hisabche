@@ -33,7 +33,7 @@ let started = false
 const run: Run = async (text, params) => {
   if (!sql) throw new Error('database not started')
   const rows = await sql.unsafe(text, (params ? [...params] : []) as never[])
-  return rows as unknown as Array<Record<string, any>>
+  return rows as unknown as Array<Record<string, unknown>>
 }
 
 describe('Postgres: the returns core (invoice-return-05)', () => {

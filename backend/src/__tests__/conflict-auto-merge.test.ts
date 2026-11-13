@@ -29,10 +29,16 @@ const USER = fakeId('user')
 const CUSTOMER = fakeId('customer')
 const INVOICE = fakeId('invoice')
 
-vi.mock('../db', async () => (globalThis as any).__conflictFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__conflictFakeDb,
+)
 
 async function service() {
-  ;(globalThis as any).__conflictFakeDb ??= createFakeDb(db, new Map())
+  ;(globalThis as typeof globalThis & Record<string, object>).__conflictFakeDb ??= createFakeDb(
+    db,
+    new Map(),
+  )
   const { ConflictService } = await import('../services/conflict')
   return new ConflictService()
 }

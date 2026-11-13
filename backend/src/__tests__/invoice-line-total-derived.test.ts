@@ -48,7 +48,7 @@ const rpcCalls: Array<{ name: string; args: Record<string, unknown> }> = []
 
 vi.mock('../db', () => {
   const builder = (table: string) => {
-    const q: any = {
+    const q = {
       select: () => q,
       insert: () => q,
       update: () => q,

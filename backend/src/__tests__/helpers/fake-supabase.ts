@@ -28,7 +28,20 @@
 // here, the test fails loudly and this file grows.
 // ============================================
 
-export type Row = Record<string, any>
+export type Row = Record<string, unknown>
+
+/** What a finished query resolves to — the shape supabase-js hands its callers. */
+export interface FakeResult {
+  data: unknown
+  error: { code?: string; message: string } | null
+  count?: number | undefined
+}
+
+/**
+ * A cell compared with `<`/`>` the way JavaScript compares the values the fake stores
+ * (numbers, ISO strings). The cast names that; the comparison itself is unchanged.
+ */
+type Comparable = string | number
 
 type Filter = (row: Row) => boolean
 
@@ -37,13 +50,13 @@ type Filter = (row: Row) => boolean
  * on a row seeded with a nested `journal_entries` object) — how PostgREST
  * filters on an `!inner` embed.
  */
-function valueAt(row: Row, column: string): any {
+function valueAt(row: Row, column: string): unknown {
   if (column in row) return row[column]
   const [head, ...rest] = column.split('.')
   if (!head || rest.length === 0) return undefined
   const nested = row[head]
   const target = Array.isArray(nested) ? nested[0] : nested
-  return target == null ? undefined : valueAt(target, rest.join('.'))
+  return target == null ? undefined : valueAt(target as Row, rest.join('.'))
 }
 
 interface OrderSpec {
@@ -223,7 +236,7 @@ export function fakeId(prefix = 'row'): string {
   return `${tag}-0000-4000-8000-${counter}`
 }
 
-class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
+class QueryBuilder implements PromiseLike<FakeResult> {
   private filters: Filter[] = []
   private describedFilters: string[] = []
   private orderSpecs: OrderSpec[] = []
@@ -297,20 +310,32 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     return this.push(`neq:${column}`, (row) => valueAt(row, column) !== value)
   }
 
-  gt(column: string, value: any) {
-    return this.push(`gt:${column}`, (row) => valueAt(row, column) > value)
+  gt(column: string, value: unknown) {
+    return this.push(
+      `gt:${column}`,
+      (row) => (valueAt(row, column) as Comparable) > (value as Comparable),
+    )
   }
 
-  gte(column: string, value: any) {
-    return this.push(`gte:${column}`, (row) => valueAt(row, column) >= value)
+  gte(column: string, value: unknown) {
+    return this.push(
+      `gte:${column}`,
+      (row) => (valueAt(row, column) as Comparable) >= (value as Comparable),
+    )
   }
 
-  lt(column: string, value: any) {
-    return this.push(`lt:${column}`, (row) => valueAt(row, column) < value)
+  lt(column: string, value: unknown) {
+    return this.push(
+      `lt:${column}`,
+      (row) => (valueAt(row, column) as Comparable) < (value as Comparable),
+    )
   }
 
-  lte(column: string, value: any) {
-    return this.push(`lte:${column}`, (row) => valueAt(row, column) <= value)
+  lte(column: string, value: unknown) {
+    return this.push(
+      `lte:${column}`,
+      (row) => (valueAt(row, column) as Comparable) <= (value as Comparable),
+    )
   }
 
   /**
@@ -448,7 +473,7 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     return columns.map((column) => String(row[column])).join(' ')
   }
 
-  private run(): { data: any; error: any } {
+  private run(): FakeResult {
     this.db.queries.push({
       table: this.table,
       op: this.mode,
@@ -466,8 +491,8 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
       if (this.orderSpecs.length > 0) {
         result = [...result].sort((a, b) => {
           for (const { column, ascending } of this.orderSpecs) {
-            const left = valueAt(a, column)
-            const right = valueAt(b, column)
+            const left = valueAt(a, column) as Comparable
+            const right = valueAt(b, column) as Comparable
             if (left === right) continue
             return (left > right ? 1 : -1) * (ascending ? 1 : -1)
           }
@@ -537,7 +562,7 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     const data = result.map((row) => ({ ...row }))
 
     if (this.singleMode === 'maybe') {
-      return { data: data[0] ?? null, error: null, count: data.length } as any
+      return { data: data[0] ?? null, error: null, count: data.length }
     }
 
     if (this.singleMode === 'one') {
@@ -549,12 +574,12 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
             code: 'PGRST116',
             message: 'JSON object requested, multiple (or no) rows returned',
           },
-        } as any
+        }
       }
-      return { data: data[0], error: null } as any
+      return { data: data[0], error: null }
     }
 
-    return { data, error: null, count: this.countMode ? data.length : undefined } as any
+    return { data, error: null, count: this.countMode ? data.length : undefined }
   }
 
   /** Both a modifier and a terminator: it resolves immediately. */
@@ -563,9 +588,9 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     return this.run()
   }
 
-  then<TResult1 = any, TResult2 = never>(
-    onfulfilled?: ((value: { data: any; error: any }) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+  then<TResult1 = FakeResult, TResult2 = never>(
+    onfulfilled?: ((value: FakeResult) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     try {
       return Promise.resolve(this.run()).then(onfulfilled, onrejected)

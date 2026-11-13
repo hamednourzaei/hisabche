@@ -5,7 +5,7 @@
 
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { flagFilter } from '@hisabche/validation'
+import { flagFilter, type CreateCustomer } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { BaseError } from '../errors/base.error'
 import {
@@ -37,14 +37,14 @@ export async function customerRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const query = request.query as any
+        const query = request.query as Record<string, string | undefined>
 
         // ✅ تبدیل دستی با default values
         const page = query.page ? parseInt(query.page, 10) : 1
         const limit = query.limit ? parseInt(query.limit, 10) : 20
         const search = query.search || ''
         const sortBy = query.sortBy || 'created_at'
-        const sortDirection = query.sortDirection || 'desc'
+        const sortDirection: 'asc' | 'desc' = query.sortDirection === 'asc' ? 'asc' : 'desc'
 
         // requireWorkspaceContext has already rejected an unauthenticated or
         // non-member caller with 401/403, so `tenancy` is present here.
@@ -102,7 +102,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const body = request.body as any
+        const body = request.body as CreateCustomer
         const customer = await customerService.create(request.tenancy, body, {
           clientRequestId: readClientRequestId(request),
         })

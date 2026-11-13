@@ -27,6 +27,7 @@ import {
   type BookEntry,
   type StatementLine,
 } from './reconciliation.domain'
+import { rowOf, rowsOf, rowText, type DbRow } from '../../utils/db-row'
 
 /**
  * J2 — does this error mean `bank_statement_lines.matched_kind` has not been
@@ -41,14 +42,14 @@ function isMissingMatchedKind(error: { code?: string; message?: string } | null)
   return /matched_kind/i.test(error.message ?? '')
 }
 
-function mapLine(raw: Record<string, any>): StatementLine {
+function mapLine(raw: DbRow): StatementLine {
   return {
-    id: raw.id,
-    externalRef: raw.external_ref ?? null,
+    id: String(raw.id),
+    externalRef: rowText(raw.external_ref),
     onDate: String(raw.on_date ?? '').slice(0, 10),
     amountMinor: Number(raw.amount_minor) || 0,
-    description: raw.description ?? '',
-    matchedTo: raw.matched_to ?? null,
+    description: rowText(raw.description) ?? '',
+    matchedTo: rowText(raw.matched_to),
   }
 }
 
@@ -97,13 +98,13 @@ export class BankingService {
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch statements', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
-      id: row.id,
-      accountId: row.account_id,
+    return rowsOf(data).map((row) => ({
+      id: String(row.id),
+      accountId: String(row.account_id),
       statementDate: String(row.statement_date ?? '').slice(0, 10),
       openingBalanceMinor: Number(row.opening_balance_minor) || 0,
       closingBalanceMinor: Number(row.closing_balance_minor) || 0,
-      importedAt: row.imported_at ?? null,
+      importedAt: rowText(row.imported_at),
     }))
   }
 
@@ -277,8 +278,8 @@ export class BankingService {
       return entries
     }
 
-    for (const row of (journals.data ?? []) as Record<string, any>[]) {
-      const lines = (row.journal_lines ?? []) as Record<string, any>[]
+    for (const row of rowsOf(journals.data)) {
+      const lines = rowsOf(row.journal_lines)
 
       // The entry's effect ON THIS ACCOUNT, not its total. A four-line entry
       // that moves 500 through the bank and 500 through two other accounts
@@ -295,12 +296,12 @@ export class BankingService {
       if (netMinor === 0) continue
 
       entries.push({
-        id: row.id,
+        id: String(row.id),
         kind: 'journal',
         onDate: String(row.date ?? '').slice(0, 10),
         amountMinor: netMinor,
-        reference: row.entry_number ?? row.id,
-        partyName: row.description ?? null,
+        reference: rowText(row.entry_number) ?? String(row.id),
+        partyName: rowText(row.description),
       })
     }
 
@@ -469,9 +470,7 @@ export class BankingService {
     )
     if (reconciled.length === 0) return []
 
-    const entryIds = [
-      ...new Set(reconciled.map((row: Record<string, any>) => String(row.matched_to))),
-    ]
+    const entryIds = [...new Set(rowsOf(reconciled).map((row) => String(row.matched_to)))]
     const otherAccount = new Map<string, string | null>()
     const CHUNK = 200
     for (let index = 0; index < entryIds.length; index += CHUNK) {
@@ -513,7 +512,7 @@ export class BankingService {
     }
 
     const history: CategoryHistory[] = []
-    for (const row of reconciled as Array<Record<string, any>>) {
+    for (const row of rowsOf(reconciled)) {
       const accountId = otherAccount.get(String(row.matched_to))
       const account = accountId ? accounts.get(accountId) : undefined
       if (!accountId || !account) continue
@@ -553,7 +552,7 @@ export class BankingService {
     if (error || !data) return new Map()
 
     return learnPatterns(
-      data.map((row: Record<string, any>) => ({
+      rowsOf(data).map((row) => ({
         description: String(row.description ?? ''),
         counterpartyId: String(row.matched_party),
       })),
@@ -695,7 +694,8 @@ export class BankingService {
     if (journalError) throw new DatabaseError('Failed to fetch the journal entry', journalError)
     if (!journal) return null
 
-    const lines = ((journal as Record<string, any>).journal_lines ?? []) as Record<string, any>[]
+    const entry = rowOf(journal) ?? {}
+    const lines = rowsOf(entry.journal_lines)
 
     const netMinor = lines.reduce(
       (sum, line) =>
@@ -704,12 +704,12 @@ export class BankingService {
     )
 
     return {
-      id: journal.id,
+      id: String(entry.id),
       kind: 'journal',
-      onDate: String((journal as Record<string, any>).date ?? '').slice(0, 10),
+      onDate: String(entry.date ?? '').slice(0, 10),
       amountMinor: netMinor,
-      reference: (journal as Record<string, any>).entry_number ?? journal.id,
-      partyName: (journal as Record<string, any>).description ?? null,
+      reference: rowText(entry.entry_number) ?? String(entry.id),
+      partyName: rowText(entry.description),
     }
   }
 
@@ -773,8 +773,8 @@ export class BankingService {
     // J2.6 — un-matching is the documented way to release a reconciled line,
     // and it is exactly the act that must leave a trace. It had none.
     this.audit(ctx, 'unreconcile', statementLineId, {
-      previousMatchedTo: (before as Record<string, any>)?.matched_to ?? null,
-      previousMatchedKind: (before as Record<string, any>)?.matched_kind ?? null,
+      previousMatchedTo: rowText(rowOf(before)?.matched_to),
+      previousMatchedKind: rowText(rowOf(before)?.matched_kind),
     })
 
     await this.invalidate(ctx.workspaceId)

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setupReturn05, type Run, type Scenario, WS } from './invoice-return-05-scenarios'
+import type { DbRow } from '../../utils/db-row'
 
 const DOCS = process.env.RETURN05_DOCS ?? join(__dirname, '..', '..', '..', '..', 'docs')
 const doc = (name: string) => readFileSync(join(DOCS, name), 'utf8')
@@ -83,7 +84,7 @@ async function returnOf(
       ),
     ],
   )
-  return rows[0]!.result as Record<string, any>
+  return rows[0]!.result as DbRow
 }
 
 const entriesOf = (run: Run, sourceType: string, sourceId: string) =>

@@ -289,7 +289,7 @@ function registerRpcs() {
       const inv = db.rows('invoices').find((i) => i.id === alloc.invoice_id)
       if (inv) {
         inv.paid_amount = (Number(inv.paid_amount) || 0) + Number(alloc.amount)
-        if (inv.paid_amount >= inv.total) {
+        if (Number(inv.paid_amount) >= Number(inv.total)) {
           inv.status = 'completed'
         } else {
           inv.status = 'partial'

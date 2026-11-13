@@ -21,7 +21,7 @@ const CHECKOUT_SESSION_COLUMNS =
 // ─── Interface for Payment Provider ────────────────────────
 export interface PaymentProvider {
   createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult>
-  handleWebhook(payload: any, signature: string): Promise<WebhookResult>
+  handleWebhook(payload: unknown, signature: string): Promise<WebhookResult>
   cancelSubscription(subscriptionId: string): Promise<void>
 }
 
@@ -43,7 +43,30 @@ export interface CheckoutResult {
 export interface WebhookResult {
   success: boolean
   eventType: string
-  data: any
+  data: unknown
+}
+
+/** A `checkout_sessions` row, as CHECKOUT_SESSION_COLUMNS reads it. */
+interface CheckoutSessionRow {
+  id: string
+  user_id: string
+  plan: Plan
+  interval: CheckoutParams['interval']
+  status: string
+  stripe_session_id: string | null
+  checkout_url: string | null
+  idempotency_key: string | null
+  created_at: string
+  expires_at: string | null
+  updated_at: string | null
+}
+
+/** What is cached for a checkout while it is open. */
+interface CachedCheckout {
+  userId: string
+  plan: Plan
+  interval: CheckoutParams['interval']
+  status: string
 }
 
 // ✅ Type for checkout session data (idempotencyKey با string | null)
@@ -300,7 +323,7 @@ export class CheckoutService {
   }
 
   // ─── Private: Get Checkout Session ──────────────────────
-  private async getCheckoutSession(checkoutId: string): Promise<any> {
+  private async getCheckoutSession(checkoutId: string): Promise<CheckoutSessionRow | null> {
     const { data, error } = await supabase
       .from('checkout_sessions')
       .select(CHECKOUT_SESSION_COLUMNS)
@@ -335,7 +358,7 @@ export class CheckoutService {
   }
 
   // ─── Private: Cache Checkout Session ─────────────────────
-  private async cacheCheckoutSession(checkoutId: string, data: any): Promise<void> {
+  private async cacheCheckoutSession(checkoutId: string, data: CachedCheckout): Promise<void> {
     const cacheKey = this.getCheckoutCacheKey(checkoutId)
     await memoryCache.set(cacheKey, data, CHECKOUT_CACHE_TTL)
 

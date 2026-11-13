@@ -14,6 +14,7 @@ import {
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { isMissingFunctionError } from './aggregates/aggregate-rpc'
 import { memoryCache } from '../utils/pagination'
+import { rowOf, rowsOf, rowText } from '../utils/db-row'
 
 // ✅ Column Selection Constants
 const PERMISSION_COLUMNS = 'id, code, name, description, resource, action, created_at'
@@ -24,7 +25,16 @@ const ROLE_MINIMAL = 'id, name'
 
 const USER_ROLE_COLUMNS = 'id, user_id, role_id, created_at'
 
-const DEFAULT_PERMISSIONS: any[] = [
+/** A row of the `permissions` table as this service reads it. */
+interface PermissionRow {
+  id?: string
+  code: string
+  name: string
+  resource: string
+  action: string
+}
+
+const DEFAULT_PERMISSIONS: PermissionRow[] = [
   { code: 'product.create', name: 'ایجاد محصول', resource: 'product', action: 'create' },
   { code: 'product.read', name: 'مشاهده محصول', resource: 'product', action: 'read' },
   { code: 'product.update', name: 'ویرایش محصول', resource: 'product', action: 'update' },
@@ -408,9 +418,8 @@ export class PermissionService {
     // ✅ بررسی وجود permission در داده‌های برگشتی
     let hasPermission = false
     for (const item of data) {
-      const rolePerms = (item as any).role_permissions || []
-      for (const rp of rolePerms) {
-        const perm = rp.permissions || {}
+      for (const rp of rowsOf(rowOf(item)?.role_permissions)) {
+        const perm = rowOf(rp.permissions) ?? {}
         if (perm.code === permissionCode) {
           hasPermission = true
           break
@@ -452,13 +461,19 @@ export class PermissionService {
     }
 
     // ✅ استخراج permissions از داده‌های برگشتی
-    const permissionMap = new Map<string, any>()
+    const permissionMap = new Map<string, PermissionRow>()
     for (const item of data) {
-      const rolePerms = (item as any).role_permissions || []
-      for (const rp of rolePerms) {
-        const perm = rp.permissions || {}
-        if (perm.id && !permissionMap.has(perm.id)) {
-          permissionMap.set(perm.id, perm)
+      for (const rp of rowsOf(rowOf(item)?.role_permissions)) {
+        const perm = rowOf(rp.permissions)
+        const id = rowText(perm?.id)
+        if (perm && id && !permissionMap.has(id)) {
+          permissionMap.set(id, {
+            id,
+            code: String(perm.code ?? ''),
+            name: String(perm.name ?? ''),
+            resource: String(perm.resource ?? ''),
+            action: String(perm.action ?? ''),
+          })
         }
       }
     }
@@ -485,7 +500,7 @@ export class PermissionService {
 
     if (error || !data) return []
 
-    const result = data.map((r: any) => r.role_id)
+    const result = rowsOf(data).map((r) => String(r.role_id))
     await memoryCache.set(cacheKey, result, 120)
     return result
   }

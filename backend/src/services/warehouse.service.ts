@@ -47,8 +47,19 @@ import {
 
 const PAGE = 1000
 
-type CreateWarehouse = any
-type UpdateWarehouse = any
+/** What the create route parses (`createwarehouseSchema`) and the cloud migration sends. */
+interface CreateWarehouse {
+  name: string
+  location?: string | undefined
+  isActive?: boolean | undefined
+  branchId?: string | null | undefined
+}
+interface UpdateWarehouse {
+  name?: string | undefined
+  location?: string | undefined
+  isActive?: boolean | undefined
+  branchId?: string | null | undefined
+}
 
 const WAREHOUSE_COLUMNS = 'id, name, location, is_active, created_at, updated_at'
 

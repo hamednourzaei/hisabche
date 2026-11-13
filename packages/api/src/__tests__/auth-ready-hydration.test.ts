@@ -6,27 +6,29 @@
 // server (no provider), `true` in the browser. Every query gated on it was
 // disabled in the server HTML (empty state) and enabled in the first client
 // render (skeleton) — React #418 on /manufacturing and every page like it.
+//
+// 13 Nov 2026: the hook became a `useSyncExternalStore` read (the lint rule
+// against setState-in-effect). The guard checks the BEHAVIOUR now, not the
+// source: rendered on the server with the provider already ready, it says false.
 // ============================================
 
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
+import { describe, expect, it, vi } from 'vitest'
 
-import { describe, expect, it } from 'vitest'
+vi.mock('../lib/tokenProvider', () => ({
+  isTokenProviderReady: () => true,
+  tokenReady: Promise.resolve(),
+}))
 
-const source = readFileSync(join(__dirname, '..', 'hooks', 'useAuthReady.ts'), 'utf8')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/\/\/.*/g, '')
+const { useAuthReady } = await import('../hooks/useAuthReady')
+
+function Probe() {
+  return createElement('span', null, String(useAuthReady()))
+}
 
 describe('useAuthReady hydration', () => {
-  it('initial state is a constant, not a render-time read', () => {
-    expect(source).toContain('useState<boolean>(false)')
-    expect(source).not.toContain('useState<boolean>(() => isTokenProviderReady())')
-  })
-
-  it('reads the token provider only inside the effect', () => {
-    const effectAt = source.indexOf('useEffect(')
-    const readAt = source.indexOf('isTokenProviderReady()')
-    expect(effectAt).toBeGreaterThan(-1)
-    expect(readAt).toBeGreaterThan(effectAt)
+  it('is false in the server render even when the provider is ready', () => {
+    expect(renderToString(createElement(Probe))).toBe('<span>false</span>')
   })
 })

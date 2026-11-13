@@ -19,7 +19,8 @@
 // (`onOpenChange`), so one scan is never added twice.
 // ============================================
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { noSubscription } from '../../../lib/browser-facts'
 import { Camera, ScanBarcode } from 'lucide-react'
 
 import { Button } from '../button'
@@ -42,6 +43,9 @@ export interface CameraScanButtonProps {
   onOpenChange?: ((open: boolean) => void) | undefined
 }
 
+// The host and the browser camera are client facts: asked after hydration only.
+const cameraAvailable = (): boolean => getCameraScanner() !== null || browserCameraAvailable()
+
 export function CameraScanButton({ t, onCode, disabled, onOpenChange }: CameraScanButtonProps) {
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -51,10 +55,7 @@ export function CameraScanButton({ t, onCode, disabled, onOpenChange }: CameraSc
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const stopRef = useRef<(() => void) | null>(null)
   // Read after mount only: the host and the browser camera are client facts.
-  const [canCamera, setCanCamera] = useState(false)
-  useEffect(() => {
-    setCanCamera(getCameraScanner() !== null || browserCameraAvailable())
-  }, [])
+  const canCamera = useSyncExternalStore(noSubscription, cameraAvailable, () => false)
 
   const stopCamera = () => {
     stopRef.current?.()

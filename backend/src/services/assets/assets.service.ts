@@ -24,6 +24,7 @@ import {
   type DepreciationEntry,
   type DepreciationMethod,
 } from './depreciation.domain'
+import { rowOf, rowText, type DbRow } from '../../utils/db-row'
 
 const ASSET_COLUMNS =
   'id, name, asset_account_id, expense_account_id, accumulated_account_id, cost_minor, salvage_minor, method, periods, period_months, declining_factor, first_period_on, prorata_from, acquired_on, disposed_on, disposal_proceeds_minor, source_invoice_id'
@@ -44,21 +45,21 @@ export interface FixedAsset {
   accumulatedAccountId: string | null
 }
 
-function mapAsset(raw: Record<string, any>): FixedAsset {
+function mapAsset(raw: DbRow): FixedAsset {
   return {
-    id: raw.id,
-    name: raw.name,
+    id: String(raw.id),
+    name: String(raw.name ?? ''),
     costMinor: Number(raw.cost_minor) || 0,
     salvageMinor: Number(raw.salvage_minor) || 0,
-    method: raw.method,
+    method: raw.method as FixedAsset['method'],
     periods: Number(raw.periods) || 0,
     periodMonths: Number(raw.period_months) || 1,
     firstPeriodOn: String(raw.first_period_on ?? '').slice(0, 10),
     acquiredOn: String(raw.acquired_on ?? '').slice(0, 10),
     disposedOn: raw.disposed_on ? String(raw.disposed_on).slice(0, 10) : null,
-    assetAccountId: raw.asset_account_id ?? null,
-    expenseAccountId: raw.expense_account_id ?? null,
-    accumulatedAccountId: raw.accumulated_account_id ?? null,
+    assetAccountId: rowText(raw.asset_account_id),
+    expenseAccountId: rowText(raw.expense_account_id),
+    accumulatedAccountId: rowText(raw.accumulated_account_id),
   }
 }
 
@@ -223,7 +224,7 @@ export class AssetsService {
     const skipped: Array<{ assetId: string; period: number; reason: string }> = []
 
     for (const row of data ?? []) {
-      const asset = (row as any).asset as {
+      const asset = rowOf(row)?.asset as {
         expense_account_id: string | null
         accumulated_account_id: string | null
         name: string
@@ -290,7 +291,7 @@ export class AssetsService {
     const asset = await this.get(ctx, assetId)
     if (asset.disposedOn) throw new ConflictError('ASSET_ALREADY_DISPOSED')
 
-    const schedule = (await this.getSchedule(ctx, assetId)).map((row: any) => ({
+    const schedule = (await this.getSchedule(ctx, assetId)).map((row) => ({
       period: row.period,
       onDate: String(row.on_date).slice(0, 10),
       amountMinor: Number(row.amount_minor),
@@ -323,7 +324,7 @@ export class AssetsService {
 
   /** Due entries without posting them, for a "what would this run do" view. */
   async previewDue(ctx: TenancyContext, assetId: string, asOf: string) {
-    const schedule = (await this.getSchedule(ctx, assetId)).map((row: any) => ({
+    const schedule = (await this.getSchedule(ctx, assetId)).map((row) => ({
       period: row.period,
       onDate: String(row.on_date).slice(0, 10),
       amountMinor: Number(row.amount_minor),

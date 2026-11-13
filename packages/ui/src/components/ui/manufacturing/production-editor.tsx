@@ -60,6 +60,7 @@ import { CloudRequiredNotice } from '../cloud-required-notice'
 import { useProductionDraft } from './use-production-draft'
 import { manufacturingErrorText } from './manufacturing-errors'
 import { nameOfCurrency } from '../../../lib/currency-name'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 type T = (key: string, fallback?: string) => string
 
@@ -160,14 +161,14 @@ export function ProductionEditor({
   }, [initialQuantity, setQuantity])
 
   // With exactly one warehouse there is nothing to choose.
-  useEffect(() => {
+  useAdjustOnChange([addToInventory, warehouseId, warehouses], () => {
     if (!addToInventory) return
     if (warehouseId && !warehouses.some((warehouse) => warehouse.id === warehouseId)) {
       setWarehouseId(null)
     } else if (!warehouseId && warehouses.length === 1) {
       setWarehouseId(warehouses[0]!.id)
     }
-  }, [addToInventory, warehouseId, warehouses])
+  })
 
   const { cost, columns, ctx, currency } = draft
   const currencyName = nameOfCurrency(t, currency, currency)

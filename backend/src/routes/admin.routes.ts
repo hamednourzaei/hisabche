@@ -105,8 +105,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
           ? (e as { message: string }).message
           : 'Failed'
       const code =
-        typeof e === 'object' && e !== null && 'code' in e && typeof (e as any).code === 'string'
-          ? (e as any).code
+        typeof e === 'object' && e !== null && 'code' in e && typeof e.code === 'string'
+          ? e.code
           : status === 403
             ? 'FORBIDDEN'
             : status === 404

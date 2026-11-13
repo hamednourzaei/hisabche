@@ -105,7 +105,7 @@ export interface DeviceInfo {
 
 export interface RawDeviceEvent {
   externalEventId: string
-  payload: any
+  payload: unknown
   eventType: string
   occurredAt: Date
 }
@@ -128,12 +128,12 @@ export interface AttendanceDeviceAdapter {
   pullEvents(cursor: string): Promise<{ events: RawDeviceEvent[]; nextCursor: string }>
   subscribeEvents?(callback: (event: RawDeviceEvent) => void): Promise<void>
 
-  getUsers(): Promise<any[]>
+  getUsers(): Promise<unknown[]>
   enrollUser(userId: string, credentialType: string): Promise<boolean>
   disableUser(userId: string): Promise<boolean>
   deleteUser(userId: string): Promise<boolean>
 
-  getDeviceStatus(): Promise<any>
+  getDeviceStatus(): Promise<unknown>
 
   // Normalization logic specific to the vendor payload
   normalizeEvent(rawEvent: RawDeviceEvent): NormalizedPunchEvent

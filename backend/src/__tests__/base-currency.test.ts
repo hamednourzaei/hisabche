@@ -20,7 +20,10 @@ const users = new Map<string, { id: string }>([
   [SELLER.token, { id: SELLER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__baseCurFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__baseCurFakeDb,
+)
 
 const member = (user: string, role: string) => ({
   id: fakeId('member'),
@@ -49,7 +52,10 @@ let app: FastifyInstance
 let base: typeof import('../services/base-currency')
 
 beforeAll(async () => {
-  ;(globalThis as any).__baseCurFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__baseCurFakeDb = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   base = await import('../services/base-currency')
   const { buildServer } = await import('../index')

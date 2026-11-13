@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 'use client'
 
-import { memo, useMemo, useState, type ReactNode } from 'react'
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { StockSummary } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
@@ -387,12 +387,15 @@ export const WarehouseView = memo(function WarehouseView({
 }: WarehouseViewProps) {
   // Loading shows the placeholder; a loaded response without a summary says
   // the figure is unavailable. Neither shows a number that is not there.
-  const figure = (value: number | undefined) =>
-    isLoading
-      ? '…'
-      : value === undefined
-        ? t('warehouse.summaryUnavailable', 'نامعلوم')
-        : fmt(value)
+  const figure = useCallback(
+    (value: number | undefined) =>
+      isLoading
+        ? '…'
+        : value === undefined
+          ? t('warehouse.summaryUnavailable', 'نامعلوم')
+          : fmt(value),
+    [isLoading, t, fmt],
+  )
 
   // ✅ دقیقاً همان BentoStats که /invoices استفاده میکند — در همه‌ی ابعاد.
   // ⚠️ عمداً از `text` استفاده شده (نه `amount`) چون BentoStats مقدار متنی
@@ -467,7 +470,7 @@ export const WarehouseView = memo(function WarehouseView({
         text: figure(summary?.outOfStockCount),
       },
     ],
-    [t, fmt, summary, isLoading, currencies, displayCode, valueText, bookCode, baseLabel],
+    [t, figure, summary, currencies, displayCode, valueText, bookCode, baseLabel],
   )
 
   const showEmptyState = !isLoading && products.length === 0

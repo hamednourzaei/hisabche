@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Loader2, FileText } from 'lucide-react'
 import { InvoiceDocument, type InvoiceDocumentData } from '../invoice-document'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 /* ═══════════════════════════════════════════════════════════
    PublicInvoiceContainer — read-only, no-login invoice view.
@@ -45,10 +46,14 @@ export function PublicInvoiceContainer({ token }: { token: string }) {
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
+  // A new token starts from «loading» — set during render, not from the effect.
+  useAdjustOnChange([token], () => {
     setLoading(true)
     setError(false)
+  })
+
+  useEffect(() => {
+    let cancelled = false
     fetch(`${BASE_URL}/public/invoices/${token}`)
       .then((res) => {
         if (!res.ok) throw new Error('not ok')

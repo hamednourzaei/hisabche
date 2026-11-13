@@ -24,6 +24,7 @@ import {
   type MdmEntity,
   type MdmRecord,
 } from './mdm.domain'
+import { rowsOf, rowText } from '../../utils/db-row'
 
 /**
  * Where each entity lives, what points at it, and how a record is retired.
@@ -105,13 +106,13 @@ export class MdmService {
 
     if (error) throw new DatabaseError('Failed to load records for duplicate detection', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
-      id: row.id,
-      name: row[config.nameColumn] ?? '',
-      phone: row.phone ?? null,
-      email: row.email ?? null,
-      identifier: entity === 'product' ? row.barcode || row.sku || null : null,
-      createdAt: row.created_at ?? undefined,
+    return rowsOf(data).map((row) => ({
+      id: String(row.id),
+      name: rowText(row[config.nameColumn]) ?? '',
+      phone: rowText(row.phone),
+      email: rowText(row.email),
+      identifier: entity === 'product' ? rowText(row.barcode) || rowText(row.sku) || null : null,
+      ...(row.created_at ? { createdAt: String(row.created_at) } : {}),
     }))
   }
 

@@ -296,7 +296,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
   const [branchFormError, setBranchFormError] = useState<string | null>(null)
   const [showBranchForm, setShowBranchForm] = useState(false)
 
-  const employees = employeesData?.employees ?? []
+  const employees = useMemo(() => employeesData?.employees ?? [], [employeesData])
 
   // ─── Actions ──────────────────────────────────────────────────────────────
 

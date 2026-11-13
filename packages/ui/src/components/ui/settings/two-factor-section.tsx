@@ -32,6 +32,7 @@ import { Checkbox } from '../checkbox'
 import { Input } from '../input'
 import { useToast } from '../toast-provider'
 import { copyText } from '../../../lib/copy-text'
+import Image from 'next/image'
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4'
@@ -128,9 +129,12 @@ export const TwoFactorSection = memo(function TwoFactorSection() {
           <div className="space-y-3">
             <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('scanHint')}</p>
             {enrollment.qrCode ? (
-              <img
+              <Image
+                unoptimized
                 src={enrollment.qrCode}
                 alt={t('qrAlt')}
+                width={176}
+                height={176}
                 className="h-44 w-44 rounded-lg bg-white p-2"
               />
             ) : null}

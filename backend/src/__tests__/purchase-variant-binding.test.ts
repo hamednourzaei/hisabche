@@ -10,7 +10,7 @@ let variantRows: Array<Record<string, unknown>> = []
 let tableError: { code: string } | null = null
 
 vi.mock('../db', () => {
-  const q: any = {
+  const q = {
     select: () => q,
     eq: () => q,
     in: () => q,

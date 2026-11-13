@@ -173,7 +173,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
       }
 
       // 2. Cache lookup — SHA-256 hash (✅ هماهنگ با pdf-queue.ts)
-      const versionKey = (invoice as any).updated_at || (invoice as any).created_at || 'v1'
+      const versionKey = invoice.updated_at || invoice.created_at || 'v1'
       const cachePath = getCachePath(id, versionKey)
 
       const cachedUrl = await getCachedSignedUrl(cachePath)
@@ -185,7 +185,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
       try {
         let qrDataUrl: string | null = null
         try {
-          const shareUrl = buildShareUrl(id, (invoice as any).public_token)
+          const shareUrl = buildShareUrl(id, invoice.public_token)
           qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 160 })
         } catch (qrErr) {
           fastify.log.error(
@@ -208,7 +208,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
         const lang = uiLanguageFromHeader(request.headers['accept-language'])
 
         const stream = await renderToStream(
-          InvoicePDFDocument({ invoice: invoice as any, qrDataUrl, lang }),
+          InvoicePDFDocument({ invoice: invoice, qrDataUrl, lang }),
         )
 
         const chunks: Buffer[] = []
@@ -227,7 +227,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
         reply.header('Content-Type', 'application/pdf')
         reply.header(
           'Content-Disposition',
-          `attachment; filename="Invoice-${(invoice as any).invoice_number || id}.pdf"`,
+          `attachment; filename="Invoice-${invoice.invoice_number || id}.pdf"`,
         )
         reply.header('Cache-Control', 'private, max-age=3600')
 

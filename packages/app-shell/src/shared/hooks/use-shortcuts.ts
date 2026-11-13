@@ -6,7 +6,7 @@
 // except for the ones that must always work (save, command palette).
 // ============================================
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 export type ShortcutId = 'newInvoice' | 'save' | 'search' | 'print' | 'commandPalette' | 'close'
 
@@ -48,7 +48,10 @@ function matches(event: KeyboardEvent, binding: Binding): boolean {
 
 export function useShortcuts(handlers: ShortcutHandlers): void {
   const ref = useRef(handlers)
-  ref.current = handlers
+  // After render, not during it: the latest handlers for the one keydown listener below.
+  useLayoutEffect(() => {
+    ref.current = handlers
+  })
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {

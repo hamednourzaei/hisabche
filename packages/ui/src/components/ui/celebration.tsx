@@ -3,6 +3,12 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { cn } from '../../lib/utils'
+import { useAdjustOnChange } from '../../hooks/use-adjust-on-change'
+
+/** A number in [0, 1) for confetti piece `index`, channel `k` — fixed, but well spread. */
+function spread(index: number, k: number): number {
+  return ((index + 1) * 0.6180339887 + k * 0.4142135623) % 1
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Celebration v3 — i18n-ready
@@ -38,21 +44,30 @@ const Celebration: React.FC<CelebrationProps> = ({
   const [isLeaving, setIsLeaving] = useState(false)
   const handleComplete = useCallback(() => onComplete?.(), [onComplete])
 
-  useEffect(() => {
-    if (show && !open) {
+  // Opens when `show` turns on — during render, not from an effect.
+  useAdjustOnChange([show], () => {
+    if (show) {
       setOpen(true)
       setIsLeaving(false)
-      const timer = setTimeout(() => {
-        setIsLeaving(true)
-        setTimeout(() => {
-          setOpen(false)
-          handleComplete()
-        }, 500)
-      }, duration)
-      return () => clearTimeout(timer)
     }
-    return undefined
-  }, [show, duration, handleComplete, open])
+  })
+
+  // While open: fade out after `duration`, then close and report.
+  useEffect(() => {
+    if (!open) return undefined
+    let closing: ReturnType<typeof setTimeout> | undefined
+    const leaving = setTimeout(() => {
+      setIsLeaving(true)
+      closing = setTimeout(() => {
+        setOpen(false)
+        handleComplete()
+      }, 500)
+    }, duration)
+    return () => {
+      clearTimeout(leaving)
+      if (closing) clearTimeout(closing)
+    }
+  }, [open, duration, handleComplete])
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -90,10 +105,12 @@ const Celebration: React.FC<CelebrationProps> = ({
                   CONFETTI_COLORS[i % CONFETTI_COLORS.length],
                   CONFETTI_SIZES[i % CONFETTI_SIZES.length],
                 )}
+                // A spread by the golden ratio, not Math.random(): render stays pure and the
+                // pieces still look scattered.
                 style={{
                   top: '-5%',
-                  insetInlineStart: `${Math.random() * 100}%`,
-                  animation: `confettiFall ${Math.random() * 2 + 2}s linear ${Math.random() * 0.6}s forwards`,
+                  insetInlineStart: `${spread(i, 0) * 100}%`,
+                  animation: `confettiFall ${spread(i, 1) * 2 + 2}s linear ${spread(i, 2) * 0.6}s forwards`,
                 }}
               />
             ))}

@@ -4,13 +4,13 @@ import { odataRoutes } from '../routes/odata.routes'
 
 // Mock authentication and tenancy middlewares
 vi.mock('../middleware/auth.middleware', () => ({
-  authenticate: async (request: any) => {
+  authenticate: async (request: Record<string, unknown>) => {
     request.user = { id: 'test-user-id' }
   },
 }))
 
 vi.mock('../middleware/workspace.middleware', () => ({
-  requireWorkspaceContext: async (request: any) => {
+  requireWorkspaceContext: async (request: Record<string, unknown>) => {
     request.tenancy = {
       workspaceId: '11111111-1111-1111-1111-111111111111',
       userId: 'test-user-id',

@@ -249,11 +249,20 @@ const as = (user: { token: string }, shop = SHOP) => ({
 let requestCounter = 0
 const requestId = () => `99999999-0000-4000-8000-${String(++requestCounter).padStart(12, '0')}`
 
+/** What POST /api/attendance-links answers — the fields these tests read, plus the rest. */
+type LinkBody = Row & {
+  id: string
+  token: string
+  code?: string
+  state?: string
+  requireUnlock?: boolean
+}
+
 async function makeLink(
   body: Record<string, unknown> = {},
   user = OWNER,
   shop = SHOP,
-): Promise<{ status: number; body: Row }> {
+): Promise<{ status: number; body: LinkBody }> {
   const res = await app.inject({
     method: 'POST',
     url: '/api/attendance-links',

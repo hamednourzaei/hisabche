@@ -88,7 +88,7 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
         return Promise.resolve({ data: args.p_invoice_id, error: null })
       }
       return Promise.resolve({ data: null, error: null })
-    }) as any
+    }) as never
 
     try {
       const doc = {
@@ -128,7 +128,7 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
     const originalRpc = supabase.rpc
     supabase.rpc = (() => {
       return Promise.resolve({ data: null, error: { code: '23505', message: 'duplicate key' } })
-    }) as any
+    }) as never
 
     try {
       const doc = {
@@ -165,10 +165,10 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
               }),
             }),
           }),
-        } as any
+        } as never
       }
       return originalFrom(table)
-    }) as any
+    }) as never
 
     try {
       await expect(
@@ -201,7 +201,7 @@ describe('M5 deployment order: a package sale on a database without invoice-writ
       Promise.resolve({
         data: null,
         error: { code: 'PGRST202', message: 'Could not find the function' },
-      })) as any
+      })) as never
     try {
       return await service.writeInvoiceDocument(ctx, {
         invoiceId: '33333333-3333-4333-8333-333333333333',

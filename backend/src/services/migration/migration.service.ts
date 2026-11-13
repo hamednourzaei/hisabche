@@ -119,6 +119,7 @@ import {
   type Finding,
   type ReconciliationLine,
 } from './migration.validate'
+import { rowOf, rowText } from '../../utils/db-row'
 
 /* ─── Shapes the route and the UI share ───────────────────────────────────── */
 
@@ -170,27 +171,34 @@ const COLUMNS =
   'dry_run, reconciliation, rows_scanned, rows_created, rows_updated, rows_skipped, created_by, ' +
   'created_at, completed_at, error_code'
 
-function mapJob(raw: Record<string, any>): MigrationJob {
+// `unknown`: the column list is a constant supabase-js cannot parse into a row type.
+function mapJob(value: unknown): MigrationJob {
+  const raw = rowOf(value) ?? {}
+  const discovery = rowOf(raw.discovery)
   return {
-    id: raw.id,
-    entity: raw.entity,
-    sourceType: raw.source_type,
-    originalFilename: raw.original_filename,
+    id: String(raw.id),
+    entity: raw.entity as MigrationJob['entity'],
+    sourceType: raw.source_type as MigrationJob['sourceType'],
+    originalFilename: String(raw.original_filename ?? ''),
     byteSize: Number(raw.byte_size) || 0,
-    status: raw.status,
-    discovery: raw.discovery && Object.keys(raw.discovery).length > 0 ? raw.discovery : null,
-    mapping: raw.mapping ?? {},
-    findings: raw.findings ?? [],
-    dryRun: raw.dry_run ?? null,
-    reconciliation: raw.reconciliation ?? null,
+    status: raw.status as MigrationJob['status'],
+    // JSON columns this service alone writes, in these shapes.
+    discovery:
+      discovery && Object.keys(discovery).length > 0
+        ? (raw.discovery as MigrationJob['discovery'])
+        : null,
+    mapping: (raw.mapping ?? {}) as MigrationJob['mapping'],
+    findings: (raw.findings ?? []) as MigrationJob['findings'],
+    dryRun: (raw.dry_run ?? null) as MigrationJob['dryRun'],
+    reconciliation: (raw.reconciliation ?? null) as MigrationJob['reconciliation'],
     rowsScanned: Number(raw.rows_scanned) || 0,
     rowsCreated: Number(raw.rows_created) || 0,
     rowsUpdated: Number(raw.rows_updated) || 0,
     rowsSkipped: Number(raw.rows_skipped) || 0,
-    createdBy: raw.created_by,
-    createdAt: raw.created_at,
-    completedAt: raw.completed_at ?? null,
-    errorCode: raw.error_code ?? null,
+    createdBy: String(raw.created_by ?? ''),
+    createdAt: String(raw.created_at ?? ''),
+    completedAt: rowText(raw.completed_at),
+    errorCode: rowText(raw.error_code),
   }
 }
 
@@ -1411,7 +1419,7 @@ export class MigrationService {
 
   private toDefinition(plan: BomPlan, productId: string, booksCurrency: string) {
     const validCurrency = (
-      CURRENCY_CODES.includes(booksCurrency as any) ? booksCurrency : 'AFN'
+      (CURRENCY_CODES as readonly string[]).includes(booksCurrency) ? booksCurrency : 'AFN'
     ) as (typeof CURRENCY_CODES)[number]
     return saveProductionDefinitionSchema.parse({
       productId,

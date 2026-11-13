@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/landing/use-scene-observer.ts
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from 'react'
 
 import {
   isSectionId,
@@ -46,19 +46,19 @@ function recordTrigger(section: SectionId): void {
 
 const DESKTOP_QUERY = '(min-width: 1024px)'
 
+function subscribeDesktop(onChange: () => void): () => void {
+  const mql = window.matchMedia(DESKTOP_QUERY)
+  mql.addEventListener('change', onChange)
+  return () => mql.removeEventListener('change', onChange)
+}
+
+// null = هنوز معلوم نیست (سرور و رندر hydration)
 function useIsDesktop(): boolean | null {
-  const [isDesktop, setIsDesktop] = useState<boolean | null>(null) // null = هنوز معلوم نیست
-
-  useEffect(() => {
-    const mql = window.matchMedia(DESKTOP_QUERY)
-    setIsDesktop(mql.matches)
-
-    const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    mql.addEventListener('change', listener)
-    return () => mql.removeEventListener('change', listener)
-  }, [])
-
-  return isDesktop
+  return useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => null,
+  )
 }
 
 function getDeviceConfig(isDesktop: boolean) {

@@ -18,6 +18,7 @@ import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
 import crypto from 'crypto'
 import { assertWithinLimit } from './plan-limits.service'
+import { rowOf } from '../utils/db-row'
 interface WorkspaceWithRole {
   id: string
   name: string
@@ -199,7 +200,7 @@ export class WorkspaceService {
       return []
     }
 
-    const workspaceIds = members.map((m: any) => m.workspace_id)
+    const workspaceIds = members.map((m) => m.workspace_id)
 
     const { data: workspaces, error: workspacesError } = await supabase
       .from('workspaces')
@@ -208,15 +209,21 @@ export class WorkspaceService {
 
     if (workspacesError) throw new DatabaseError('Failed to fetch workspaces', workspacesError)
 
-    const byId = new Map((workspaces || []).map((w: any) => [w.id, w]))
+    const byId = new Map((workspaces || []).map((w) => [w.id, w]))
     const signatures = await signaturesOf([...byId.keys()])
-    const result = members
-      .filter((m: any) => byId.has(m.workspace_id))
-      .map((m: any) => ({
-        ...byId.get(m.workspace_id),
-        signature_url: signatures.get(m.workspace_id) ?? null,
-        myRole: m.role || 'member',
-      }))
+    // A membership whose workspace was not returned is left out.
+    const result = members.flatMap((m) => {
+      const workspace = byId.get(m.workspace_id)
+      return workspace
+        ? [
+            {
+              ...workspace,
+              signature_url: signatures.get(m.workspace_id) ?? null,
+              myRole: m.role || 'member',
+            },
+          ]
+        : []
+    })
 
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
@@ -228,7 +235,7 @@ export class WorkspaceService {
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) {
-      const data = cached as any
+      const data = rowOf(cached) ?? {}
       // ✅ بررسی permission از کش
       if (data.userHasAccess !== userId) throw new DatabaseError('Access denied')
       return data

@@ -7,6 +7,8 @@ export interface NextImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>
   priority?: boolean
   fill?: boolean
   quality?: number
+  /** next/image option; here every image is served as is anyway. */
+  unoptimized?: boolean
 }
 
 export default function Image({
@@ -15,6 +17,7 @@ export default function Image({
   priority: _p,
   fill,
   quality: _q,
+  unoptimized: _u,
   style,
   ...rest
 }: NextImageProps) {

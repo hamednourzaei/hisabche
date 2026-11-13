@@ -21,6 +21,7 @@
 import { supabase } from '../db'
 import { cacheService } from '../services/cache.service'
 import { isMoneyCacheKey } from './money-cache-keys'
+import { rowOf, rowText } from './db-row'
 
 // ═══════════════════════════════════════════
 // Types
@@ -71,12 +72,10 @@ export async function keysetPaginate<T>(
   const hasMore = (data?.length || 0) > limit
   const items = hasMore ? data!.slice(0, limit) : data || []
 
-  // ✅ Fix: Cast to any برای دسترسی به created_at
-  const lastItem = items.length > 0 ? (items[items.length - 1] as any) : null
+  // The cursor is the last row's created_at, whatever the row's type.
+  const lastCreatedAt = rowText(rowOf(items[items.length - 1])?.created_at)
   const nextCursor =
-    hasMore && lastItem && lastItem.created_at
-      ? Buffer.from(lastItem.created_at).toString('base64')
-      : undefined
+    hasMore && lastCreatedAt ? Buffer.from(lastCreatedAt).toString('base64') : undefined
 
   return {
     data: items as T[],

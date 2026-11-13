@@ -37,7 +37,7 @@ export async function invoicePublicRoutes(fastify: FastifyInstance) {
 
         const invoice = await invoiceService.getPublicByToken(token)
         return reply.send(invoice)
-      } catch (err: any) {
+      } catch (err) {
         fastify.log.error(err)
         return reply.code(404).send({ error: 'Invoice not found' })
       }

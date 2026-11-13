@@ -153,6 +153,51 @@ const DEFAULT_STATUS = STATUS_STYLE.pending!
 const fmt = (n: number, lang: UiLanguage) => formatNumber(n ?? 0, resolveIntlLocale(lang))
 const fmtDate = (d: string, lang: UiLanguage) => formatDate(d, lang) || d
 
+/** One line of the invoice, in either spelling the readers hand over. */
+interface PdfInvoiceItem {
+  product_name?: string | null
+  productName?: string | null
+  quantity?: number | null
+  unit?: string | null
+  unit_price?: number | null
+  unitPrice?: number | null
+  discount?: number | null
+  total_price?: number | null
+  totalPrice?: number | null
+}
+
+/** The invoice fields the PDF prints — the stored row (snake_case) or a mapped one. */
+export interface PdfInvoice {
+  currency?: string | null
+  invoice_items?: PdfInvoiceItem[] | null
+  items?: PdfInvoiceItem[] | null
+  status?: string | null
+  customer?: {
+    full_name?: string | null
+    phone?: string | null
+    email?: string | null
+    address?: string | null
+  } | null
+  customer_name?: string | null
+  customerName?: string | null
+  subtotal?: number | null
+  discount_total?: number | null
+  discountTotal?: number | null
+  tax_total?: number | null
+  taxTotal?: number | null
+  total?: number | null
+  paid_amount?: number | null
+  paidAmount?: number | null
+  invoice_number?: string | null
+  invoiceNumber?: string | null
+  date?: string | null
+  due_date?: string | null
+  dueDate?: string | null
+  notes?: string | null
+  created_at?: string | null
+  createdAt?: string | null
+}
+
 // ─── PDF Document ──────────────────────────────────────────
 // `qrDataUrl` — optional PNG data URI (from qrcode.toDataURL) encoding
 // the same public-view share link used by the on-page QR code.
@@ -161,12 +206,12 @@ export function InvoicePDFDocument({
   qrDataUrl,
   lang = 'af',
 }: {
-  invoice: any
+  invoice: PdfInvoice
   qrDataUrl?: string | null
   /** The reader's UI language. Defaults to Dari — see `fmtDate` above. */
   lang?: UiLanguage
 }) {
-  const inv = invoice as any
+  const inv = invoice
   // The invoice's own stored currency. `invoices.currency` is NOT NULL — a
   // missing value prints nothing rather than assuming a currency.
   const currency: string = inv.currency ?? ''
@@ -210,7 +255,9 @@ export function InvoicePDFDocument({
             <Text style={s.infoTitle}>اطلاعات فاکتور</Text>
             <Text style={s.infoLine}>تاریخ: {fmtDate(inv.date ?? '', lang)}</Text>
             {inv.due_date || inv.dueDate ? (
-              <Text style={s.infoLine}>سررسید: {fmtDate(inv.due_date ?? inv.dueDate, lang)}</Text>
+              <Text style={s.infoLine}>
+                سررسید: {fmtDate(inv.due_date ?? inv.dueDate ?? '', lang)}
+              </Text>
             ) : null}
           </View>
           <View style={s.infoBox}>
@@ -238,7 +285,7 @@ export function InvoicePDFDocument({
             <Text style={s.thDiscount}>تخفیف</Text>
             <Text style={s.thTotal}>قیمت کل</Text>
           </View>
-          {items.map((item: any, i: number) => (
+          {items.map((item, i: number) => (
             <View key={i} style={s.tableRow}>
               <Text style={s.tdNum}>{i + 1}</Text>
               <Text style={s.tdName}>{item.product_name ?? item.productName ?? ''}</Text>

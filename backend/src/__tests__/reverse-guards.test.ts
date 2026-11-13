@@ -25,7 +25,10 @@ const OWNER = { id: fakeId('owner'), token: 'guards-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__guardsFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__guardsFakeDb,
+)
 
 const BUSY_CUSTOMER = '11111111-1111-4111-8111-111111111111'
 const PAYING_CUSTOMER = '22222222-2222-4222-8222-222222222222'
@@ -139,7 +142,10 @@ function resetWorld() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__guardsFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__guardsFakeDb = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   const { buildServer } = await import('../index')
   app = await buildServer()

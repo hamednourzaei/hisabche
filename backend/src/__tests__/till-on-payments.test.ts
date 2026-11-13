@@ -54,7 +54,7 @@ vi.mock('../services/accounting', () => ({
   },
 }))
 
-const ctx = { workspaceId: 'ws-1', userId: 'user-1', role: 'owner' } as any
+const ctx = { workspaceId: 'ws-1', userId: 'user-1', role: 'owner' } as never
 const INVOICE = '11111111-1111-4111-8111-111111111111'
 
 function fakeRepo(invoice: { currency: string | null; rate: number | null; total?: number }) {
@@ -114,7 +114,7 @@ const pay = (over: Record<string, unknown> = {}) =>
     method: 'cash',
     allocations: [{ invoiceId: INVOICE, amount: 500 }],
     ...over,
-  }) as any
+  }) as never
 
 async function service(repo: ReturnType<typeof fakeRepo>) {
   const { PaymentsService } = await import('../services/payments/payments.service')

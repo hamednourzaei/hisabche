@@ -92,6 +92,9 @@ export default tseslint.config(
   {
     // Next.js plugin — shared UI used by web; directives reference it.
     files: ['**/*.{ts,tsx}'],
+    // The app-shell shims ARE the next/* modules on Windows and Android (no Next.js there):
+    // the next/image shim must render <img>. Real app code keeps the rule.
+    ignores: ['packages/app-shell/src/shims/**'],
     plugins: {
       '@next/next': nextPlugin,
     },

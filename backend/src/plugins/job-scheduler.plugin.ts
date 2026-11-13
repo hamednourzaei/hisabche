@@ -13,6 +13,7 @@ import { generateDraft } from '../services/blog/draft.service'
 import { runQualityGate } from '../services/blog/quality-gate.service'
 import { suggestInternalLinks } from '../services/blog/internal-links.service'
 import type { TenancyContext } from '../services/tenancy.service'
+import { errorText } from '../utils/error-text'
 
 const jobService = new JobService()
 const notificationService = new NotificationService()
@@ -267,8 +268,8 @@ async function pollJobsSingleInstance(): Promise<void> {
         // run here and says so rather than starting with an empty topic.
         await handler({ id: job.id, job_type: job.job_type, payload: null })
         await jobService.markCompleted(job.id)
-      } catch (err: any) {
-        await jobService.markFailed(job.id, err?.message || 'Unknown error')
+      } catch (err) {
+        await jobService.markFailed(job.id, errorText(err) || 'Unknown error')
       }
     } else {
       await jobService.markFailed(job.id, `Unknown job_type: ${job.job_type}`)

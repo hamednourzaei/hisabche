@@ -291,7 +291,7 @@ describe('Entitlement core: requireEntitlement middleware', () => {
     const req = {
       tenancy: { workspaceId: WS_IRR, userId: 'u1', role: 'owner' },
       log: { error: vi.fn() },
-    } as any
+    } as never
     const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as any
 
     await guard(req, reply)

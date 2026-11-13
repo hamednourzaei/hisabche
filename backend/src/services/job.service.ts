@@ -12,7 +12,7 @@ export interface Job {
   id: string
   job_type: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  payload: Record<string, any>
+  payload: Record<string, unknown>
   scheduled_at: string
   max_retries: number
   retry_count: number
@@ -257,8 +257,14 @@ export class JobService {
   }> {
     const cacheKey = this.getStatsCacheKey()
 
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached as any
+    const cached = await memoryCache.get<{
+      pending: number
+      processing: number
+      completed: number
+      failed: number
+      total: number
+    }>(cacheKey)
+    if (cached) return cached
 
     const [pendingResult, processingResult, completedResult, failedResult] = await Promise.all([
       supabase

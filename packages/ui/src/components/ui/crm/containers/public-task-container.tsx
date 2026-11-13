@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Loader2, ClipboardList, User, Check, PlayCircle } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { TaskCustomerOutcomes } from '../task-customer-outcomes'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 /* ═══════════════════════════════════════════════════════════
    PublicTaskContainer — read-only-except-status, no-login task
@@ -57,9 +58,13 @@ export function PublicTaskContainer({ token }: { token: string }) {
   const [updating, setUpdating] = useState(false)
   const [pendingCustomerId, setPendingCustomerId] = useState<string | null>(null)
 
-  const load = useCallback(() => {
+  // A new token starts from «loading» — set during render, not from the effect.
+  useAdjustOnChange([token], () => {
     setLoading(true)
     setError(false)
+  })
+
+  useEffect(() => {
     fetch(`${BASE_URL}/public/tasks/${token}`)
       .then((res) => {
         if (!res.ok) throw new Error('not ok')
@@ -69,10 +74,6 @@ export function PublicTaskContainer({ token }: { token: string }) {
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [token])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const advanceStatus = useCallback(
     async (status: TaskStatus) => {

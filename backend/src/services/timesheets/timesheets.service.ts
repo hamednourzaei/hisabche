@@ -20,22 +20,23 @@ import {
   type ProjectBillingConfig,
   type TimeEntry,
 } from './billing.domain'
+import { rowText, type DbRow } from '../../utils/db-row'
 
 const ENTRY_COLUMNS =
   'id, project_id, task_id, employee_id, on_date, minutes, billable, rate_minor, invoice_id, description'
 
-function mapEntry(raw: Record<string, any>): TimeEntry {
+function mapEntry(raw: DbRow): TimeEntry {
   return {
-    id: raw.id,
-    projectId: raw.project_id,
-    taskId: raw.task_id ?? null,
-    employeeId: raw.employee_id,
+    id: String(raw.id),
+    projectId: String(raw.project_id),
+    taskId: rowText(raw.task_id),
+    employeeId: String(raw.employee_id),
     onDate: String(raw.on_date ?? '').slice(0, 10),
     minutes: Number(raw.minutes) || 0,
     billable: raw.billable !== false,
     rateMinor: raw.rate_minor === null ? null : Number(raw.rate_minor),
-    invoiceId: raw.invoice_id ?? null,
-    description: raw.description ?? '',
+    invoiceId: rowText(raw.invoice_id),
+    description: rowText(raw.description) ?? '',
   }
 }
 
@@ -331,7 +332,7 @@ export class TimesheetsService {
     )
 
     const revenueMinor = (invoices.data ?? []).reduce(
-      (sum, row: any) => sum + Math.round((Number(row.total) || 0) * 100),
+      (sum, row) => sum + Math.round((Number(row.total) || 0) * 100),
       0,
     )
 

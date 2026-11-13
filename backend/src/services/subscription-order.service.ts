@@ -20,6 +20,7 @@ import { supabase } from '../db'
 import { BaseError } from '../errors/base.error'
 import { DatabaseError, NotFoundError, ConflictError } from '../errors/database.error'
 import { PLAN_PRICING, type PricingPlan } from './plan-pricing'
+import { rowText, type DbRow } from '../utils/db-row'
 
 export class SubscriptionOrderError extends BaseError {
   public readonly code: string
@@ -316,24 +317,28 @@ export class SubscriptionOrderService {
     }
   }
 
-  private mapRow(row: Record<string, any>): SubscriptionOrder {
+  private mapRow(row: DbRow): SubscriptionOrder {
     return {
-      id: row.id,
-      plan: row.plan,
-      billingInterval: row.billing_interval,
+      id: String(row.id),
+      plan: row.plan as SubscriptionOrder['plan'],
+      billingInterval: row.billing_interval as SubscriptionOrder['billingInterval'],
       amountMinor: Number(row.amount_minor),
-      currency: row.currency,
-      status: row.status,
-      paymentMethod: row.payment_method,
-      paymentReference: row.payment_reference,
-      paymentVerifiedAt: row.payment_verified_at,
-      claimTokenExpiresAt: row.claim_token_expires_at,
-      claimedByUserId: row.claimed_by_user_id,
-      claimedAt: row.claimed_at,
-      provisionedWorkspaceId: row.provisioned_workspace_id,
-      createdByUserId: row.created_by_user_id,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      currency: row.currency as SubscriptionOrder['currency'],
+      status: row.status as SubscriptionOrder['status'],
+      paymentMethod: rowText(row.payment_method) as SubscriptionOrder['paymentMethod'],
+      paymentReference: rowText(row.payment_reference) as SubscriptionOrder['paymentReference'],
+      paymentVerifiedAt: rowText(row.payment_verified_at) as SubscriptionOrder['paymentVerifiedAt'],
+      claimTokenExpiresAt: rowText(
+        row.claim_token_expires_at,
+      ) as SubscriptionOrder['claimTokenExpiresAt'],
+      claimedByUserId: rowText(row.claimed_by_user_id) as SubscriptionOrder['claimedByUserId'],
+      claimedAt: rowText(row.claimed_at) as SubscriptionOrder['claimedAt'],
+      provisionedWorkspaceId: rowText(
+        row.provisioned_workspace_id,
+      ) as SubscriptionOrder['provisionedWorkspaceId'],
+      createdByUserId: rowText(row.created_by_user_id) as SubscriptionOrder['createdByUserId'],
+      createdAt: String(row.created_at ?? ''),
+      updatedAt: String(row.updated_at ?? ''),
     }
   }
 }

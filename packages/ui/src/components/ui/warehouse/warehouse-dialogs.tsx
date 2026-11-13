@@ -9,7 +9,7 @@
 // goods coming in, not a second one here.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import {
   apiErrorMessage,
@@ -35,6 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../dialog'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 type T = (key: string, fallback?: string) => string
 
@@ -153,24 +154,24 @@ export function AddWarehouseDialog({
     }
   }
 
-  useEffect(() => {
+  useAdjustOnChange([open, initial], () => {
     if (open) {
       setName(initial?.name ?? '')
       setLocation(initial?.location ?? '')
       setError(null)
       setRows([{ key: Date.now(), code: '', name: '' }])
     }
-  }, [open, initial])
-  useEffect(() => {
+  })
+  useAdjustOnChange([open, shelfCount], () => {
     if (open) setShelvesOn(shelfCount > 0)
-  }, [open, shelfCount])
+  })
 
   const filledRows = shelvesOn ? rows.filter((row) => row.code.trim() !== '') : []
   const repeated = repeatedShelfCodes(filledRows)
   // The warehouse's present branch arrives after the dialog opens.
-  useEffect(() => {
+  useAdjustOnChange([open, currentBranch], () => {
     if (open) setBranchId(currentBranch ?? NO_BRANCH)
-  }, [open, currentBranch])
+  })
 
   const submit = async () => {
     try {
@@ -533,13 +534,13 @@ export function AssignStockDialog({
   const [quantity, setQuantity] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  useAdjustOnChange([open], () => {
     if (open) {
       setProductId('')
       setQuantity('')
       setError(null)
     }
-  }, [open])
+  })
 
   const selected = available.find((product) => product.id === productId)
   const amount = typedNumber(quantity) ?? 0
@@ -690,7 +691,7 @@ export function TransferStockDialog({
   // a lost answer, is the same movement.
   const [requestKey, setRequestKey] = useState('')
 
-  useEffect(() => {
+  useAdjustOnChange([open, initialProductId], () => {
     if (open) {
       setProductId(initialProductId ?? '')
       setTargetId('')
@@ -699,7 +700,7 @@ export function TransferStockDialog({
       setError(null)
       setRequestKey(crypto.randomUUID())
     }
-  }, [open, initialProductId])
+  })
 
   const selected = available.find((product) => product.id === productId)
   const amount = typedNumber(quantity) ?? 0

@@ -19,7 +19,7 @@
 //     StepUpDialog and passes the timestamp it returns.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 import { FRACTION_DIGITS, type KnownCurrency } from '@hisabche/formatting'
@@ -117,13 +117,12 @@ function errorText(error: unknown, fallback: string): string {
 
 // ─── Section: provider + per-account allowance ───────────────────────────
 
-function ConfigSection({
-  restorePrompt,
-  onRestored,
-}: {
-  restorePrompt: string | null
-  onRestored: () => void
-}) {
+/** A request to put an old prompt back in the form; a new object for every click. */
+interface RestoreRequest {
+  content: string
+}
+
+function ConfigSection({ restore }: { restore: RestoreRequest | null }) {
   const t = useTranslations()
   const { data: config, isLoading, isError, refetch } = useAdminAiConfig()
   const save = useSaveAdminAiConfig()
@@ -142,8 +141,11 @@ function ConfigSection({
   const [quotaLimit, setQuotaLimit] = useState('')
   const [quotaNote, setQuotaNote] = useState('')
 
-  useEffect(() => {
-    if (!config) return
+  // The form takes the saved config each time a new one arrives — during render, against
+  // the last one taken (React's «adjust state when a prop changes»), not in an effect.
+  const [loadedConfig, setLoadedConfig] = useState(config)
+  if (config && config !== loadedConfig) {
+    setLoadedConfig(config)
     setProvider(config.provider)
     setModel(config.model)
     setBaseUrl(config.baseUrl ?? '')
@@ -152,15 +154,15 @@ function ConfigSection({
     setIsEnabled(config.isEnabled)
     // ⚠️ `apiKey` is deliberately NOT set from `config` — there is nothing to
     // set it from, by design.
-  }, [config])
+  }
 
   // The prompts section can hand an old version back to this form. Applying it
-  // only prefills: saving stays the existing one write path.
-  useEffect(() => {
-    if (restorePrompt === null) return
-    setSystemPrompt(restorePrompt)
-    onRestored()
-  }, [restorePrompt, onRestored])
+  // only prefills: saving stays the existing one write path. Each request is applied once.
+  const [appliedRestore, setAppliedRestore] = useState<RestoreRequest | null>(null)
+  if (restore && restore !== appliedRestore) {
+    setAppliedRestore(restore)
+    setSystemPrompt(restore.content)
+  }
 
   if (isError) {
     return <ErrorState message={t('admin.error.generic')} onRetry={() => void refetch()} />
@@ -432,9 +434,12 @@ function FallbackSection() {
   const [drafts, setDrafts] = useState<AiFallbackDraft[]>([])
   const [stepUpOpen, setStepUpOpen] = useState(false)
 
-  useEffect(() => {
+  // New server data → fresh drafts; during render, against the last data taken.
+  const [draftedFrom, setDraftedFrom] = useState<typeof data | null>(null)
+  if (data !== draftedFrom) {
+    setDraftedFrom(data)
     setDrafts((data ?? []).map(draftFrom))
-  }, [data])
+  }
 
   if (isError) {
     return <ErrorState message={t('admin.ai.fallback.loadFailed')} onRetry={() => void refetch()} />
@@ -1441,7 +1446,7 @@ function AuditSection() {
 export function AiClient() {
   const t = useTranslations()
   const [section, setSection] = useState<AiSection>('config')
-  const [restorePrompt, setRestorePrompt] = useState<string | null>(null)
+  const [restore, setRestore] = useState<RestoreRequest | null>(null)
 
   return (
     <div className="space-y-5">
@@ -1455,16 +1460,14 @@ export function AiClient() {
         }))}
       />
 
-      {section === 'config' ? (
-        <ConfigSection restorePrompt={restorePrompt} onRestored={() => setRestorePrompt(null)} />
-      ) : null}
+      {section === 'config' ? <ConfigSection restore={restore} /> : null}
       {section === 'fallback' ? <FallbackSection /> : null}
       {section === 'usage' ? <UsageSection /> : null}
       {section === 'budgets' ? <BudgetsSection /> : null}
       {section === 'prompts' ? (
         <PromptsSection
           onUse={(content) => {
-            setRestorePrompt(content)
+            setRestore({ content })
             setSection('config')
           }}
         />

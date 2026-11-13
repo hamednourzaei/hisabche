@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { PageCustomizer, type CustomizerGroup } from './page-customizer'
 import { useCustomizerStore } from '@hisabche/store'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { usePageLook } from '../../lib/page-look'
 import { NAV_ITEMS } from '../../lib/menu/nav-items'
 import { consumeCustomizeFlag } from '../../lib/customize-flag'
@@ -49,6 +49,21 @@ export function useMenuCustomizerGroup(
   }
 }
 
+function arrivalStore() {
+  let asked: boolean | null = null
+  return {
+    subscribe(onChange: () => void) {
+      // StrictMode subscribes twice: the flag is taken on the first, never re-read.
+      if (asked === null) asked = consumeCustomizeFlag()
+      onChange()
+      return () => undefined
+    },
+    read: (): boolean | null => asked,
+  }
+}
+
+const serverArrival = (): boolean | null => null
+
 export function GlobalPageCustomizer() {
   const t = useCustomizerT()
   const pageGroups = useCustomizerStore((state) => state.pageGroups)
@@ -59,11 +74,10 @@ export function GlobalPageCustomizer() {
 
   // null until mounted (the server knows no person); then whether a
   // `?customize=1` link from settings asked for the dialog on arrival — once.
-  const [openOnArrival, setOpenOnArrival] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    setOpenOnArrival(consumeCustomizeFlag())
-  }, [])
+  // Consumed when this customizer subscribes (after commit), once per mount: the first
+  // customizer to subscribe takes the flag, the second finds it gone — one dialog.
+  const arrival = useMemo(() => arrivalStore(), [])
+  const openOnArrival = useSyncExternalStore(arrival.subscribe, arrival.read, serverArrival)
 
   if (openOnArrival === null) return null
 

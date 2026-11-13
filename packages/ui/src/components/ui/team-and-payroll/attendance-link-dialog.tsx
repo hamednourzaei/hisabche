@@ -23,7 +23,8 @@
 // only way another phone can be registered.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
+import { canShareNow, linkOrigin, noSubscription } from '../../../lib/browser-facts'
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { Copy, Send } from 'lucide-react'
@@ -47,6 +48,7 @@ import { useActionAvailability } from '../../../lib/capability'
 import { CloudRequiredNotice } from '../cloud-required-notice'
 import { Switch } from '../switch'
 import { useToast } from '../toast-provider'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 /** Server refusals this dialog can explain. Anything else gets the general sentence. */
 export const ATTENDANCE_LINK_ERROR_CODES = [
@@ -93,28 +95,20 @@ export function AttendanceLinkDialog({
   // The public page lives on the website; a packaged desktop app runs from
   // file://, so the public site is the link's home there. The share sheet is
   // the device's too. Both are read after mount.
-  const [device, setDevice] = useState<{ origin: string; canShare: boolean }>({
-    origin: '',
-    canShare: false,
-  })
-  useEffect(() => {
-    setDevice({
-      origin: window.location.protocol.startsWith('http')
-        ? window.location.origin
-        : 'https://hisabche.com',
-      canShare: typeof navigator.share === 'function',
-    })
-  }, [])
+  const device = {
+    origin: useSyncExternalStore(noSubscription, linkOrigin, () => ''),
+    canShare: useSyncExternalStore(noSubscription, canShareNow, () => false),
+  }
 
   // A new employee, a clean form.
   const employeeId = employee?.id ?? null
-  useEffect(() => {
+  useAdjustOnChange([employeeId], () => {
     setExpiresOn('')
     setDaysBack('0')
     setAutoApply(false)
     setRequireUnlock(false)
     setFailure(null)
-  }, [employeeId])
+  })
 
   const explain = (error: unknown): string => {
     const raw = apiErrorMessage(error, '')

@@ -99,7 +99,7 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
   const createNote = useCreateDeliveryNote()
   const recordPod = useRecordDeliveryPod()
 
-  const orders = ordersQuery.data?.orders ?? []
+  const orders = useMemo(() => ordersQuery.data?.orders ?? [], [ordersQuery.data])
   const filteredOrders = useMemo(() => {
     const q = orderSearch.trim().toLowerCase()
     if (!q) return orders

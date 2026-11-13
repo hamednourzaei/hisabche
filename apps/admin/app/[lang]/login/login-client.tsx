@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useEffectEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
 import { createAdminSupabaseClient } from '@/lib/supabase-client'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 
 /**
  * Admin sign-in is two steps: password, then a TOTP code (Supabase MFA).
@@ -110,8 +111,9 @@ export function LoginClient() {
       goToDashboard()
     })
 
-  useEffect(() => {
-    // An existing session goes on only as far as its own level allows.
+  // An existing session goes on only as far as its own level allows. An effect EVENT: it
+  // reads the latest `continueToSecondFactor` and `t` without making the mount effect rerun.
+  const resumeSession = useEffectEvent(() => {
     const supabase = createAdminSupabaseClient()
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return
@@ -121,7 +123,10 @@ export function LoginClient() {
         setError(e instanceof Error ? e.message : t('app.error'))
       }
     })
-    // Once on mount; after that the forms drive the steps.
+  })
+  // Once on mount; after that the forms drive the steps.
+  useEffect(() => {
+    resumeSession()
   }, [])
 
   const notice =
@@ -201,9 +206,12 @@ export function LoginClient() {
                     {t('adminPanel.mfaEnrollHint')}
                   </p>
                   {/* Supabase returns the QR as an SVG data URI. */}
-                  <img
+                  <Image
+                    unoptimized
                     src={step.qrCode}
                     alt={t('adminPanel.mfaQrAlt')}
+                    width={176}
+                    height={176}
                     className="mx-auto h-44 w-44 rounded-lg bg-white p-2"
                   />
                   <p className="text-xs text-[hsl(var(--fg-tertiary))]">

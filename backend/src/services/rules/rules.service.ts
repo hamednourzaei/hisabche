@@ -24,18 +24,20 @@ import {
   type RuleEntity,
   type RuleFacts,
 } from './rules.domain'
+import type { DbRow } from '../../utils/db-row'
 
 const COLUMNS =
   'id, workspace_id, name, entity, conditions, actions, priority, active, stop_on_match, created_at, updated_at'
 
-function mapRule(raw: Record<string, any>): BusinessRule {
+function mapRule(raw: DbRow): BusinessRule {
   return {
-    id: raw.id,
-    workspaceId: raw.workspace_id,
-    name: raw.name,
-    entity: raw.entity,
-    conditions: raw.conditions ?? { match: 'all', conditions: [] },
-    actions: raw.actions ?? [],
+    id: String(raw.id),
+    workspaceId: String(raw.workspace_id),
+    name: String(raw.name ?? ''),
+    entity: raw.entity as BusinessRule['entity'],
+    // JSON columns written by this service from validated input.
+    conditions: (raw.conditions ?? { match: 'all', conditions: [] }) as BusinessRule['conditions'],
+    actions: (raw.actions ?? []) as BusinessRule['actions'],
     priority: Number(raw.priority) || 0,
     active: raw.active !== false,
     stopOnMatch: raw.stop_on_match === true,

@@ -20,7 +20,10 @@ const SHOP = fakeId('shop')
 const OTHER_SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__migStockFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__migStockFakeDb,
+)
 
 const MAIN = fakeId('warehouse')
 const SECOND = fakeId('warehouse')
@@ -76,7 +79,10 @@ function resetWorld(
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__migStockFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__migStockFakeDb = createFakeDb(
+    db,
+    users,
+  )
   db.unique('migration_records', ['workspace_id', 'source_entity_type', 'source_identity'])
   ;({ IMPORT_LIMITS } = await import('../services/migration'))
   resetWorld()

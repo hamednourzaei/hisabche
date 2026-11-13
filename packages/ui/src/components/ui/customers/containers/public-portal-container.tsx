@@ -18,6 +18,7 @@ import { localizePath } from '@hisabche/ui-contract'
 
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { KpiCard } from '../../kpi-card'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 const BASE_URL =
   (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
@@ -62,9 +63,11 @@ export function PublicPortalContainer({ token }: { token: string }) {
   const { date } = useDateFormat()
   const [state, setState] = useState<State>({ kind: 'loading' })
 
+  // A new token starts from «loading» — set during render, not from the effect.
+  useAdjustOnChange([token], () => setState({ kind: 'loading' }))
+
   useEffect(() => {
     let cancelled = false
-    setState({ kind: 'loading' })
     fetch(`${BASE_URL}/public/portal/${token}`)
       .then(async (res) => {
         if (cancelled) return

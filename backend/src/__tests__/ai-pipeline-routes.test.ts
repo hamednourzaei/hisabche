@@ -408,7 +408,7 @@ const enable = (autoApproveNonFinancial = false) =>
 
 const start = async (session: string, request: string, dryRun = false) => {
   const response = await call('POST', '/api/ai/pipeline/runs', session, { request, dryRun })
-  const json = response.json() as any
+  const json = response.json()
   if (!json.run)
     require('fs').writeFileSync(
       'C:\\Users\\hamed\\Desktop\\hisabche\\backend-error.log',

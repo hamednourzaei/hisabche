@@ -71,7 +71,7 @@ const ctx = {
   workspaceId: '11111111-1111-4111-8111-111111111111',
   userId: '22222222-2222-4222-8222-222222222222',
   role: 'owner',
-} as any
+} as never
 
 const purchase = (over: Record<string, unknown> = {}) =>
   ({
@@ -81,7 +81,7 @@ const purchase = (over: Record<string, unknown> = {}) =>
       { productId: null, productName: 'طلا', quantity: 10, unitPrice: 1000, totalPrice: 10_000 },
     ],
     ...over,
-  }) as any
+  }) as never
 
 beforeEach(() => {
   writes.length = 0

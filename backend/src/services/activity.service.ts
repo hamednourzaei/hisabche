@@ -343,7 +343,7 @@ export class ActivityService {
         // The page is read as usual and narrowed by activity_reads below.
         unreadByReads = true
       } else if (Array.isArray(unreadIds)) {
-        unreadIdsFilter = unreadIds.map((r: any) => (typeof r === 'string' ? r : r.id))
+        unreadIdsFilter = unreadIds.map((r) => (typeof r === 'string' ? r : r.id))
         if (unreadIdsFilter.length === 0) {
           return {
             data: [],
@@ -436,14 +436,14 @@ export class ActivityService {
             throw new DatabaseError('Failed to read activity reads', readRowsErr)
           }
         } else if (readRows) {
-          readSet = new Set(readRows.map((r: any) => r.activity_id))
+          readSet = new Set(readRows.map((r) => r.activity_id))
         }
       }
 
       // The unread tab without its function: only what this person has not read.
       const shown = unreadByReads ? items.filter((item) => !readSet.has(item.id)) : items
 
-      const groups = new Map<string, any[]>()
+      const groups = new Map<string, typeof shown>()
       for (const activity of shown) {
         const key = `${activity.entity_type}:${activity.entity_id}`
         if (!groups.has(key)) {
@@ -472,6 +472,7 @@ export class ActivityService {
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         const latest = sortedItems[0]
+        if (!latest) continue
         const metadata = latest.metadata || {}
 
         // خلاصه‌ها بالاتر به‌صورت موازی گرفته شده‌اند.
@@ -599,7 +600,7 @@ export class ActivityService {
 
     return {
       activities: page as unknown as ActivityItemDto[],
-      nextCursor: hasMore ? ((page[page.length - 1] as any)?.created_at ?? null) : null,
+      nextCursor: hasMore ? (page[page.length - 1]?.created_at ?? null) : null,
       hasMore,
     }
   }

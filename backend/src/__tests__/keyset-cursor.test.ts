@@ -8,7 +8,7 @@ const ID = '0b6b1c52-1e0c-4c8e-9a51-6a3f1d9d2a11'
 
 function recorder() {
   const calls: Array<[string, ...unknown[]]> = []
-  const q: any = {
+  const q = {
     gt: (...a: unknown[]) => (calls.push(['gt', ...a]), q),
     lt: (...a: unknown[]) => (calls.push(['lt', ...a]), q),
     or: (...a: unknown[]) => (calls.push(['or', ...a]), q),

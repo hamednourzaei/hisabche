@@ -38,6 +38,7 @@ import {
   planPayrollOutcome,
   summarizePayrolls,
 } from '@hisabche/validation'
+import type { DbRow } from '../utils/db-row'
 
 /**
  * G2 — does this error mean `employee_branch_assignments` has not been created
@@ -300,7 +301,7 @@ export class HumanResourcesService {
       return []
     }
 
-    return (data ?? []).map((row: Record<string, any>) => {
+    return (data ?? []).map((row: DbRow) => {
       // PostgREST hands back an embedded to-one as an ARRAY when it cannot
       // prove the relationship — a missing FK, which this schema has several
       // of. Both shapes are handled or the branch name renders blank on

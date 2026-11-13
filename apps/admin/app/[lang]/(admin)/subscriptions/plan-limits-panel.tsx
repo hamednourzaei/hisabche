@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient, apiErrorMessage } from '@hisabche/api'
@@ -102,7 +102,12 @@ function PlanRowEditor({ row }: { row: PlanRow }) {
   const t = useTranslations()
   const queryClient = useQueryClient()
   const [fields, setFields] = useState(() => toFields(row.settings))
-  useEffect(() => setFields(toFields(row.settings)), [row.settings])
+  // New saved settings → fresh fields; during render, against the last settings taken.
+  const [fieldsFrom, setFieldsFrom] = useState(row.settings)
+  if (row.settings !== fieldsFrom) {
+    setFieldsFrom(row.settings)
+    setFields(toFields(row.settings))
+  }
   const save = useMutation({
     mutationFn: async () => {
       await apiClient.put(`/admin/plan-limits/${row.plan}`, toPatch(fields))

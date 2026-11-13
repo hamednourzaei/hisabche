@@ -3,7 +3,7 @@
 // Create or edit one article. The server is the authority on everything it
 // can check — slug uniqueness, alt text, sanitised HTML, the publication
 // rule — and its answers land on the field they belong to.
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
@@ -44,6 +44,7 @@ import {
 import { AiArticleButton } from './ai-article-button'
 import { BlogEditor } from './blog-editor'
 import { SeoPanel, type SeoFields } from './seo-panel'
+import Image from 'next/image'
 
 interface FormState extends SeoFields {
   locale: BlogLocale
@@ -165,12 +166,10 @@ export function PostEditorClient({ id }: { id: string | null }) {
 
   // Fill the form once per loaded post (not on every refetch — that would
   // throw away what the admin is typing).
-  useEffect(() => {
-    if (post.data && post.data.id !== loadedId) {
-      setForm(fromPost(post.data))
-      setLoadedId(post.data.id)
-    }
-  }, [post.data, loadedId])
+  if (post.data && post.data.id !== loadedId) {
+    setForm(fromPost(post.data))
+    setLoadedId(post.data.id)
+  }
 
   const categories = useBlogTaxonomy('categories', form.locale)
   const tags = useBlogTaxonomy('tags', form.locale)
@@ -531,9 +530,12 @@ export function PostEditorClient({ id }: { id: string | null }) {
           {form.coverUrl ? (
             // eslint-plugin-next prefers next/image; the admin preview is a
             // thumbnail of an arbitrary upload, not a page's LCP.
-            <img
+            <Image
+              unoptimized
               src={form.coverUrl}
               alt={form.coverAlt}
+              width={1200}
+              height={630}
               className="aspect-[1200/630] w-full rounded-lg object-cover"
             />
           ) : null}

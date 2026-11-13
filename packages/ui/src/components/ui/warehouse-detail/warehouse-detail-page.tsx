@@ -2,7 +2,7 @@
 
 import { CategoryField, categoryLabel } from '../warehouse/category-field'
 import { KpiCard, KpiGrid } from '../kpi-card'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { UnitSelect } from '../units/unit-select'
 import { GHOST_ICON_BUTTON, OUTLINE_BUTTON } from '../button-classes'
 import { cn } from '../../../lib/utils'
@@ -25,6 +25,7 @@ import {
 import { MoneyInput } from '../money-input'
 import { SelectField } from '../select-field'
 import { Dialog, DialogContent, DialogTitle } from '../dialog'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ProductDetailPage v3 — Hisabche Design Language
@@ -194,7 +195,7 @@ export function ProductDetailPage({
   /** Which tile's panel is open over the page — null is «none». */
   const [openSection, setOpenSection] = useState<SectionKey | null>(null)
 
-  useEffect(() => {
+  useAdjustOnChange([product], () => {
     if (product) {
       setEditValues({
         name: product.name,
@@ -208,7 +209,7 @@ export function ProductDetailPage({
         warehouseId: '',
       })
     }
-  }, [product])
+  })
 
   const handleEditChange = (field: keyof ProductEditValues, value: string | number | UnitType) => {
     setEditValues((prev) => ({ ...prev, [field]: value }))

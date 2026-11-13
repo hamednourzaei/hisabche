@@ -34,7 +34,10 @@ const users = new Map<string, { id: string }>([
   [SELLER.token, { id: SELLER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__financeFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__financeFakeDb,
+)
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -200,7 +203,7 @@ function registerRpcs() {
           row.client_request_id === args.p_client_request_id,
       )
     if (existing) return { payment_id: existing.id, replayed: true }
-    const record = (db as any).rpcs.get('payments_record') as (a: Row) => string
+    const record = db.rpcs.get('payments_record') as (a: Row) => string
     const id = record(args)
     const row = db.rows('payments').find((candidate) => candidate.id === id)!
     row.client_request_id = args.p_client_request_id
@@ -211,7 +214,10 @@ function registerRpcs() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__financeFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__financeFakeDb = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   registerRpcs()
 

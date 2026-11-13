@@ -26,7 +26,10 @@ const users = new Map<string, { id: string }>([
   [STRANGER.token, { id: STRANGER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__tillFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__tillFakeDb,
+)
 
 function member(workspaceId: string, userId: string) {
   return {
@@ -54,7 +57,7 @@ function resetWorld() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__tillFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__tillFakeDb = createFakeDb(db, users)
   resetWorld()
   const { buildServer } = await import('../index')
   app = await buildServer()

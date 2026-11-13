@@ -38,7 +38,7 @@ vi.mock('../services/authorization/scope.service', () => ({
   scopes: { assertMay: async () => undefined },
 }))
 
-const ctx = { workspaceId: 'ws', userId: 'u', role: 'owner' } as any
+const ctx = { workspaceId: 'ws', userId: 'u', role: 'owner' } as never
 
 beforeEach(() => {
   writes.length = 0
@@ -51,7 +51,7 @@ const wh = (id: string) => ({ id, name: id, location: null, is_active: true })
 describe('ProductService.update — stock', () => {
   it('−98 → 99 records ONE adjustment of +197 and never writes products.quantity', async () => {
     const { ProductService } = await import('../services/product.service')
-    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 99 } as any)
+    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 99 } as never)
 
     const movements = writes.filter((w) => w.table === 'stock_movements')
     expect(movements).toHaveLength(1)
@@ -67,7 +67,7 @@ describe('ProductService.update — stock', () => {
 
   it('an unchanged quantity writes no movement', async () => {
     const { ProductService } = await import('../services/product.service')
-    await new ProductService().update('p1', ctx, { id: 'p1', quantity: -98, name: 'y' } as any)
+    await new ProductService().update('p1', ctx, { id: 'p1', quantity: -98, name: 'y' } as never)
     expect(writes.filter((w) => w.table === 'stock_movements')).toHaveLength(0)
   })
 
@@ -76,7 +76,7 @@ describe('ProductService.update — stock', () => {
   it('with ONE warehouse, the adjustment lands in it', async () => {
     warehouses = [wh('haji')]
     const { ProductService } = await import('../services/product.service')
-    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as any)
+    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as never)
     const movement = writes.find((w) => w.table === 'stock_movements')
     expect(movement?.row).toMatchObject({ quantity: 100, to_warehouse_id: 'haji' })
   })
@@ -85,7 +85,7 @@ describe('ProductService.update — stock', () => {
     warehouses = [wh('a'), wh('b')]
     const { ProductService } = await import('../services/product.service')
     await expect(
-      new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as any),
+      new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as never),
     ).rejects.toThrow('PRODUCT_WAREHOUSE_REQUIRED')
     expect(writes.filter((w) => w.table === 'stock_movements')).toHaveLength(0)
   })
@@ -93,18 +93,26 @@ describe('ProductService.update — stock', () => {
   it('with SEVERAL, the chosen warehouse gets it; an unknown one is refused', async () => {
     warehouses = [wh('a'), wh('b')]
     const { ProductService } = await import('../services/product.service')
-    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 2, warehouseId: 'b' } as any)
+    await new ProductService().update('p1', ctx, {
+      id: 'p1',
+      quantity: 2,
+      warehouseId: 'b',
+    } as never)
     expect(writes.find((w) => w.table === 'stock_movements')?.row).toMatchObject({
       to_warehouse_id: 'b',
     })
     await expect(
-      new ProductService().update('p1', ctx, { id: 'p1', quantity: 5, warehouseId: 'zzz' } as any),
+      new ProductService().update('p1', ctx, {
+        id: 'p1',
+        quantity: 5,
+        warehouseId: 'zzz',
+      } as never),
     ).rejects.toThrow('PRODUCT_WAREHOUSE_NOT_FOUND')
   })
 
   it('with NO warehouses, the adjustment names none — there is nowhere else', async () => {
     const { ProductService } = await import('../services/product.service')
-    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as any)
+    await new ProductService().update('p1', ctx, { id: 'p1', quantity: 2 } as never)
     expect(writes.find((w) => w.table === 'stock_movements')?.row).not.toHaveProperty(
       'to_warehouse_id',
     )

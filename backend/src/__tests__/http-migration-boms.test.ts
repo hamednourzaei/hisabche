@@ -11,6 +11,7 @@ import type { FastifyInstance } from 'fastify'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { FakeDatabase, createFakeDb, fakeId } from './helpers/fake-supabase'
+import type { DbRow } from '../utils/db-row'
 
 const db = new FakeDatabase()
 
@@ -18,7 +19,10 @@ const OWNER = { id: fakeId('owner'), token: 'migbom-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__migBomFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__migBomFakeDb,
+)
 
 const PEN = fakeId('product')
 
@@ -31,7 +35,7 @@ const SHEET = [
   'Gift Hamper,Nos,Gift Hamper,1,Pen,2',
 ].join('\n')
 
-const saved: Array<{ productId: string; rows: Array<Record<string, any>> }> = []
+const saved: Array<{ productId: string; rows: Array<DbRow> }> = []
 
 function resetWorld() {
   db.tables.clear()
@@ -59,7 +63,10 @@ function resetWorld() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__migBomFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__migBomFakeDb = createFakeDb(
+    db,
+    users,
+  )
   db.unique('migration_records', ['workspace_id', 'source_entity_type', 'source_identity'])
 
   const { ManufacturingService } = await import('../services/manufacturing.service')
@@ -69,7 +76,7 @@ beforeAll(async () => {
   ) => (saved.some((entry) => entry.productId === productId) ? { productId } : null)) as never)
   vi.spyOn(ManufacturingService.prototype, 'saveDefinition').mockImplementation((async (
     _ctx: unknown,
-    input: { productId: string; rows: Array<Record<string, any>> },
+    input: { productId: string; rows: Array<DbRow> },
   ) => {
     saved.push({ productId: input.productId, rows: input.rows })
     return { bom_id: fakeId('bom'), version: 1, revised: false }

@@ -28,7 +28,7 @@
 // ever be a guess about the next delivery.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useCreateProduct, useCreateUnit, useReceiveBatch, useUnits } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
@@ -41,6 +41,7 @@ import { Switch } from '../switch'
 import { CameraScanButton } from '../invoice-builder/camera-scan-button'
 import { CategoryField } from './category-field'
 import { barcodeTakenMessage } from '../../../lib/barcode/barcode-errors'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 type T = (key: string, fallback?: string) => string
 
@@ -107,14 +108,14 @@ export function AddToWarehouseModal({
   const { data: unitData } = useUnits()
   const receiveBatch = useReceiveBatch()
 
-  useEffect(() => {
+  useAdjustOnChange([open], () => {
     if (open) {
       setForm(blank)
       setError(null)
       setNewUnit(null)
       setHasExpiry(false)
     }
-  }, [open])
+  })
 
   const set = (key: keyof typeof blank, value: string) => setForm((f) => ({ ...f, [key]: value }))
   const number = (value: string) => (value.trim() === '' ? 0 : Number(value))

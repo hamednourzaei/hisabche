@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useAfterHydration } from './use-after-hydration'
 import { selectHasUsableSession, useAuthStore } from '@hisabche/store'
 
 /**
@@ -17,7 +17,6 @@ import { selectHasUsableSession, useAuthStore } from '@hisabche/store'
  */
 export function useSignedInAfterMount(): boolean {
   const hasSession = useAuthStore(selectHasUsableSession)
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
+  const mounted = useAfterHydration()
   return mounted && hasSession
 }

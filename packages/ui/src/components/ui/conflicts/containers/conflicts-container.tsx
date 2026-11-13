@@ -101,7 +101,7 @@ const ConflictsContainerContent = memo(function ConflictsContainerContent({
         },
       )
     },
-    [resolve, selectedId],
+    [resolve, selectedId, t],
   )
 
   const handleSelect = useCallback((id: string | null) => {

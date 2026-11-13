@@ -36,7 +36,6 @@ const WORKFLOW_MINIMAL = 'id, name, entity_type, is_active'
 
 const WORKFLOW_STEP_COLUMNS =
   'id, workflow_id, step_order, approver_role, approver_user_id, is_final, created_at'
-const WORKFLOW_STEP_MINIMAL = 'id, workflow_id, step_order, approver_role'
 
 const INSTANCE_COLUMNS =
   'id, workflow_id, workspace_id, entity_type, entity_id, status, current_step, total_steps, started_at, completed_at, created_at, updated_at'
@@ -52,6 +51,13 @@ interface StepWithWorkflowId {
   workflow_id: string
   step_order: number
   approver_role: string
+}
+
+/** A `workflow_steps` row as WORKFLOW_STEP_COLUMNS reads it. */
+interface WorkflowStepRow extends StepWithWorkflowId {
+  approver_user_id: string | null
+  is_final: boolean
+  created_at: string
 }
 
 /**
@@ -190,18 +196,21 @@ export class WorkflowService {
 
     // ✅ گرفتن steps به صورت موازی
     const workflowIds = (data || []).map((w) => w.id)
-    const stepsMap: Record<string, any[]> = {}
+    // ⚠️ The full step columns (13 Nov 2026): this list read only id/order/role, while
+    // `Workflow.steps` promises `is_final` and `approver_user_id` — every listed step
+    // went out without them. An `any[]` here hid it from tsc.
+    const stepsMap: Record<string, Workflow['steps']> = {}
 
     if (workflowIds.length > 0) {
       const { data: steps } = await supabase
         .from('workflow_steps')
-        .select(WORKFLOW_STEP_MINIMAL)
+        .select(WORKFLOW_STEP_COLUMNS)
         .in('workflow_id', workflowIds)
         .order('step_order')
 
       // ✅ FIX: استفاده از forEach با چک undefined
       if (steps) {
-        for (const step of steps as StepWithWorkflowId[]) {
+        for (const step of steps as Array<Workflow['steps'][number] & { workflow_id: string }>) {
           const workflowId = step.workflow_id
           // ✅ چک کردن وجود workflowId
           if (workflowId) {
@@ -323,7 +332,7 @@ export class WorkflowService {
     await this.getWorkflow(workspaceId, input.workflow_id)
 
     const stepsCacheKey = this.getWorkflowStepsCacheKey(workspaceId, input.workflow_id)
-    let templateSteps = (await memoryCache.get(stepsCacheKey)) as any[]
+    let templateSteps = await memoryCache.get<WorkflowStepRow[]>(stepsCacheKey)
 
     if (!templateSteps) {
       const { data: steps, error } = await supabase
@@ -547,7 +556,7 @@ export class WorkflowService {
     }
 
     const stepsCacheKey = this.getWorkflowStepsCacheKey(ctx.workspaceId, workflowId)
-    let steps = (await memoryCache.get(stepsCacheKey)) as any[]
+    let steps = await memoryCache.get<WorkflowStepRow[]>(stepsCacheKey)
 
     if (!steps) {
       const { data: s, error } = await supabase
@@ -584,7 +593,7 @@ export class WorkflowService {
     // The default is gone; so is the branch that made it dangerous.
     //
     // Owner keeps its override because owner IS a real workspace role.
-    let canAct = userRole === 'owner' || userRole === (currentStep.approver_role as string)
+    let canAct = userRole === 'owner' || userRole === currentStep.approver_role
 
     // Capability #68: a step that waited past its workflow's policy gains a
     // second role allowed to act on it. Asked only when the actor's own role
@@ -649,7 +658,7 @@ export class WorkflowService {
     let newStep: number
     let completedAt: string | null = null
 
-    const isFinal = currentStep.is_final as boolean
+    const isFinal = currentStep.is_final
 
     if (input.action === 'approved') {
       if (isFinal) {

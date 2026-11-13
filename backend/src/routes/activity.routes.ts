@@ -5,6 +5,7 @@ import { ActivityService, ActivityReadsNotConfiguredError } from '../services/ac
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { errorText } from '../utils/error-text'
 
 const activityService = new ActivityService()
 
@@ -262,9 +263,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
       if (!summary) return reply.code(404).send({ error: 'NOT_FOUND' })
 
       return reply.send(summary)
-    } catch (err: any) {
+    } catch (err) {
       fastify.log.error(err)
-      return reply.code(400).send({ error: err.message })
+      return reply.code(400).send({ error: errorText(err) })
     }
   }
 
@@ -285,9 +286,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
       )
 
       return reply.send(result)
-    } catch (err: any) {
+    } catch (err) {
       fastify.log.error(err)
-      return reply.code(400).send({ error: err.message })
+      return reply.code(400).send({ error: errorText(err) })
     }
   }
 

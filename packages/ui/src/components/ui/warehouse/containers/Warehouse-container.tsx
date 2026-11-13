@@ -7,7 +7,7 @@
 //   ?warehouse → that warehouse's stat cards + its products («افزودن کالا به انبار»)
 // `?warehouse=unassigned` is the stock that is in no warehouse yet.
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useWarehouse } from '../../../../hooks/warehouse/use-warehouse'
@@ -41,6 +41,7 @@ import { ShelfOverflowNotice, shelfOverflows } from '../shelves/shelf-overflow'
 import type { ShelfT } from '../shelves/shelf-dialogs'
 import { stockOptions } from '../shelves/warehouse-shelves-view'
 import { nameOfCurrency } from '../../../../lib/currency-name'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 /**
  * H4 — the server's own cap on `GET /products/:id/stock-history`.
@@ -132,13 +133,13 @@ export function WarehouseContainer() {
   // supplier, lines, dates and a decision about approval. Recorded as a gap in
   // .claude/HANDOFF-PHASES-G-TO-O.md instead of half-built here.
 
-  useEffect(() => {
+  useAdjustOnChange([addParam], () => {
     if (addParam === 'true') setShowAddModal(true)
-  }, [addParam])
+  })
 
-  useEffect(() => {
+  useAdjustOnChange([queryParam], () => {
     if (queryParam !== null && queryParam !== undefined) setSearch(queryParam)
-  }, [queryParam])
+  })
 
   const { products, summary, isLoading, stockStatus, stockLabel, handleDelete, refetch } =
     useWarehouse(search)
@@ -217,8 +218,6 @@ export function WarehouseContainer() {
         })),
     [detail.data, search],
   )
-
-  const handleOpenAddModal = useCallback(() => setShowAddModal(true), [])
 
   // ✅ FIX: بعد از بستن مودال و ایجاد محصول، کش را پاک کن
   // A new product's opening stock is in no warehouse yet, so the warehouse

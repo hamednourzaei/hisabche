@@ -144,10 +144,8 @@ export function useDashboard() {
   }, [productsData])
 
   // ─── 9. Map recent invoices ────────────────────────────────────────────
-  const simpleT = (key: string): string => t(key)
-
   const recentInvoices = useMemo(
-    () => mapRecentInvoices(invoicesData?.invoices, simpleT),
+    () => mapRecentInvoices(invoicesData?.invoices, (key: string): string => t(key)),
     [invoicesData, t],
   )
 

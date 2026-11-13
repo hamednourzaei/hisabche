@@ -37,7 +37,7 @@ afterAll(async () => {
 const client = () =>
   createClient(base, 'service-key', {
     auth: { persistSession: false },
-    global: { fetch: instrumentFetch((input: any, init?: any) => fetch(input, init)) },
+    global: { fetch: instrumentFetch((input, init?) => fetch(input, init)) },
   })
 
 describe('classify', () => {
@@ -105,7 +105,7 @@ describe('per-request database metrics over real HTTP', () => {
     const url = `http://127.0.0.1:${(other.address() as AddressInfo).port}`
     const db = createClient(url, 'k', {
       auth: { persistSession: false },
-      global: { fetch: instrumentFetch((input: any, init?: any) => fetch(input, init)) },
+      global: { fetch: instrumentFetch((input, init?) => fetch(input, init)) },
     })
     await runWithMetrics(async () => {
       await db.from('x').select('id')

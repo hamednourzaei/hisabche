@@ -4,7 +4,7 @@
 'use client'
 
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CustomersView } from '../customer-view'
@@ -13,6 +13,7 @@ import type { CustomerWithDebt } from '../../../../lib/customers/customers-types
 import { useCustomersData } from '../../../../hooks/customers/use-customers-data'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import type { InvoiceRecord } from '../PaymentModal'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 // ============================================================
 // 📦 Typeهای محلی
@@ -84,13 +85,13 @@ export function CustomersContainer({ role = 'all' }: CustomersContainerProps = {
 
   // مسیر مقصد ممکن است همین صفحه باشد؛ در آن حالت کامپوننت remount نمی‌شود و
   // مقدار اولیه‌ی useState دوباره خوانده نمی‌شود.
-  useEffect(() => {
+  useAdjustOnChange([addParam], () => {
     if (addParam === 'true') setShowAddModal(true)
-  }, [addParam])
+  })
 
-  useEffect(() => {
+  useAdjustOnChange([queryParam], () => {
     if (queryParam !== null && queryParam !== undefined) setSearch(queryParam)
-  }, [queryParam])
+  })
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentCustomer, setPaymentCustomer] = useState<CustomerWithInvoices | null>(null)
 

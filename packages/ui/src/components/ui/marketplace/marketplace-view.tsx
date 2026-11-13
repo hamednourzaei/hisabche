@@ -32,6 +32,7 @@ import { Card, CardContent } from '../card'
 import { Input } from '../input'
 import { SelectField } from '../select-field'
 import { appCategoryLabel, appPriceLabel } from '../../../lib/oauth-labels'
+import Image from 'next/image'
 
 type T = (key: string, fallback?: string) => string
 export type MarketplaceState = 'loading' | 'ready' | 'not-configured' | 'error' | 'not-found'
@@ -108,7 +109,15 @@ function StateLine({ state, t, onRetry }: { state: MarketplaceState; t: T; onRet
 
 function Icon({ url, name }: { url: string | null; name: string }) {
   return url ? (
-    <img src={url} alt="" loading="lazy" className="size-12 shrink-0 rounded-xl object-cover" />
+    <Image
+      unoptimized
+      src={url}
+      alt=""
+      width={48}
+      height={48}
+      loading="lazy"
+      className="size-12 shrink-0 rounded-xl object-cover"
+    />
   ) : (
     <span
       aria-hidden="true"
@@ -357,9 +366,12 @@ function Detail({ props, d }: { props: MarketplaceViewProps; d: MarketplaceAppDe
         <div className="flex gap-2 overflow-x-auto pb-2">
           {d.screenshots.map((s) => (
             <figure key={s.id} className="w-72 shrink-0 space-y-1">
-              <img
+              <Image
+                unoptimized
                 src={s.url}
                 alt={s.caption}
+                width={1280}
+                height={720}
                 loading="lazy"
                 className="aspect-video w-full rounded-xl object-cover"
               />

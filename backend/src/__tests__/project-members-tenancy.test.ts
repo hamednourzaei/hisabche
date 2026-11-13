@@ -143,14 +143,14 @@ describe('N-31: Project Members and Tasks Tenancy Isolation', () => {
     userId: USER_A,
     role: 'owner',
     capabilities: ['*'],
-  } as any
+  }
 
   const ctxB = {
     workspaceId: WORKSPACE_B,
     userId: USER_B,
     role: 'owner',
     capabilities: ['*'],
-  } as any
+  }
 
   beforeEach(async () => {
     reset()

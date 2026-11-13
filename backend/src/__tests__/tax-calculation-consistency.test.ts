@@ -87,7 +87,7 @@ describe('N-37: Tax Calculation Consistency & Return Generation', () => {
     userId: 'user-1',
     role: 'owner',
     capabilities: ['*'],
-  } as any
+  }
 
   let taxService: any
 

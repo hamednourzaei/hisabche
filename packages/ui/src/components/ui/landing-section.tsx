@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, memo, type ReactNode } from 'react'
+import { useAfterHydration } from '../../hooks/use-after-hydration'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
@@ -66,11 +67,7 @@ export const AnimatedCounter = memo(function AnimatedCounter({
 }) {
   const { ref, inView } = useInView()
   const count = useEasedCounter(end, inView)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useAfterHydration()
 
   const display = mounted ? count : end
 

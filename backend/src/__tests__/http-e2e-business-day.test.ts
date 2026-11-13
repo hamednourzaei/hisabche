@@ -42,7 +42,7 @@ const users = new Map<string, { id: string }>([
   [SELLER.token, { id: SELLER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__e2eFakeDb)
+vi.mock('../db', async () => (globalThis as typeof globalThis & Record<string, object>).__e2eFakeDb)
 
 const CASH = fakeId('acct')
 const SALES = fakeId('acct')
@@ -202,7 +202,7 @@ function registerRpcs() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__e2eFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__e2eFakeDb = createFakeDb(db, users)
   resetWorld()
   registerRpcs()
 

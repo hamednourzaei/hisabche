@@ -10,6 +10,8 @@
 'use client'
 
 import { memo, useCallback, useEffect, useState } from 'react'
+import { useAfterHydration } from '../../../hooks/use-after-hydration'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 import { useTranslations } from 'next-intl'
 import { Printer, Scale, ScanBarcode } from 'lucide-react'
 import { lookupProductByBarcode, type BarcodeLookup } from '@hisabche/api'
@@ -74,15 +76,19 @@ export const HardwareSection = memo(function HardwareSection() {
   const [hasHost, setHasHost] = useState(false)
   const [scale, setScale] = useState<ScaleLabelConfig | null>(null)
 
-  useEffect(() => {
+  const hydrated = useAfterHydration()
+  useAdjustOnChange([hydrated], () => {
+    if (!hydrated) return
     setScanner(loadScannerConfig())
     setScale(loadScaleLabelConfig())
     setPrinter(loadPrinterSettings())
-    const host = getReceiptPrinterHost()
-    setHasHost(host !== null)
-    if (host) {
-      host.listPrinters().then(setPrinters, () => setPrinters([]))
-    }
+    setHasHost(getReceiptPrinterHost() !== null)
+  })
+  // The printer list is the host's answer, asked once mounted.
+  useEffect(() => {
+    getReceiptPrinterHost()
+      ?.listPrinters()
+      .then(setPrinters, () => setPrinters([]))
   }, [])
 
   const updateScanner = useCallback((patch: Partial<ScannerConfig>) => {

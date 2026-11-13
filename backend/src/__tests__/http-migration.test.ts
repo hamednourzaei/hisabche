@@ -37,7 +37,10 @@ const users = new Map<string, { id: string }>([
   [OUTSIDER.token, { id: OUTSIDER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__migrationFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__migrationFakeDb,
+)
 
 /** A small, realistic customer export: a comma inside a quoted name, one
  *  European-format balance, and one duplicate phone written differently. */
@@ -79,7 +82,7 @@ let app: FastifyInstance
 
 beforeAll(async () => {
   const fake = createFakeDb(db, users)
-  ;(globalThis as any).__migrationFakeDb = fake
+  ;(globalThis as typeof globalThis & Record<string, object>).__migrationFakeDb = fake
 
   // Mirrors the unique index the migration creates. Without it the fake would
   // let the identity ledger hold two rows for one source identity, and the

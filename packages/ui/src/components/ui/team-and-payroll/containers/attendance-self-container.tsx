@@ -29,6 +29,7 @@ import { Button } from '../../button'
 import { SegmentedControl } from '../../segmented-control'
 import { SelectField } from '../../select-field'
 import { Switch } from '../../switch'
+import { useAdjustOnChange } from '../../../../hooks/use-adjust-on-change'
 
 const BASE_URL =
   (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
@@ -144,33 +145,46 @@ export function AttendanceSelfContainer({ token }: { token: string }) {
   const [sending, setSending] = useState(false)
   const [outcome, setOutcome] = useState<Outcome>(null)
 
-  const read = useCallback(
-    async (quiet: boolean) => {
-      if (!quiet) setLoad({ kind: 'loading' })
-      try {
-        const res = await fetch(`${BASE_URL}/public/attendance/${token}`, { cache: 'no-store' })
-        if (res.status === 404) return setLoad({ kind: 'gone' })
-        if (!res.ok) {
-          // A quiet re-read that fails leaves what is on screen alone.
+  // The request and what it shows; «loading» is set by whoever starts a loud read.
+  // A promise chain, so every state change happens after the response — never synchronously.
+  const fetchView = useCallback(
+    (quiet: boolean): Promise<void> =>
+      fetch(`${BASE_URL}/public/attendance/${token}`, { cache: 'no-store' })
+        .then(async (res) => {
+          if (res.status === 404) return setLoad({ kind: 'gone' })
+          if (!res.ok) {
+            // A quiet re-read that fails leaves what is on screen alone.
+            if (!quiet) setLoad({ kind: 'error' })
+            return
+          }
+          const data = (await res.json()) as SelfView
+          setLoad({ kind: 'ready', data })
+          setDay((current) =>
+            data.days.some((item) => item.date === current) ? current : data.today,
+          )
+        })
+        .catch(() => {
           if (!quiet) setLoad({ kind: 'error' })
-          return
-        }
-        const data = (await res.json()) as SelfView
-        setLoad({ kind: 'ready', data })
-        setDay((current) =>
-          data.days.some((item) => item.date === current) ? current : data.today,
-        )
-      } catch {
-        if (!quiet) setLoad({ kind: 'error' })
-      }
-    },
+        }),
     [token],
   )
 
-  useEffect(() => {
-    void read(false)
+  const read = useCallback(
+    (quiet: boolean) => {
+      if (!quiet) setLoad({ kind: 'loading' })
+      return fetchView(quiet)
+    },
+    [fetchView],
+  )
+
+  // A new link: «loading» and a fresh request id during render; the effect only fetches.
+  useAdjustOnChange([token], () => {
+    setLoad({ kind: 'loading' })
     setRequestId(newRequestId())
-  }, [read])
+  })
+  useEffect(() => {
+    void fetchView(false)
+  }, [fetchView])
 
   useEffect(() => {
     let alive = true

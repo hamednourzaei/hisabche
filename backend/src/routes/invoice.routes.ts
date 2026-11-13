@@ -26,6 +26,46 @@ import { invalidateMoneyCaches } from '../utils/money-cache'
 import { PlanLimitError } from '../services/plan-limits.service'
 import { majorToTillMinor } from '@hisabche/validation'
 import { InvoiceSellerNotInstalledError, salesBySeller } from '../services/invoice-seller'
+import { errorText } from '../utils/error-text'
+import type { CreateInvoice, InvoiceFilters, UpdateInvoice } from '@hisabche/validation'
+
+// The create body as the clients send it: the schema's own fields, plus the
+// snake_case spellings older clients use for lines and line components. The
+// mapping below reads exactly these and the service validates what it receives.
+type CreateItem = NonNullable<CreateInvoice['items']>[number]
+type CreateDetail = NonNullable<CreateItem['details']>[number]
+type RawInvoiceDetail = Partial<CreateDetail> & {
+  unit_label?: CreateDetail['unitLabel']
+  weight_grams?: CreateDetail['weightGrams']
+  sort_order?: CreateDetail['sortOrder']
+}
+type RawInvoiceItem = Partial<Omit<CreateItem, 'details'>> & {
+  product_id?: CreateItem['productId']
+  variant_id?: CreateItem['variantId']
+  product_name?: CreateItem['productName']
+  unit_label?: CreateItem['unitLabel']
+  weight_grams?: CreateItem['weightGrams']
+  unit_price?: CreateItem['unitPrice']
+  total_price?: CreateItem['totalPrice']
+  details?: RawInvoiceDetail[]
+}
+interface RawInvoicePayment {
+  method: NonNullable<CreateInvoice['payments']>[number]['method']
+  amount: unknown
+  reference?: unknown
+  note?: unknown
+}
+type RawInvoiceBody = Partial<Omit<CreateInvoice, 'items' | 'payments'>> & {
+  items?: RawInvoiceItem[]
+  payments?: RawInvoicePayment[]
+  warehouseId?: unknown
+  sellerUserId?: unknown
+  exchangeRate?: unknown
+  tillSessionId?: unknown
+  branchId?: unknown
+  creditOverride?: { reason?: unknown }
+  invoiceNumber?: string
+}
 
 /** Anything that is not a uuid is ignored, never passed to a query. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -81,14 +121,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         // restricted to other branches is refused, not shown someone else's sales.
         if (filters.branchId) await branches.resolveActive(request.tenancy, filters.branchId)
 
-        const result = await invoiceService.list(request.tenancy, filters as any)
+        const result = await invoiceService.list(request.tenancy, filters as InvoiceFilters)
         return reply.send(result)
-      } catch (err: any) {
+      } catch (err) {
         if (err instanceof BaseError && err.statusCode < 500) {
           return reply.code(err.statusCode).send({ error: err.message, code: err.message })
         }
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.code(500).send({ error: errorText(err) })
       }
     },
   )
@@ -114,12 +154,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         return reply.send(await invoiceRelatedService.get(request.tenancy, id))
-      } catch (err: any) {
+      } catch (err) {
         if (err instanceof BaseError && err.statusCode < 500) {
           return reply.code(err.statusCode).send({ error: err.message })
         }
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.code(500).send({ error: errorText(err) })
       }
     },
   )
@@ -167,9 +207,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const invoice = await invoiceService.getById(id, request.tenancy)
         return reply.send(invoice)
-      } catch (err: any) {
+      } catch (err) {
         fastify.log.error(err)
-        return reply.code(404).send({ error: err.message })
+        return reply.code(404).send({ error: errorText(err) })
       }
     },
   )
@@ -190,7 +230,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const body = request.body as any
+        const body = (request.body ?? {}) as RawInvoiceBody
         const { workspaceId } = request.tenancy
 
         const data = {
@@ -222,7 +262,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           // first method — the till and the bank reconciliation both wrong.
           ...(Array.isArray(body.payments)
             ? {
-                payments: body.payments.map((p: any) => ({
+                payments: body.payments.map((p: RawInvoicePayment) => ({
                   method: p.method,
                   amount: Number(p.amount),
                   ...(typeof p.reference === 'string' ? { reference: p.reference } : {}),
@@ -251,7 +291,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           // arrived. A gram-priced line came back as a plain "piece" and every
           // line component vanished.
           items:
-            body.items?.map((item: any) => ({
+            body.items?.map((item) => ({
               productId: item.productId ?? item.product_id,
               variantId: item.variantId ?? item.variant_id,
               productName: item.productName ?? item.product_name ?? '',
@@ -264,7 +304,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
               totalPrice: item.totalPrice ?? item.total_price ?? 0,
               notes: item.notes ?? '',
               details:
-                item.details?.map((detail: any, index: number) => ({
+                item.details?.map((detail, index: number) => ({
                   title: detail.title ?? '',
                   quantity: detail.quantity ?? 1,
                   amount: detail.amount ?? 0,
@@ -326,7 +366,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         }
 
         return reply.code(201).send(invoice)
-      } catch (err: any) {
+      } catch (err) {
         if (err instanceof IdempotencyUnavailableError) {
           // 503, not 4xx: the mobile runner treats 4xx as permanent and would
           // give up on a sale that only needs the migration to go through.
@@ -440,7 +480,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const body = request.body as any
+        const body = request.body as UpdateInvoice
         const { workspaceId, userId } = request.tenancy
         const invoice = await invoiceService.update(id, request.tenancy, body)
 
@@ -451,7 +491,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         try {
           await activityService.createActivity({
             actorId: userId,
-            actorName: (request as any).user?.email ?? '',
+            actorName: request.user?.email ?? '',
             workspaceId,
             entityType: 'invoice',
             entityId: id,
@@ -513,7 +553,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         try {
           await activityService.createActivity({
             actorId: userId,
-            actorName: (request as any).user?.email ?? '',
+            actorName: request.user?.email ?? '',
             workspaceId,
             entityType: 'invoice',
             entityId: id,
@@ -529,7 +569,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         }
 
         return reply.code(204).send()
-      } catch (err: any) {
+      } catch (err) {
         // J5 — a refusal is not a server fault.
         //
         // This returned 500 for everything, so `SOD_BLOCKED:...` and
@@ -541,7 +581,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
         }
         fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
+        return reply.code(500).send({ error: errorText(err) })
       }
     },
   )

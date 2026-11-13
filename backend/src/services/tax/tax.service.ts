@@ -26,6 +26,7 @@ import {
   type TaxableLine,
 } from './tax.domain'
 import { detectDrift, type TaxDrift, type TaxSnapshot } from './tax.snapshot'
+import { rowText, type DbRow } from '../../utils/db-row'
 
 const COMPONENT_COLUMNS =
   'id, label_key, computation, treatment, rate, included_in_price, compounds_on, is_withholding, account_id, is_active'
@@ -33,29 +34,29 @@ const COMPONENT_COLUMNS =
 const RULE_COLUMNS =
   'id, component_ids, product_id, category_id, party_tax_category, valid_from, valid_to, priority'
 
-function mapComponent(raw: Record<string, any>): TaxComponent {
+function mapComponent(raw: DbRow): TaxComponent {
   return {
-    id: raw.id,
-    labelKey: raw.label_key,
-    computation: raw.computation,
-    treatment: raw.treatment,
+    id: String(raw.id),
+    labelKey: String(raw.label_key ?? ''),
+    computation: raw.computation as TaxComponent['computation'],
+    treatment: raw.treatment as TaxComponent['treatment'],
     rate: Number(raw.rate) || 0,
     includedInPrice: raw.included_in_price === true,
     compoundsOn: (raw.compounds_on as string[]) ?? [],
     isWithholding: raw.is_withholding === true,
-    accountId: raw.account_id ?? null,
+    accountId: rowText(raw.account_id),
   }
 }
 
-function mapRule(raw: Record<string, any>): TaxRule {
+function mapRule(raw: DbRow): TaxRule {
   return {
-    id: raw.id,
+    id: String(raw.id),
     componentIds: (raw.component_ids as string[]) ?? [],
-    productId: raw.product_id ?? null,
-    categoryId: raw.category_id ?? null,
-    partyTaxCategory: raw.party_tax_category ?? null,
-    validFrom: raw.valid_from ?? null,
-    validTo: raw.valid_to ?? null,
+    productId: rowText(raw.product_id),
+    categoryId: rowText(raw.category_id),
+    partyTaxCategory: rowText(raw.party_tax_category),
+    validFrom: rowText(raw.valid_from),
+    validTo: rowText(raw.valid_to),
     priority: Number(raw.priority) || 100,
   }
 }

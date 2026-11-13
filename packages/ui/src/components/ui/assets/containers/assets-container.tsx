@@ -23,10 +23,13 @@ import { AssetsView } from '../assets-view'
 
 export const AssetsContainer = memo(function AssetsContainer() {
   const translate = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const value = translate(key as Parameters<typeof translate>[0])
-    return value && value !== key ? value : (fallback ?? key)
-  }
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = translate(key as Parameters<typeof translate>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [translate],
+  )
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -73,7 +76,7 @@ export const AssetsContainer = memo(function AssetsContainer() {
         },
       },
     )
-  }, [postDepreciation])
+  }, [postDepreciation, t])
 
   const handleRefresh = useCallback(() => {
     setActionError(null)

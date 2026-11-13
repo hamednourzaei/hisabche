@@ -26,7 +26,10 @@ const OWNER = { id: fakeId('owner'), token: 'reverse-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__reverseFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__reverseFakeDb,
+)
 
 const CASH = fakeId('acct')
 const SALES = fakeId('acct')
@@ -287,7 +290,10 @@ function registerRpcs() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__reverseFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__reverseFakeDb = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   registerRpcs()
   const { buildServer } = await import('../index')

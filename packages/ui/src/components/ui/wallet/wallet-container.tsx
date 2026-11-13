@@ -16,7 +16,9 @@
 // approves it, and the balance shown is the server's, never a local sum.
 // ============================================
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { useNow } from '../../../hooks/use-now'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 import { useLocale, useTranslations } from 'next-intl'
 import { Wallet } from 'lucide-react'
 import {
@@ -154,9 +156,10 @@ function TopupForm({ methods }: { methods: WalletPaymentMethod[] }) {
   // Today on this device, set after mount: reading the clock during render
   // would differ between the server's render and the browser's. (The server
   // allows one day ahead, for a device east of UTC.)
-  useEffect(() => {
-    setPaidAt((current) => current || toIsoDay(new Date()))
-  }, [])
+  const now = useNow()
+  useAdjustOnChange([now === null], () => {
+    if (now !== null) setPaidAt((current) => current || toIsoDay(new Date(now)))
+  })
 
   const method = methods.find((m) => m.id === methodId) ?? methods[0] ?? null
   const amountMinor = method ? walletAmountToMinor(amount, method.currency) : null

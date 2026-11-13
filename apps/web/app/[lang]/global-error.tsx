@@ -1,13 +1,18 @@
 'use client'
 
 import * as Sentry from '@sentry/nextjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import { useAuthStore } from '@hisabche/store'
 import { resolveMessage } from '@hisabche/i18n/messages'
 import { getMessages } from '@hisabche/i18n/messages-static'
 import { cn } from '@/lib/utils'
 import { localePath, resolveLocale } from './i18n-config'
+
+/** The URL does not change while this screen is up: nothing to subscribe to. */
+const noSubscription = () => () => undefined
+
+const localeFromUrl = (): string => resolveLocale(window.location.pathname.split('/')[1] ?? '')
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GlobalError v2 — Hisabche Design Language
@@ -22,16 +27,23 @@ export default function GlobalError({
   reset: () => void
 }) {
   /*
-   * ⚠️ THE LOCALE IS READ IN AN EFFECT, NOT DURING RENDER.
+   * ⚠️ THE LOCALE IS NOT READ DURING THE HYDRATION RENDER.
    *
    * This component replaces the root layout, so there is no `params` and no
    * intl provider — the only place the locale still exists is the URL. Reading
    * `window.location` during render is a hydration mismatch under React 19 and
    * throws the whole tree away, which on THIS screen means losing the error
-   * report itself. So the escape link starts at the default locale and is
-   * corrected once mounted.
+   * report itself. `useSyncExternalStore` hydrates with the server snapshot
+   * (the default locale) and then reads the URL — no effect, no second state.
    */
-  const [href, setHref] = useState<string>(localePath('fa', ''))
+  const href = useSyncExternalStore(
+    noSubscription,
+    () => {
+      const lang = localeFromUrl()
+      return localePath(lang, useAuthStore.getState().isAuthenticated ? '/dashboard' : '')
+    },
+    () => localePath('fa', ''),
+  )
 
   /*
    * ⚠️ TRANSLATED WITHOUT A PROVIDER.
@@ -43,7 +55,7 @@ export default function GlobalError({
    * provider. Starts at the default locale and is corrected on mount for the
    * same hydration reason as the link above.
    */
-  const [lang, setLang] = useState<string>('fa')
+  const lang = useSyncExternalStore(noSubscription, localeFromUrl, () => 'fa')
   const catalog = getMessages(lang)
   const tr = (key: string, fallback: string) => resolveMessage(catalog, key) ?? fallback
 
@@ -53,14 +65,6 @@ export default function GlobalError({
     // a boundary that hides the cause is worse than the crash.
     console.error('[global-error]', error?.digest ?? '', error)
   }, [error])
-
-  useEffect(() => {
-    const segment = window.location.pathname.split('/')[1] ?? ''
-    const resolved = resolveLocale(segment)
-    const authed = useAuthStore.getState().isAuthenticated
-    setLang(resolved)
-    setHref(localePath(resolved, authed ? '/dashboard' : ''))
-  }, [])
 
   return (
     <html lang={lang} dir={lang === 'en' ? 'ltr' : 'rtl'}>

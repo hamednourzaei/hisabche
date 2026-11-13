@@ -32,11 +32,14 @@ export const CustomerPicker = memo(
     ({ value, onChange, onQuickCreate, placeholder, disabled, className }, _ref) => {
       const tOriginal = useTranslations()
 
-      const t = (key: string, fallback?: string): string => {
-        const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      const t = useCallback(
+        (key: string, fallback?: string): string => {
+          const v = tOriginal(key as Parameters<typeof tOriginal>[0])
 
-        return v && v !== key ? v : (fallback ?? key)
-      }
+          return v && v !== key ? v : (fallback ?? key)
+        },
+        [tOriginal],
+      )
 
       // ✅ safeT wrapper
 

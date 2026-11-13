@@ -1,8 +1,9 @@
 'use client'
 
-import { memo, useEffect, useState, useCallback, useMemo } from 'react'
+import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
+import { useAdjustOnChange } from '../../hooks/use-adjust-on-change'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LandingPreview v4 — Memoized · Performance Optimized
@@ -170,20 +171,23 @@ function useInView(threshold = 0.05) {
 export const LandingPreview = memo(function LandingPreview() {
   const tOriginal = useTranslations()
 
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
 
-    return v && v !== key ? v : (fallback ?? key)
-  }
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
 
   // ✅ safeT wrapper
 
   const { ref, inView } = useInView(0.05)
   const [hydrated, setHydrated] = useState(false)
 
-  useEffect(() => {
+  useAdjustOnChange([inView], () => {
     if (inView) setHydrated(true)
-  }, [inView])
+  })
 
   const kpiData = useMemo(
     () => [

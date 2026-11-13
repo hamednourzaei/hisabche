@@ -4,7 +4,7 @@ import { useNumberFormat } from '../../../hooks/use-number-format'
 import { SelectField } from '../select-field'
 import { TillSelectField } from '../till/till-select-field'
 import { useTillChoice } from '../../../hooks/use-till-choice'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { z } from 'zod'
 // PHASE B — this modal used `useCreateTransaction`, which POSTed a single-sided
@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
 import { toIsoDay } from '@hisabche/formatting'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 export interface InvoiceRecord {
   id: string
@@ -80,13 +81,13 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
   const [error, setError] = useState<string | null>(null)
   const [showSaved, setShowSaved] = useState(false)
 
-  useEffect(() => {
+  useAdjustOnChange([open, customer?.id, openInvoices], () => {
     if (!open) return
     setInvoiceId(openInvoices.length === 1 ? (openInvoices[0]?.id ?? '') : '')
     setAmount('')
     setError(null)
     setShowSaved(false)
-  }, [open, customer?.id, openInvoices])
+  })
 
   const suggested = useMemo(() => {
     const inv = openInvoices.find((i) => i.id === invoiceId)

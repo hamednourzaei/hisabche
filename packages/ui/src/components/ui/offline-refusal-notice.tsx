@@ -13,12 +13,14 @@
 import { useEffect, useState } from 'react'
 import { onOfflineRefusal, type OfflineRefusal } from '@hisabche/api'
 import { CloudRequiredNotice } from './cloud-required-notice'
+import { useAdjustOnChange } from '../../hooks/use-adjust-on-change'
 
 export function OfflineRefusalNotice({ routeKey }: { routeKey: string }) {
   const [refusal, setRefusal] = useState<OfflineRefusal | null>(null)
 
   useEffect(() => onOfflineRefusal(setRefusal), [])
-  useEffect(() => setRefusal(null), [routeKey])
+  // A new page starts without the last page's notice.
+  useAdjustOnChange([routeKey], () => setRefusal(null))
 
   if (!refusal) return null
   return (

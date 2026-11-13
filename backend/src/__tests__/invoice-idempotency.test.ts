@@ -58,7 +58,7 @@ const ctx = {
   workspaceId: '11111111-1111-4111-8111-111111111111',
   userId: '22222222-2222-4222-8222-222222222222',
   role: 'owner',
-} as any
+} as never
 // Paid in cash: an unpaid sale with no customer is refused before any of
 // this is reached (INVOICE_CREDIT_NEEDS_PARTY, 14 Oct).
 const draft = {
@@ -66,7 +66,7 @@ const draft = {
   paidAmount: 100,
   paymentMethod: 'cash',
   items: [{ productId: null, productName: 'x', quantity: 1, unitPrice: 100, totalPrice: 100 }],
-} as any
+} as never
 const EXISTING = {
   id: '33333333-3333-4333-8333-333333333333',
   invoice_number: 'INV-000051',

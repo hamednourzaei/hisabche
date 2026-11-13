@@ -16,12 +16,13 @@
 // be shown again.
 // ============================================
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Check, Copy, KeyRound, TriangleAlert } from 'lucide-react'
 
 import { copyText } from '../../../lib/copy-text'
 import { Button } from '../button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 type T = (key: string) => string
 
@@ -42,9 +43,9 @@ export function SecretRevealDialog({
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
 
   // A new secret starts un-copied.
-  useEffect(() => {
+  useAdjustOnChange([value], () => {
     setState('idle')
-  }, [value])
+  })
 
   const copy = async () => {
     if (!value) return

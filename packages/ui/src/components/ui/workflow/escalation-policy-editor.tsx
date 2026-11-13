@@ -7,13 +7,14 @@
 // Off until a person sets it. It widens who may answer — it never answers.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { apiErrorMessage, useEscalationPolicy, useSetEscalationPolicy } from '@hisabche/api'
 
 import { Button } from '../button'
 import { Input } from '../input'
 import { SelectField } from '../select-field'
 import { useToast } from '../toast-provider'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 type T = (key: string, fallback?: string) => string
 
@@ -39,11 +40,11 @@ export function EscalationPolicyEditor({ t, workflowId }: { t: T; workflowId: st
   const [touched, setTouched] = useState(false)
 
   // Start from what is saved; never overwrite what the person is typing.
-  useEffect(() => {
+  useAdjustOnChange([policy.data, touched], () => {
     if (!policy.data || touched) return
     setHours(policy.data.afterHours === null ? '' : String(policy.data.afterHours))
     setRole(policy.data.toRole ?? 'manager')
-  }, [policy.data, touched])
+  })
 
   if (policy.isLoading) {
     return <div className="h-9 w-48 animate-pulse rounded-lg bg-[hsl(var(--surface-muted))]" />

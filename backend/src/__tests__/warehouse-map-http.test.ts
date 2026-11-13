@@ -32,7 +32,10 @@ const users = new Map<string, { id: string }>([
   [SELLER.token, { id: SELLER.id }],
 ])
 
-vi.mock('../db', async () => (globalThis as any).__warehouseMapFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__warehouseMapFakeDb,
+)
 
 const W1 = fakeId('wh')
 const W2 = fakeId('wh')
@@ -306,7 +309,10 @@ function resetWorld() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__warehouseMapFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__warehouseMapFakeDb = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   const { buildServer } = await import('../index')
   app = await buildServer()
@@ -607,8 +613,8 @@ describe('recording what is on a shelf', () => {
     await addLocation({ code: 'R02', kind: 'rack' })
     const second = db.rows('storage_locations').find((row) => row.code === 'R02')!
     // 4 free (10 held − 6 on R01): 4 fits, 5 does not.
-    expect((await place(second.id, { productId: P1, quantity: 4 })).statusCode).toBe(200)
-    expect((await place(second.id, { productId: P1, quantity: 5 })).statusCode).toBe(409)
+    expect((await place(String(second.id), { productId: P1, quantity: 4 })).statusCode).toBe(200)
+    expect((await place(String(second.id), { productId: P1, quantity: 5 })).statusCode).toBe(409)
   })
 
   it('a seller may not record stock; a manager may', async () => {

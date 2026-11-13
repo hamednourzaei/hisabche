@@ -47,6 +47,7 @@ import { logBusinessEvent } from './event-log.service'
 import { ledger } from './accounting'
 import { budgets } from './budgeting'
 import { ValidationError } from '../errors/validation.error'
+import { rowOf } from '../utils/db-row'
 
 const PO_LIST_COLUMNS =
   'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
@@ -100,7 +101,10 @@ export class PurchasingService {
    * for buying stock lives and where the commitment is reserved. Resolved, not
    * created: no chart of accounts means no budget can exist on it.
    */
-  private async budgetTarget(ctx: TenancyContext, items: any[]) {
+  private async budgetTarget(
+    ctx: TenancyContext,
+    items: ReadonlyArray<{ totalPrice?: unknown; quantity?: unknown; unitPrice?: unknown }>,
+  ) {
     const totalMinor = items.reduce(
       (sum, item) =>
         sum +
@@ -176,7 +180,7 @@ export class PurchasingService {
       workspace_id: workspaceId,
       user_id: userId,
     }
-    const orderItems = items.map((item: any) => ({
+    const orderItems = items.map((item) => ({
       purchase_order_id: orderId,
       product_id: item.productId,
       // Named only when the line carries a variant, so documents without one keep working before the migration.
@@ -486,7 +490,8 @@ export class PurchasingService {
     requestedMap?: Map<string, number>,
   ) {
     const { workspaceId, userId } = ctx
-    const items = ((order as any).items ?? []) as Array<{
+    const orderRow = rowOf(order) ?? {}
+    const items = (orderRow.items ?? []) as Array<{
       id: string
       product_id: string
       /** V55 P2: named when the order line bought a variant; absent before the migration. */
@@ -496,7 +501,7 @@ export class PurchasingService {
       total_price: number | null
     }>
 
-    const entryDate = String((order as any).order_date ?? new Date().toISOString()).slice(0, 10)
+    const entryDate = String(orderRow.order_date ?? new Date().toISOString()).slice(0, 10)
 
     for (const item of items) {
       const quantity = requestedMap ? (requestedMap.get(item.id) ?? 0) : Number(item.quantity) || 0

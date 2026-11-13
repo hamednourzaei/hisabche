@@ -11,7 +11,7 @@
 // as `x-wall-token` on every poll. It is never written to localStorage.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button, Card, CardContent, Input, Label } from '@/components/ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
@@ -19,6 +19,18 @@ import { adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
 import type { MonitorSnapshot } from '@/hooks/use-admin-monitor'
 
 const POLL_MS = 10_000
+
+/**
+ * The token the address carried, remembered until this screen unmounts. Read through
+ * `useSyncExternalStore`: the server snapshot is '', so no token is ever rendered into the HTML.
+ */
+let urlToken = ''
+function tokenFromUrl(): string {
+  const fromUrl = new URL(window.location.href).searchParams.get('token')
+  if (fromUrl !== null) urlToken = fromUrl.length >= 20 ? fromUrl : ''
+  return urlToken
+}
+const noSubscription = () => () => undefined
 
 function formatBytes(value: number | null): string {
   if (value === null || !Number.isFinite(value)) return UNKNOWN_VALUE
@@ -35,7 +47,10 @@ function formatBytes(value: number | null): string {
 export function WallClient() {
   const t = useTranslations()
   const locale = useAdminLocale()
-  const [token, setToken] = useState('')
+  // `null` = the admin has not typed or cleared one: the address's token applies.
+  const [typedToken, setToken] = useState<string | null>(null)
+  const fromAddress = useSyncExternalStore(noSubscription, tokenFromUrl, () => '')
+  const token = typedToken ?? fromAddress
   const [entry, setEntry] = useState('')
   const [snapshot, setSnapshot] = useState<MonitorSnapshot | null>(null)
   const [invalid, setInvalid] = useState(false)
@@ -47,12 +62,15 @@ export function WallClient() {
   // left in the URL stays in the browser history, in a screenshot of the TV
   // and in any proxy log of the next navigation (V63 audit, 12 Nov 2026).
   useEffect(() => {
+    tokenFromUrl() // remember it before it leaves the address
     const url = new URL(window.location.href)
-    const fromUrl = url.searchParams.get('token')
-    if (fromUrl === null) return
-    url.searchParams.delete('token')
-    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
-    if (fromUrl.length >= 20) setToken(fromUrl)
+    if (url.searchParams.get('token') !== null) {
+      url.searchParams.delete('token')
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    }
+    return () => {
+      urlToken = ''
+    }
   }, [])
 
   useEffect(() => {

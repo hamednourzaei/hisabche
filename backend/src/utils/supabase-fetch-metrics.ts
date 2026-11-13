@@ -89,13 +89,15 @@ export function recordCall(sample: CallSample): void {
   if (db.samples.length > 200) db.samples.shift()
 }
 
-type FetchLike = (input: any, init?: any) => Promise<Response>
+export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
 /** Wrap the fetch supabase-js uses. Behaviour is unchanged; only timing is observed. */
 export function instrumentFetch(base: FetchLike): FetchLike {
-  return async (input: any, init?: any) => {
-    const url = typeof input === 'string' ? input : (input?.url ?? String(input))
-    const method = String(init?.method ?? input?.method ?? 'GET').toUpperCase()
+  return async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    const method = String(
+      init?.method ?? (typeof input === 'object' && 'method' in input ? input.method : 'GET'),
+    ).toUpperCase()
     const { kind, target } = classify(url)
     const started = performance.now()
     let status = 0

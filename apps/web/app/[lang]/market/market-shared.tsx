@@ -5,6 +5,7 @@
 // text or structured data here says there is (landing-claims): a listing shows
 // the seller's price and how to reach the seller.
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   FRACTION_DIGITS,
@@ -154,7 +155,8 @@ export function ListingGrid({
             className="block overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] transition-colors hover:bg-[hsl(var(--surface-muted))]"
           >
             {listing.imageUrl ? (
-              <img
+              <Image
+                unoptimized
                 src={listing.imageUrl}
                 alt={listing.title}
                 width={320}

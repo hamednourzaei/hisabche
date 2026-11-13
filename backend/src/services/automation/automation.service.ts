@@ -65,6 +65,7 @@ import {
   type Automation,
   type AutomationState,
 } from './schedule.domain'
+import type { DraftLine } from '../accounting'
 
 /** PostgREST/Postgres codes for «docs/automation-01-migration.sql has not been run». */
 const MISSING_SCHEMA = new Set(['42703', '42P01', 'PGRST204', 'PGRST205'])
@@ -89,7 +90,14 @@ export class AutomationNotConfiguredError extends BaseError {
 const AUTOMATION_COLUMNS =
   'id, workspace_id, name, action_type, cadence, conditions, payload, enabled, on_failure, max_attempts, attempts, disabled_reason, last_checked_on, last_run_at, archived_at, created_by, created_at'
 
-interface AutomationRow {
+interface JournalTemplateLine {
+  accountId: string
+  debitMinor?: number | string | null
+  creditMinor?: number | string | null
+  description?: string | null
+}
+
+export interface AutomationRow {
   id: string
   workspace_id: string
   name: string
@@ -103,6 +111,9 @@ interface AutomationRow {
     fiscalYearEndMonth?: number
     /** month_end: seal the period after the steps succeed. */
     lock?: boolean
+    /** journal template: the lines to post, under `journal` (older rows: at the top level). */
+    journal?: { lines?: JournalTemplateLine[] }
+    lines?: JournalTemplateLine[]
   }
   enabled: boolean
   on_failure: 'stop' | 'keep' | 'ignore'
@@ -237,6 +248,29 @@ function reasonOf(error: unknown): string {
  * message, and a schema that tightened since the template was saved is caught
  * on the run rather than written past.
  */
+/**
+ * The ledger lines of a recurring-expense template (13 Nov 2026).
+ *
+ * ⚠️ The template stores MINOR units (`debitMinor`/`creditMinor`); the ledger's
+ * `DraftLine` is MAJOR (`debit`/`credit`, rounded to 2 places by `normaliseLines`).
+ * These lines used to go out as `{ debitMinor, creditMinor }` — fields `postDocument`
+ * never reads — so every line posted as 0. An `any` on the payload hid it from tsc.
+ * Minor → major here is ÷100, the same convention the ledger uses everywhere it
+ * converts (`dimensions.service`, `banking.service`).
+ */
+export function journalTemplateLines(
+  payload: AutomationRow['payload'] | null | undefined,
+  fallbackDescription: string,
+): DraftLine[] {
+  const journal = payload?.journal || payload
+  return (journal?.lines || []).map((line) => ({
+    accountId: line.accountId,
+    debit: (Number(line.debitMinor) || 0) / 100,
+    credit: (Number(line.creditMinor) || 0) / 100,
+    description: line.description || fallbackDescription,
+  }))
+}
+
 export function invoiceForSlot(
   template: Record<string, unknown>,
   slot: string,
@@ -799,13 +833,7 @@ export class AutomationService {
     row: AutomationRow,
     slot: string,
   ): Promise<string | null> {
-    const payload = (row.payload as any)?.journal || (row.payload as any)
-    const lines = (payload?.lines || []).map((l: any) => ({
-      accountId: l.accountId,
-      debitMinor: Number(l.debitMinor || 0),
-      creditMinor: Number(l.creditMinor || 0),
-      description: l.description || row.name,
-    }))
+    const lines = journalTemplateLines(row.payload, row.name)
 
     const sourceId = sourceIdOf(actor.workspaceId, 'journal_entry', row.id, slot)
     const outcome = await this.accounting.postDocument(actor, {

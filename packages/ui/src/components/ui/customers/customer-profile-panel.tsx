@@ -13,7 +13,7 @@
 // could not save.
 // ============================================
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { AlertTriangle, FileText, Link2, Trash2, Upload } from 'lucide-react'
 import {
@@ -32,6 +32,7 @@ import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useActionAvailability } from '../../../lib/capability'
 import { CloudRequiredNotice } from '../cloud-required-notice'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 const MAX_BYTES = 5 * 1024 * 1024
 const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp'
@@ -79,11 +80,11 @@ export function CustomerProfilePanel({
   const suppliers = useSupplierSearch(search)
 
   const data = profile.data
-  useEffect(() => {
+  useAdjustOnChange([data], () => {
     if (!data) return
     setLimit(data.creditLimit === null ? '' : String(data.creditLimit))
     setTerms(data.paymentTermsDays === null ? '' : String(data.paymentTermsDays))
-  }, [data])
+  })
 
   const fail = (err: unknown) => {
     const code = errorCode(err)

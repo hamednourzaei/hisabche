@@ -10,7 +10,11 @@
 // ============================================
 
 import { createClient, SupabaseClientOptions } from '@supabase/supabase-js'
-import { installConnectionCounter, instrumentFetch } from './utils/supabase-fetch-metrics'
+import {
+  installConnectionCounter,
+  instrumentFetch,
+  type FetchLike,
+} from './utils/supabase-fetch-metrics'
 
 const isLocal = !process.env.RENDER
 
@@ -71,7 +75,7 @@ if (isLocal) {
     const proxyAgent = new ProxyAgent('http://127.0.0.1:10808')
     clientOptions.global = {
       ...clientOptions.global,
-      fetch: (input: any, init?: any) => undiciFetch(input, { ...init, dispatcher: proxyAgent }),
+      fetch: (input, init?: RequestInit) => undiciFetch(input, { ...init, dispatcher: proxyAgent }),
     }
   } catch {
     console.log('ℹ️ undici not installed, skipping proxy setup')
@@ -83,8 +87,8 @@ if (isLocal) {
 clientOptions.global = {
   ...clientOptions.global,
   fetch: instrumentFetch(
-    (clientOptions.global?.fetch as ((input: any, init?: any) => Promise<Response>) | undefined) ??
-      ((input: any, init?: any) => fetch(input, init)),
+    (clientOptions.global?.fetch as FetchLike | undefined) ??
+      ((input, init?: RequestInit) => fetch(input, init)),
   ),
 }
 installConnectionCounter()

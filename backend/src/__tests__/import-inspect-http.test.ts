@@ -13,12 +13,18 @@ const OWNER = { id: fakeId('owner'), token: 'inspect-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__inspectFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__inspectFakeDb,
+)
 
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__inspectFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__inspectFakeDb = createFakeDb(
+    db,
+    users,
+  )
   db.seed('workspace_members', [
     {
       id: fakeId('member'),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 
 /**
  * The current time, read AFTER MOUNT — never during render. React #418 (text).
@@ -13,18 +13,32 @@ import { useEffect, useState } from 'react'
  * tree away.
  *
  * Returns `null` on the server and on the first client render, so both sides
- * paint the same neutral text; the effect then supplies the real time. Pass
- * `tickMs` to keep relative text ("minutes ago") current while mounted.
+ * paint the same neutral text; subscribing (after commit) then supplies the real
+ * time. Pass `tickMs` to keep relative text ("minutes ago") current while mounted.
+ *
+ * A small clock store per `tickMs` read with `useSyncExternalStore` (13 Nov 2026) —
+ * the clock is read in the subscription, never in render and never set from an effect.
  */
+function clockStore(tickMs: number | undefined) {
+  let now: number | null = null
+  return {
+    subscribe(onChange: () => void) {
+      now = Date.now()
+      onChange()
+      if (!tickMs) return () => undefined
+      const id = setInterval(() => {
+        now = Date.now()
+        onChange()
+      }, tickMs)
+      return () => clearInterval(id)
+    },
+    read: (): number | null => now,
+  }
+}
+
+const serverNow = (): number | null => null
+
 export function useNow(tickMs?: number | undefined): number | null {
-  const [now, setNow] = useState<number | null>(null)
-
-  useEffect(() => {
-    setNow(Date.now())
-    if (!tickMs) return
-    const id = setInterval(() => setNow(Date.now()), tickMs)
-    return () => clearInterval(id)
-  }, [tickMs])
-
-  return now
+  const clock = useMemo(() => clockStore(tickMs), [tickMs])
+  return useSyncExternalStore(clock.subscribe, clock.read, serverNow)
 }

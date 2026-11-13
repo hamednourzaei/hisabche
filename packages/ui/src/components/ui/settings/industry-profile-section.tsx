@@ -14,7 +14,7 @@
 // 403 INDUSTRY_OWNER_ONLY. Hiding a button is a courtesy, never a control.
 // ============================================
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useAuthStore } from '@hisabche/store'
 import { BUSINESS_TYPES, BUSINESS_MODELS } from '@hisabche/ui-contract'
@@ -22,6 +22,7 @@ import { apiErrorMessage, useSaveWorkspaceProfile } from '@hisabche/api'
 import { CAPABILITIES, resolveBusinessProfile } from '@hisabche/validation'
 import { industryEditable } from '../../../lib/industry-edit-access'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
+import { useAdjustOnChange } from '../../../hooks/use-adjust-on-change'
 
 export interface IndustryProfileSectionProps {
   /** Overrides the auth store (the desktop shell keeps its own session). */
@@ -66,9 +67,9 @@ export function IndustryProfileSection({
 
   // A profile arriving from a server read or a sync must replace a draft only
   // when the person has not started editing; otherwise their click is lost.
-  useEffect(() => {
+  useAdjustOnChange([current], () => {
     setSelected((previous) => (previous.length === 0 ? current : previous))
-  }, [current])
+  })
 
   const noteKey = industrySupportNoteKey(selected)
   const editable = canEdit ?? industryEditable(storeRole)

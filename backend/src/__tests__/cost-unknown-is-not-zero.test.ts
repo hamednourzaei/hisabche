@@ -40,7 +40,10 @@ const OWNER = { id: fakeId('owner'), token: 'cost-token-owner' }
 const SHOP = fakeId('shop')
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 
-vi.mock('../db', async () => (globalThis as any).__costFakeDb)
+vi.mock(
+  '../db',
+  async () => (globalThis as typeof globalThis & Record<string, object>).__costFakeDb,
+)
 
 const RECEIVABLE = fakeId('acct')
 const SALES = fakeId('acct')
@@ -304,7 +307,7 @@ function registerRpcs() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__costFakeDb = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__costFakeDb = createFakeDb(db, users)
   resetWorld({ quantity: 20, buyPrice: BOUGHT_AT })
   registerRpcs()
   const { buildServer } = await import('../index')

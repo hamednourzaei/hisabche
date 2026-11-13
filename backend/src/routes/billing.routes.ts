@@ -1023,7 +1023,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const params = request.params as { id: string }
-      const body = request.body as { paymentReference: string; paymentMethod?: any }
+      const body = request.body as { paymentReference: string; paymentMethod?: string }
       try {
         const updated = await subscriptionOrderService.markPaymentVerified(
           params.id,

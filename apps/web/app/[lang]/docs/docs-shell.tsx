@@ -28,7 +28,7 @@
 // open — see `HEADER_HEIGHT`.
 // ============================================
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 
 import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
@@ -62,14 +62,17 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
   const locale = useLocale()
   const router = useRouter()
 
-  const user = useAuthStore((s) => s.user)
   const isDark = useThemeStore((s) => s.isDark)
   const toggleTheme = useThemeStore((s) => s.toggle)
 
   // `undefined` = not known yet. Distinct from «signed out», because the two
-  // render different things and guessing produces a hydration mismatch.
-  const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined)
-  useEffect(() => setSignedIn(Boolean(useAuthStore.getState().user)), [user])
+  // render different things and guessing produces a hydration mismatch. The server
+  // snapshot is `undefined`, so React renders that on the server and when hydrating.
+  const signedIn = useSyncExternalStore(
+    useAuthStore.subscribe,
+    () => Boolean(useAuthStore.getState().user),
+    () => undefined,
+  )
 
   function toggleLang(next: string) {
     if (next === locale) return

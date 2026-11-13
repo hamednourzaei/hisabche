@@ -146,6 +146,9 @@ function snapshot(row: SubscriptionRow): Record<string, unknown> {
   return snap
 }
 
+/** A head-only count query on one table — what `countOf` lets a caller narrow. */
+type CountQuery = ReturnType<ReturnType<typeof supabase.from>['select']>
+
 export class AdminService {
   private auditService = new AuditService()
   private billingService = new BillingService()
@@ -187,7 +190,10 @@ export class AdminService {
     const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
     /** Count only, never rows. Returns 0 rather than throwing on a missing table. */
-    const countOf = async (table: string, build: (q: any) => any = (q) => q): Promise<number> => {
+    const countOf = async (
+      table: string,
+      build: (q: CountQuery) => CountQuery = (q) => q,
+    ): Promise<number> => {
       try {
         const { count, error } = await build(
           supabase.from(table).select('id', { count: 'exact', head: true }),
@@ -763,7 +769,7 @@ export class AdminService {
       userId: m.user_id,
       name: user?.name ?? null,
       email: user?.email ?? null,
-      role: m.role as any,
+      role: m.role,
       status: m.suspended_at ? 'suspended' : m.has_access === false ? 'no-access' : 'active',
       joinedAt: m.joined_at,
     }

@@ -42,6 +42,7 @@ import { parseAmountMinor } from '../../../lib/bank-statement-csv'
 import { appCategoryLabel, appHealthLabel, appVersionStatusLabel } from '../../../lib/oauth-labels'
 import { CheckList } from './check-list'
 import type { SectionState } from './developers-view'
+import Image from 'next/image'
 
 type T = (key: string, fallback?: string) => string
 
@@ -451,9 +452,12 @@ export const AppManagePanel = memo(function AppManagePanel(props: AppManagePanel
                 key={s.id}
                 className="space-y-1 rounded-lg bg-[hsl(var(--surface-muted))] p-2 text-xs"
               >
-                <img
+                <Image
+                  unoptimized
                   src={s.url}
                   alt={s.caption}
+                  width={1280}
+                  height={720}
                   loading="lazy"
                   className="aspect-video w-full rounded object-cover"
                 />

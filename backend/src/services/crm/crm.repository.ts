@@ -12,6 +12,7 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { rowsOf, rowText, type DbRow } from '../../utils/db-row'
 import { DatabaseError, isFailedRead } from '../../errors/database.error'
 
 export const INTERACTION_COLUMNS =
@@ -24,7 +25,7 @@ const OPPORTUNITY_COLUMNS =
 
 const PAGE = 1000
 
-type Row = Record<string, any>
+type Row = DbRow
 
 const isMissingColumn = (error: { code?: string; message?: string } | null) =>
   !!error && (error.code === '42703' || /column/.test(error.message || ''))
@@ -32,8 +33,11 @@ const isMissingColumn = (error: { code?: string; message?: string } | null) =>
 /** Reads every page of a query; stops on the first error. */
 async function readAll(
   label: string,
-  page: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: any }>,
-): Promise<{ rows: Row[]; error: any }> {
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>,
+): Promise<{ rows: Row[]; error: { message: string } | null }> {
   const rows: Row[] = []
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await page(from, from + PAGE - 1)
@@ -115,7 +119,7 @@ export class CrmRepository {
     }
 
     const byId = new Map<string, Row>()
-    for (const row of [...primary.rows, ...onSnapshot.rows]) byId.set(row.id, row)
+    for (const row of [...primary.rows, ...onSnapshot.rows]) byId.set(String(row.id), row)
     return [...byId.values()]
   }
 
@@ -226,7 +230,7 @@ export class CrmRepository {
       .order('created_at', { ascending: false })
       .limit(200) // suggestions only: the 200 most recent are what anyone retypes
     if (error) throw new DatabaseError('Failed to load subject suggestions', error)
-    return (data ?? []).map((row: Row) => row.subject)
+    return rowsOf(data).map((row) => String(row.subject))
   }
 
   // ─── Opportunities ────────────────────────────────────────────────────────
@@ -309,7 +313,7 @@ export class CrmRepository {
     return opportunities.rows.map((row) => ({
       id: String(row.id),
       title: String(row.title ?? ''),
-      stage: row.stage ?? null,
+      stage: rowText(row.stage),
       createdAt: String(row.created_at),
       lastActivityAt: latest.get(String(row.id)) ?? null,
     }))

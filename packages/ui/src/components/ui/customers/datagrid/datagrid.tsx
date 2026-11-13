@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/customers/datagrid/datagrid.tsx
 'use client'
 
-import { useState, useMemo, useCallback, useRef } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
+import { useState, useMemo, useCallback } from 'react'
+import { useFixedRowWindow } from '../../../../hooks/use-fixed-row-window'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
@@ -105,8 +105,6 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-  const parentRef = useRef<HTMLDivElement>(null)
-
   const sortedData = useMemo(() => {
     if (!sortKey || !data.length) return data
     const col = columns.find((c) => c.id === sortKey)
@@ -121,12 +119,8 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
     })
   }, [data, sortKey, sortDir, columns])
 
-  const virtualizer = useVirtualizer({
-    count: sortedData.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 48,
-    overscan: 10,
-  })
+  // 48px rows in a body no taller than 500px (max-h-[500px] below).
+  const rowWindow = useFixedRowWindow(sortedData.length, 48, 500, 10)
 
   const toggleSort = useCallback(
     (colId: string) => {
@@ -230,14 +224,14 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
         </div>
 
         {/* Body */}
-        <div ref={parentRef} className="max-h-[500px] overflow-auto">
+        <div onScroll={rowWindow.onScroll} className="max-h-[500px] overflow-auto">
           {sortedData.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-[hsl(var(--fg-tertiary))]">
               {emptyMessage || t('common.noData', 'داده‌ای یافت نشد')}
             </div>
           ) : (
-            <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
-              {virtualizer.getVirtualItems().map((virtualRow) => {
+            <div style={{ height: `${rowWindow.totalSize}px`, position: 'relative' }}>
+              {rowWindow.items.map((virtualRow) => {
                 const row = sortedData[virtualRow.index]
                 if (!row) return null
                 const isSelected = selectedIds.has(row.id)

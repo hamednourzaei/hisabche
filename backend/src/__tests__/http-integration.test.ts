@@ -56,7 +56,7 @@ vi.mock('../db', async () => {
   const { FakeDatabase: _unused } = await import('./helpers/fake-supabase')
   // The instance is the module-level `db` below; this factory closes over it
   // through the registry rather than constructing a second one.
-  return (globalThis as any).__fakeDbModule
+  return (globalThis as typeof globalThis & Record<string, object>).__fakeDbModule
 })
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -224,7 +224,10 @@ function registerRpcs() {
 let app: FastifyInstance
 
 beforeAll(async () => {
-  ;(globalThis as any).__fakeDbModule = createFakeDb(db, users)
+  ;(globalThis as typeof globalThis & Record<string, object>).__fakeDbModule = createFakeDb(
+    db,
+    users,
+  )
   resetWorld()
   registerRpcs()
 

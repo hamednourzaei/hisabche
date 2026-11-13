@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Search, Loader2, X } from 'lucide-react'
 import { apiClient } from '@hisabche/api'
 import { cn } from '../../lib/utils'
+import { useAdjustOnChange } from '../../hooks/use-adjust-on-change'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    GlobalSearch — جستجوی سراسری در بالای داشبورد.
@@ -80,16 +81,22 @@ export function GlobalSearch({
   }, [pages, query, t])
 
   // ─── جستجوی داده‌ها ─────────────────────────────────────────────────────
-  useEffect(() => {
-    const q = query.trim()
-    if (q.length < MIN_QUERY_LENGTH) {
+  // A new query: clear or show «searching» during render; the effect only fetches.
+  const searchable = query.trim().length >= MIN_QUERY_LENGTH
+  useAdjustOnChange([query], () => {
+    if (searchable) {
+      setIsLoading(true)
+    } else {
       setRemote([])
       setIsLoading(false)
-      return
     }
+  })
 
+  useEffect(() => {
+    const q = query.trim()
+    // Every new query outdates the one in flight, even a query too short to send.
     const requestId = ++requestIdRef.current
-    setIsLoading(true)
+    if (q.length < MIN_QUERY_LENGTH) return
 
     const timer = setTimeout(async () => {
       try {

@@ -61,7 +61,7 @@ vi.mock('../db', () => ({
   supabase: { from: (t: string) => query(t), rpc: async () => ({ data: null, error: null }) },
 }))
 
-const ctx = { workspaceId: 'w1', userId: 'u1', role: 'owner' } as any
+const ctx = { workspaceId: 'w1', userId: 'u1', role: 'owner' } as never
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
@@ -214,7 +214,7 @@ describe('postDocument — Scenario C/D: two writers, one journal entry', () => 
 
     const ledger = new AccountingService(repo)
     const outcome = await ledger.postDocument(
-      { workspaceId: 'w-race', userId: 'u1', role: 'owner' } as any,
+      { workspaceId: 'w-race', userId: 'u1', role: 'owner' } as never,
       {
         sourceType: 'invoice',
         sourceId: 'inv-1',
@@ -224,7 +224,7 @@ describe('postDocument — Scenario C/D: two writers, one journal entry', () => 
           { accountId: 'cash', debit: 100, credit: 0 },
           { accountId: 'sales', debit: 0, credit: 100 },
         ],
-      } as any,
+      } as never,
     )
 
     expect(outcome).toEqual({ status: 'already_posted', entryId: 'winner-entry' })

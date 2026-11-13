@@ -78,14 +78,26 @@ describe('web keeps the locale prefix', () => {
   it('global-error, which has no intl provider, still translates', () => {
     expect(webGlobal).toMatch(/@hisabche\/i18n\/messages/)
     expect(webGlobal).toMatch(/console\.error/)
-    // ⚠️ Reading `window` during render is a hydration mismatch under React 19
-    // and would discard the very tree showing the error. So every read of it
-    // must sit AFTER the first `useEffect(` — inside one, never in the render
-    // body or a `useState` initialiser.
-    const firstEffect = webGlobal.indexOf('useEffect(')
-    const firstWindow = webGlobal.indexOf('window.location')
-    expect(firstEffect).toBeGreaterThan(-1)
-    expect(firstWindow).toBeGreaterThan(firstEffect)
+    // ⚠️ Reading `window` during the HYDRATION render is a mismatch under React 19
+    // and would discard the very tree showing the error. (13 Nov 2026: the read moved
+    // from an effect + setState to `useSyncExternalStore`, whose hydration render uses
+    // the server snapshot.) So: exactly one read of the URL, in `localeFromUrl`, and
+    // that function is only ever the CLIENT snapshot of a store that has a server one.
+    expect(webGlobal.split('window.location').length - 1).toBe(1)
+    expect(webGlobal).toContain('const localeFromUrl = (): string => resolveLocale(window.location')
+    // Each store call, cut at its closing parenthesis on a line of its own.
+    const stores = webGlobal
+      .split('useSyncExternalStore(')
+      .slice(1)
+      .map((call) => call.split('\n  )')[0] ?? '')
+    const readers = stores.filter((call) => call.includes('localeFromUrl'))
+    // every use of localeFromUrl (all but its definition) is inside such a store
+    expect(readers.length).toBe(webGlobal.split('localeFromUrl').length - 2)
+    for (const call of readers) {
+      // three arguments: subscribe, client snapshot, server snapshot (the default locale)
+      expect(call.trimStart().startsWith('noSubscription,')).toBe(true)
+      expect(call.includes("() => 'fa'") || call.includes("() => localePath('fa', '')")).toBe(true)
+    }
   })
 })
 
