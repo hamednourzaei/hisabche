@@ -4,7 +4,7 @@ import { JalaliDatePicker } from '../jalali-datepicker'
 import { SUPPORTED_CURRENCIES } from '@hisabche/store'
 import { SelectField } from '../select-field'
 import { Switch } from '../switch'
-import { Briefcase, Clock, Plus, Trash2 } from 'lucide-react'
+import { Briefcase, Plus } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { EmployeeListTable, type EmployeeRow } from './employee-list-table'
 
@@ -32,7 +32,7 @@ export type Employee = EmployeeRow
  * `statusFilter` kept its name and its two original values so nothing that
  * already passes it breaks; 'branches' is the third.
  */
-export type TeamTab = 'employees' | 'branches' | 'attendance'
+export type TeamTab = 'employees' | 'branches' | 'attendance' | 'expenses'
 
 /** A branch as the employee form's picker needs it. */
 export interface BranchOption {
@@ -61,6 +61,13 @@ interface TeamAndPayrollViewProps {
   branchesTab?: React.ReactNode
   /** The daily attendance sheet (#100), passed in by the container. */
   attendanceTab?: React.ReactNode
+  /**
+   * V61 B.2.18 — employee expense claims, passed in by the container.
+   *
+   * A section node like «شعب» and «حضور و غیاب»: this view renders what it is
+   * given and fetches nothing for it, so the hub keeps ONE owner of the data.
+   */
+  expensesTab?: React.ReactNode
   /** Surfaced instead of being swallowed: a failed save must say why. */
   employeeFormError?: string | null
   /**
@@ -105,6 +112,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   branches = [],
   branchesTab,
   attendanceTab,
+  expensesTab,
   employeeFormError,
   employeeFieldErrors = {},
   permissionProfiles = [],
@@ -844,6 +852,8 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         <div>{branchesTab}</div>
       ) : statusFilter === 'attendance' ? (
         <div>{attendanceTab}</div>
+      ) : statusFilter === 'expenses' ? (
+        <div>{expensesTab}</div>
       ) : (
         <>
           {/* Content Grid */}

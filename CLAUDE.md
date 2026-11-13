@@ -193,7 +193,9 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **دور UX ۹ نوامبر: پیش‌فروش در سازنده‌ی فاکتور، منوها، داشبورد دلخواه، سربه‌سر** | `.claude/lessons-learned.md` درس ۲۵۵ — advances-03 و user-dashboard-kpis-01 اجرا و VERIFY شد (۹ نوامبر، ۵ از ۵ و ۵ از ۵ true) |
 | **گزارش QA ۹ نوامبر: پیش‌نویس در دیتابیس، تم، ضایعات، واحد بسته↔فله، سریال/IMEI روی فروش، ۶ مقاله، راهنمای ۵۵ گامی** | `docs/product/QA-2026-11-09-RESPONSE.md` · درس ۲۵۶ — user-state-01 (۷/۷) و dashboard-stock-value-01 (۴/۴) اجرا و VERIFY شد، ۱۰ نوامبر |
 | **بسته‌های صنفی سند QA روی هسته‌ی عمومی: لباس (موجودی هر واریانت، جدول سایز×رنگ، واریانت در فاکتور)، درخواست انتقال، تعمیرات/رزرو، صرافی/حواله، سالن/کمیسیون (۱۰ نوامبر)** | `docs/product/QA-2026-11-09-RESPONSE.md` § دور دوم · درس ۲۵۷ — variant-stock-01 (۵/۵)، retail-ops-01 (۸/۸)، exchange-01 (۱۰/۱۰)، salon-01 (۹/۹) اجرا و VERIFY شد، ۱۰ نوامبر |
-| **همه‌ی درس‌ها با شماره (۱–۲۵۷)**                                     | `.claude/lessons-learned.md`                                                |
+| **ممیزی V61/V63: سرویس‌های ۵۰۰، فرم درگاه، دیوار تلویزیون، ۱۱۳ مورد (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.1 · `V63-IMPLEMENTATION-PROGRESS.md` §8 · `admin/V63-113-ITEMS.md` — **۳ مهاجرت V61 تازه منتظر اجرا و VERIFY** |
+| **تصمیم‌های مالک V61: فروشنده = عضو، یک موتور تأیید، حذف دو نفره در کنسول (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.2 — **invoices-seller-01 و admin-action-types-03 منتظر اجرا و VERIFY** |
+| **همه‌ی درس‌ها با شماره (۱–۲۶۰)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -345,6 +347,19 @@ cd apps/admin     && npx tsc --noEmit
 - ⚠️ **`response.data.error` نامِ وضعیت HTTP است، نه دلیل.** Fastify برای بدنه‌ی نامعتبر `{ error: 'Bad Request', message: 'body/email must match format "email"' }` می‌فرستد؛ دلیل در `message` است و در `details[].path` زود. ۹ کانتینر فقط `data.error` را می‌خواندند و کاربر «Bad Request» یا یک «Error» خالی می‌دید. همیشه `apiErrorMessage()` از `@hisabche/api` (گارد: `error-reading-is-shared.test.ts` کل `components/ui` را می‌گردد).
 - ⚠️ **اگر سرور اسم فیلد را گفته، کاربر را ببر سر همان فیلد.** `apiErrorFields()` + هوک `useServerFieldErrors()`: پیام زیر همان اینپوت، اسکرول و فوکوس روی آن. هر کنترل باید `name` (یا `data-field` برای کنترل‌های سفارشی) با **همان اسمی که API می‌شناسد** داشته باشد. اگر خطا به فیلدی مربوط نیست، هیچ فیلدی را مقصر نکن — یک پیام کلی بالای فرم.
 - ⚠️ **اتریبیوت خط‌دار در JSX از excess-property check معاف است.** `data-field` روی کامپوننتی که آن را فوروارد نمی‌کند بی‌صدا دور ریخته می‌شود و tsc ساکت می‌ماند. هر `data-*` که معنا دارد باید در props اعلام شود.
+
+**ممیزی V61/V63 (۱۲ نوامبر)**
+
+- ⚠️ **پاسخ `apiClient` = پاسخ کامل axios؛ بدنه‌ی route = `{ data }` ⇒ دو لایه.** فقط `responseBody` (`packages/api/src/lib/response-body.ts`).
+- ⚠️ **`DataTable` کلید ستون را کامل می‌خواند**؛ `t` را از `useTableLabel` بده، نه مترجم namespace‌دار.
+- ⚠️ **ستونی که سرویس می‌خواند باید در `docs/*.sql` باشد** — گارد `v61-columns-exist.test.ts` (فهرست بسته؛ سرویس تازه را اضافه کن).
+- ⚠️ **هدری که `apps/admin` می‌فرستد هم در `allowedHeaders`**؛ کامنت داخل آن آرایه بدون `]` و آپاستروف.
+
+**فروشنده و تأیید (۱۲ نوامبر)**
+
+- ⚠️ **فروشنده‌ی فاکتور یک عضو است، نه کارمند:** `seller_user_id` فقط جایگزین را نگه می‌دارد؛ تهی = صادرکننده (`user_id`). سرور عضویت را می‌سنجد (`invoice-seller.ts`). کمیسیون ساخته نمی‌شود تا نرخی تعریف شود.
+- ⚠️ **یک موتور تأیید:** rules + الگوهای workflow + `/approvals`. موتور «approval policies» V61 حذف شد — دوباره نسازش. صادرکننده سند خودش را تأیید نمی‌کند مگر مالک (`refusesSelfApproval`)؛ شرط مبلغ `invoice.total_book`.
+- ⚠️ **حذف در کنسول ادمین = پیشنهاد:** حذف عضو و IP از `admin_action_requests` می‌گذرد و تأییدکننده‌ی دوم اجرا می‌کند (`admin-deletions.ts`).
 
 **قرارداد داده‌ی بین لایه‌ها**
 

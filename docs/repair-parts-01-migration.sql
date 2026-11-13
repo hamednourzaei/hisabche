@@ -50,30 +50,37 @@ CREATE INDEX IF NOT EXISTS repair_ticket_parts_ticket_idx
 
 ALTER TABLE repair_ticket_parts ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS repair_ticket_parts_tenant ON repair_ticket_parts;
-CREATE POLICY repair_ticket_parts_tenant ON repair_ticket_parts
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = repair_ticket_parts.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = repair_ticket_parts.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  );
 
 REVOKE ALL ON public.repair_ticket_parts
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE ON public.repair_ticket_parts TO service_role;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['repair_ticket_parts'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.repair_ticket_parts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.repair_ticket_parts FROM PUBLIC, anon, authenticated;
 
 COMMIT;

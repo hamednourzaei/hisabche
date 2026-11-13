@@ -33,22 +33,38 @@ CREATE INDEX IF NOT EXISTS idx_cheques_ws_status
   ON cheques (workspace_id, status, due_date);
 
 REVOKE ALL ON cheques FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON cheques TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON cheques TO service_role;
 
 ALTER TABLE cheques ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-     WHERE schemaname = 'public' AND tablename = 'cheques' AND policyname = 'cheques_ws_isolation'
-  ) THEN
-    CREATE POLICY cheques_ws_isolation ON cheques
-      FOR ALL TO authenticated
-      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()))
-      WITH CHECK (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()));
-  END IF;
-END $$;
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.cheques;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['cheques'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.cheques ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.cheques FROM PUBLIC, anon, authenticated;

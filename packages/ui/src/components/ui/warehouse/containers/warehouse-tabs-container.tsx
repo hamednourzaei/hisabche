@@ -46,6 +46,8 @@ import {
   WarehouseShelfMapSection,
 } from '../shelves/warehouse-products-section'
 import { HoldsSection } from '../holds-section'
+import { ConsignmentSection } from '../../erp-core/consignment-section'
+import { RfqSection } from '../../erp-core/rfq-section'
 import { warehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
@@ -109,6 +111,10 @@ export const STOCK_SECTIONS = [
   'holds',
   'reorder',
   'deadStock',
+  // V61 audit (12 Nov 2026): buying and holding for others — server routes that
+  // had no screen. Requests for quotation sit after «reorder» (what to buy).
+  'rfqs',
+  'consignments',
 ] as const
 export type StockSection = (typeof STOCK_SECTIONS)[number]
 
@@ -267,6 +273,10 @@ function WarehouseHub() {
               <TransferRequestsSection />
             ) : section === 'holds' ? (
               <HoldsSection />
+            ) : section === 'rfqs' ? (
+              <RfqSection />
+            ) : section === 'consignments' ? (
+              <ConsignmentSection />
             ) : (
               <WarehouseStockTab />
             )}

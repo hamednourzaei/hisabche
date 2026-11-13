@@ -67,6 +67,14 @@ vi.mock('../db', () => ({
   supabase: {
     from: (table: string) => {
       tablesRead.push(table)
+      if (table === 'admin_ip_allowlist') {
+        // The IP allow-list feature is OFF in this test: no rows, no refusals.
+        const empty = {
+          select: () => empty,
+          order: () => Promise.resolve({ data: [], error: null }),
+        }
+        return empty
+      }
       return makeQuery()
     },
   },
@@ -167,7 +175,15 @@ describe('the Admin Panel guard is independent of workspace membership', () => {
       },
     }
 
-    await platformAdminGuard({ user } as never, reply as never)
+    await platformAdminGuard(
+      {
+        user,
+        url: '/api/admin/overview',
+        ip: '203.0.113.7',
+        headers: {},
+      } as never,
+      reply as never,
+    )
     return sent
   }
 

@@ -35,7 +35,15 @@ function builder() {
   return q
 }
 
-vi.mock('../db', () => ({ supabase: { from: () => builder() } }))
+vi.mock('../db', () => ({
+  // V63 · S-3: the status also asks Vault for the key's METADATA (`listSecrets`
+  // → `platform_secrets_list`). No Vault here means no metadata, which is the
+  // correct «not configured» answer — not a thrown mock error.
+  supabase: {
+    from: () => builder(),
+    rpc: async () => ({ data: [], error: null }),
+  },
+}))
 
 const { AiSettingsService } = await import('../services/ai/ai-settings.service')
 

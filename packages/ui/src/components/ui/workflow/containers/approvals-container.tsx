@@ -75,8 +75,14 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
         })
       } catch (err) {
         const apiError = err as ApiErrorLike
-        const message =
-          apiError.status === 403
+        // V61 decision 2: whoever issued the document does not approve it.
+        const selfApproval = /SELF_APPROVAL_REFUSED/.test(String(apiError.message ?? ''))
+        const message = selfApproval
+          ? t(
+              'workflow.selfApprovalRefused',
+              'کسی که این سند را صادر کرده نمی‌تواند خودش آن را تأیید کند؛ عضو دیگری یا مالک باید تأیید کند.',
+            )
+          : apiError.status === 403
             ? t('workflow.forbiddenError', 'شما اجازه‌ی انجام این اقدام را در این مرحله ندارید.')
             : (apiError.message ?? t('workflow.actionError', 'انجام اقدام با خطا مواجه شد.'))
         toast.error(t('workflow.actionErrorTitle', 'خطا در انجام اقدام'), message)

@@ -29,6 +29,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { marketplaceService, type MarketplaceService } from '../services/oauth/marketplace.service'
 import { oauthFailure } from './oauth.routes'
 
@@ -56,7 +57,16 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
   return async function marketplaceRoutes(fastify: FastifyInstance) {
     const member = [authenticate, requireWorkspaceContext]
     const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]
-    const admin = [authenticate, platformAdminGuard]
+    const adminRead = [
+      authenticate,
+      platformAdminGuard,
+      requireAdminPermission('product.market.read'),
+    ]
+    const adminWrite = [
+      authenticate,
+      platformAdminGuard,
+      requireAdminPermission('product.market.write'),
+    ]
 
     const handle =
       (fn: (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>) =>
@@ -208,7 +218,7 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.get(
       '/api/admin/oauth-apps/:id/stats',
-      { preHandler: admin },
+      { preHandler: adminRead },
       handle(async (request, reply) => {
         const { id } = idParams.parse(request.params)
         const { days } = statsQuery.parse(request.query)
@@ -218,13 +228,13 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.get(
       '/api/admin/app-publishers',
-      { preHandler: admin },
+      { preHandler: adminRead },
       handle(async (_request, reply) => reply.send({ data: await marketplace.listPublishers() })),
     )
 
     fastify.post(
       '/api/admin/app-publishers/:workspaceId/verification',
-      { preHandler: admin },
+      { preHandler: adminWrite },
       handle(async (request, reply) => {
         const { workspaceId } = workspaceParams.parse(request.params)
         const { verified } = verificationBody.parse(request.body)
@@ -234,7 +244,7 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.get(
       '/api/admin/app-reports',
-      { preHandler: admin },
+      { preHandler: adminRead },
       handle(async (request, reply) => {
         const { status } = reportsQuery.parse(request.query)
         return reply.send({ data: await marketplace.listReports(status) })
@@ -243,7 +253,7 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.post(
       '/api/admin/app-reports/:id/resolution',
-      { preHandler: admin },
+      { preHandler: adminWrite },
       handle(async (request, reply) => {
         const { id } = idParams.parse(request.params)
         const b = resolutionBody.parse(request.body)
@@ -255,7 +265,7 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.get(
       '/api/admin/app-reviews',
-      { preHandler: admin },
+      { preHandler: adminRead },
       handle(async (request, reply) => {
         const { hidden } = reviewsQuery.parse(request.query)
         return reply.send({ data: await marketplace.listReviews(hidden === 'true') })
@@ -264,7 +274,7 @@ export function buildMarketplaceRoutes(marketplace: MarketplaceService) {
 
     fastify.post(
       '/api/admin/app-reviews/:id/visibility',
-      { preHandler: admin },
+      { preHandler: adminWrite },
       handle(async (request, reply) => {
         const { id } = idParams.parse(request.params)
         const b = visibilityBody.parse(request.body)

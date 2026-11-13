@@ -28,27 +28,11 @@ CREATE INDEX IF NOT EXISTS idx_document_revisions_lookup
   ON document_revisions (workspace_id, document_type, document_id, version DESC);
 
 REVOKE ALL ON document_revisions FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON document_revisions TO authenticated, service_role;
+GRANT SELECT ON document_revisions TO service_role;
 GRANT INSERT ON document_revisions TO service_role;
 
 ALTER TABLE document_revisions ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-     WHERE schemaname = 'public' AND tablename = 'document_revisions' AND policyname = 'document_revisions_ws_select'
-  ) THEN
-    CREATE POLICY document_revisions_ws_select ON document_revisions
-      FOR SELECT TO authenticated
-      USING (
-        workspace_id IN (
-          SELECT wm.workspace_id FROM public.workspace_members wm
-           WHERE wm.user_id = auth.uid()
-        )
-      );
-  END IF;
-END $$;
 
 CREATE OR REPLACE FUNCTION public.document_revisions_immutable_guard()
 RETURNS trigger
@@ -162,3 +146,31 @@ END $$;
 -- DROP TABLE IF EXISTS public.document_revisions;
 -- DROP FUNCTION IF EXISTS public.record_document_revision_trigger();
 -- DROP FUNCTION IF EXISTS public.document_revisions_immutable_guard();
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['document_revisions'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.document_revisions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.document_revisions FROM PUBLIC, anon, authenticated;

@@ -23,6 +23,13 @@
 
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
+import {
+  PLATFORM_SECRETS,
+  listSecrets,
+  resolveSecret,
+  stageSecret,
+  type StagedSecret,
+} from '../secrets/secret-store'
 
 export type AiProvider = 'anthropic' | 'openai'
 
@@ -47,6 +54,8 @@ export interface AiProviderStatus {
   isEnabled: boolean
   /** Whether a key is stored. Not the key, not part of it. */
   hasApiKey: boolean
+  /** A rotation waiting for its approver (V63 · S-3). No value, only last4. */
+  pendingKeyRotation: { last4: string } | null
   updatedAt: string | null
 }
 
@@ -59,6 +68,18 @@ interface SettingsRow {
   topup_contact: string
   is_enabled: boolean
   updated_at: string | null
+}
+
+/** A fallback provider tried after the primary configuration, in order. */
+export interface AiFallback {
+  id: string
+  position: number
+  provider: AiProvider
+  model: string
+  baseUrl: string | null
+  timeoutMs: number
+  isEnabled: boolean
+  updatedAt: string
 }
 
 /** Everything the status shows. Deliberately without `api_key`. */
@@ -80,9 +101,7 @@ export class AiSettingsService {
   async getConfig(): Promise<AiProviderConfig | null> {
     const { data, error } = await supabase
       .from('ai_provider_settings')
-      .select(
-        'provider, base_url, model, api_key, system_prompt, topup_contact, is_enabled, updated_at',
-      )
+      .select(STATUS_COLUMNS)
       .maybeSingle()
 
     if (error) {
@@ -91,17 +110,21 @@ export class AiSettingsService {
     }
     if (!data) return null
 
-    const row = data as SettingsRow
+    const row = data as StatusRow
+    // ⚠️ V63 · S-3 — the key comes from Vault (or, transitionally, the
+    // environment) through `readApiKey`. The `api_key` column is only a
+    // pre-migration fallback and is emptied by the owner's copy migration.
+    const apiKey = await this.readApiKey()
     // Enabled but keyless is not a usable configuration, and reporting it as
     // one would produce a 500 from the provider instead of a clear «not
     // configured» to the user.
-    if (!row.is_enabled || !row.api_key) return null
+    if (!row.is_enabled || !apiKey) return null
 
     return {
       provider: row.provider as AiProvider,
       baseUrl: row.base_url,
       model: row.model,
-      apiKey: row.api_key,
+      apiKey,
       systemPrompt: row.system_prompt ?? '',
       topupContact: row.topup_contact ?? '',
       isEnabled: row.is_enabled,
@@ -109,11 +132,16 @@ export class AiSettingsService {
   }
 
   /**
-   * ⚠️ INTERNAL ONLY. The stored key whether or not the assistant is enabled —
-   * so the admin can test a configuration BEFORE switching it on. Never
-   * returned from a route.
+   * The stored key whether or not the assistant is enabled — so the admin can
+   * test a configuration BEFORE switching it on.
+   *
+   * ⚠️ INTERNAL ONLY. Vault first, environment as a documented transition,
+   * legacy plaintext column last. Never returned from a route.
    */
-  async getStoredApiKey(): Promise<string | null> {
+  private async readApiKey(): Promise<string | null> {
+    const resolved = await resolveSecret(PLATFORM_SECRETS.aiApiKey, process.env.AI_API_KEY)
+    if (resolved.value) return resolved.value
+
     const { data, error } = await supabase
       .from('ai_provider_settings')
       .select('api_key')
@@ -123,6 +151,11 @@ export class AiSettingsService {
       throw new DatabaseError('Failed to read AI provider settings', error)
     }
     return (data as { api_key: string | null } | null)?.api_key || null
+  }
+
+  /** Public, still value-only: used by the admin's «test» button. */
+  async getStoredApiKey(): Promise<string | null> {
+    return this.readApiKey()
   }
 
   /**
@@ -140,6 +173,13 @@ export class AiSettingsService {
     const row = keyed ?? (await this.readStatusRow(false))
     if (!row) return null
 
+    // ⚠️ V63 · S-3 — «is a key set» now also looks in Vault. The index row is
+    // metadata only (`last4`, rotation state); the value itself never leaves
+    // the store.
+    const metadata = (await listSecrets()).find(
+      (secret) => secret.name === PLATFORM_SECRETS.aiApiKey,
+    )
+
     return {
       provider: row.provider as AiProvider,
       baseUrl: row.base_url,
@@ -147,10 +187,53 @@ export class AiSettingsService {
       systemPrompt: row.system_prompt ?? '',
       topupContact: row.topup_contact ?? '',
       isEnabled: row.is_enabled,
-      // ⚠️ A boolean, from the filter — the key itself was never selected.
-      hasApiKey: keyed !== null,
+      // ⚠️ A boolean: the column filter, or a live Vault entry. Never the key.
+      hasApiKey: keyed !== null || Boolean(metadata?.last4),
+      pendingKeyRotation: metadata?.pendingLast4 ? { last4: metadata.pendingLast4 } : null,
       updatedAt: row.updated_at,
     }
+  }
+
+  /**
+   * The ordered fallback list, disabled entries included.
+   *
+   * ⚠️ EMPTY IS A VALID ANSWER, and it means «no fallback» — not «read the
+   * failure». A deployment that has not applied `docs/ai-usage-01-migration.sql`
+   * gets [] and behaves exactly as it did before.
+   */
+  async getFallbacks(): Promise<AiFallback[]> {
+    const { data, error } = await supabase
+      .from('ai_provider_fallbacks')
+      .select('id, position, provider, model, base_url, timeout_ms, is_enabled, updated_at')
+      .order('position', { ascending: true })
+
+    if (error) {
+      if (SCHEMA_ABSENT.has(error.code)) return []
+      throw new DatabaseError('Failed to read AI fallbacks', error)
+    }
+
+    return (data ?? []).map((row) => {
+      const fallback = row as {
+        id: string
+        position: number
+        provider: string
+        model: string
+        base_url: string | null
+        timeout_ms: number
+        is_enabled: boolean
+        updated_at: string
+      }
+      return {
+        id: fallback.id,
+        position: fallback.position,
+        provider: fallback.provider as AiProvider,
+        model: fallback.model,
+        baseUrl: fallback.base_url,
+        timeoutMs: fallback.timeout_ms,
+        isEnabled: fallback.is_enabled,
+        updatedAt: fallback.updated_at,
+      }
+    })
   }
 
   private async readStatusRow(withKey: boolean): Promise<StatusRow | null> {
@@ -184,6 +267,7 @@ export class AiSettingsService {
       topupContact: string
       isEnabled: boolean
     },
+    actorEmail?: string | undefined,
   ): Promise<AiProviderStatus> {
     const patch: Record<string, unknown> = {
       singleton: true,
@@ -197,8 +281,19 @@ export class AiSettingsService {
       updated_by: actorId,
     }
 
-    // Only when a non-empty key was actually supplied.
-    if (input.apiKey && input.apiKey.trim()) patch.api_key = input.apiKey.trim()
+    // ⚠️ V63 · S-3 — a NEW key is staged in Vault and filed for a second
+    // admin's approval. It is never written to the plaintext column, and it
+    // does not become live until the maker-checker request is approved.
+    let staged: StagedSecret | null = null
+    if (input.apiKey && input.apiKey.trim()) {
+      staged = await stageSecret({
+        name: PLATFORM_SECRETS.aiApiKey,
+        value: input.apiKey.trim(),
+        purpose: 'AI provider API key',
+        actorId,
+        actorEmail: actorEmail ?? actorId,
+      })
+    }
 
     const { error } = await supabase
       .from('ai_provider_settings')
@@ -208,6 +303,6 @@ export class AiSettingsService {
 
     const status = await this.getStatus()
     if (!status) throw new DatabaseError('AI provider settings did not persist', null)
-    return status
+    return staged ? { ...status, pendingKeyRotation: { last4: staged.last4 } } : status
   }
 }

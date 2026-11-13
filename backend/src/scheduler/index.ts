@@ -17,6 +17,8 @@ import { runDepreciationPosting } from '../workers/depreciation-posting.worker'
 import { automationService } from '../services/automation/automation.service'
 import { escalationService } from '../services/workflow/escalation.service'
 import { runDivergenceAlarm } from '../workers/divergence-alarm.worker'
+import { supabase } from '../db'
+import { MonitoringService } from '../services/monitoring/monitoring.service'
 
 const trialWorker = new TrialExpirationWorker()
 
@@ -129,6 +131,7 @@ export async function runEscalationTick(now: Date = new Date()): Promise<boolean
 }
 
 const TIMED_AUTOMATION_SECONDS = 5 * 60
+const MONITOR_ALERT_SECONDS = 60
 
 /**
  * Automations that name a time of day (the automatic month-end), once per
@@ -168,6 +171,50 @@ export async function runDivergenceAlarmTick(now: Date = new Date()): Promise<bo
       )
     }
   })
+}
+
+/**
+ * V63 · M-3 — roll the closed hour into `request_metrics_hour`, then prune.
+ * Once per hour across all instances; late and repeated runs are harmless
+ * because the rollup is an idempotent UPSERT keyed by the hour.
+ */
+export async function runMonitorRollupTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce('monitor-rollup', slotOf(60 * 60, now), async () => {
+    const closed = new Date(now)
+    closed.setUTCMinutes(0, 0, 0)
+    closed.setUTCHours(closed.getUTCHours() - 1)
+
+    const rolled = await supabase.rpc('admin_monitor_rollup_hour', {
+      p_hour: closed.toISOString(),
+    })
+    if (rolled.error) throw rolled.error
+
+    const pruned = await supabase.rpc('admin_monitor_prune', {
+      p_keep_minute_days: 7,
+      p_keep_hour_days: 90,
+    })
+    if (pruned.error) throw pruned.error
+  })
+}
+
+/**
+ * V63 · M-5 — evaluate the alert rules once a minute across all instances.
+ * The email is deduplicated per rule per hour inside the service, so a rule
+ * that keeps breaching is not a mail every sixty seconds.
+ */
+export async function runMonitorAlertsTick(now: Date = new Date()): Promise<boolean> {
+  return runScheduledOnce(
+    'monitor-alerts',
+    slotOf(MONITOR_ALERT_SECONDS, now),
+    async () => {
+      const evaluations = await MonitoringService.evaluateAlerts({ notify: true, now })
+      const breaching = evaluations.filter((row) => row.state === 'breaching')
+      if (breaching.length > 0) {
+        console.warn(`⚠️ Monitor alerts: ${breaching.map((row) => row.rule.metric).join(',')}`)
+      }
+    },
+    MONITOR_ALERT_SECONDS,
+  )
 }
 
 export function startScheduler() {
@@ -283,6 +330,34 @@ export function startScheduler() {
       }
     },
     { timezone: SCHEDULER_TIMEZONE, name: 'divergence-alarm' },
+  )
+
+  // ─── Monitoring rollup + prune (V63 · M-3) ──────────────
+  // دقیقه‌ی ۲ هر ساعت: ساعتِ بسته‌شده به جدول ساعتی می‌رود، سپس هرس.
+  cron.schedule(
+    '2 * * * *',
+    async () => {
+      try {
+        await runMonitorRollupTick()
+      } catch (err) {
+        console.error('❌ Monitor rollup failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'monitor-rollup' },
+  )
+
+  // ─── Monitoring alerts (V63 · M-5) ──────────────
+  // هر دقیقه؛ ایمیل برای هر قاعده حداکثر یک‌بار در ساعت.
+  cron.schedule(
+    '* * * * *',
+    async () => {
+      try {
+        await runMonitorAlertsTick()
+      } catch (err) {
+        console.error('❌ Monitor alerts failed:', err)
+      }
+    },
+    { timezone: SCHEDULER_TIMEZONE, name: 'monitor-alerts' },
   )
 
   console.log('✅ Scheduler started.')

@@ -12,7 +12,9 @@ import { adminWorkspaceKeys } from './use-admin-workspaces'
  *
  *   GET    /admin/workspaces/:workspaceId/members  -> { members: AdminMember[] }
  *   PATCH  /admin/memberships/:membershipId        -> AdminMember
- *   DELETE /admin/memberships/:membershipId        -> { removed, membershipId }
+ *   DELETE /admin/memberships/:membershipId        -> { pending, requestId, membershipId }
+ *     (owner, 12 Nov 2026: a removal is PROPOSED; a second admin approves it
+ *      under Revenue › approvals, and only then is the member removed)
  *
  * `apiClient` already carries the `/api` prefix, so paths here must not repeat
  * it — '/api/admin/...' produced '.../api/api/admin/...'.
@@ -103,12 +105,18 @@ export function useRemoveMember(workspaceId: string) {
 
   return useMutation({
     mutationFn: async (membershipId: string) => {
-      await apiClient.delete(`/admin/memberships/${membershipId}`)
-      return membershipId
+      const response = await apiClient.delete(`/admin/memberships/${membershipId}`)
+      const body = (response?.data ?? {}) as { pending?: unknown; requestId?: unknown }
+      return {
+        membershipId,
+        pending: body.pending === true,
+        requestId: typeof body.requestId === 'string' ? body.requestId : null,
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminMemberKeys.ofWorkspace(workspaceId) })
       void queryClient.invalidateQueries({ queryKey: adminWorkspaceKeys.all })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'billing', 'action-requests'] })
     },
   })
 }

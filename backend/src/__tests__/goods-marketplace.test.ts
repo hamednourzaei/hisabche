@@ -277,7 +277,8 @@ describe('routes: who may do what', () => {
     expect(src).toContain(
       "const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]",
     )
-    expect(src).toContain('const admin = [authenticate, platformAdminGuard]')
+    expect(src).toContain("adminRouteByMethod('product.market.read', 'product.market.write', {")
+    expect(src).toContain('stepUpOnWrite: true')
   })
 
   it("the seller's bodies cannot carry the platform's fields", () => {

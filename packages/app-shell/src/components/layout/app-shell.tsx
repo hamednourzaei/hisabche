@@ -8,6 +8,7 @@
 // Desktop-specific: Electron drag regions, keyboard shortcuts, route outlet.
 // ============================================
 
+import { StepUpDialogHost } from '@hisabche/ui/settings/step-up-dialog-host'
 import { Fragment, Suspense, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMyCapabilities } from '@hisabche/api'
@@ -117,6 +118,7 @@ export function AppShell() {
             covers the last 5rem, so the page must be able to scroll past it. */}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
+          <StepUpDialogHost />
           <BookCurrencySync />
           <ThemePreferenceSync />
           <InteractiveGuide currentRoute={location.pathname} t={(key) => t(key as never)} />

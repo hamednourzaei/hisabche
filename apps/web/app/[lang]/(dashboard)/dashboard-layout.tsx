@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-layout.tsx
 'use client'
 
+import { StepUpDialogHost } from '@hisabche/ui/settings/step-up-dialog-host'
 import type { ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
@@ -623,6 +624,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <SandboxNotice />
+          <StepUpDialogHost />
           <BookCurrencySync />
           <ThemePreferenceSync />
           <InteractiveGuide currentRoute={pathname || '/dashboard'} t={t} />

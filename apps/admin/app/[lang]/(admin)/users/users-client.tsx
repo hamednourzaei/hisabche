@@ -11,6 +11,7 @@ import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminUsers } from '@/hooks/use-admin-users'
 import { useManageUser } from '@/hooks/use-admin-customers'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { UserActivitySheet } from './user-activity-sheet'
 
 const PAGE_SIZE = 20
 
@@ -25,6 +26,7 @@ export function UsersClient() {
   const page = pageParam - 1
   const [search, setSearch] = useState(query)
   const [lastQuery, setLastQuery] = useState(query)
+  const [activityUser, setActivityUser] = useState<{ id: string; label: string } | null>(null)
   const [targetAction, setTargetAction] = useState<{
     userId: string
     action: 'suspend' | 'reactivate' | 'revoke_sessions' | 'reset_mfa' | 'force_signout'
@@ -164,6 +166,19 @@ export function UsersClient() {
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
+                    onClick={() =>
+                      setActivityUser({
+                        id: user.id,
+                        label: user.full_name ?? user.email ?? user.id,
+                      })
+                    }
+                  >
+                    {t('admin.insights.activity.open')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
                     onClick={() => setTargetAction({ userId: user.id, action: 'revoke_sessions' })}
                   >
                     {t('admin.customers.revokeSessions')}
@@ -190,6 +205,9 @@ export function UsersClient() {
           </ul>
         </Card>
       )}
+
+      {/* V63 #89 */}
+      <UserActivitySheet user={activityUser} onClose={() => setActivityUser(null)} />
 
       {/* StepUp Dialog for User Actions */}
       <StepUpDialog

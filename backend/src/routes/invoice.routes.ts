@@ -24,6 +24,8 @@ import { sendFailure } from '../errors/http-failure'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { PlanLimitError } from '../services/plan-limits.service'
+import { majorToTillMinor } from '@hisabche/validation'
+import { InvoiceSellerNotInstalledError, salesBySeller } from '../services/invoice-seller'
 
 /** Anything that is not a uuid is ignored, never passed to a query. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -122,6 +124,33 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/invoices/sales-by-seller ──────────────────
+  // Owner decision (12 Nov 2026): each seller is a member, and the owner sees
+  // them all. Owner/admin/manager see every seller; anyone else their own row.
+  // Per currency, minor units. Not cached: a new sale changes it.
+  fastify.get(
+    '/api/invoices/sales-by-seller',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const q = request.query as { from?: string; to?: string }
+        const result = await salesBySeller(
+          request.tenancy,
+          {
+            from: typeof q.from === 'string' ? q.from : undefined,
+            to: typeof q.to === 'string' ? q.to : undefined,
+          },
+          majorToTillMinor,
+        )
+        return reply.send({ data: result })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to load sales by seller')
+      }
+    },
+  )
+
   // GET /api/invoices/:id
   fastify.get(
     '/api/invoices/:id',
@@ -175,6 +204,10 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           // and the id never arrived — every invoice moved no warehouse at all.
           ...(UUID_PATTERN.test(String(body.warehouseId ?? ''))
             ? { warehouseId: body.warehouseId as string }
+            : {}),
+          // ⚠️ FORWARDED. Who sold it — a member; the service proves it.
+          ...(UUID_PATTERN.test(String(body.sellerUserId ?? ''))
+            ? { sellerUserId: body.sellerUserId as string }
             : {}),
           subtotal: body.subtotal ?? 0,
           discountTotal: body.discountTotal ?? 0,
@@ -297,6 +330,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         if (err instanceof IdempotencyUnavailableError) {
           // 503, not 4xx: the mobile runner treats 4xx as permanent and would
           // give up on a sale that only needs the migration to go through.
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
+        if (err instanceof InvoiceSellerNotInstalledError) {
           return reply.code(503).send({ error: err.message, code: err.code })
         }
         if (err instanceof PlanLimitError) {
@@ -510,37 +546,10 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // V61 B.2.9 — Seller commission on invoices (server-enforced seller scope when not manager/owner)
-  fastify.get(
-    '/api/invoices/seller-commissions',
-    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const query = (request.query ?? {}) as {
-          sellerEmployeeId?: string
-          ratePercent?: string
-          basis?: 'revenue' | 'margin'
-        }
-        const canViewAll = ['owner', 'admin', 'manager', 'accountant'].includes(
-          request.tenancy.role,
-        )
-        const targetSellerId = canViewAll
-          ? (query.sellerEmployeeId ?? request.tenancy.userId)
-          : request.tenancy.userId
-        const { bundlesConsignmentCommissionService } =
-          await import('../services/commerce/bundles-consignment-commission.service')
-        return reply.send({
-          data: await bundlesConsignmentCommissionService.getSellerCommissions(
-            request.tenancy,
-            targetSellerId,
-            Number(query.ratePercent ?? 5),
-            query.basis === 'margin' ? 'margin' : 'revenue',
-          ),
-        })
-      } catch (err: any) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: err.message })
-      }
-    },
-  )
+  // ⚠️ V61 audit (12 Nov 2026): «GET /api/invoices/seller-commissions» was removed.
+  // It read `invoices.cost_total` (no such column: every call was a 500), mixed
+  // every currency into one number, scaled by ×100, took the commission rate from
+  // the query string, and filtered on `invoices.seller_employee_id`, which nothing
+  // writes. Commission comes back when the invoice records its seller — the
+  // owner's decision (NEEDS_OWNER_DECISION in V61-IMPLEMENTATION-PROGRESS.md).
 }

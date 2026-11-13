@@ -422,8 +422,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
           data: await bundlesConsignmentCommissionService.listConsignmentLots(request.tenancy),
         })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to list consignment lots' })
+        return sendFailure(reply, fastify.log, err, 'Failed to list consignment lots')
       }
     },
   )
@@ -444,8 +443,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
           ),
         })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create consignment lot' })
+        return sendFailure(reply, fastify.log, err, 'Failed to create consignment lot')
       }
     },
   )

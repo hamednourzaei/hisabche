@@ -41,10 +41,18 @@ const hub = file.slice(
 describe('two tabs, each with one switch', () => {
   it('team and pay — and the four parts under them', () => {
     expect([...TEAM_HUB_TABS]).toEqual(['team', 'pay'])
-    expect([...TEAM_SECTIONS]).toEqual(['employees', 'branches'])
+    // 12 Nov 2026 (V61 audit): the org chart (B.2.17) joined «team».
+    // 12 Nov 2026 (owner decision 1): «فروش هر نفر» — each seller is a member.
+    expect([...TEAM_SECTIONS]).toEqual(['employees', 'branches', 'orgChart', 'sellers'])
     // No «حقوق» section (owner, 18 Oct 2026): it repeated the team page. A
     // person's payroll and «پرداخت شد / نشد» are on their own page.
-    expect([...PAY_SECTIONS]).toEqual(['attendance', 'timesheets'])
+    //
+    // ⚠️ «مطالبات هزینه» ADDED 12 Nov 2026 (V61 B.2.18 — expense claims), with
+    // the screen's own endpoints in the matrix. It is money owed to a person,
+    // decided by whoever approves pay, so it belongs with pay and not with
+    // «who works here». The list is still pinned: a silent fourth section is a
+    // failure, a dated one is this line.
+    expect([...PAY_SECTIONS]).toEqual(['attendance', 'timesheets', 'expenses'])
   })
 
   it('the payroll list is gone, and settling a payroll is still reachable', () => {
@@ -67,7 +75,11 @@ describe('two tabs, each with one switch', () => {
   })
 
   it('the screen is told its part, and then draws no tab bar of its own', () => {
-    expect(hub).toContain("<TeamAndPayrollScreen section={tab === 'pay' ? pay : team} />")
+    // 12 Nov 2026 (V61 audit): the org chart is its own screen, so the section
+    // goes through `TeamSectionBody`, which hands every other part to the screen.
+    expect(hub).toContain("<TeamSectionBody section={tab === 'pay' ? pay : team} />")
+    expect(file).toContain("if (section === 'orgChart') return <OrgChartSection />")
+    expect(file).toContain('return <TeamAndPayrollScreen section={section} />')
     // The view has no pills of its own left.
     expect(ui('team-and-payroll', 'team-and-payroll-view.tsx')).not.toContain('role="tablist"')
   })

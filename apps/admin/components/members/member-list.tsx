@@ -58,6 +58,8 @@ export function MemberList({
   const removeMember = useRemoveMember(workspaceId)
 
   const [pending, setPending] = useState<AdminMember | null>(null)
+  // Owner, 12 Nov 2026: a removal is a REQUEST until a second admin approves it.
+  const [proposed, setProposed] = useState(false)
 
   if (isLoading) {
     return (
@@ -211,6 +213,12 @@ export function MemberList({
         })}
       </ul>
 
+      {proposed ? (
+        <p role="status" className="mt-2 px-4 text-sm text-muted-foreground">
+          {t('admin.member.removalProposed')}
+        </p>
+      ) : null}
+
       {(updateRole.isError || removeMember.isError) && (
         <p role="alert" className="mt-2 px-4 text-sm text-destructive">
           {updateRole.isError ? t('admin.error.updateRole') : t('admin.error.removeMember')}
@@ -227,7 +235,10 @@ export function MemberList({
           removeMember.mutate(pending.id, {
             // Closed only on success: a failed removal must leave the member
             // visible and the dialog answerable, not silently dismissed.
-            onSuccess: () => setPending(null),
+            onSuccess: (result) => {
+              setPending(null)
+              setProposed(result.pending)
+            },
           })
         }}
       />

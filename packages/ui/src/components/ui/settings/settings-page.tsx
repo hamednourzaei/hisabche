@@ -20,6 +20,7 @@ import { CreditLimitModeSection } from './credit-limit-mode-section'
 import { MetalUnitSection } from './metal-unit-section'
 import { LanguageSection } from './language-section'
 import { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
+import { TwoFactorSection } from './two-factor-section'
 import { useToast } from '../toast-provider'
 import {
   Shield,
@@ -48,6 +49,7 @@ import {
   Briefcase,
   LayoutGrid,
   ScanBarcode,
+  ShieldCheck,
 } from 'lucide-react'
 import { buildCsvZip, formatBytes, formatNumber, toIsoDay } from '@hisabche/formatting'
 import { localizePath } from '@hisabche/ui-contract'
@@ -1160,6 +1162,12 @@ export const SettingsPage = memo(function SettingsPage({
             icon: Clock,
             titleKey: 'settings.quick.timeZone',
             render: () => <WorkplaceTimeZoneSection />,
+          },
+          {
+            id: 'twoFactor',
+            icon: ShieldCheck,
+            titleKey: 'settings.quick.twoFactor',
+            render: () => <TwoFactorSection />,
           },
           {
             id: 'backup',

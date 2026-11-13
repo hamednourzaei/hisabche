@@ -27,6 +27,7 @@ import {
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDate, adminDateTime } from '@/lib/admin-format'
+import { WorkspaceUsageSection } from './workspace-usage-section'
 
 interface Workspace360SheetProps {
   workspaceId: string | null
@@ -162,6 +163,9 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                   </span>
                 </div>
               </div>
+
+              {/* V63 #84 — what this business uses */}
+              {workspaceId ? <WorkspaceUsageSection workspaceId={workspaceId} /> : null}
 
               {/* Honest Entitlements / Subscription State */}
               <div className="p-4 rounded-xl border border-border space-y-2">

@@ -12,6 +12,7 @@ import { BalanceSheetTab } from './tabs/BalanceSheetTab'
 import { IncomeStatementTab } from './tabs/IncomeStatementTab'
 import { MonthEndTab } from './tabs/MonthEndTab'
 import { FinancingTab } from './tabs/FinancingTab'
+import { ChequesTab } from './tabs/ChequesTab'
 import { BranchScopeProvider } from '../branch/branch-scope'
 import { BookOpen, FileBarChart, Landmark } from 'lucide-react'
 import { PageHub } from '../page-hub'
@@ -46,7 +47,7 @@ const BudgetsContainer = lazy(() =>
 export const ACCOUNTING_HUB_TABS = ['books', 'treasury', 'reports'] as const
 export const ACCOUNTING_BOOK_SECTIONS = ['accounts', 'journal', 'monthEnd'] as const
 /** What the business holds and owes outside the day-to-day books. */
-export const ACCOUNTING_TREASURY_SECTIONS = ['bank', 'assets', 'financing'] as const
+export const ACCOUNTING_TREASURY_SECTIONS = ['bank', 'cheques', 'assets', 'financing'] as const
 export const ACCOUNTING_REPORT_SECTIONS = [
   'trialBalance',
   'balanceSheet',
@@ -179,6 +180,7 @@ function AccountingHub() {
     journal: () => <JournalTab />,
     monthEnd: () => <MonthEndTab />,
     bank: () => <BankContainer />,
+    cheques: () => <ChequesTab />,
     assets: () => <AssetsContainer />,
     financing: () => <FinancingTab />,
     trialBalance: () => <TrialBalanceTab />,

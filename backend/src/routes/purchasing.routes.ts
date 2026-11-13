@@ -326,9 +326,12 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
       try {
         const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
         const { rfqContractsService } = await import('../services/purchasing/rfq-contracts.service')
-        const todayIso = new Date().toISOString().slice(0, 10)
+        const { businessDayOf } = await import('../utils/local-day')
+        // The business's own day — a quotation valid «until today» is still
+        // valid at 23:00 in Kabul, which is already tomorrow in UTC.
+        const businessDay = businessDayOf(new Date(), request.tenancy.timeZone)
         return reply.send({
-          data: await rfqContractsService.chooseQuotation(request.tenancy, id, todayIso),
+          data: await rfqContractsService.chooseQuotation(request.tenancy, id, businessDay),
         })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to convert quotation to PO')

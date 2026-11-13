@@ -91,6 +91,13 @@ export interface AuthState {
   }) => Promise<void>
   initAuth: () => void
   clearError: () => void
+  /**
+   * After a correct authenticator code the server returns a NEW session at
+   * AAL2 (two-step verification). Only the token pair changes. Returns false
+   * when nobody is signed in any more (logout while the code was checked):
+   * a verified session must never sign a logged-out person back in.
+   */
+  adoptVerifiedSession: (session: { token: string; refreshToken?: string | undefined }) => boolean
 }
 
 // ============================================
@@ -288,6 +295,17 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       clearError: () => set({ error: null }),
+
+      adoptVerifiedSession: (session) => {
+        const now = useAuthStore.getState()
+        if (!now.isAuthenticated || now.isDemo || !now.token) return false
+        set({
+          token: session.token,
+          // Cookie transport answers without one; the httpOnly cookie was renewed.
+          refreshToken: session.refreshToken ?? null,
+        })
+        return true
+      },
 
       login: async (credentials) => {
         set({ isLoading: true, error: null })

@@ -27,12 +27,11 @@ export function matchesLocalizedSearch(
 }
 
 export const SENSITIVE_FIELD_CAPABILITIES: Record<string, string> = {
-  cost_price: 'product.cost.read',
-  buy_price: 'product.cost.read',
+  buy_price: 'inventory.cost.read',
   margin: 'report.financial.read',
   margin_percent: 'report.financial.read',
-  salary: 'payroll.manage',
-  supplier_price: 'purchasing.read',
+  salary: 'payroll.read',
+  supplier_price: 'inventory.cost.read',
 }
 
 export function redactSensitiveFields<T extends Record<string, unknown>>(

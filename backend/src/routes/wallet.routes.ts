@@ -20,13 +20,19 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { readClientRequestId } from '../utils/client-request'
 import { BillingService } from '../services/billing.service'
 import { walletService } from '../services/wallet/wallet.service'
 
 const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]
-const admin = [authenticate, platformAdminGuard]
+const adminRead = [authenticate, platformAdminGuard, requireAdminPermission('billing.wallet.read')]
+const adminWrite = [
+  authenticate,
+  platformAdminGuard,
+  requireAdminPermission('billing.wallet.adjust'),
+]
 
 // The one currency list (CLAUDE.md §8): a method or an adjustment in a code
 // the product cannot format would leave a balance nobody can read.
@@ -161,7 +167,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   // ─── Platform admin ──────────────────────────────────────────────────────
 
-  fastify.get('/api/admin/wallet/methods', { preHandler: admin }, async (_request, reply) => {
+  fastify.get('/api/admin/wallet/methods', { preHandler: adminRead }, async (_request, reply) => {
     try {
       return reply.send({ methods: await walletService.listMethods() })
     } catch (err) {
@@ -169,7 +175,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.post('/api/admin/wallet/methods', { preHandler: admin }, async (request, reply) => {
+  fastify.post('/api/admin/wallet/methods', { preHandler: adminWrite }, async (request, reply) => {
     try {
       const body = methodBody.parse(request.body)
       return reply.code(201).send(await walletService.saveMethod(request.userId, null, body))
@@ -178,16 +184,20 @@ export async function walletRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.patch('/api/admin/wallet/methods/:id', { preHandler: admin }, async (request, reply) => {
-    try {
-      const body = methodBody.parse(request.body)
-      return reply.send(await walletService.saveMethod(request.userId, id(request), body))
-    } catch (err) {
-      return fail(reply, err, 'Failed to save the payment method')
-    }
-  })
+  fastify.patch(
+    '/api/admin/wallet/methods/:id',
+    { preHandler: adminWrite },
+    async (request, reply) => {
+      try {
+        const body = methodBody.parse(request.body)
+        return reply.send(await walletService.saveMethod(request.userId, id(request), body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save the payment method')
+      }
+    },
+  )
 
-  fastify.get('/api/admin/wallet/topups', { preHandler: admin }, async (request, reply) => {
+  fastify.get('/api/admin/wallet/topups', { preHandler: adminRead }, async (request, reply) => {
     const status = z
       .enum(['pending', 'approved', 'rejected', 'cancelled', 'all'])
       .catch('pending')
@@ -201,7 +211,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/admin/wallet/topups/:id/receipt',
-    { preHandler: admin },
+    { preHandler: adminRead },
     async (request, reply) => {
       try {
         return reply.send({ url: await walletService.receiptUrl(id(request)) })
@@ -213,7 +223,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/admin/wallet/topups/:id/approve',
-    { preHandler: admin },
+    { preHandler: adminWrite },
     async (request, reply) => {
       try {
         const body = approveBody.parse(request.body ?? {})
@@ -232,7 +242,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/admin/wallet/topups/:id/reject',
-    { preHandler: admin },
+    { preHandler: adminWrite },
     async (request, reply) => {
       try {
         const body = rejectBody.parse(request.body)
@@ -244,7 +254,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
     },
   )
 
-  fastify.get('/api/admin/wallet/workspaces', { preHandler: admin }, async (request, reply) => {
+  fastify.get('/api/admin/wallet/workspaces', { preHandler: adminRead }, async (request, reply) => {
     const q = z
       .string()
       .trim()
@@ -262,7 +272,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/admin/wallet/workspaces/:id/transactions',
-    { preHandler: admin },
+    { preHandler: adminRead },
     async (request, reply) => {
       try {
         return reply.send({ transactions: await walletService.workspaceLedger(id(request)) })
@@ -274,7 +284,7 @@ export async function walletRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/admin/wallet/workspaces/:id/adjust',
-    { preHandler: admin },
+    { preHandler: adminWrite },
     async (request, reply) => {
       try {
         const body = adjustBody.parse(request.body)

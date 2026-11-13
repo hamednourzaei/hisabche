@@ -14,11 +14,8 @@ import {
   createWorkflowInstanceSchema,
   instanceFiltersSchema,
   createWorkflowActionSchema,
-  upsertApprovalPolicySchema,
-  decideApprovalPolicyRequestSchema,
 } from '@hisabche/validation'
 import { WorkflowService } from '../services/workflow.service'
-import { ApprovalPolicyService } from '../services/workflow/approval-policy.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -35,7 +32,6 @@ const toJsonSchema = (schema: any) => {
 
 export async function workflowRoutes(fastify: FastifyInstance) {
   const workflowService = new WorkflowService()
-  const approvalPolicyService = new ApprovalPolicyService()
 
   /* ═══════════════════════════════════════════════════════════════
      WORKFLOW TEMPLATES
@@ -336,73 +332,13 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     },
   )
 
-  /* ═══════════════════════════════════════════════════════════════
-     V61 B.2.7 — UNIFIED DOCUMENT APPROVAL POLICIES & REQUESTS
-     ═══════════════════════════════════════════════════════════════ */
-
-  fastify.get(
-    '/api/v1/approval-policies',
-    {
-      preHandler: [authenticate, requireWorkspaceContext],
-      schema: { response: { 200: toJsonSchema(z.any()) } },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const policies = await approvalPolicyService.listPolicies(request.tenancy)
-      return reply.send({ data: policies })
-    },
-  )
-
-  fastify.post(
-    '/api/v1/approval-policies',
-    {
-      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')],
-      schema: {
-        body: toJsonSchema(upsertApprovalPolicySchema),
-        response: { 200: toJsonSchema(z.any()), 201: toJsonSchema(z.any()) },
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const data = upsertApprovalPolicySchema.parse(request.body)
-      const policy = await approvalPolicyService.upsertPolicy(request.tenancy, data)
-      return reply.code(data.id ? 200 : 201).send(policy)
-    },
-  )
-
-  fastify.get(
-    '/api/v1/approval-requests',
-    {
-      preHandler: [authenticate, requireWorkspaceContext],
-      schema: { response: { 200: toJsonSchema(z.any()) } },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { status } = request.query as { status?: string }
-      const requests = await approvalPolicyService.listRequests(request.tenancy, status)
-      return reply.send({ data: requests })
-    },
-  )
-
-  fastify.post(
-    '/api/v1/approval-requests/:id/decide',
-    {
-      preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')],
-      schema: {
-        body: toJsonSchema(decideApprovalPolicyRequestSchema),
-        response: { 200: toJsonSchema(z.any()) },
-      },
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { id } = request.params as { id: string }
-        const body = decideApprovalPolicyRequestSchema.parse(request.body)
-        const updated = await approvalPolicyService.actOnRequest(request.tenancy, id, body)
-        return reply.send(updated)
-      } catch (err) {
-        if (err instanceof BaseError && err.isOperational) {
-          return reply.code(err.statusCode).send({ error: err.message })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to decide approval request' })
-      }
-    },
-  )
+  // V61 B.2.7 «approval policies» was a SECOND approval engine beside this
+  // one: no screen used it, no document ever created a request
+  // (`createRequestIfRequired` had no caller), and any member could write a
+  // policy. Owner decision (12 Nov 2026, V61 open decision 2): one engine —
+  // rules + the templates above + /approvals. Its self-approval rule moved to
+  // `refusesSelfApproval` (workflow/approval-gate.domain.ts); its thresholds
+  // are the template's condition (invoice type + amount in the books' currency).
+  // The tables (approval-policy-01) are left untouched; dropping them is a
+  // separate decision.
 }

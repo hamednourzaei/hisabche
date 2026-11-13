@@ -112,12 +112,22 @@ describe('routes: who may touch the money', () => {
 
   it('/api/wallet/* → manage (workspace.manage); /api/admin/wallet/* → admin', () => {
     for (const [, , path, guard] of routes) {
-      expect(guard, path).toBe(path!.startsWith('/api/admin/') ? 'admin' : 'manage')
+      if (path!.startsWith('/api/admin/')) {
+        // V63 · S-1 — reads and money-moving writes have separate constants.
+        expect(['adminRead', 'adminWrite'], path).toContain(guard)
+      } else {
+        expect(guard, path).toBe('manage')
+      }
     }
     expect(src).toContain(
       "const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]",
     )
-    expect(src).toContain('const admin = [authenticate, platformAdminGuard]')
+    expect(src).toContain(
+      "const adminRead = [authenticate, platformAdminGuard, requireAdminPermission('billing.wallet.read')]",
+    )
+    expect(src).toContain(
+      "const adminWrite = [authenticate, platformAdminGuard, requireAdminPermission('billing.wallet.adjust')]",
+    )
   })
 
   it('a currency is one of the product codes, never any three letters', () => {

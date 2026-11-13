@@ -13,6 +13,8 @@ import {
   DataTable,
   EmptyState,
   HubTabs,
+  Input,
+  Label,
   Sheet,
   SheetContent,
   SheetHeader,
@@ -24,12 +26,17 @@ import {
 import {
   useAdminAccounts,
   useAdminAuditLogs,
-  useAdminRoles,
+  useAdminIpAllowlist,
+  useAdminPosture,
   useAdminSecurityEvents,
   useAdminSessions,
+  useAddAdminIpAllowlistEntry,
+  useRemoveAdminIpAllowlistEntry,
   useRevokeAdminSession,
   type AdminAccountItem,
   type AdminAuditLogItem,
+  type AdminIpAllowlistEntryItem,
+  type AdminPostureCheckItem,
   type AdminSecurityEventItem,
   type AdminSessionItem,
 } from '@/hooks/use-admin-security'
@@ -37,8 +44,12 @@ import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDate, adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
 import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { TabSections } from '@/components/admin-shell/tab-sections'
+import { CertificatesPanel } from './certificates-panel'
+import { FailedLoginsPanel } from './failed-logins-panel'
+import { PermissionMatrix } from './permission-matrix'
 
-const SECURITY_TABS = ['audit', 'roles', 'sessions', 'events'] as const
+const SECURITY_TABS = ['audit', 'roles', 'sessions', 'events', 'network', 'posture'] as const
 type SecurityTab = (typeof SECURITY_TABS)[number]
 
 export function SecurityClient() {
@@ -54,6 +65,8 @@ export function SecurityClient() {
           { id: 'roles', label: t('admin.hubs.security.roles') },
           { id: 'sessions', label: t('admin.hubs.security.sessions') },
           { id: 'events', label: t('admin.hubs.security.events') },
+          { id: 'network', label: t('admin.hubs.security.network') },
+          { id: 'posture', label: t('admin.hubs.security.posture') },
         ]}
         active={tab}
         onSelect={setTab}
@@ -62,7 +75,41 @@ export function SecurityClient() {
       {tab === 'audit' && <AuditTabContent />}
       {tab === 'roles' && <RolesTabContent />}
       {tab === 'sessions' && <SessionsTabContent />}
-      {tab === 'events' && <EventsTabContent />}
+      {tab === 'events' && (
+        <TabSections
+          label={t('admin.hubs.security.events')}
+          sections={[
+            {
+              id: 'events',
+              label: t('admin.insights.sections.events'),
+              render: () => <EventsTabContent />,
+            },
+            {
+              id: 'failed_logins',
+              label: t('admin.insights.sections.failedLogins'),
+              render: () => <FailedLoginsPanel />,
+            },
+          ]}
+        />
+      )}
+      {tab === 'network' && <NetworkTabContent />}
+      {tab === 'posture' && (
+        <TabSections
+          label={t('admin.hubs.security.posture')}
+          sections={[
+            {
+              id: 'checks',
+              label: t('admin.insights.sections.checks'),
+              render: () => <PostureTabContent />,
+            },
+            {
+              id: 'certificates',
+              label: t('admin.insights.sections.certificates'),
+              render: () => <CertificatesPanel />,
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }
@@ -285,7 +332,7 @@ function ActionBadge({ action }: { action: string }) {
 
 function RolesTabContent() {
   const t = useTranslations()
-  const { data: rolesData, isLoading: rolesLoading } = useAdminRoles()
+
   const {
     data: accountsData,
     isLoading: accountsLoading,
@@ -293,7 +340,6 @@ function RolesTabContent() {
     refetch: refetchAccounts,
   } = useAdminAccounts()
 
-  const roles = rolesData?.roles ?? []
   const accounts = accountsData?.accounts ?? []
   const locale = useAdminLocale()
   const tableT = useAdminTableT()
@@ -343,42 +389,8 @@ function RolesTabContent() {
 
   return (
     <div className="space-y-6">
-      {/* 7 Fixed Roles Matrix */}
-      <Card>
-        <CardHeader className="text-start">
-          <CardTitle>{t('admin.security.fixedRolesTitle')}</CardTitle>
-          <CardDescription>{t('admin.security.fixedRolesDesc')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rolesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }, (_, i) => (
-                <Skeleton key={i} className="h-28 rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {roles.map((r) => (
-                <div key={r.role} className="p-4 rounded-xl border border-border bg-card space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-foreground text-sm">{r.role}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {r.permissions.length} {t('admin.security.permissionsCount')}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-muted-foreground max-h-24 overflow-y-auto space-y-1">
-                    {r.permissions.map((p) => (
-                      <div key={p} className="font-mono text-xs bg-muted/50 rounded px-1.5 py-0.5">
-                        {p}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* V63 #52 — permissions × the seven fixed roles, from the catalogue the guard reads */}
+      <PermissionMatrix />
 
       {/* Admin Accounts Table */}
       <Card>
@@ -663,5 +675,278 @@ function EventBadge({ eventType }: { eventType: string }) {
     <Badge variant={variant} className="font-mono text-xs">
       {eventType}
     </Badge>
+  )
+}
+
+// ─── TAB 5: ADMIN NETWORK (V63 · S-5) ───────────────────────────────
+
+function NetworkTabContent() {
+  const t = useTranslations()
+  const locale = useAdminLocale()
+  const tableT = useAdminTableT()
+  const { data, isLoading, isError, refetch } = useAdminIpAllowlist()
+  const { mutateAsync: addEntry } = useAddAdminIpAllowlistEntry()
+  const { mutateAsync: removeEntry } = useRemoveAdminIpAllowlistEntry()
+
+  const [cidr, setCidr] = useState('')
+  const [label, setLabel] = useState('')
+  const [pending, setPending] = useState<
+    { kind: 'add' } | { kind: 'remove'; entry: AdminIpAllowlistEntryItem } | null
+  >(null)
+  // Owner, 12 Nov 2026: a removal is a REQUEST until a second admin approves it.
+  const [removalProposed, setRemovalProposed] = useState(false)
+
+  const entries = data?.entries ?? []
+  const enforced = data?.enforcement === 'enforced'
+
+  const columns: TableColumn<AdminIpAllowlistEntryItem>[] = [
+    {
+      id: 'cidr',
+      labelKey: 'admin.security.allowlist.cidr',
+      labelFallback: 'محدوده',
+      locked: true,
+      render: (entry) => <span className="font-mono text-xs text-foreground">{entry.cidr}</span>,
+      sortValue: (entry) => entry.cidr,
+    },
+    {
+      id: 'label',
+      labelKey: 'admin.security.allowlist.label',
+      labelFallback: 'برچسب',
+      render: (entry) => (
+        <span className="text-sm text-muted-foreground">{entry.label || UNKNOWN_VALUE}</span>
+      ),
+    },
+    {
+      id: 'created',
+      labelKey: 'admin.security.createdAt',
+      labelFallback: 'تاریخ ایجاد',
+      showFrom: 'md',
+      render: (entry) => (
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {adminDateTime(entry.createdAt, locale)}
+        </span>
+      ),
+      sortValue: (entry) => entry.createdAt,
+    },
+    {
+      id: 'actions',
+      labelKey: 'admin.security.actions',
+      labelFallback: 'عملیات',
+      align: 'end',
+      locked: true,
+      render: (entry) => (
+        <Button
+          variant="destructive"
+          size="sm"
+          aria-label={t('admin.security.allowlist.removeFor', { cidr: entry.cidr })}
+          onClick={() => setPending({ kind: 'remove', entry })}
+        >
+          {t('admin.security.allowlist.remove')}
+        </Button>
+      ),
+    },
+  ]
+
+  const handleConfirm = async ({
+    stepUpTimestamp,
+  }: {
+    stepUpTimestamp: string
+    reason?: string
+  }) => {
+    if (!pending) return
+    if (pending.kind === 'add') {
+      await addEntry({ cidr: cidr.trim(), label: label.trim(), stepUpTimestamp })
+      setCidr('')
+      setLabel('')
+    } else {
+      const result = (await removeEntry({ id: pending.entry.id, stepUpTimestamp })) as
+        { pending?: unknown } | undefined
+      setRemovalProposed(result?.pending === true)
+    }
+    setPending(null)
+    void refetch()
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.security.allowlist.title')}</CardTitle>
+          <CardDescription>
+            {enforced
+              ? t('admin.security.allowlist.enforcedHint')
+              : t('admin.security.allowlist.disabledHint')}
+          </CardDescription>
+          {removalProposed ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {t('admin.security.allowlist.removalProposed')}
+            </p>
+          ) : null}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="allowlist-cidr">{t('admin.security.allowlist.cidr')}</Label>
+              <Input
+                id="allowlist-cidr"
+                value={cidr}
+                onChange={(event) => setCidr(event.target.value)}
+                placeholder="203.0.113.0/24"
+                dir="ltr"
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t('admin.security.allowlist.cidrHint')}
+              </p>
+            </div>
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="allowlist-label">{t('admin.security.allowlist.label')}</Label>
+              <Input
+                id="allowlist-label"
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                maxLength={80}
+              />
+            </div>
+            <Button
+              type="button"
+              disabled={cidr.trim().length === 0}
+              onClick={() => setPending({ kind: 'add' })}
+            >
+              {t('admin.security.allowlist.add')}
+            </Button>
+          </div>
+
+          {isLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-xl" />
+              ))}
+            </div>
+          )}
+
+          {isError && !isLoading && (
+            <ErrorState
+              message={t('admin.security.allowlist.error')}
+              onRetry={() => void refetch()}
+            />
+          )}
+
+          {!isLoading && !isError && (
+            <DataTable
+              tableId="admin-ip-allowlist"
+              t={tableT}
+              rows={entries}
+              columns={columns}
+              rowKey={(entry) => entry.id}
+              caption={t('admin.security.allowlist.title')}
+              minWidthClass="min-w-[600px]"
+              emptyState={
+                <EmptyState
+                  title={t('admin.security.allowlist.empty')}
+                  description={t('admin.security.allowlist.emptyHint')}
+                />
+              }
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <StepUpDialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+        title={
+          pending?.kind === 'remove'
+            ? t('admin.security.allowlist.removeConfirmTitle')
+            : t('admin.security.allowlist.addConfirmTitle')
+        }
+        description={
+          pending?.kind === 'remove'
+            ? t('admin.security.allowlist.removeConfirmDesc', { cidr: pending.entry.cidr })
+            : t('admin.security.allowlist.addConfirmDesc', { cidr: cidr.trim() })
+        }
+        destructive={pending?.kind === 'remove'}
+        confirmLabel={t('admin.security.allowlist.confirm')}
+        onConfirm={handleConfirm}
+      />
+    </div>
+  )
+}
+
+// ─── TAB 6: SECURITY POSTURE (V63 · S-6) ────────────────────────────
+
+function PostureTabContent() {
+  const t = useTranslations()
+  const { data, isLoading, isError, refetch } = useAdminPosture()
+  const checks = data?.checks ?? []
+
+  const statusLabel = (check: AdminPostureCheckItem): string => {
+    if (check.status === 'pass') return t('admin.security.posture.pass')
+    if (check.status === 'fail') return t('admin.security.posture.fail')
+    return t('admin.security.posture.unknown')
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('admin.security.posture.title')}</CardTitle>
+          <CardDescription>{t('admin.security.posture.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {isLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              ))}
+            </div>
+          )}
+
+          {isError && !isLoading && (
+            <ErrorState
+              message={t('admin.security.posture.error')}
+              onRetry={() => void refetch()}
+            />
+          )}
+
+          {!isLoading && !isError && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {t('admin.security.posture.summary', {
+                  pass: data?.summary.pass ?? 0,
+                  fail: data?.summary.fail ?? 0,
+                  unknown: data?.summary.unknown ?? 0,
+                })}
+              </p>
+
+              <ul className="space-y-2">
+                {checks.map((check) => (
+                  <li key={check.id} className="rounded-xl border border-border p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-mono text-xs text-muted-foreground">{check.id}</span>
+                      <Badge
+                        variant={
+                          check.status === 'pass'
+                            ? 'default'
+                            : check.status === 'fail'
+                              ? 'destructive'
+                              : 'outline'
+                        }
+                      >
+                        {statusLabel(check)}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-foreground">{check.evidence}</p>
+                    {check.action && (
+                      <p className="mt-1 text-xs text-muted-foreground">{check.action}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   )
 }

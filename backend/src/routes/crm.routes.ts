@@ -382,7 +382,15 @@ export async function crmRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // V61 B.2.15 — RFM segmentation per currency
+  // V61 B.2.15 — RFM segmentation, per customer AND currency.
+  //
+  // ⚠️ V61 audit (12 Nov 2026): the first version read `invoices.issue_date`
+  // (no such column — the field is `date`, so every call was a 500), counted
+  // PURCHASE invoices as a customer buying, scaled by ×100 (wrong for AFN), fell
+  // back to a hard-coded 'AFN', used the UTC day, and read one page (1,000
+  // invoices) of a figure people act on (lesson 4). Now: sales only, every page,
+  // each total in its own currency's digits, the books currency as the fallback,
+  // and the business's own day.
   fastify.get(
     '/api/crm/rfm',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.read')] },
@@ -390,43 +398,59 @@ export async function crmRoutes(fastify: FastifyInstance) {
       try {
         const { supabase } = await import('../db')
         const { baseCurrencyOf } = await import('../services/base-currency')
-        const { computeCustomerRfmByCurrency } = await import('@hisabche/validation')
-        const [custRes, invRes, bookCurrency] = await Promise.all([
-          supabase.from('customers').select('id').eq('workspace_id', request.tenancy.workspaceId),
-          supabase
-            .from('invoices')
-            .select('customer_id, currency, issue_date, total, status')
-            .eq('workspace_id', request.tenancy.workspaceId)
-            .neq('status', 'cancelled'),
-          baseCurrencyOf(request.tenancy.workspaceId),
-        ])
-        if (custRes.error || invRes.error) {
-          return reply.code(500).send({ error: 'Failed to load RFM data' })
+        const { selectAllPages } = await import('../utils/fetch-all-pages')
+        const { businessDayOf } = await import('../utils/local-day')
+        const { DatabaseError } = await import('../errors/database.error')
+        const { computeCustomerRfmByCurrency, majorToTillMinor } =
+          await import('@hisabche/validation')
+        const ws = request.tenancy.workspaceId
+
+        type CustomerRow = { id: string }
+        type InvoiceRow = {
+          customer_id: string | null
+          currency: string | null
+          date: string
+          total: number | string | null
         }
-        const customerIds = (custRes.data ?? []).map((c: { id: string }) => c.id)
-        const invoices = (invRes.data ?? [])
-          .filter((i: { customer_id: string | null }) => Boolean(i.customer_id))
-          .map(
-            (i: {
-              customer_id: string
-              currency: string | null
-              issue_date: string
-              total: number
-            }) => ({
-              customerId: i.customer_id,
-              currency: i.currency ?? bookCurrency ?? 'AFN',
-              date: String(i.issue_date ?? new Date().toISOString()).slice(0, 10),
-              totalMinor: Math.round(Number(i.total ?? 0) * 100),
-            }),
-          )
-        const todayIso = new Date().toISOString().slice(0, 10)
-        return reply.send({
-          data: computeCustomerRfmByCurrency(
-            customerIds,
-            invoices,
-            todayIso,
-            bookCurrency ?? 'AFN',
+        type ReadError = { message: string; code?: string }
+        const [custRes, invRes, bookCurrency] = await Promise.all([
+          selectAllPages<CustomerRow, ReadError>((from, to) =>
+            supabase
+              .from('customers')
+              .select('id')
+              .eq('workspace_id', ws)
+              .order('id', { ascending: true })
+              .range(from, to),
           ),
+          selectAllPages<InvoiceRow, ReadError>((from, to) =>
+            supabase
+              .from('invoices')
+              .select('customer_id, currency, date, total')
+              .eq('workspace_id', ws)
+              .eq('type', 'sale')
+              .neq('status', 'cancelled')
+              .not('customer_id', 'is', null)
+              .order('id', { ascending: true })
+              .range(from, to),
+          ),
+          baseCurrencyOf(ws),
+        ])
+        if (custRes.error) throw new DatabaseError('Failed to load customers', custRes.error)
+        if (invRes.error) throw new DatabaseError('Failed to load sales', invRes.error)
+
+        const customerIds = (custRes.data ?? []).map((c) => c.id)
+        const invoices = (invRes.data ?? []).map((i) => {
+          const currency = i.currency ?? bookCurrency
+          return {
+            customerId: String(i.customer_id),
+            currency,
+            date: String(i.date).slice(0, 10),
+            totalMinor: majorToTillMinor(Number(i.total ?? 0), currency),
+          }
+        })
+        const today = businessDayOf(new Date(), request.tenancy.timeZone)
+        return reply.send({
+          data: computeCustomerRfmByCurrency(customerIds, invoices, today, bookCurrency),
         })
       } catch (err) {
         return fail(reply, err, 'Failed to compute RFM segmentation')

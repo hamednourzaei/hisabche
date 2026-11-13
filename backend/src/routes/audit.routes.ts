@@ -55,6 +55,7 @@ import { createAuditLogSchema, auditFiltersSchema, type AuditFilters } from '@hi
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
@@ -220,7 +221,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/audit/log',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('security.audit.read')],
       schema: {
         body: toJsonSchema(createAuditLogSchema),
         response: { 201: toJsonSchema(z.object({ success: z.boolean() })) },
@@ -256,6 +257,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.audit.read'),
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-logs' }),
       ],
       schema: {
@@ -285,6 +287,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.audit.read'),
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-entity' }),
       ],
       schema: {
@@ -316,6 +319,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.audit.read'),
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-user' }),
       ],
       schema: {
@@ -352,6 +356,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.audit.read'),
         cacheMiddleware({ scope: 'user', ttl: 300, keyPrefix: 'audit-stats' }),
       ],
       schema: {
@@ -384,7 +389,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/audit/export',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('security.audit.read')],
       schema: {
         querystring: toJsonSchema(auditFiltersSchema.omit({ page: true, limit: true })),
         response: { 200: toJsonSchema(z.array(z.any())) },
@@ -413,7 +418,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/audit/cleanup',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('security.audit.read')],
       schema: {
         body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(30).default(90) })),
         response: { 200: toJsonSchema(z.any()) },

@@ -12,6 +12,7 @@
 import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { AdminSecurityService } from './admin-security.service'
+import { MAINTENANCE_FLAG_KEY } from '../../runtime/maintenance-mode'
 
 export interface FeatureFlagItem {
   id: string
@@ -70,6 +71,8 @@ export class AdminOpsService {
     const { data, error } = await supabase
       .from('feature_flags')
       .select('*')
+      // V63 #68 — the maintenance switch has its own screen and permission.
+      .neq('key', MAINTENANCE_FLAG_KEY)
       .order('key', { ascending: true })
 
     if (error) throw new DatabaseError(error.message)

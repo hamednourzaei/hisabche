@@ -152,6 +152,8 @@ const TIMER_CONSUMERS = new Set([
   'services/sync-stream.ts', // one per workspace, reads only
   'routes/sync-stream.routes.ts', // per-WebSocket, torn down with the socket
   'routes/system-metrics.routes.ts', // metrics sampling
+  'routes/admin-monitor.routes.ts', // one sampler for all SSE viewers, cleared on close
+  'index.ts', // minute flush of the in-memory traffic collector; per-instance, UPSERT-idempotent
   'runtime/start-worker.ts', // dedicated worker process polling/claiming via distributedWork
 ])
 

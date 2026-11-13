@@ -13,6 +13,7 @@ import { authenticate } from '../middleware/auth.middleware'
 // workspace's ids, or purge the log. No screen calls them. Platform support only;
 // the product emits through `logBusinessEvent`, never through these routes.
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -30,7 +31,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/events/emit',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
       schema: {
         body: toJsonSchema(createEventLogSchema),
         response: { 201: toJsonSchema(z.object({ id: z.string() })) },
@@ -61,7 +62,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/events/process',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
       schema: {
         response: { 200: toJsonSchema(z.object({ processed: z.number(), failed: z.number() })) },
       },
@@ -87,7 +88,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/events/seed',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
       schema: {
         response: { 200: toJsonSchema(z.object({ success: z.boolean() })) },
       },
@@ -139,7 +140,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/events/cleanup',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
       schema: {
         body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(7).default(30) })),
         response: { 200: toJsonSchema(z.object({ deleted: z.number() })) },

@@ -150,11 +150,15 @@ describe('source guards', () => {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '')
 
-  it('every admin route carries authenticate + platformAdminGuard', () => {
+  it('every admin route carries the admin chain', () => {
     const adminRoutes = [...src.matchAll(/fastify\.\w+\(\s*'\/api\/admin\/blog[^']*',\s*(\w+)/g)]
     expect(adminRoutes.length).toBeGreaterThanOrEqual(10)
     for (const m of adminRoutes) expect(m[1], m[0]).toBe('admin')
-    expect(src).toContain('const admin = { preHandler: [authenticate, platformAdminGuard] }')
+    // V63 · S-1 — the allow-list alone was not authorization: the shared
+    // constant now names a read permission, a write permission, and a fresh
+    // step-up on every write.
+    expect(src).toContain("adminRouteByMethod('content.blog.read', 'content.blog.write'")
+    expect(src).toContain('stepUpOnWrite: true')
   })
 
   it('the acting user comes from the token, never from the body', () => {

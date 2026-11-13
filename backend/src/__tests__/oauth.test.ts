@@ -188,7 +188,8 @@ describe('wiring', () => {
     expect(routes).toContain(
       "const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]",
     )
-    expect(routes).toContain('const admin = [authenticate, platformAdminGuard]')
+    expect(routes).toContain("adminRouteByMethod('product.oauth.read', 'product.oauth.write', {")
+    expect(routes).toContain('stepUpOnWrite: true')
     for (const path of [
       "'/api/oauth/authorize'",
       "'/api/developer/apps'",

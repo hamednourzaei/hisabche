@@ -14,6 +14,7 @@ import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { Plan, type Tier1EvidenceType, type Tier2SignalType } from '@hisabche/validation'
 import { BaseError } from '../errors/base.error'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { subscriptionUpgradeService } from '../services/subscription-upgrade.service'
 import {
   cleanPatch,
@@ -262,7 +263,13 @@ export async function billingRoutes(fastify: FastifyInstance) {
   // ─── Platform admin: the queue ──────────────────────────────
   fastify.get(
     '/api/admin/upgrade-requests',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.upgrade_requests.read'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const status = z
         .enum(['pending', 'approved', 'rejected', 'cancelled', 'all'])
@@ -285,7 +292,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/admin/upgrade-requests/:id/approve',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.upgrade_requests.decide'),
+      ],
       schema: { body: toJsonSchema(decisionSchema) },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -308,7 +319,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/admin/upgrade-requests/:id/reject',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.upgrade_requests.decide'),
+      ],
       schema: { body: toJsonSchema(decisionSchema) },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -399,13 +414,17 @@ export async function billingRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/admin/plan-limits',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('billing.plans.read')],
+    },
     async () => listPlanSettings(),
   )
 
   fastify.put(
     '/api/admin/plan-limits/:plan',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('billing.plans.write')],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const plan = (request.params as { plan: string }).plan
       if (!['free', 'pro', 'enterprise'].includes(plan)) {
@@ -425,14 +444,26 @@ export async function billingRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/admin/workspace-limits/:workspaceId',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.read'),
+      ],
+    },
     async (request: FastifyRequest) =>
       getWorkspaceOverride((request.params as { workspaceId: string }).workspaceId),
   )
 
   fastify.put(
     '/api/admin/workspace-limits/:workspaceId',
-    { preHandler: [authenticate, platformAdminGuard] },
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.override_limits'),
+      ],
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = (request.params as { workspaceId: string }).workspaceId
       if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) {
@@ -979,7 +1010,11 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/billing/orders/:id/verify-payment',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.ledger.write'),
+      ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(

@@ -49,11 +49,14 @@ const hub = code(
 describe('three tabs, built from shared parts', () => {
   it('customers, sessions and outreach — and nothing else', () => {
     expect([...CUSTOMERS_HUB_TABS]).toEqual(['customers', 'sessions', 'outreach'])
-    expect([...OUTREACH_SECTIONS]).toEqual(['followUp', 'campaigns', 'stale'])
+    // 12 Nov 2026 (V61 audit): RFM segmentation (B.2.15) joined outreach.
+    expect([...OUTREACH_SECTIONS]).toEqual(['followUp', 'campaigns', 'stale', 'rfm'])
     expect(OUTREACH_SOURCE).toEqual({
       followUp: '/tasks',
       campaigns: '/campaigns',
       stale: '/customers',
+      // 12 Nov 2026 (V61 audit): RFM is part of the customers module's lock.
+      rfm: '/customers',
     })
   })
 

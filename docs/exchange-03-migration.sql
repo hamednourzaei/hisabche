@@ -97,27 +97,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS fx_agent_settlements_request_key
 
 ALTER TABLE fx_agent_settlements ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS fx_agent_settlements_tenant_isolation ON fx_agent_settlements;
-CREATE POLICY fx_agent_settlements_tenant_isolation ON fx_agent_settlements
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = fx_agent_settlements.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = fx_agent_settlements.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  );
 
 REVOKE ALL ON public.fx_agent_settlements
   FROM PUBLIC, anon, authenticated, service_role;
@@ -895,5 +874,33 @@ GRANT EXECUTE ON FUNCTION public.fx_trade_resolve_pending_review(uuid, uuid, tex
 GRANT EXECUTE ON FUNCTION public.fx_trade_void_with_ledger(uuid, uuid, text, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.remittance_payout_with_ledger(uuid, uuid, text, text, text, text, bigint, text, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.fx_agent_settle(uuid, uuid, jsonb) TO service_role;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['fx_agent_settlements'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.fx_agent_settlements ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.fx_agent_settlements FROM PUBLIC, anon, authenticated;
 
 COMMIT;

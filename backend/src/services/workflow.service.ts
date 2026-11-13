@@ -21,6 +21,7 @@ import type {
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import { ForbiddenError } from '../errors/auth.error'
 import { escalationService } from './workflow/escalation.service'
+import { refusesSelfApproval } from './workflow/approval-gate.domain'
 import { ValidationError } from '../errors/validation.error'
 import {
   validateDefinition,
@@ -468,6 +469,29 @@ export class WorkflowService {
     return result
   }
 
+  /**
+   * Who issued the document an instance is about. Invoices only — the one
+   * kind the rules hold today (`decideApprovalRoute`); for any other kind
+   * there is no issuer to compare and null is returned. A failed read is an
+   * error: «unknown issuer» must not quietly allow a self-approval.
+   */
+  private async documentIssuer(
+    ctx: TenancyContext,
+    entityType: string,
+    entityId: string,
+  ): Promise<string | null> {
+    if (entityType !== 'invoice' || !entityId) return null
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('user_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', entityId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read the document issuer', error)
+    const issuer = (data as { user_id: string | null } | null)?.user_id
+    return issuer ?? null
+  }
+
   /* ─── Approve or reject a step ─── */
   /**
    * Approve or reject the current step.
@@ -580,6 +604,28 @@ export class WorkflowService {
       throw new ForbiddenError(
         `Only a "${currentStep.approver_role}" (or the workspace owner) can act on this step`,
       )
+    }
+
+    // V61 decision 2 (12 Nov 2026): whoever issued the document does not
+    // approve it — read from the document, never from the request.
+    if (input.action === 'approved' && userRole !== 'owner') {
+      const issuerId = await this.documentIssuer(
+        ctx,
+        instance.entity_type as string,
+        instance.entity_id as string,
+      )
+      if (
+        refusesSelfApproval({
+          action: input.action,
+          actorId: userId,
+          actorRole: userRole,
+          issuerId,
+        })
+      ) {
+        throw new ForbiddenError(
+          'SELF_APPROVAL_REFUSED: the person who issued this document cannot approve it',
+        )
+      }
     }
 
     const { data: action, error: actionError } = await supabase

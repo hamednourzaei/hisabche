@@ -24,6 +24,7 @@ import { ForbiddenError } from '../../errors/auth.error'
 import { ValidationError } from '../../errors/validation.error'
 
 import { isSlugReserved, pageInputSchema, PageInput, validatePageSections } from './cms.domain'
+import { sanitizeDeep, sanitizeSections } from './cms.sanitize'
 import { CmsRepository, CmsPageRow } from './cms.repository'
 
 export class CmsService {
@@ -60,6 +61,9 @@ export class CmsService {
 
     const payload: Partial<CmsPageRow> = {
       ...data,
+      // V63 · S-4 — the section HTML is sanitised on the SERVER, before it is
+      // stored. The editor is a convenience, never a trust boundary.
+      sections: sanitizeSections(data.sections),
       created_by: actorUserId,
     }
 
@@ -80,6 +84,7 @@ export class CmsService {
 
     const payload: Partial<CmsPageRow> = {
       ...data,
+      sections: sanitizeSections(data.sections),
     }
 
     return this.repo.updatePage(id, payload)
@@ -116,6 +121,8 @@ export class CmsService {
     key: string,
     content: Record<string, unknown>,
   ) {
-    return this.repo.upsertGlobal(locale, key, content, actorUserId)
+    // V63 · S-4 — a global is fetched by every app at start-up and may carry
+    // HTML. It is sanitised here, at the one write path, not at render time.
+    return this.repo.upsertGlobal(locale, key, sanitizeDeep(content), actorUserId)
   }
 }

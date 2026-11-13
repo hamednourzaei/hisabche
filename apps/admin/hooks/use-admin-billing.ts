@@ -26,7 +26,20 @@ export interface BillingLedgerItem {
 
 export interface AdminActionRequestItem {
   id: string
-  action_type: 'REFUND' | 'LEDGER_ADJUSTMENT' | 'PRICE_CHANGE' | 'DOWNGRADE' | 'LICENSE_TRANSFER'
+  action_type:
+    | 'REFUND'
+    | 'LEDGER_ADJUSTMENT'
+    | 'PRICE_CHANGE'
+    | 'DOWNGRADE'
+    | 'LICENSE_TRANSFER'
+    | 'SECRET_ROTATE'
+    | 'GATEWAY_ENABLE'
+    | 'SERVER_SCALE_UP'
+    | 'ADMIN_ROLE_GRANT'
+    | 'BULK_EXPORT'
+    // Two-person approval for deletions (owner, 12 Nov 2026).
+    | 'MEMBER_REMOVE'
+    | 'IP_ALLOWLIST_REMOVE'
   payload: Record<string, unknown>
   diff_preview: Record<string, unknown>
   status: 'PENDING' | 'APPROVED' | 'REJECTED'

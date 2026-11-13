@@ -368,6 +368,58 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
   },
   {
+    routeFile: 'admin-security.routes.ts',
+    route: 'POST /api/admin/security/ip-allowlist',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      { file: `${SVC}/admin/admin-ip-allowlist.service.ts`, text: 'addEntry' },
+      { file: `${SVC}/admin/admin-ip-allowlist.service.ts`, text: 'insert' },
+    ],
+  },
+  {
+    routeFile: 'admin-security.routes.ts',
+    route: 'DELETE /api/admin/security/ip-allowlist/:id',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${SVC}/admin/admin-ip-allowlist.service.ts`, text: 'removeEntry' }],
+  },
+  // ─── AI administration (V63 · A) ─────────────────────────────────────
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'PUT /api/admin/ai/fallbacks',
+    mechanisms: ['db-function'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: 'ai_fallbacks_replace' }],
+  },
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'PUT /api/admin/ai/prices',
+    mechanisms: ['unique-constraint'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: "onConflict: 'provider,model'" }],
+  },
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'DELETE /api/admin/ai/prices/:id',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: 'deletePrice' }],
+  },
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'PUT /api/admin/ai/budgets',
+    mechanisms: ['db-function'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: 'ai_budget_save' }],
+  },
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'PUT /api/admin/ai/budgets/workspace/:workspaceId',
+    mechanisms: ['db-function'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: 'ai_budget_save' }],
+  },
+  {
+    routeFile: 'admin-ai.routes.ts',
+    route: 'DELETE /api/admin/ai/budgets/:id',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${SVC}/admin/admin-ai.service.ts`, text: 'deleteBudget' }],
+  },
+  {
     routeFile: 'admin-customers.routes.ts',
     route: 'POST /api/admin/users/:id/action',
     mechanisms: ['last-write-wins'],
@@ -473,6 +525,13 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'POST /api/admin/ops/export-csv',
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
+  },
+  // ─── V63 #68 — the maintenance switch (one reserved feature_flags row) ──
+  {
+    routeFile: 'admin-insights.routes.ts',
+    route: 'PUT /api/admin/ops/maintenance',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: 'backend/src/runtime/maintenance-mode.ts', text: "{ onConflict: 'key' }" }],
   },
   {
     routeFile: 'billing.routes.ts',

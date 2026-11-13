@@ -48,6 +48,9 @@ const LEDGER: Readonly<Record<string, Why>> = {
   'personalization.routes.ts POST /visibility/reset': 'OWN_STATE',
   'saved-views.routes.ts POST /api/saved-views': 'OWN_STATE',
   'saved-views.routes.ts PATCH /api/saved-views/:id': 'OWN_STATE',
+  // 12 Nov 2026 (V61 B.2.25): verifying or recovering the caller's OWN authenticator factor (Supabase Auth, by user token).
+  'auth.routes.ts POST /api/auth/mfa/verify': 'OWN_STATE',
+  'auth.routes.ts POST /api/auth/mfa/recover': 'OWN_STATE',
   'saved-views.routes.ts DELETE /api/saved-views/:id': 'OWN_STATE',
   // 9 Nov 2026: the cards a person added to their own dashboard (keyed by userId).
   'dashboard-kpis.routes.ts PUT /api/me/dashboard-kpis': 'OWN_STATE',

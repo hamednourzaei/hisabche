@@ -15,30 +15,81 @@ const ui = (...p: string[]) => readFileSync(join(__dirname, '..', 'components', 
 const flat = (s: string) => s.split(/\s+/).join(' ')
 
 describe('an approval template’s condition', () => {
-  it('«بیشتر از ۵۰۰۰» becomes invoice.total > 5000 → require_approval(template)', () => {
+  // 12 Nov 2026 (owner, V61 decision 2): the amount is in the BOOKS' currency
+  // (`invoice.total_book`) and a condition may name sales or purchases. A rule
+  // saved before keeps `invoice.total` and reads back as «invoice currency».
+  it('«بیشتر از ۵۰۰۰» becomes invoice.total_book > 5000 → require_approval(template)', () => {
     const rule = invoiceApprovalRule('فاکتور بالای 5000', 'wf1', 5000)
     expect(rule.entity).toBe('invoice')
     expect(rule.conditions.conditions).toEqual([
-      { field: 'invoice.total', operator: 'gt', value: 5000 },
+      { field: 'invoice.total_book', operator: 'gt', value: 5000 },
     ])
     expect(rule.actions).toEqual([{ kind: 'require_approval', workflowId: 'wf1' }])
   })
 
   it('empty = every invoice (the engine wants one condition: total ≥ 0)', () => {
     expect(invoiceApprovalRule('x', 'wf1', null).conditions.conditions).toEqual([
-      { field: 'invoice.total', operator: 'gte', value: 0 },
+      { field: 'invoice.total_book', operator: 'gte', value: 0 },
     ])
   })
 
-  it('reads back: above / always / none — the owner’s two templates had none', () => {
-    const saved = (min: number | null, workflowId = 'wf1'): BusinessRule => ({
+  it('purchases only: the type is a second condition, ANDed', () => {
+    const rule = invoiceApprovalRule('خرید بالای ۵۰ هزار', 'wf1', 50000, 'purchase')
+    expect(rule.conditions.match).toBe('all')
+    expect(rule.conditions.conditions).toEqual([
+      { field: 'invoice.total_book', operator: 'gt', value: 50000 },
+      { field: 'invoice.type', operator: 'eq', value: 'purchase' },
+    ])
+  })
+
+  it('an older rule on invoice.total reads back as «in the invoice’s own currency»', () => {
+    const older: BusinessRule = {
       id: 'r',
       priority: 100,
       active: true,
-      ...invoiceApprovalRule('x', workflowId, min),
+      name: 'x',
+      entity: 'invoice',
+      conditions: {
+        match: 'all',
+        conditions: [{ field: 'invoice.total', operator: 'gt', value: 5000 }],
+      },
+      actions: [{ kind: 'require_approval', workflowId: 'wf1' }],
+    } as BusinessRule
+    expect(approvalConditionOf([older], 'wf1')).toEqual({
+      kind: 'above',
+      amount: 5000,
+      invoiceType: 'all',
+      currency: 'invoice',
     })
-    expect(approvalConditionOf([saved(5000)], 'wf1')).toEqual({ kind: 'above', amount: 5000 })
-    expect(approvalConditionOf([saved(null)], 'wf1')).toEqual({ kind: 'always' })
+  })
+
+  it('reads back: above / always / none — the owner’s two templates had none', () => {
+    const saved = (
+      min: number | null,
+      workflowId = 'wf1',
+      type: 'all' | 'sale' | 'purchase' = 'all',
+    ): BusinessRule => ({
+      id: 'r',
+      priority: 100,
+      active: true,
+      ...invoiceApprovalRule('x', workflowId, min, type),
+    })
+    expect(approvalConditionOf([saved(5000)], 'wf1')).toEqual({
+      kind: 'above',
+      amount: 5000,
+      invoiceType: 'all',
+      currency: 'book',
+    })
+    expect(approvalConditionOf([saved(5000, 'wf1', 'sale')], 'wf1')).toEqual({
+      kind: 'above',
+      amount: 5000,
+      invoiceType: 'sale',
+      currency: 'book',
+    })
+    expect(approvalConditionOf([saved(null)], 'wf1')).toEqual({
+      kind: 'always',
+      invoiceType: 'all',
+    })
     expect(approvalConditionOf([saved(5000, 'other')], 'wf1')).toEqual({ kind: 'none' })
     expect(approvalConditionOf([], 'wf1')).toEqual({ kind: 'none' })
     expect(approvalConditionOf([{ ...saved(5000), active: false }], 'wf1')).toEqual({
@@ -49,10 +100,10 @@ describe('an approval template’s condition', () => {
   it('the screen writes the rule on creation, and offers «شرط بگذار» to a template without one', () => {
     const container = flat(ui('workflow', 'containers', 'workflow-templates-container.tsx'))
     expect(container).toContain(
-      'await createRule(invoiceApprovalRule(template.name, created.id, minTotal))',
+      'await createRule(invoiceApprovalRule(template.name, created.id, minTotal, invoiceType))',
     )
     expect(container).toContain(
-      'await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal))',
+      'await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal, invoiceType))',
     )
     const view = ui('workflow', 'workflow-templates-view.tsx')
     expect(view).toContain('data-condition="none"')

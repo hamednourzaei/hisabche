@@ -41,7 +41,7 @@ import type { TenancyContext } from '../tenancy.service'
 import { AiQuotaService, type QuotaStatus } from './ai-quota.service'
 import { AiSettingsService, type AiProvider, type AiProviderConfig } from './ai-settings.service'
 import { ReportingReader, REPORTING_VIEWS, type ReportingResult } from './reporting-reader'
-import { callProvider } from './provider-client'
+import { callProvider, type AiTokenUsage } from './provider-client'
 
 export interface AskResult {
   answer: string
@@ -49,6 +49,30 @@ export interface AskResult {
   usedViews: string[]
   quota: QuotaStatus
 }
+
+/**
+ * One provider exchange, kept only long enough to be logged.
+ *
+ * ⚠️ `provider`/`model` are the ones that ACTUALLY answered — which is not
+ * always the configured pair, because a fallback may have taken over.
+ */
+interface ProviderCall {
+  provider: string
+  model: string
+  promptTokens: number | null
+  completionTokens: number | null
+}
+
+/** One endpoint the question may be sent to, in order. */
+interface ProviderTarget {
+  provider: AiProvider
+  baseUrl: string | null
+  model: string
+  timeoutMs: number
+}
+
+/** The question log's table appears with the Phase O migration. */
+const LOG_SCHEMA_ABSENT = new Set(['42P01', 'PGRST205', '42703', 'PGRST204'])
 
 /**
  * The instructions the model always gets, whatever the admin wrote.
@@ -132,6 +156,43 @@ export interface ProviderTestResult {
   detail: string
 }
 
+/**
+ * Whether this failure is the provider's, and therefore worth retrying at the
+ * next one in the list.
+ *
+ * A missing key, a bad model name echoed back as 404, or a quota refusal is
+ * the caller's problem and stays the caller's problem. A 429/5xx, a timeout or
+ * a fetch that never connected is the provider's.
+ */
+export function isProviderFault(err: unknown): boolean {
+  const candidate = err as {
+    providerStatus?: number
+    name?: string
+    message?: string
+  } | null
+  if (!candidate) return false
+  if (typeof candidate.providerStatus === 'number') return true
+  if (/AI_PROVIDER_(?:ERROR|BUSY)/.test(candidate.message ?? '')) return true
+  return candidate.name === 'TimeoutError' || candidate.name === 'AbortError'
+}
+
+/**
+ * Sum token counts across the calls one question made.
+ *
+ * ⚠️ NULL IF ANY CALL DID NOT REPORT. Adding the ones that did report would
+ * print a total smaller than the provider's bill, with nothing beside it
+ * saying so.
+ */
+export function sumReportedTokens(values: readonly (number | null)[]): number | null {
+  if (values.length === 0) return null
+  let total = 0
+  for (const value of values) {
+    if (value === null) return null
+    total += value
+  }
+  return total
+}
+
 export class AiChatService {
   private readonly settings = new AiSettingsService()
   private readonly quota = new AiQuotaService()
@@ -158,21 +219,26 @@ export class AiChatService {
 
     const started = Date.now()
 
+    // ⚠️ Read ONCE per question, then shared by both model calls: a fallback
+    // list is configuration, and reading it twice would be two more database
+    // round trips on the path a person is waiting on.
+    const targets = await this.targetsFor(config)
+    const calls: ProviderCall[] = []
+
     // 1. Which views could answer this. A closed set, validated downstream.
-    const views = await this.chooseViews(config, question)
+    const views = await this.chooseViews(config, question, targets, calls)
 
     // 2. Read them AS THE USER.
     const results = await reader.readMany(views)
 
     // 3. Answer from those rows only.
-    const answer = await this.answer(config, question, results)
+    const answer = await this.answer(config, question, results, targets, calls)
 
     await this.log(ctx, {
       question,
       answer,
       views: results.map((result) => `reporting.${result.view}`),
-      provider: config.provider,
-      model: config.model,
+      calls,
       latencyMs: Date.now() - started,
     })
 
@@ -192,11 +258,17 @@ export class AiChatService {
    * none of them, everything is read, because reading all four of the user's
    * own views is harmless and a wrong guess should not produce «I don't know».
    */
-  private async chooseViews(config: AiProviderConfig, question: string): Promise<string[]> {
+  private async chooseViews(
+    config: AiProviderConfig,
+    question: string,
+    targets: readonly ProviderTarget[],
+    calls: ProviderCall[],
+  ): Promise<string[]> {
     const reply = await this.call(
       config,
       `You may read these four data sources:\n${VIEW_MENU}\n\nWhich are needed to answer the question? Reply with ONLY a comma-separated list of names from that list. No other text.`,
       question,
+      { targets, calls },
     )
 
     const named = reply
@@ -212,6 +284,8 @@ export class AiChatService {
     config: AiProviderConfig,
     question: string,
     results: ReportingResult[],
+    targets: readonly ProviderTarget[],
+    calls: ProviderCall[],
   ): Promise<string> {
     const data = results
       .map((result) => {
@@ -229,7 +303,7 @@ export class AiChatService {
       .filter(Boolean)
       .join('\n\n---\n\n')
 
-    return this.call(config, system, question)
+    return this.call(config, system, question, { targets, calls })
   }
 
   /**
@@ -252,11 +326,99 @@ export class AiChatService {
    * a generic failure. Any other status is final at once — retrying a bad key
    * or a wrong model only makes the user wait.
    */
-  private async call(config: AiProviderConfig, system: string, user: string): Promise<string> {
+  /**
+   * The primary configuration followed by every ENABLED fallback, in order.
+   *
+   * ⚠️ A fallback reuses the one stored key: the platform keeps a single
+   * provider credential, so a fallback is a different model or gateway, not a
+   * second account.
+   */
+  private async targetsFor(config: AiProviderConfig): Promise<ProviderTarget[]> {
+    const fallbacks = (await this.settings.getFallbacks()).filter((entry) => entry.isEnabled)
+    return [
+      {
+        provider: config.provider,
+        baseUrl: config.baseUrl,
+        model: config.model,
+        timeoutMs: 60_000,
+      },
+      ...fallbacks.map((entry) => ({
+        provider: entry.provider,
+        baseUrl: entry.baseUrl,
+        model: entry.model,
+        timeoutMs: entry.timeoutMs,
+      })),
+    ]
+  }
+
+  private async call(
+    config: AiProviderConfig,
+    system: string,
+    user: string,
+    options: { calls?: ProviderCall[]; targets?: readonly ProviderTarget[] } = {},
+  ): Promise<string> {
+    const targets = options.targets ?? (await this.targetsFor(config))
+    let lastError: unknown = null
+
+    for (const target of targets) {
+      const targetConfig: AiProviderConfig = {
+        ...config,
+        provider: target.provider,
+        baseUrl: target.baseUrl,
+        model: target.model,
+      }
+      try {
+        const outcome = await this.attempt(targetConfig, system, user, target.timeoutMs)
+        options.calls?.push(outcome)
+        return outcome.text
+      } catch (err) {
+        lastError = err
+        // ⚠️ Only a FAULT moves to the next provider. A missing key, a bad
+        // prompt or a quota refusal is the same everywhere, and asking three
+        // providers costs three times as much to reach the same answer.
+        if (!isProviderFault(err)) throw err
+      }
+    }
+
+    throw lastError ?? new ValidationError('AI_PROVIDER_ERROR: no provider configured')
+  }
+
+  /**
+   * A provider call that survives a momentarily busy provider.
+   *
+   * ⚠️ Reported 26 Sep 2026: the admin's test passed, a user's «سلام» got
+   * «نتوانستم پاسخ بدهم». OpenRouter had answered 429 — the free model is a
+   * pool shared by everyone («temporarily rate-limited upstream»). A 429 or
+   * 5xx is retried twice (1 s, 3 s — or the provider's Retry-After, capped);
+   * if it is still busy, the user is told THAT (AI_PROVIDER_BUSY, 503), not
+   * a generic failure. Any other status is final at once — retrying a bad key
+   * or a wrong model only makes the user wait.
+   */
+  private async attempt(
+    config: AiProviderConfig,
+    system: string,
+    user: string,
+    timeoutMs: number,
+  ): Promise<ProviderCall & { text: string }> {
     const delays = [1000, 3000]
     for (let attempt = 0; ; attempt++) {
+      let usage: AiTokenUsage = { promptTokens: null, completionTokens: null }
       try {
-        return await callProvider(config, { system, user })
+        const text = await callProvider(config, {
+          system,
+          user,
+          timeoutMs,
+          onUsage: (reported) => {
+            usage = reported
+          },
+        })
+        return {
+          text,
+          provider: config.provider,
+          model: config.model,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+        }
       } catch (err) {
         const status = (err as { providerStatus?: number }).providerStatus
         const retryable = status === 429 || (status !== undefined && status >= 500)
@@ -303,12 +465,21 @@ export class AiChatService {
       }
     }
     try {
-      const reply = await this.call(
+      // ⚠️ `attempt`, not `call`: the «test» button tests THE CONFIGURATION IN
+      // THE FORM. Letting a fallback answer would report «ok» for a primary
+      // provider that is broken, which is the one thing this button is for.
+      const outcome = await this.attempt(
         config,
         'You are a connectivity check.',
         'Reply with the single word: OK',
+        60_000,
       )
-      return { ok: true, status: 200, latencyMs: Date.now() - started, detail: reply.slice(0, 200) }
+      return {
+        ok: true,
+        status: 200,
+        latencyMs: Date.now() - started,
+        detail: outcome.text.slice(0, 200),
+      }
     } catch (err) {
       const status = /AI_PROVIDER_(?:ERROR|BUSY): (\d+)/.exec(
         err instanceof Error ? err.message : '',
@@ -342,21 +513,50 @@ export class AiChatService {
       question: string
       answer: string
       views: string[]
-      provider: string
-      model: string
+      calls: readonly ProviderCall[]
       latencyMs: number
     },
   ): Promise<void> {
-    const { error } = await supabase.from('ai_query_log').insert({
+    const answeredBy = entry.calls[entry.calls.length - 1]
+    const oneModel =
+      entry.calls.length > 0 &&
+      entry.calls.every(
+        (call) => call.provider === answeredBy?.provider && call.model === answeredBy?.model,
+      )
+
+    // ⚠️ Tokens are attributed to the model named on the row. A question that
+    // failed over to a DIFFERENT model therefore records NULL instead of a
+    // total that belongs to two prices — the same rule the usage summary uses.
+    const promptTokens = oneModel
+      ? sumReportedTokens(entry.calls.map((call) => call.promptTokens))
+      : null
+    const completionTokens = oneModel
+      ? sumReportedTokens(entry.calls.map((call) => call.completionTokens))
+      : null
+
+    const row = {
       workspace_id: ctx.workspaceId,
       actor_id: ctx.userId,
       question_text: entry.question,
       answer_text: entry.answer,
       resolved_views_or_functions: entry.views,
-      model_provider: entry.provider,
-      model_name: entry.model,
+      model_provider: answeredBy?.provider ?? null,
+      model_name: answeredBy?.model ?? null,
       latency_ms: entry.latencyMs,
+    }
+
+    let { error } = await supabase.from('ai_query_log').insert({
+      ...row,
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
     })
+
+    // ⚠️ The token columns arrive with docs/ai-usage-01-migration.sql. This
+    // row is also the quota counter, so a deployment that has not run that
+    // migration yet must still get its row — without the two new columns.
+    if (error && LOG_SCHEMA_ABSENT.has(error.code)) {
+      ;({ error } = await supabase.from('ai_query_log').insert(row))
+    }
 
     if (error) console.error('[AiChatService] failed to write ai_query_log:', error)
   }

@@ -1,13 +1,26 @@
 // ============================================
 // backend/src/middleware/mfa.middleware.ts
 //
-// OPTION 47: CUSTOMER MFA & STEP-UP ENFORCEMENT
+// Customer-facing (and admin fallback) TOTP AAL2 enforcement for high-risk
+// actions — period locks, API-key creation, and similar.
 //
-// Requires TOTP AAL2 verification for high-risk actions
-// (e.g. period lock changes, API key creation) when MFA is enabled.
+// ⚠️ V63 · S-2 — two changes, both security:
+//
+// 1. The test bypass is no longer `NODE_ENV === 'test'`. It is
+//    `isTestRuntime()`: Vitest AND an explicitly test-built server. A
+//    production process that inherited `NODE_ENV=test` used to skip MFA for
+//    everyone; now it refuses to start (runtime/test-runtime.ts).
+//
+// 2. The claims come from `verifiedTokenClaims` — the same reader the admin
+//    guard uses — instead of this file base64-decoding the JWT itself. One
+//    reader means two guards can never disagree about a token's assurance
+//    level.
 // ============================================
 
 import type { FastifyReply, FastifyRequest } from 'fastify'
+
+import { verifiedTokenClaims } from '../services/admin/admin-security.service'
+import { isTestRuntime } from '../runtime/test-runtime'
 
 export interface MfaTokenClaims {
   aal?: 'aal1' | 'aal2' | string
@@ -19,29 +32,20 @@ export function requireStepUpMfa(
   reply: FastifyReply,
   done: (err?: Error) => void,
 ) {
-  // Check if session token claims contain AAL2
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   if (!token) {
     return reply.status(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' })
   }
 
-  // In test environment without Supabase MFA active, allow step-up bypass if explicitly marked
-  if (process.env.NODE_ENV === 'test' && !req.headers['x-require-mfa']) {
+  // Only an explicitly test-built Vitest runtime may skip MFA, and only when
+  // the test did not ask for the check.
+  if (isTestRuntime() && !req.headers['x-require-mfa']) {
     return done()
   }
 
-  try {
-    const parts = token.split('.')
-    if (parts.length >= 2) {
-      const payload = JSON.parse(
-        Buffer.from(parts[1]!, 'base64').toString('utf8'),
-      ) as MfaTokenClaims
-      if (payload.aal === 'aal2') {
-        return done()
-      }
-    }
-  } catch {
-    // Ignore parse error, treat as unverified
+  const claims = verifiedTokenClaims(req.headers.authorization)
+  if (claims.aal === 'aal2') {
+    return done()
   }
 
   return reply.status(403).send({

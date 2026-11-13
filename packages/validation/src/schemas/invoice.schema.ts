@@ -303,6 +303,11 @@ export const invoiceSchema = z.object({
   /** Multi-warehouse: the warehouse this invoice's goods leave (sale) or arrive at (purchase). */
   warehouseId: uuidSchema.nullable().optional(),
   /**
+   * Who sold it (owner decision, 12 Nov 2026): a MEMBER of this business. Absent
+   * or the issuer = the issuer is the seller. A request — the server checks it.
+   */
+  sellerUserId: uuidSchema.nullable().optional(),
+  /**
    * The branch this invoice belongs to. A REQUEST: the server checks it against
    * the member's own branches. Absent = the business as a whole.
    */

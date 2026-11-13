@@ -18,6 +18,11 @@ import {
   type TableColumn,
 } from '@/components/ui'
 import { ServersClient } from '../servers/servers-client'
+import { MonitorPanel } from './monitor/monitor-panel'
+import { EmailDeliveryPanel } from './email-delivery-panel'
+import { MaintenancePanel } from './maintenance-panel'
+import { MigrationsPanel } from './migrations-panel'
+import { TabSections } from '@/components/admin-shell/tab-sections'
 import {
   useAdminSystemHealth,
   useAdminBackgroundJobs,
@@ -30,7 +35,7 @@ import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
 
-const OPERATIONS_TABS = ['health', 'servers', 'jobs', 'announcements'] as const
+const OPERATIONS_TABS = ['health', 'monitor', 'servers', 'jobs', 'announcements'] as const
 type OperationsTab = (typeof OPERATIONS_TABS)[number]
 
 export function OperationsClient() {
@@ -43,6 +48,7 @@ export function OperationsClient() {
         label={t('admin.hubs.operations.title')}
         items={[
           { id: 'health', label: t('admin.hubs.operations.health') },
+          { id: 'monitor', label: t('admin.operations.monitor.tabLabel') },
           { id: 'servers', label: t('admin.hubs.operations.servers') },
           { id: 'jobs', label: t('admin.hubs.operations.jobs') },
           { id: 'announcements', label: t('admin.hubs.operations.announcements') },
@@ -51,10 +57,59 @@ export function OperationsClient() {
         onSelect={setTab}
       />
 
-      {tab === 'health' && <SystemHealthTabContent />}
+      {tab === 'health' && (
+        <TabSections
+          label={t('admin.hubs.operations.health')}
+          sections={[
+            {
+              id: 'probes',
+              label: t('admin.insights.sections.probes'),
+              render: () => <SystemHealthTabContent />,
+            },
+            {
+              id: 'migrations',
+              label: t('admin.insights.sections.migrations'),
+              render: () => <MigrationsPanel />,
+            },
+          ]}
+        />
+      )}
+      {tab === 'monitor' && <MonitorPanel />}
       {tab === 'servers' && <ServersClient />}
-      {tab === 'jobs' && <BackgroundJobsTabContent />}
-      {tab === 'announcements' && <AnnouncementsTabContent />}
+      {tab === 'jobs' && (
+        <TabSections
+          label={t('admin.hubs.operations.jobs')}
+          sections={[
+            {
+              id: 'jobs',
+              label: t('admin.insights.sections.jobs'),
+              render: () => <BackgroundJobsTabContent />,
+            },
+            {
+              id: 'email',
+              label: t('admin.insights.sections.email'),
+              render: () => <EmailDeliveryPanel />,
+            },
+          ]}
+        />
+      )}
+      {tab === 'announcements' && (
+        <TabSections
+          label={t('admin.hubs.operations.announcements')}
+          sections={[
+            {
+              id: 'announcements',
+              label: t('admin.insights.sections.announcements'),
+              render: () => <AnnouncementsTabContent />,
+            },
+            {
+              id: 'maintenance',
+              label: t('admin.insights.sections.maintenance'),
+              render: () => <MaintenancePanel />,
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }

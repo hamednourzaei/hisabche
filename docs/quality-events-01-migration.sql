@@ -83,58 +83,35 @@ ALTER TABLE warranty_claims ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.quality_events, public.warranty_claims
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT ALL ON TABLE public.quality_events, public.warranty_claims TO service_role;
-GRANT SELECT, INSERT ON TABLE public.quality_events TO authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.warranty_claims TO authenticated;
+GRANT SELECT, INSERT ON TABLE public.quality_events TO service_role;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.warranty_claims TO service_role;
 
-DO $$
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'quality_events' AND policyname = 'quality_events_workspace_member'
-  ) THEN
-    CREATE POLICY quality_events_workspace_member ON quality_events
-      FOR ALL TO authenticated
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = quality_events.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = quality_events.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      );
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'warranty_claims' AND policyname = 'warranty_claims_workspace_member'
-  ) THEN
-    CREATE POLICY warranty_claims_workspace_member ON warranty_claims
-      FOR ALL TO authenticated
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = warranty_claims.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = warranty_claims.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      );
-  END IF;
-END $$;
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['quality_events', 'warranty_claims'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.quality_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.quality_events FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.warranty_claims ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.warranty_claims FROM PUBLIC, anon, authenticated;

@@ -37,6 +37,8 @@ const proposeActionRequestBody = z.object({
     'PRICE_CHANGE',
     'DOWNGRADE',
     'LICENSE_TRANSFER',
+    // V63 — enabling a LIVE payment gateway changes where customer money goes.
+    'GATEWAY_ENABLE',
   ]),
   payload: z.record(z.unknown()),
   diffPreview: z.record(z.unknown()),
@@ -177,6 +179,8 @@ export default async function adminBillingRoutes(fastify: FastifyInstance) {
         authenticate,
         platformAdminGuard,
         requireAdminPermission('billing.upgrade_requests.decide'),
+        // V63 · S-6 — creating a pending money action is itself auditable intent.
+        requireAdminStepUp,
       ],
     },
     async (req: FastifyRequest, reply: FastifyReply) => {
@@ -210,6 +214,7 @@ export default async function adminBillingRoutes(fastify: FastifyInstance) {
           requestId: id,
           approved: body.approved,
           approverEmail: actorEmail,
+          approverId: req.userId,
           rejectionReason: body.rejectionReason,
         })
       })

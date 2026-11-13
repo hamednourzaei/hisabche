@@ -84,7 +84,9 @@ const CMS_READS = [
 
 beforeAll(async () => {
   const { buildServer } = await import('../index')
-  app = await buildServer()
+  // V63 · S-2 — the admin chain needs AAL2; a test-built server is the only
+  // way to opt out of it, and it must be explicit.
+  app = await buildServer({ testRuntime: true })
 })
 
 afterAll(async () => {
@@ -192,8 +194,8 @@ describe('the guard is the platform one, in the source', () => {
   it('the media upload of the content is behind the platform guard too', async () => {
     // The CMS has no media route of its own (the admin screen's upload button
     // is still dead), so the media a customer could have written went through
-    // the BLOG's image upload. It is behind the platform guard — asserted
-    // here so a future route cannot quietly be added beside it.
+    // the BLOG's image upload. V63 · S-1 moved it from the email allow-list to
+    // the full admin chain — RBAC, AAL2 and a step-up on every write.
     const { readFileSync } = await import('node:fs')
     const source = readFileSync(new URL('../routes/blog.routes.ts', import.meta.url), 'utf8')
     const code = source
@@ -201,6 +203,8 @@ describe('the guard is the platform one, in the source', () => {
       .replace(/\/\/.*$/gm, '')
       .replace(/\s+/g, ' ')
 
-    expect(code).toContain('const admin = { preHandler: [authenticate, platformAdminGuard] }')
+    expect(code).toContain(
+      "adminRouteByMethod('content.blog.read', 'content.blog.write', { stepUpOnWrite: true, })",
+    )
   })
 })

@@ -117,7 +117,8 @@ beforeAll(async () => {
   ])
 
   const { buildServer } = await import('../index')
-  app = await buildServer()
+  // V63 · S-2 — the MFA bypass is opt-in for an explicitly test-built server.
+  app = await buildServer({ testRuntime: true })
 })
 
 afterAll(async () => {
@@ -241,11 +242,13 @@ describe('A7: Admin Gate Security Invariants', () => {
   it('enforces Maker-Checker: proposer cannot approve own action request', async () => {
     const verifiedAt = nowSeconds()
 
-    // 1. Propose request by super admin
+    // 1. Propose request by super admin. V63 · S-1 — proposing a billing action
+    //    is itself a write, so it carries the same fresh step-up the decision
+    //    does; the maker-checker rule under test is unchanged.
     const proposeRes = await app.inject({
       method: 'POST',
       url: '/api/admin/billing/action-requests',
-      headers: as(SUPER_ADMIN.token),
+      headers: as(tokenWithTotpAt(verifiedAt), verifiedAt),
       payload: {
         actionType: 'REFUND',
         payload: { amountIrr: 1000000 },

@@ -88,8 +88,13 @@ describe('Gate 7: Offline Phase 7 — «این کار اینترنت می‌خو
     // 86 on 11 Nov 2026 (V60 Slices 9–11): +3 server-only features (`commerce.contracts`,
     // `purchase.three_way_match`, `operations.quality`).
     // V61: +2 server features (`payments.cheques`, `hr.expense_claims`).
-    it('has exactly 88 server-execution features in FEATURE_REGISTRY', () => {
-      expect(serverFeatures.length).toBe(88)
+    // 94 on 12 Nov 2026 (V61 audit): +6 server-only screens for routes that had no
+    // client (`purchase.rfq`, `hr.org_chart`, `inventory.consignment`,
+    // `product.bundles`, `crm.rfm`, `data.snapshots`) — server tables, no device engine.
+    // 95 on 12 Nov 2026 (owner decision 1, seller = member): `sales.by_seller`,
+    // a server read of sales per member and currency — no device engine.
+    it('has exactly 95 server-execution features in FEATURE_REGISTRY', () => {
+      expect(serverFeatures.length).toBe(95)
     })
 
     it('refuses EVERY server-execution feature when offline with REQUIRES_ONLINE', () => {

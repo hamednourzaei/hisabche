@@ -23,6 +23,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { ConflictError, NotFoundError } from '../errors/database.error'
+import { sendFailure } from '../errors/http-failure'
 import { ValidationError } from '../errors/validation.error'
 import { ForbiddenError } from '../errors/auth.error'
 import { invalidateMoneyCaches } from '../utils/money-cache'
@@ -455,21 +456,22 @@ export async function productRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // V61 B.2.8 — Product bundles / kits
+  // V61 B.2.8 — Product bundles / kits. A bundle's components, replaced as one
+  // list in one transaction (`product_bundle_set_items`); an empty list makes the
+  // product a standard one again.
   fastify.get(
     '/api/products/:id/bundle-items',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.read')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = request.params as { id: string }
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
         const { bundlesConsignmentCommissionService } =
           await import('../services/commerce/bundles-consignment-commission.service')
         return reply.send({
           data: await bundlesConsignmentCommissionService.getBundleItems(request.tenancy, id),
         })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to load bundle items' })
+        return sendFailure(reply, fastify.log, err, 'Failed to load bundle items')
       }
     },
   )
@@ -479,21 +481,20 @@ export async function productRoutes(fastify: FastifyInstance) {
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = request.params as { id: string }
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
         const { upsertBundleItemsSchema } = await import('@hisabche/validation')
         const body = upsertBundleItemsSchema.parse(request.body)
         const { bundlesConsignmentCommissionService } =
           await import('../services/commerce/bundles-consignment-commission.service')
-        return reply.send({
-          data: await bundlesConsignmentCommissionService.setBundleItems(
-            request.tenancy,
-            id,
-            body.items,
-          ),
-        })
+        const data = await bundlesConsignmentCommissionService.setBundleItems(
+          request.tenancy,
+          id,
+          body.items,
+        )
+        await clearCache(`products:${request.tenancy.workspaceId}:*`)
+        return reply.send({ data })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update bundle items' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update bundle items')
       }
     },
   )
@@ -504,13 +505,14 @@ export async function productRoutes(fastify: FastifyInstance) {
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.write')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { id } = request.params as { id: string }
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
         const translations = z
           .object({
-            fa: z.string().optional(),
-            af: z.string().optional(),
-            en: z.string().optional(),
+            fa: z.string().trim().max(200).optional(),
+            af: z.string().trim().max(200).optional(),
+            en: z.string().trim().max(200).optional(),
           })
+          .strict()
           .parse(request.body)
         const { supabase } = await import('../db')
         const { data, error } = await supabase
@@ -519,37 +521,22 @@ export async function productRoutes(fastify: FastifyInstance) {
           .eq('id', id)
           .eq('workspace_id', request.tenancy.workspaceId)
           .select('id, name, translations')
-          .single()
-        if (error || !data) return reply.code(404).send({ error: 'Product not found' })
+          .maybeSingle()
+        // A failed write is a 500, not «no such product» (lesson 3).
+        if (error) throw error
+        if (!data) throw new NotFoundError('Product')
         return reply.send({ data })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update translations' })
+        return sendFailure(reply, fastify.log, err, 'Failed to update translations')
       }
     },
   )
 
-  fastify.get(
-    '/api/products/redacted',
-    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.read')] },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      try {
-        const { supabase } = await import('../db')
-        const { redactSensitiveFields } = await import('@hisabche/validation')
-        const { capabilitiesOf } = await import('../services/authorization/authorization.domain')
-        const { data, error } = await supabase
-          .from('products')
-          .select('id, name, sell_price, buy_price, cost_price, translations')
-          .eq('workspace_id', request.tenancy.workspaceId)
-        if (error) return reply.code(500).send({ error: 'Failed to fetch products' })
-        const caps = new Set(capabilitiesOf(request.tenancy.role))
-        return reply.send(redactSensitiveFields(data ?? [], caps))
-      } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch redacted products' })
-      }
-    },
-  )
+  // ⚠️ V61 audit (12 Nov 2026): «GET /api/products/redacted» was removed. It
+  // selected `products.cost_price` (no such column: every call was a 500), had no
+  // caller, and redacted by `product.cost.read` — a capability that does not
+  // exist (the real one is `inventory.cost.read`). Field-level hiding of buy
+  // prices belongs on the product list everyone already uses, not a second list.
 }
 
 export default productRoutes

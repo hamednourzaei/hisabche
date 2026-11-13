@@ -56,34 +56,48 @@ REVOKE ALL ON public.rfqs FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.supplier_quotations FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.purchase_contract_prices FROM PUBLIC, anon, authenticated;
 
-GRANT SELECT, INSERT, UPDATE ON public.rfqs TO authenticated, service_role;
-GRANT SELECT, INSERT, UPDATE ON public.supplier_quotations TO authenticated, service_role;
-GRANT SELECT, INSERT, UPDATE ON public.purchase_contract_prices TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON public.rfqs TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.supplier_quotations TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.purchase_contract_prices TO service_role;
 
 ALTER TABLE public.rfqs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_quotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_contract_prices ENABLE ROW LEVEL SECURITY;
 
-DO $$
-DECLARE
-  t text;
-  pol text;
-BEGIN
-  FOREACH t IN ARRAY ARRAY['rfqs', 'supplier_quotations', 'purchase_contract_prices']
-  LOOP
-    pol := t || '_ws_isolation';
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = t AND policyname = pol
-    ) THEN
-      EXECUTE format(
-        'CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid())) WITH CHECK (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()))',
-        pol, t
-      );
-    END IF;
-  END LOOP;
-END $$;
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.purchase_contract_prices;
 -- DROP TABLE IF EXISTS public.supplier_quotations;
 -- DROP TABLE IF EXISTS public.rfqs;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['rfqs', 'supplier_quotations', 'purchase_contract_prices'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.rfqs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.rfqs FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.supplier_quotations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.supplier_quotations FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.purchase_contract_prices ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.purchase_contract_prices FROM PUBLIC, anon, authenticated;

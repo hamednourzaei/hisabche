@@ -52,6 +52,10 @@ describe('two tabs, built from shared parts', () => {
       'holds',
       'reorder',
       'deadStock',
+      // 12 Nov 2026 (V61 audit): requests for quotation and consignment lots —
+      // server routes that had no screen until now.
+      'rfqs',
+      'consignments',
     ])
   })
 

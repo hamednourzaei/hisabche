@@ -25,7 +25,7 @@ import {
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
-import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { adminRouteByMethod } from '../middleware/admin-rbac.middleware'
 import { DeveloperError } from '../services/developer/developer.service'
 import { NotConfiguredError } from '../services/developer/developer.repository'
 import { OAuthError, oauthService, type OAuthService } from '../services/oauth/oauth.service'
@@ -109,7 +109,10 @@ export function buildOAuthRoutes(oauth: OAuthService) {
     )
 
     const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]
-    const admin = [authenticate, platformAdminGuard]
+    // V63 · S-1 — developer-platform administration: RBAC + AAL2, step-up on writes.
+    const admin = adminRouteByMethod('product.oauth.read', 'product.oauth.write', {
+      stepUpOnWrite: true,
+    })
 
     const handle =
       (fn: (request: FastifyRequest, reply: FastifyReply) => Promise<unknown>) =>

@@ -21,8 +21,21 @@ import {
   ADMIN_PERMISSIONS,
 } from '../services/admin/admin-rbac.domain'
 import { AdminSecurityService, verifiedTokenClaims } from '../services/admin/admin-security.service'
+import { adminIpAllowlistService } from '../services/admin/admin-ip-allowlist.service'
+import { AdminBillingService } from '../services/admin/admin-billing.service'
+import {
+  AdminActionTypeNotInstalledError,
+  isUnknownActionType,
+} from '../services/admin/admin-deletions'
+import { AdminPostureService } from '../services/admin/admin-posture.service'
+import { isValidCidrEntry } from '../utils/ip-cidr'
 
 const roleEnum = z.enum(ADMIN_ROLES)
+
+const allowlistEntryBody = z.object({
+  cidr: z.string().min(2).max(64),
+  label: z.string().max(80).optional(),
+})
 
 const upsertAccountBody = z.object({
   userId: z.string().uuid(),
@@ -197,6 +210,126 @@ export default async function adminSecurityRoutes(fastify: FastifyInstance) {
         return {
           stepUpTimestamp: String(timestamp),
           expiresInSeconds: 300,
+        }
+      })
+    },
+  )
+
+  // ─── GET /api/admin/security/posture ─────────────────────────
+  //
+  // V63 · S-6. Facts + evidence. `unknown` is a real answer here and the screen
+  // renders it as one, so this route never swallows a failed read.
+  fastify.get(
+    '/api/admin/security/posture',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.posture.read'),
+      ],
+    },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
+      return handle(reply, async () => AdminPostureService.report())
+    },
+  )
+
+  // ─── GET /api/admin/security/ip-allowlist ────────────────────
+  //
+  // V63 · S-5. This is the route the break-glass path reaches by definition:
+  // the list is edited here, so an admin locked out by a wrong entry can still
+  // fix it from an unlisted network.
+  fastify.get(
+    '/api/admin/security/ip-allowlist',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.ip_allowlist.read'),
+      ],
+    },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
+      return handle(reply, async () => {
+        const entries = await adminIpAllowlistService.listEntries()
+        return {
+          entries,
+          // The screen must be able to say «off» instead of showing an empty
+          // table as if the console were protected.
+          enforcement: entries.length > 0 ? 'enforced' : 'disabled',
+        }
+      })
+    },
+  )
+
+  // ─── POST /api/admin/security/ip-allowlist ───────────────────
+  fastify.post(
+    '/api/admin/security/ip-allowlist',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.ip_allowlist.write'),
+        requireAdminStepUp,
+      ],
+    },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const body = allowlistEntryBody.parse(req.body)
+      if (!isValidCidrEntry(body.cidr)) {
+        return reply.code(400).send({
+          error: 'This is not an IP address or CIDR range',
+          code: 'INVALID_CIDR',
+        })
+      }
+
+      return handle(reply, async () => {
+        const actor = req.user?.email ?? 'admin'
+        const entry = await adminIpAllowlistService.addEntry({
+          cidr: body.cidr,
+          label: body.label ?? '',
+          actorEmail: actor,
+        })
+        await AdminSecurityService.logSecurityEvent({
+          eventType: 'ADMIN_IP_ALLOWLIST_ADDED',
+          adminEmail: actor,
+          ipAddress: req.ip,
+          details: { cidr: entry.cidr, label: entry.label },
+        })
+        return { entry }
+      })
+    },
+  )
+
+  // ─── DELETE /api/admin/security/ip-allowlist/:id ─────────────
+  fastify.delete(
+    '/api/admin/security/ip-allowlist/:id',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.ip_allowlist.write'),
+        requireAdminStepUp,
+      ],
+    },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = req.params as { id: string }
+      // Owner request (12 Nov 2026): a deletion needs a SECOND admin. This
+      // click only PROPOSES; the entry is removed by `decideActionRequest`
+      // when a different admin approves (ADMIN_IP_ALLOWLIST_REMOVED is logged
+      // then, by the approver).
+      return handle(reply, async () => {
+        if (!z.string().uuid().safeParse(id).success) {
+          throw Object.assign(new Error('Invalid id'), { statusCode: 400, code: 'INVALID_PARAM' })
+        }
+        try {
+          const proposal = await AdminBillingService.proposeActionRequest({
+            actionType: 'IP_ALLOWLIST_REMOVE',
+            payload: { id },
+            diffPreview: { ipAllowlistEntryId: id, remove: true },
+            proposedBy: req.user?.email ?? req.userId,
+          })
+          return { pending: true, requestId: proposal.id }
+        } catch (err) {
+          if (isUnknownActionType(err)) throw new AdminActionTypeNotInstalledError()
+          throw err
         }
       })
     },

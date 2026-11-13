@@ -293,8 +293,10 @@ describe('wiring', () => {
     expect(guardOf('put', '/api/marketplace/apps/:app/review')).toBe('manage')
     expect(guardOf('put', '/api/developer/publisher')).toBe('manage')
     expect(guardOf('get', '/api/developer/apps/:id/stats')).toBe('manage')
-    expect(guardOf('post', '/api/admin/app-publishers/:workspaceId/verification')).toBe('admin')
-    expect(guardOf('post', '/api/admin/app-reviews/:id/visibility')).toBe('admin')
+    expect(guardOf('post', '/api/admin/app-publishers/:workspaceId/verification')).toBe(
+      'adminWrite',
+    )
+    expect(guardOf('post', '/api/admin/app-reviews/:id/visibility')).toBe('adminWrite')
   })
 
   it('registered, and never open to an API key', async () => {

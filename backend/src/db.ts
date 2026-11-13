@@ -213,3 +213,36 @@ export function createUserScopedClient(accessToken: string) {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
 }
+
+/**
+ * One request to Supabase Auth (GoTrue) REST, for the MFA endpoints that act
+ * AS THE SIGNED-IN USER (enroll / challenge / verify a TOTP factor). The
+ * project key stays inside this file: callers pass only the user's own access
+ * token, or nothing for the admin endpoints.
+ *
+ * Returns the parsed body with the HTTP status; never throws on a 4xx, so the
+ * caller can turn GoTrue's refusal ("invalid code") into its own code.
+ */
+export async function gotrueRequest(
+  path: string,
+  init: { method: 'GET' | 'POST' | 'DELETE'; userToken?: string | undefined; body?: unknown },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const res = await fetch(`${SUPABASE_URL_CHECKED}/auth/v1${path}`, {
+    method: init.method,
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY_CHECKED,
+      Authorization: `Bearer ${init.userToken ?? SUPABASE_SERVICE_KEY_CHECKED}`,
+      'Content-Type': 'application/json',
+    },
+    ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+    signal: AbortSignal.timeout(10_000),
+  })
+  const text = await res.text()
+  let body: Record<string, unknown> = {}
+  try {
+    body = text ? (JSON.parse(text) as Record<string, unknown>) : {}
+  } catch {
+    body = { raw: text.slice(0, 200) }
+  }
+  return { status: res.status, body }
+}

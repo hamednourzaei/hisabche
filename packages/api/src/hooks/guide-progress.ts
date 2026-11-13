@@ -58,18 +58,23 @@ export function useMarkGuideStepsSeen() {
     },
     onSuccess: (_data, steps) => {
       const now = new Date().toISOString()
-      queryClient.setQueryData<GuideProgress>(guideProgressKeys.all, (previous) => {
-        const known = new Set((previous?.steps ?? []).map((step) => step.stepId))
-        return {
-          configured: previous?.configured ?? true,
-          steps: [
-            ...(previous?.steps ?? []),
-            ...steps
-              .filter((step) => !known.has(step.stepId))
-              .map((step) => ({ ...step, seenAt: now })),
-          ],
-        }
-      })
+      queryClient.setQueryData<GuideProgress>(
+        guideProgressKeys.all,
+        (previous: GuideProgress | undefined) => {
+          const known = new Set(
+            (previous?.steps ?? []).map((step: GuideProgress['steps'][number]) => step.stepId),
+          )
+          return {
+            configured: previous?.configured ?? true,
+            steps: [
+              ...(previous?.steps ?? []),
+              ...steps
+                .filter((step) => !known.has(step.stepId))
+                .map((step) => ({ ...step, seenAt: now })),
+            ],
+          }
+        },
+      )
     },
   })
 }

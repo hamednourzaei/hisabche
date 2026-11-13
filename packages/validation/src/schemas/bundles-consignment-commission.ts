@@ -1,12 +1,14 @@
 import { z } from 'zod'
+import { currencyCodeSchema } from './common.schema'
 
 export const bundleItemInputSchema = z.object({
   component_product_id: z.string().uuid(),
   quantity: z.number().positive(),
 })
 
+// An empty list is allowed: it turns the bundle back into a standard product.
 export const upsertBundleItemsSchema = z.object({
-  items: z.array(bundleItemInputSchema).min(1),
+  items: z.array(bundleItemInputSchema).max(50),
 })
 
 export const createConsignmentLotSchema = z.object({
@@ -16,7 +18,7 @@ export const createConsignmentLotSchema = z.object({
   product_id: z.string().uuid(),
   quantity: z.number().positive(),
   unit_agreed_price_minor: z.number().int().nonnegative(),
-  currency: z.string().min(3).max(8),
+  currency: currencyCodeSchema,
 })
 
 export interface BundleComponentDef {

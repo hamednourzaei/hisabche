@@ -45,32 +45,44 @@ ALTER TABLE public.journal_entries
 
 REVOKE ALL ON public.accrual_schedules FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.accrual_schedule_periods FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON public.accrual_schedules TO authenticated, service_role;
-GRANT SELECT, INSERT, UPDATE ON public.accrual_schedule_periods TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON public.accrual_schedules TO service_role;
+GRANT SELECT, INSERT, UPDATE ON public.accrual_schedule_periods TO service_role;
 
 ALTER TABLE public.accrual_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accrual_schedule_periods ENABLE ROW LEVEL SECURITY;
 
-DO $$
-DECLARE
-  t text;
-  pol text;
-BEGIN
-  FOREACH t IN ARRAY ARRAY['accrual_schedules', 'accrual_schedule_periods']
-  LOOP
-    pol := t || '_ws_isolation';
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = t AND policyname = pol
-    ) THEN
-      EXECUTE format(
-        'CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid())) WITH CHECK (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()))',
-        pol, t
-      );
-    END IF;
-  END LOOP;
-END $$;
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.accrual_schedule_periods;
 -- DROP TABLE IF EXISTS public.accrual_schedules;
 -- ALTER TABLE public.journal_entries DROP COLUMN IF EXISTS auto_reversed_entry_id, DROP COLUMN IF EXISTS reverse_on;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['accrual_schedules', 'accrual_schedule_periods'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.accrual_schedules ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.accrual_schedules FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.accrual_schedule_periods ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.accrual_schedule_periods FROM PUBLIC, anon, authenticated;

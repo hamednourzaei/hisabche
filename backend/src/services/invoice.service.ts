@@ -72,6 +72,11 @@ import { WarehouseMapService } from './inventory/warehouse-map.service'
 import { latestBuyPrices } from './inventory/buy-price.domain'
 import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
 import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
+import {
+  InvoiceSellerNotInstalledError,
+  isMissingSellerColumn,
+  resolveSellerOverride,
+} from './invoice-seller'
 import { assertWithinLimit } from './plan-limits.service'
 import {
   checkVariantBinding,
@@ -894,6 +899,10 @@ export class InvoiceService {
     // in. This is the one read that cannot join the group below, because the
     // group also needs `money.total`; the other four still run together.
     // ═══════════════════════════════════════════════════════════════════════
+    // Who sold it (owner decision, 12 Nov 2026): the issuer, unless the form
+    // named another member — proven here, before a number is taken. Only the
+    // override is stored; nothing is written when the issuer sold it.
+    const sellerOverride = await resolveSellerOverride(ctx, data.sellerUserId)
     const booksCurrency = await baseCurrencyOf(workspaceId)
     const bookCurrency = data.currency || booksCurrency
     // ═══════════════════════════════════════════════════════════════════════
@@ -939,6 +948,16 @@ export class InvoiceService {
         type: data.type,
         currency: data.currency,
         customerId: data.customerId ?? null,
+        // V61 decision 2: a threshold is one number in the books' currency —
+        // «above 50,000» must catch a USD invoice worth that much too. A
+        // foreign invoice without a rate has no book total (and is refused
+        // below for the missing rate anyway).
+        totalInBook:
+          bookCurrency === booksCurrency
+            ? money.total
+            : Number((data as { exchangeRate?: number }).exchangeRate) > 0
+              ? money.total * Number((data as { exchangeRate?: number }).exchangeRate)
+              : undefined,
       }),
       // The plan's invoice ceiling — checked against the usage policy.
       // An import or system-generated invoice (late fee) does not count and is
@@ -1165,6 +1184,9 @@ export class InvoiceService {
       // Multi-warehouse: which warehouse this invoice's goods leave/arrive.
       // Only named when set, so creation works before the migration.
       ...(invoiceWarehouseId ? { warehouse_id: invoiceWarehouseId } : {}),
+      // Named only when another member sold it, so a sale by its issuer keeps
+      // working on a database that has not run invoices-seller-01.
+      ...(sellerOverride ? { seller_user_id: sellerOverride } : {}),
       // Only a keyed request names the column, so unkeyed creation keeps
       // working on a database that has not run the idempotency migration.
       ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
@@ -1212,6 +1234,9 @@ export class InvoiceService {
       grantRows,
     })
 
+    // Checked before the idempotency branch: a missing seller column is also a
+    // 42703 and would otherwise read as «idempotency not installed».
+    if (isMissingSellerColumn(invoiceError)) throw new InvoiceSellerNotInstalledError()
     if (invoiceError && clientRequestId) {
       // A concurrent copy of the same request won the insert: answer with its
       // invoice. The whole write of this attempt rolled back with it.
@@ -4371,6 +4396,8 @@ export class InvoiceService {
       type?: string | undefined
       currency?: string | undefined
       customerId?: string | null | undefined
+      /** The total in the books' currency (total × the invoice's rate). */
+      totalInBook?: number | undefined
     },
   ): Promise<ApprovalOutcome> {
     const { workspaceId } = ctx
@@ -4387,7 +4414,12 @@ export class InvoiceService {
       // approval. Which chain, and whether one is needed at all, is now a
       // RULE the business writes, not a hardcoded "the first one we find".
       const decision = await rules.evaluate(ctx, 'invoice', {
-        invoice: { total, type: data?.type, currency: data?.currency },
+        invoice: {
+          total,
+          total_book: data?.totalInBook,
+          type: data?.type,
+          currency: data?.currency,
+        },
         customer: { id: data?.customerId },
       })
 

@@ -29,9 +29,13 @@ export function buildAccrualPeriods(
 
   const periods: PlannedAccrualPeriod[] = []
   for (let i = 0; i < periodsCount; i++) {
-    const d = new Date(
-      Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate()),
-    )
+    // ⚠️ Clamp to the month's last day. `Date.UTC(y, m + i, 31)` in a 28-day
+    // month silently becomes the 3rd of the NEXT month, so a schedule starting
+    // on 31 Jan skipped February (V61 audit, 12 Nov 2026).
+    const year = start.getUTCFullYear()
+    const month = start.getUTCMonth() + i
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+    const d = new Date(Date.UTC(year, month, Math.min(start.getUTCDate(), lastDay)))
     periods.push({
       periodIndex: i + 1,
       periodDate: d.toISOString().slice(0, 10),

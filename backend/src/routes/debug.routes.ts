@@ -2,6 +2,7 @@
 import { FastifyInstance } from 'fastify'
 import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 
 // ⚠️ PLATFORM ADMINS ONLY (audit 7 Nov 2026, AUDIT-80 #14).
 //
@@ -10,7 +11,9 @@ import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 // required a session, so ANY signed-in customer of any business could read
 // them — a map of the API and the server's internals handed to every account.
 // Nothing in the clients calls them; they are an operator's tool.
-const adminOnly = { preHandler: [authenticate, platformAdminGuard] }
+const adminOnly = {
+  preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.health.read')],
+}
 
 export async function debugRoutes(fastify: FastifyInstance) {
   // ─── لیست همه‌ی Route‌های ثبت‌شده ──────────────────────

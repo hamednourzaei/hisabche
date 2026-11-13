@@ -162,3 +162,86 @@ export function useAdminStepUp() {
     },
   })
 }
+
+// ─── V63 · S-5 / S-6 ────────────────────────────────────────────────
+
+export interface AdminIpAllowlistEntryItem {
+  id: string
+  cidr: string
+  label: string
+  createdBy: string | null
+  createdAt: string
+}
+
+export function useAdminIpAllowlist() {
+  return useQuery<{
+    entries: AdminIpAllowlistEntryItem[]
+    enforcement: 'enforced' | 'disabled'
+  }>({
+    queryKey: ['admin', 'ip-allowlist'],
+    queryFn: async () => {
+      const res = await apiClient.get('/admin/security/ip-allowlist')
+      return res.data
+    },
+    staleTime: 60 * 1000,
+  })
+}
+
+export function useAddAdminIpAllowlistEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { cidr: string; label: string; stepUpTimestamp: string }) => {
+      const res = await apiClient.post(
+        '/admin/security/ip-allowlist',
+        { cidr: input.cidr, label: input.label },
+        { headers: { 'X-Admin-Step-Up-Timestamp': input.stepUpTimestamp } },
+      )
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'ip-allowlist'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'security-events'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'posture'] })
+    },
+  })
+}
+
+export function useRemoveAdminIpAllowlistEntry() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string; stepUpTimestamp: string }) => {
+      const res = await apiClient.delete(`/admin/security/ip-allowlist/${input.id}`, {
+        headers: { 'X-Admin-Step-Up-Timestamp': input.stepUpTimestamp },
+      })
+      return res.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'ip-allowlist'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'security-events'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'posture'] })
+    },
+  })
+}
+
+export interface AdminPostureCheckItem {
+  id: string
+  status: 'pass' | 'fail' | 'unknown'
+  evidence: string
+  action: string | null
+}
+
+export function useAdminPosture() {
+  return useQuery<{
+    checks: AdminPostureCheckItem[]
+    generatedAt: string
+    summary: { pass: number; fail: number; unknown: number }
+  }>({
+    queryKey: ['admin', 'posture'],
+    queryFn: async () => {
+      const res = await apiClient.get('/admin/security/posture')
+      return res.data
+    },
+    // A stale «pass» on a security page is a false assurance.
+    staleTime: 0,
+  })
+}

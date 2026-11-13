@@ -47,6 +47,9 @@ const OpsSectionContainer = lazy(() =>
     default: m.OpsSectionContainer,
   })),
 )
+const RfmSection = lazy(() =>
+  import('../../erp-core/rfm-section').then((m) => ({ default: m.RfmSection })),
+)
 const CampaignsContainer = lazy(() =>
   import('../../campaigns/campaigns-container').then((m) => ({ default: m.CampaignsContainer })),
 )
@@ -78,7 +81,8 @@ export type CustomersHubTab = (typeof CUSTOMERS_HUB_TABS)[number]
 export const CUSTOMER_ROLES = ['all', 'buyer', 'seller'] as const
 export type CustomerRole = (typeof CUSTOMER_ROLES)[number]
 
-export const OUTREACH_SECTIONS = ['followUp', 'campaigns', 'stale'] as const
+// «بخش‌بندی RFM» (V61 B.2.15): who buys recently, often and much — per currency.
+export const OUTREACH_SECTIONS = ['followUp', 'campaigns', 'stale', 'rfm'] as const
 
 /**
  * The «جلسه‌ها» tab's parts (10 Nov 2026, QA document §8–§9): the sessions
@@ -96,6 +100,7 @@ export const OUTREACH_SOURCE: Record<OutreachSection, string> = {
   campaigns: '/campaigns',
   // «فرصت‌های راکد» was a part of /operations; it is locked with the customers.
   stale: '/customers',
+  rfm: '/customers',
 }
 
 const TAB_ICON = { customers: Users, sessions: CalendarClock, outreach: Megaphone } as const
@@ -208,6 +213,8 @@ function CustomersHub() {
             >
               {section === 'stale' ? (
                 <OpsSectionContainer section="stale" />
+              ) : section === 'rfm' ? (
+                <RfmSection />
               ) : section === 'campaigns' ? (
                 <CampaignsContainer />
               ) : (

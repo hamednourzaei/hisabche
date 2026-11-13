@@ -13,6 +13,9 @@ import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ForbiddenError } from '../../errors/auth.error'
 import { AdminSecurityService } from './admin-security.service'
+import { discardStagedSecret, promoteStagedSecret } from '../secrets/secret-store'
+import { applyApprovedGatewayEnable } from './platform-gateways.service'
+import { executeApprovedDeletion, isDeletionAction } from './admin-deletions'
 
 export interface PlanPriceItem {
   id: string
@@ -35,9 +38,24 @@ export interface BillingLedgerItem {
   created_at: string
 }
 
+export type AdminActionType =
+  | 'REFUND'
+  | 'LEDGER_ADJUSTMENT'
+  | 'PRICE_CHANGE'
+  | 'DOWNGRADE'
+  | 'LICENSE_TRANSFER'
+  | 'SECRET_ROTATE'
+  | 'GATEWAY_ENABLE'
+  | 'SERVER_SCALE_UP'
+  | 'ADMIN_ROLE_GRANT'
+  | 'BULK_EXPORT'
+  // Two-person approval for deletions (owner, 12 Nov 2026; admin-action-types-03).
+  | 'MEMBER_REMOVE'
+  | 'IP_ALLOWLIST_REMOVE'
+
 export interface AdminActionRequestItem {
   id: string
-  action_type: 'REFUND' | 'LEDGER_ADJUSTMENT' | 'PRICE_CHANGE' | 'DOWNGRADE' | 'LICENSE_TRANSFER'
+  action_type: AdminActionType
   payload: Record<string, unknown>
   diff_preview: Record<string, unknown>
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
@@ -224,6 +242,7 @@ export class AdminBillingService {
     requestId: string
     approved: boolean
     approverEmail: string
+    approverId?: string | undefined
     rejectionReason?: string | undefined
   }): Promise<AdminActionRequestItem> {
     const { data: existing, error: getError } = await supabase
@@ -244,6 +263,43 @@ export class AdminBillingService {
       throw new ForbiddenError(
         'Maker-Checker violation: Proposer cannot approve their own action request',
       )
+    }
+
+    // ⚠️ V63 · S-3 — a secret rotation is EXECUTED BEFORE the row is marked
+    // APPROVED. If the promotion fails the request stays PENDING, because a
+    // row that reads «approved» while the secret was never rotated is a lie the
+    // console would render as truth. The value moves inside Postgres.
+    if (existing.action_type === 'SECRET_ROTATE') {
+      const name = typeof existing.payload?.name === 'string' ? existing.payload.name : null
+      if (!name) throw new DatabaseError('Secret rotation request carries no secret name', null)
+      if (params.approved) {
+        await promoteStagedSecret(name, {
+          id: params.approverId ?? null,
+          email: params.approverEmail,
+        })
+      } else {
+        await discardStagedSecret(name).catch(() => {})
+      }
+    }
+
+    // ⚠️ V63 · P-1 — a LIVE gateway is switched on HERE, after the approver is
+    // confirmed to differ from the proposer. The executor re-checks that the
+    // secrets the gateway needs are still stored.
+    if (existing.action_type === 'GATEWAY_ENABLE' && params.approved) {
+      await applyApprovedGatewayEnable(existing.payload ?? {}, params.approverEmail)
+    }
+
+    // Two-person approval for deletions (owner, 12 Nov 2026): the deletion runs
+    // HERE, by the second admin, before the row reads APPROVED — a failed
+    // deletion leaves the request PENDING, never «approved» over nothing.
+    if (isDeletionAction(existing.action_type) && params.approved) {
+      if (!params.approverId) {
+        throw new ForbiddenError('An approved deletion needs the approver’s account id')
+      }
+      await executeApprovedDeletion(existing.action_type, existing.payload ?? {}, {
+        id: params.approverId,
+        email: params.approverEmail,
+      })
     }
 
     const nextStatus = params.approved ? 'APPROVED' : 'REJECTED'

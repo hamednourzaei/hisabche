@@ -62,6 +62,7 @@ import { invoiceInStoredMetal } from '../../../../lib/invoices/metal-amounts'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useTillChoice } from '../../../../hooks/use-till-choice'
 import { TillSelectField } from '../../till/till-select-field'
+import { SellerSelectField, useSellerChoice } from '../seller-select-field'
 import { useOversoldLines } from '../use-oversold-lines'
 import { planLimitMessage } from '../../../../lib/plan-limit-message'
 import { loadPrinterSettings } from '../../../../lib/print/printer-settings'
@@ -280,6 +281,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       : payment.method === 'cash' && paidAmount > 0
   const tillSessionId = cashPaid ? tillChoice.tillSessionId : ''
 
+  // Who sold it (owner decision, 12 Nov 2026): the issuer unless another member
+  // is chosen. Sales only — a purchase has no seller of ours.
+  const sellerChoice = useSellerChoice()
+  const sellerUserId = draft.transactionType === 'sale' ? sellerChoice.sellerUserId : ''
+
   // Shared with the form (/invoices/new) — see use-oversold-lines.ts.
   const oversoldLines = useOversoldLines(items, draft.transactionType)
 
@@ -353,6 +359,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
           // Only on an invoice in another currency; the server refuses one without it.
           ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
           ...(tillSessionId ? { tillSessionId } : {}),
+          ...(sellerUserId ? { sellerUserId } : {}),
           ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
           ...(creditStop && creditReason.trim()
             ? { creditOverride: { reason: creditReason.trim() } }
@@ -502,6 +509,25 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // A draft kept on the device can name a customer or product deleted
       // since; the server's English «Customer not found» was shown as is.
       const missing = /not found|INVOICE_REFERENCE_MISSING/i.test(text)
+      // The seller the form named was refused (no longer a member), or the
+      // seller column is not installed yet — said in words, not as a code.
+      const sellerRefusal = /INVOICE_SELLER_NOT_A_MEMBER|INVOICE_SELLER_NOT_INSTALLED/.exec(
+        `${text} ${typeof code === 'string' ? code : ''}`,
+      )?.[0]
+      if (sellerRefusal) {
+        setError(
+          sellerRefusal === 'INVOICE_SELLER_NOT_A_MEMBER'
+            ? t(
+                'invoiceBuilder.seller.errors.notAMember',
+                'فروشنده‌ی انتخاب‌شده دیگر عضو این کسب‌وکار نیست.',
+              )
+            : t(
+                'invoiceBuilder.seller.errors.notInstalled',
+                'ثبت فروشنده هنوز روی سرور فعال نشده است.',
+              ),
+        )
+        return
+      }
       setError(
         limit ??
           (unanswered
@@ -532,6 +558,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     paymentEntries,
     paymentBlocked,
     tillSessionId,
+    sellerUserId,
     createInvoice,
     creditStop,
     creditReason,
@@ -693,6 +720,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
                 choice={tillChoice}
                 direction={draft.transactionType === 'purchase' ? 'out' : 'in'}
               />
+            </div>
+          ) : null}
+          {draft.transactionType === 'sale' && sellerChoice.show ? (
+            <div className="rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] p-3">
+              <SellerSelectField choice={sellerChoice} />
             </div>
           ) : null}
 

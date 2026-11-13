@@ -30,7 +30,12 @@ import {
   registerSystemMetricsRoutes,
 } from './routes/system-metrics.routes'
 import { pressureMonitor } from './runtime/pressure'
-import { isWriteBlocked } from './runtime/service-mode'
+import { assertNoTestMarkersInProduction, markTestRuntime } from './runtime/test-runtime'
+import {
+  enableMaintenanceRefresh,
+  noteRequestForMaintenance,
+  writeBlockReason,
+} from './runtime/maintenance-mode'
 import { startInstanceHeartbeat } from './services/instance-registry'
 import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
@@ -43,6 +48,7 @@ import swaggerUi from '@fastify/swagger-ui'
 // Middleware
 // ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
+import { adminRateLimitHook } from './middleware/admin-rate-limit.middleware'
 import { supabase } from './db'
 
 // ──────────────────────────────────────────────
@@ -161,6 +167,17 @@ import adminCustomersRoutes from './routes/admin-customers.routes'
 import adminBillingRoutes from './routes/admin-billing.routes'
 import adminOfflineRoutes from './routes/admin-offline.routes'
 import adminOpsRoutes from './routes/admin-ops.routes'
+import adminSecretsRoutes from './routes/admin-secrets.routes'
+import adminGatewaysRoutes from './routes/admin-gateways.routes'
+import adminMonitorRoutes from './routes/admin-monitor.routes'
+import adminAiRoutes from './routes/admin-ai.routes'
+import adminInsightsRoutes from './routes/admin-insights.routes'
+import {
+  RouteMetricsCollector,
+  currentInstanceSample,
+  supabaseMetricsSink,
+} from './services/monitoring/route-metrics'
+import { createSampler } from './utils/system-metrics'
 import { cloudMigrationRoutes } from './routes/cloud-migration.routes'
 import { developerRoutes } from './routes/developer.routes'
 import { ordersRoutes } from './routes/orders.routes'
@@ -239,6 +256,18 @@ server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 // ──────────────────────────────────────────────
 let inflightRequests = 0
 
+// V63 · M-1/M-2 — one in-memory collector per process. Observations are
+// bucketed by route TEMPLATE and minute; `start()` flushes the closed minutes
+// every fifteen seconds. Nothing is written per request.
+const systemSampler = createSampler(() => inflightRequests)
+const routeMetrics = new RouteMetricsCollector({
+  sink: supabaseMetricsSink,
+  sample: () => {
+    const pressure = pressureMonitor.snapshot()
+    return currentInstanceSample(systemSampler(), pressure)
+  },
+})
+
 /**
  * Uncount a request exactly once, however it ended.
  *
@@ -286,16 +315,19 @@ server.addHook('onRequest', async (request, reply) => {
         retryAfterSeconds: pressure.retryAfterSeconds,
       })
     }
-    if (
-      isWriteBlocked() &&
-      (request.method === 'POST' ||
-        request.method === 'PUT' ||
-        request.method === 'PATCH' ||
-        request.method === 'DELETE')
-    ) {
+    // V63 #68 — the same 503, now also raised by the owner's maintenance switch
+    // (runtime/maintenance-mode.ts). Admin and sign-in routes stay writable
+    // during maintenance so the switch can always be turned back off.
+    noteRequestForMaintenance()
+    const writeBlocked = writeBlockReason(request.method, pathOnly ?? '')
+    if (writeBlocked) {
       return reply.status(503).send({
         error: 'SERVICE_READ_ONLY',
-        message: 'Primary database is temporarily unavailable; writes are paused',
+        reason: writeBlocked,
+        message:
+          writeBlocked === 'maintenance'
+            ? 'The service is in maintenance; writes are paused'
+            : 'Primary database is temporarily unavailable; writes are paused',
       })
     }
   }
@@ -382,6 +414,25 @@ server.addHook('onResponse', async (request, reply) => {
   })
 })
 
+// V63 · M-2 — traffic, per route template. `request.url` is deliberately
+// never read: it carries ids, slugs and query strings, and a metric table
+// must not be a second copy of customer activity.
+server.addHook('onResponse', async (request, reply) => {
+  if (request.method === 'OPTIONS') return
+  const header = reply.getHeader('content-length')
+  const parsed = typeof header === 'number' ? header : Number(header)
+  const bytesOut = header === undefined || !Number.isFinite(parsed) ? null : parsed
+  routeMetrics.observe({
+    route: request.routeOptions.url ?? '(unmatched)',
+    method: request.method,
+    statusCode: reply.statusCode,
+    durationMs: reply.elapsedTime,
+    bytesOut,
+    userId: request.userId ?? undefined,
+    workspaceId: request.tenancy?.workspaceId,
+  })
+})
+
 server.addHook('onSend', async (request, reply, payload) => {
   const duration = elapsedSince(request)
 
@@ -435,6 +486,10 @@ server.addHook('preHandler', async (request, reply) => {
     // worked for the person the link was sent to (BUG-077). A route added here
     // must be public by design: storefront-orders.test.ts lists them all.
     '/api/public/',
+    // ⚠️ The TV wall cannot hold an MFA session. Its credential is a wall
+    // token, verified inside every route under `/api/wall/`, and those routes
+    // reach aggregate counts only (admin-monitor.routes.ts).
+    '/api/wall/',
   ]
 
   // Exact-match public endpoints (no prefix matching: `/api/billing/plans` must
@@ -626,7 +681,11 @@ server.setErrorHandler((error, request, reply) => {
  *
  * Registration order is unchanged — plugin order is behaviour in Fastify.
  */
-export async function buildServer(): Promise<typeof server> {
+export async function buildServer(options: { testRuntime?: boolean } = {}): Promise<typeof server> {
+  // V63 · S-2 — an explicit, irreversible marker. Nothing else can turn the
+  // MFA bypass on; a plain VITEST in a production process refuses at start().
+  if (options.testRuntime) markTestRuntime()
+
   // ─── 6.1 COMPRESSION ──────────────────────
   await server.register(compress, {
     global: true,
@@ -664,6 +723,9 @@ export async function buildServer(): Promise<typeof server> {
       'x-workspace-id',
       'etag',
       'X-Admin-Step-Up-Timestamp',
+      // The only credential of the TV wall (the wall page of the admin app). Missing,
+      // the browser preflight refused every wall request (V63 audit, 12 Nov 2026).
+      'x-wall-token',
     ],
     // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
     // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
@@ -682,7 +744,14 @@ export async function buildServer(): Promise<typeof server> {
     origin: true,
     credentials: false,
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Idempotency-Key', PUBLISHABLE_KEY_HEADER],
+    allowedHeaders: [
+      'Content-Type',
+      'Idempotency-Key',
+      PUBLISHABLE_KEY_HEADER,
+      // The wall display presents its scoped token as a header; a browser
+      // will not send the httpOnly cookie cross-origin without credentials.
+      'x-wall-token',
+    ],
     maxAge: 86400,
   }
 
@@ -776,6 +845,24 @@ export async function buildServer(): Promise<typeof server> {
         limit: context.max,
       }
     },
+  })
+
+  // ⚠️ V63 · S-5 — a tighter budget for the console, on top of the global one
+  // (that plugin enforces 100/min for the whole API; an admin session gets 60).
+  // Registered as a hook, not a plugin, so it runs before every admin route
+  // regardless of which file registered it.
+  server.addHook('onRequest', adminRateLimitHook)
+
+  // ⚠️ V63 · S-4 — an admin API response is personalised (customer names,
+  // balances, sessions). `no-store` keeps it out of every shared cache; the
+  // database reads behind it are already uncached for money paths.
+  server.addHook('onSend', async (request, reply, payload) => {
+    const url = request.url ?? ''
+    const path = url.indexOf('?') === -1 ? url : url.slice(0, url.indexOf('?'))
+    if (path === '/api/admin' || path.startsWith('/api/admin/')) {
+      reply.header('Cache-Control', 'no-store')
+    }
+    return payload
   })
 
   // ─── 6.5 REGISTER ROUTES ──────────────────
@@ -918,6 +1005,11 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(adminBillingRoutes)
   await server.register(adminOfflineRoutes)
   await server.register(adminOpsRoutes)
+  await server.register(adminSecretsRoutes)
+  await server.register(adminGatewaysRoutes)
+  await server.register(adminMonitorRoutes)
+  await server.register(adminAiRoutes)
+  await server.register(adminInsightsRoutes)
   await server.register(cloudMigrationRoutes)
 
   server.log.info('✅ All routes registered successfully')
@@ -927,7 +1019,18 @@ export async function buildServer(): Promise<typeof server> {
 
 async function start() {
   try {
+    // V63 · S-2 — a production process must never carry a test marker: that is
+    // the switch that removes platform-admin MFA. Fail before binding a port.
+    const markerCheck = assertNoTestMarkersInProduction()
+    if (!markerCheck.ok) {
+      console.error(`[startup] refusing to start: ${markerCheck.reason}`)
+      process.exit(1)
+    }
+
     await buildServer()
+    // V63 #68 — only a real process mirrors the maintenance switch; a test that
+    // builds a server never reads a row it did not seed.
+    enableMaintenanceRefresh()
 
     // ─── 6.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })
@@ -944,6 +1047,18 @@ async function start() {
     startScheduler()
     // The admin «servers» page reads these (services/instance-registry.ts).
     startInstanceHeartbeat(() => inflightRequests)
+
+    // V63 · M-1 — without this the event-loop snapshot is always 0.
+    pressureMonitor.start()
+
+    // V63 · M-2 — flush CLOSED minutes only. Within one minute this is a
+    // no-op, so a slow or fast timer cannot double-count.
+    const metricsFlush = setInterval(() => {
+      void routeMetrics.flushClosedMinutes().catch((err: unknown) => {
+        server.log.warn({ err }, 'route metrics flush failed')
+      })
+    }, 15_000)
+    metricsFlush.unref()
   } catch (err) {
     const error = err as Error
     server.log.error(error)

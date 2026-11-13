@@ -102,6 +102,8 @@
     "./utils": "./src/lib/utils.ts",
     "./settings/settings-page": "./src/components/ui/settings/settings-page.tsx",
     "./settings/device-modules-panel": "./src/components/ui/settings/device-modules-panel.tsx",
+    "./settings/two-factor-section": "./src/components/ui/settings/two-factor-section.tsx",
+    "./settings/step-up-dialog-host": "./src/components/ui/settings/step-up-dialog-host.tsx",
     "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
     "./components/ui/warehouse/containers/warehouse-container": "./src/components/ui/warehouse/containers/warehouse-container.tsx",
     "./components/ui/invoices/containers/invoices-container": "./src/components/ui/invoices/containers/invoices-container.tsx",

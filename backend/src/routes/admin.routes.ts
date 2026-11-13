@@ -25,8 +25,13 @@ import { z } from 'zod'
 import { AdminService } from '../services/admin.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
-import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
+import { requireAdminPermission, requireAdminStepUp } from '../middleware/admin-rbac.middleware'
 import { planEnum, subscriptionStatusEnum } from '@hisabche/validation'
+import {
+  AdminActionTypeNotInstalledError,
+  isUnknownActionType,
+} from '../services/admin/admin-deletions'
+import { AdminBillingService } from '../services/admin/admin-billing.service'
 
 const uuidParam = z.string().uuid()
 
@@ -265,6 +270,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         authenticate,
         platformAdminGuard,
         requireAdminPermission('customers.workspaces.suspend'),
+        // V63 · S-6 — changing a member's role is a privilege change.
+        requireAdminStepUp,
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -298,6 +305,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         authenticate,
         platformAdminGuard,
         requireAdminPermission('customers.workspaces.suspend'),
+        // V63 · S-6 — removing a member is destructive and needs a fresh check.
+        requireAdminStepUp,
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -305,9 +314,24 @@ export default async function adminRoutes(fastify: FastifyInstance) {
       if (!parsed.success) {
         return reply.code(400).send({ error: 'Invalid membership id', code: 'INVALID_PARAM' })
       }
+      // Owner request (12 Nov 2026): a deletion needs a SECOND admin. This
+      // click only PROPOSES; `decideActionRequest` removes the member when a
+      // different admin approves. The owner is refused here, before a request
+      // exists that nobody could carry out.
       return send(request, reply, async () => {
-        await adminService.removeMember(actorOf(request), parsed.data)
-        return { removed: true, membershipId: parsed.data }
+        await adminService.assertMemberRemovable(parsed.data)
+        try {
+          const proposal = await AdminBillingService.proposeActionRequest({
+            actionType: 'MEMBER_REMOVE',
+            payload: { id: parsed.data },
+            diffPreview: { membershipId: parsed.data, remove: true },
+            proposedBy: request.user?.email ?? request.userId,
+          })
+          return { pending: true, requestId: proposal.id, membershipId: parsed.data }
+        } catch (err) {
+          if (isUnknownActionType(err)) throw new AdminActionTypeNotInstalledError()
+          throw err
+        }
       })
     },
   )
@@ -412,6 +436,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         authenticate,
         platformAdminGuard,
         requireAdminPermission('billing.subscriptions.plan'),
+        // V63 · S-6 — a plan change moves money on the next invoice.
+        requireAdminStepUp,
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -438,6 +464,8 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         authenticate,
         platformAdminGuard,
         requireAdminPermission('billing.subscriptions.status'),
+        // V63 · S-6 — suspending or reactivating a paying workspace.
+        requireAdminStepUp,
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {

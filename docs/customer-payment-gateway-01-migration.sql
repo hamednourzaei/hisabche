@@ -23,22 +23,38 @@ CREATE TABLE IF NOT EXISTS public.payment_gateway_events (
 );
 
 REVOKE ALL ON payment_gateway_events FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT ON payment_gateway_events TO authenticated, service_role;
+GRANT SELECT, INSERT ON payment_gateway_events TO service_role;
 
 ALTER TABLE payment_gateway_events ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-     WHERE schemaname = 'public' AND tablename = 'payment_gateway_events' AND policyname = 'payment_gateway_events_ws_isolation'
-  ) THEN
-    CREATE POLICY payment_gateway_events_ws_isolation ON payment_gateway_events
-      FOR ALL TO authenticated
-      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()))
-      WITH CHECK (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()));
-  END IF;
-END $$;
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.payment_gateway_events;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['payment_gateway_events'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.payment_gateway_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.payment_gateway_events FROM PUBLIC, anon, authenticated;

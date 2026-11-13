@@ -28,8 +28,11 @@ describe('hr-org-appraisal-01-migration.sql (PG)', () => {
     const e2 = '10000000-0000-4000-8000-000000000002'
 
     await pg.sql`
-      INSERT INTO public.employees (id, workspace_id, name, reports_to)
-      VALUES (${e1}, ${ws1}, 'CEO', NULL), (${e2}, ${ws1}, 'Lead', ${e1})
+      INSERT INTO public.employees
+        (id, workspace_id, employee_code, first_name, last_name, hire_date, reports_to)
+      VALUES
+        (${e1}, ${ws1}, 'E-1', 'Chief', 'Executive', '2026-01-01', NULL),
+        (${e2}, ${ws1}, 'E-2', 'Team', 'Lead', '2026-01-01', ${e1})
     `
     await expect(
       pg.sql`UPDATE public.employees SET reports_to = ${e2} WHERE id = ${e1}`,

@@ -14,8 +14,7 @@
 
 import type { FastifyInstance, FastifyReply } from 'fastify'
 
-import { authenticate } from '../middleware/auth.middleware'
-import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { adminRoute } from '../middleware/admin-rbac.middleware'
 import { listInstances } from '../services/instance-registry'
 import {
   MAX_INSTANCES,
@@ -70,7 +69,8 @@ export function registerSystemMetricsRoutes(server: FastifyInstance, inflight: (
   })
 
   // V61 C.4.8 — Authenticated operational metrics (RED + pressure + service mode)
-  server.get('/metrics', { preHandler: [authenticate, platformAdminGuard] }, async () => {
+  // V63 · S-1 — now on the same RBAC chain as every other admin route.
+  server.get('/metrics', { preHandler: adminRoute('operations.health.read') }, async () => {
     const pressure = pressureMonitor.snapshot()
     const serviceMode = getServiceModeState()
     return {
@@ -120,11 +120,12 @@ export function registerSystemMetricsRoutes(server: FastifyInstance, inflight: (
 //   GET /api/admin/instances/scale  how many instances Render runs, the cap
 //   PUT /api/admin/instances/scale  { count } — add or remove servers
 export function registerInstanceAdminRoutes(server: FastifyInstance): void {
-  const adminOnly = [authenticate, platformAdminGuard]
+  const read = adminRoute('operations.servers.read')
+  const scale = adminRoute('operations.servers.scale', { stepUp: true })
 
-  server.get('/api/admin/instances', { preHandler: adminOnly }, async () => listInstances())
+  server.get('/api/admin/instances', { preHandler: read }, async () => listInstances())
 
-  server.get('/api/admin/instances/scale', { preHandler: adminOnly }, async (_request, reply) => {
+  server.get('/api/admin/instances/scale', { preHandler: read }, async (_request, reply) => {
     if (!isScalingConfigured()) {
       return { configured: false, count: null, max: MAX_INSTANCES }
     }
@@ -135,7 +136,7 @@ export function registerInstanceAdminRoutes(server: FastifyInstance): void {
     }
   })
 
-  server.put('/api/admin/instances/scale', { preHandler: adminOnly }, async (request, reply) => {
+  server.put('/api/admin/instances/scale', { preHandler: scale }, async (request, reply) => {
     const count = Number((request.body as { count?: unknown } | undefined)?.count)
     try {
       await setInstanceCount(count)

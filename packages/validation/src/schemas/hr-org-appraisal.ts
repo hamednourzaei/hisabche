@@ -3,7 +3,12 @@ import { z } from 'zod'
 export const addEmployeeDocumentSchema = z.object({
   title: z.string().min(1).max(200),
   kind: z.string().min(1).max(60).default('document'),
-  file_url: z.string().min(1),
+  // A link the browser opens: https only (no javascript:, data: or file:).
+  file_url: z
+    .string()
+    .url()
+    .max(2000)
+    .refine((value) => value.startsWith('https://'), { message: 'EMPLOYEE_DOCUMENT_URL_HTTPS' }),
 })
 
 export const createAppraisalSchema = z.object({

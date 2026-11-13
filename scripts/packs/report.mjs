@@ -59,19 +59,24 @@ for (const entry of Object.values(manifest)) {
   buckets.totalJs.gzipBytes += stats.gzipBytes
   buckets.totalJs.fileCount += 1
 
-  const base = path.basename(entry.file)
+  // ⚠️ The pack/locale id comes from the chunk NAME Rollup recorded in the
+  // manifest (`pack-marketplace`), never from the file name: a content hash
+  // may itself contain '-' (`pack-marketplace-v-Nxw5pK.js`), and parsing the
+  // file name then reports a pack called `marketplace-v` whose budget is never
+  // checked.
+  const chunkName = typeof entry.name === 'string' ? entry.name : ''
   if (entry.isEntry) {
     buckets.coreEntry.rawBytes += stats.rawBytes
     buckets.coreEntry.gzipBytes += stats.gzipBytes
     buckets.coreEntry.files.push(stats)
-  } else if (base.startsWith('pack-')) {
-    const packId = base.replace(/^pack-/, '').replace(/-[^-]+\.js$/, '')
+  } else if (chunkName.startsWith('pack-')) {
+    const packId = chunkName.slice('pack-'.length)
     buckets.packs[packId] ??= { rawBytes: 0, gzipBytes: 0, files: [] }
     buckets.packs[packId].rawBytes += stats.rawBytes
     buckets.packs[packId].gzipBytes += stats.gzipBytes
     buckets.packs[packId].files.push(stats)
-  } else if (base.startsWith('locale-')) {
-    const locale = base.replace(/^locale-/, '').replace(/-[^-]+\.js$/, '')
+  } else if (chunkName.startsWith('locale-')) {
+    const locale = chunkName.slice('locale-'.length)
     buckets.locales[locale] ??= { rawBytes: 0, gzipBytes: 0, files: [] }
     buckets.locales[locale].rawBytes += stats.rawBytes
     buckets.locales[locale].gzipBytes += stats.gzipBytes

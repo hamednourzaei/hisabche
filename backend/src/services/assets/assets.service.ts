@@ -13,6 +13,8 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 
+import { tillMinorToMajor } from '@hisabche/validation'
+import { baseCurrencyOf } from '../base-currency'
 import {
   buildSchedule,
   disposeAsset,
@@ -201,6 +203,8 @@ export class AssetsService {
    * entries it owes — and a run repeated twice posts nothing the second time.
    */
   async postDue(ctx: TenancyContext, asOf = businessDayOf(new Date(), ctx.timeZone)) {
+    // An asset has no currency of its own: its cost is in the book currency.
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
     const { data, error } = await supabase
       .from('asset_depreciation_schedule')
       .select(
@@ -232,7 +236,9 @@ export class AssetsService {
         continue
       }
 
-      const amount = Number(row.amount_minor) / 100
+      // ⚠️ minor → major with the BOOK currency's digits. This was `/ 100`:
+      // in an AFN book (no minor unit) every depreciation booked 1/100 of itself.
+      const amount = tillMinorToMajor(Number(row.amount_minor), bookCurrency)
 
       const outcome = await ledger.postDocument(ctx, {
         sourceType: 'depreciation',

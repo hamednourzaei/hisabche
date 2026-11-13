@@ -91,27 +91,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS gold_operations_request_key
 
 ALTER TABLE gold_operations ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS gold_operations_tenant_isolation ON gold_operations;
-CREATE POLICY gold_operations_tenant_isolation ON gold_operations
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = gold_operations.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = gold_operations.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  );
 
 REVOKE ALL ON public.gold_operations FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.gold_operations TO service_role;
@@ -143,27 +122,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS gold_loc_rec_request_key
 
 ALTER TABLE gold_location_reconciliations ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS gold_loc_rec_tenant_isolation ON gold_location_reconciliations;
-CREATE POLICY gold_loc_rec_tenant_isolation ON gold_location_reconciliations
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = gold_location_reconciliations.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = gold_location_reconciliations.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  );
 
 REVOKE ALL ON public.gold_location_reconciliations FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT ON public.gold_location_reconciliations TO service_role;
@@ -338,5 +296,35 @@ REVOKE ALL ON FUNCTION public.gold_reconcile_location(uuid, uuid, jsonb) FROM PU
 GRANT EXECUTE ON FUNCTION public.gold_record_second_hand_purchase(uuid, uuid, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.gold_record_melt_scrap(uuid, uuid, jsonb) TO service_role;
 GRANT EXECUTE ON FUNCTION public.gold_reconcile_location(uuid, uuid, jsonb) TO service_role;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['gold_operations', 'gold_location_reconciliations'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.gold_operations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.gold_operations FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.gold_location_reconciliations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.gold_location_reconciliations FROM PUBLIC, anon, authenticated;
 
 COMMIT;

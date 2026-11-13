@@ -23,12 +23,15 @@ import { currencyCodeSchema } from '@hisabche/validation'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
-import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { adminRouteByMethod } from '../middleware/admin-rbac.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { marketService } from '../services/market/market.service'
 
 const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]
-const admin = [authenticate, platformAdminGuard]
+// V63 · S-1 — admin market moderation is RBAC-gated; writes need a step-up.
+const admin = adminRouteByMethod('product.market.read', 'product.market.write', {
+  stepUpOnWrite: true,
+})
 
 const slug = (max: number) =>
   z

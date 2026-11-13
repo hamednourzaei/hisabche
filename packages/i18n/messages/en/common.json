@@ -2856,7 +2856,64 @@
       "storage": "Storage and cache",
       "pagesAndTabs": "Pages and tabs",
       "expand": "Expand",
-      "collapse": "Collapse"
+      "collapse": "Collapse",
+      "twoFactor": "Two-step verification"
+    },
+    "twoFactor": {
+      "title": "Two-step verification",
+      "description": "With an authenticator app on your phone, sensitive actions also need a six-digit code. Someone who knows your password still cannot do them without your phone.",
+      "loading": "Loading…",
+      "loadFailed": "Could not read two-step verification.",
+      "retry": "Try again",
+      "notReady": "This feature is not enabled on the server yet.",
+      "enrolledBadge": "On",
+      "notEnrolled": "Not turned on yet.",
+      "turnOn": "Turn on",
+      "startFailed": "Could not start setup.",
+      "scanHint": "Scan this code with an authenticator app (such as Google Authenticator), then enter its six-digit code.",
+      "qrAlt": "QR code for the authenticator app",
+      "manualKey": "Key for manual entry",
+      "codeLabel": "Six-digit code",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "invalidCode": "The code is wrong or has expired.",
+      "saved": "Two-step verification is on.",
+      "recoveryTitle": "Recovery codes",
+      "recoveryHint": "These codes are shown only this once. Keep them somewhere safe; if you lose your phone, one of them lets you set up again.",
+      "recoveryCopy": "Copy codes",
+      "recoveryCopied": "Codes copied.",
+      "copyFailed": "Could not copy; write the codes down.",
+      "recoveryDone": "I saved them",
+      "recoveryLeft": "Recovery codes left",
+      "lostDevice": "Lost your phone?",
+      "lostDeviceHint": "Enter a recovery code. The old app is removed and you can set up again.",
+      "recoverLabel": "Recovery code",
+      "recoverAction": "Use recovery code",
+      "recovered": "The old app was removed. Set it up again.",
+      "recoverFailed": "The recovery code was not accepted.",
+      "policyTitle": "Which actions ask for a code",
+      "policyHint": "For these actions, everyone in this business enters a fresh code from their authenticator app.",
+      "policyOff": "No action asks for a code yet. Choose and save.",
+      "policySave": "Save",
+      "policySaved": "Saved.",
+      "policySaveFailed": "Could not save.",
+      "capabilities": {
+        "ledger_lock_period": "Close an accounting period",
+        "ledger_reverse": "Reverse a journal entry",
+        "payroll_post": "Post payroll payments",
+        "member_manage": "Manage members and roles",
+        "workspace_manage": "Business settings",
+        "account_manage": "Manage accounts",
+        "payment_cancel": "Cancel a payment",
+        "license_manage": "Manage the offline licence",
+        "data_import": "Import data from a file"
+      },
+      "stepUp": {
+        "title": "Two-step code",
+        "description": "Enter the six-digit code from your authenticator app to continue.",
+        "notEnrolled": "This action needs two-step verification. Turn it on in Settings first.",
+        "action": "Action"
+      }
     }
   },
   "sync": {
@@ -3249,7 +3306,8 @@
       "financing": "Loans & investments",
       "assets": "Fixed assets",
       "bank": "Bank reconciliation",
-      "budgets": "Budgets"
+      "budgets": "Budgets",
+      "cheques": "Cheques"
     },
     "accounts": {
       "title": "Chart of Accounts",
@@ -4936,11 +4994,20 @@
       "none": "No condition — no invoice waits for this template.",
       "set": "Set condition",
       "amountPlaceholder": "e.g. 5000",
-      "hint": "Leave empty for every invoice. The amount is in the invoice’s own currency.",
+      "hint": "Leave empty for every invoice of this kind. The amount is in the books’ currency; a foreign-currency invoice is measured at its own rate.",
       "badAmount": "The amount must be a number above zero.",
       "notWired": "Approval is not applied to this kind of document yet",
-      "readFailed": "The conditions could not be read"
-    }
+      "readFailed": "The conditions could not be read",
+      "typeLabel": "Which invoices",
+      "types": {
+        "all": "Sales and purchases",
+        "sale": "Sales invoices",
+        "purchase": "Purchase invoices"
+      },
+      "inBookCurrency": "in the books’ currency",
+      "inInvoiceCurrency": "in each invoice’s own currency"
+    },
+    "selfApprovalRefused": "Whoever issued this document cannot approve it themself; another member or the owner must approve it."
   },
   "action": {
     "clear": "Clear",
@@ -5362,7 +5429,16 @@
       "projected": "After this sale"
     },
     "draftSaved": "Draft saved",
-    "draftSaveFailed": "The draft was not saved"
+    "draftSaveFailed": "The draft was not saved",
+    "seller": {
+      "label": "Seller",
+      "me": "Me (the issuer)",
+      "hint": "The seller is a member of this business. If you choose nobody, whoever issues the invoice is the seller.",
+      "errors": {
+        "notAMember": "The chosen seller is no longer a member of this business. Choose another seller.",
+        "notInstalled": "Recording a seller is not enabled on the server yet. Choose «Me», or try again after the server update."
+      }
+    }
   },
   "admin": {
     "cms": {
@@ -5512,7 +5588,8 @@
       "statusNoAccess": "No access",
       "roleOwner": "Owner",
       "roleManager": "Manager",
-      "roleSeller": "Seller"
+      "roleSeller": "Seller",
+      "removalProposed": "Removal requested. The member stays until another admin approves it under Revenue."
     },
     "removeDialog": {
       "title": "Remove membership",
@@ -5662,7 +5739,115 @@
       "monthlyLimit": "Monthly limit",
       "limitFromPlan": "Blank = from the plan",
       "note": "Note",
-      "quotaHint": "Blank means \"follow the plan\". Zero means \"none\". They are not the same."
+      "quotaHint": "Blank means \"follow the plan\". Zero means \"none\". They are not the same.",
+      "usage": {
+        "title": "Token usage and cost",
+        "description": "Questions, tokens and cost per day, from what the provider reported and the prices you entered.",
+        "day": "Day",
+        "provider": "Provider",
+        "model": "Model",
+        "queries": "Questions",
+        "promptTokens": "Prompt tokens",
+        "completionTokens": "Response tokens",
+        "cost": "Cost",
+        "unpriced": "Unpriced",
+        "unpricedHint": "A cost of “—” means no price row matches that model; its cost is unknown, not zero.",
+        "empty": "No questions in this range",
+        "emptyHint": "Usage appears here after the assistant answers a question.",
+        "loadFailed": "Could not read usage",
+        "range": {
+          "24h": "24 hours",
+          "7d": "7 days",
+          "30d": "30 days",
+          "90d": "90 days"
+        }
+      },
+      "price": {
+        "title": "Model prices",
+        "description": "What you pay per million tokens. Entered by hand — nothing is guessed.",
+        "currency": "Currency",
+        "input": "Input / million",
+        "output": "Output / million",
+        "actions": "Actions",
+        "add": "Add price",
+        "empty": "No prices yet",
+        "emptyHint": "Until a model has a price, its cost stays unknown.",
+        "hint": "Amounts are in the currency’s own unit (for example 3.00 USD per million tokens), not minor units.",
+        "confirmTitle": "Save this price?",
+        "confirmDesc": "The price applies from now on; it never rewrites past costs.",
+        "deleteTitle": "Delete this price?",
+        "deleteDesc": "Questions already priced keep their recorded cost; new questions become unpriced."
+      },
+      "fallback": {
+        "title": "Fallback chain",
+        "description": "Tried in order only when the primary provider fails (timeout, 429, 5xx) — never when it refuses.",
+        "position": "Try #{position}",
+        "timeout": "Timeout (ms)",
+        "enabled": "Enabled",
+        "add": "Add fallback",
+        "remove": "Remove",
+        "empty": "No fallback configured",
+        "emptyHint": "If the primary provider goes down, questions fail. A fallback keeps the assistant answering.",
+        "loadFailed": "Could not read the fallback list",
+        "confirmTitle": "Save the fallback chain?",
+        "confirmDesc": "Saves {count} entries. Each one needs a model name."
+      },
+      "budgets": {
+        "title": "Spending budgets",
+        "description": "A ceiling per currency. A budget is a limit, not an estimate.",
+        "scope": "Scope",
+        "scopeName": {
+          "platform": "Platform",
+          "workspace": "Workspace"
+        },
+        "currency": "Currency",
+        "limit": "Monthly limit",
+        "spent": "Spent this month",
+        "percent": "Used",
+        "alertPercent": "Alert at",
+        "actions": "Actions",
+        "add": "Save budget",
+        "empty": "No budget set",
+        "emptyHint": "Without a budget nothing stops spending; you only see it afterwards.",
+        "hint": "Entered in the currency’s own unit and stored as exact minor-unit integers.",
+        "loadFailed": "Could not read budgets",
+        "confirmTitle": "Save this budget?",
+        "confirmDesc": "The alert fires once a month when spend crosses the percentage.",
+        "deleteTitle": "Delete this budget?",
+        "deleteDesc": "The ceiling is removed; spending continues to be recorded."
+      },
+      "prompts": {
+        "title": "Prompt versions",
+        "description": "Every saved system prompt, append-only. “Use” prefills the form above; saving appends a new version.",
+        "version": "Version",
+        "createdAt": "Saved at",
+        "createdBy": "By",
+        "content": "Text",
+        "actions": "Actions",
+        "use": "Use",
+        "empty": "No saved versions yet",
+        "emptyHint": "The first save of the system prompt creates version 1.",
+        "loadFailed": "Could not read prompt versions"
+      },
+      "audit": {
+        "title": "AI audit trail",
+        "description": "Configuration and key changes, and a count of questions. Questions and answers are not shown.",
+        "event": "Event",
+        "actor": "By",
+        "at": "When",
+        "details": "Details",
+        "empty": "No AI events yet",
+        "emptyHint": "Save the configuration or test a connection and it appears here.",
+        "loadFailed": "Could not read AI events"
+      },
+      "section": {
+        "config": "Provider",
+        "fallback": "Fallback",
+        "usage": "Usage",
+        "budgets": "Budgets",
+        "prompts": "Prompts",
+        "audit": "Audit"
+      }
     },
     "blog": {
       "title": "Blog",
@@ -6055,7 +6240,8 @@
         "upgrades": "Upgrade Requests",
         "wallet": "Wallet",
         "ledger": "Billing ledger",
-        "makerChecker": "Two-person approvals"
+        "makerChecker": "Two-person approvals",
+        "gateways": "Gateways"
       },
       "offline": {
         "title": "Offline",
@@ -6091,7 +6277,9 @@
         "audit": "Audit Log",
         "roles": "Admin Roles",
         "sessions": "Admin Sessions",
-        "events": "Security Events"
+        "events": "Security Events",
+        "network": "Network",
+        "posture": "Posture"
       }
     },
     "command": {
@@ -6252,6 +6440,115 @@
       "errorMessage": "Error / result",
       "healthError": "Could not run the probes",
       "healthProbesDesc": "Each component is checked with a live probe. A component without a probe is shown as «no probe».",
+      "monitor": {
+        "tabLabel": "Monitor",
+        "title": "Live monitoring",
+        "description": "Traffic, latency, database vitals and live users, aggregated in Postgres. Nothing here is a projection.",
+        "refresh": "Refresh",
+        "error": "The monitor could not be read.",
+        "onlineUsers": "Online users",
+        "onlineWorkspaces": "Active businesses",
+        "requests": "Requests (5 min)",
+        "errorRate": "5xx rate",
+        "bandwidth": "Bandwidth sent",
+        "bandwidthUnknown": "{count} response(s) had no content-length, so the total is unknown",
+        "instancesOnline": "Instances",
+        "history": "History",
+        "historyDesc": "Minute rows for the last hour, hourly rollups beyond it.",
+        "noHistory": "No history yet",
+        "noHistoryHint": "Rows appear after the first closed minute is flushed.",
+        "historySummary": "{points} points · {unit} buckets",
+        "range": {
+          "1h": "1 hour",
+          "24h": "24 hours",
+          "7d": "7 days",
+          "90d": "90 days"
+        },
+        "instances": "Instances",
+        "instancesDesc": "One row per instance per minute, with the latest sample shown.",
+        "instance": "Instance",
+        "cpu": "CPU",
+        "memory": "RAM",
+        "eventLoop": "Event-loop delay",
+        "inflight": "In flight",
+        "syncSockets": "Sync devices",
+        "lastSample": "Last sample",
+        "noInstances": "No instance has reported yet",
+        "dbTitle": "Database",
+        "dbDesc": "Read-only vitals from the database itself. A limit that is not known is not shown.",
+        "dbUnavailable": "Database vitals are unavailable",
+        "dbSize": "Size",
+        "connections": "Connections",
+        "cacheHit": "Cache hit",
+        "replicationLag": "Replication lag",
+        "noReplica": "No replica",
+        "waitingLocks": "Waiting locks",
+        "longestTransaction": "Longest transaction",
+        "statementsUnavailable": "pg_stat_statements is not available",
+        "topStatements": "Slowest statements",
+        "query": "Query",
+        "calls": "Calls",
+        "meanMs": "Mean ms",
+        "topByTime": "Top routes by time",
+        "topByTimeDesc": "Route templates only — never a raw URL, an id or a query string.",
+        "topByBytes": "Top routes by bytes",
+        "topByBytesDesc": "Bandwidth per route template, when the response carried a content-length.",
+        "route": "Route",
+        "method": "Method",
+        "count": "Count",
+        "totalMs": "Total ms",
+        "bytes": "Bytes",
+        "noTraffic": "No traffic in this window",
+        "alerts": "Alerts",
+        "alertsDesc": "Evaluated every minute. One email per rule per hour.",
+        "noAlerts": "No alert rules",
+        "editThreshold": "Save threshold",
+        "threshold": "Threshold",
+        "confirm": "Confirm",
+        "state": {
+          "ok": "OK",
+          "pending": "Pending",
+          "breaching": "Breaching",
+          "unknown": "Unknown",
+          "disabled": "Disabled"
+        },
+        "severity": {
+          "warning": "Warning",
+          "critical": "Critical"
+        },
+        "alertConfirmTitle": "Change this alert threshold?",
+        "alertConfirmDesc": "{metric} will be compared with the new threshold {threshold}.",
+        "wallTokens": "Wall tokens",
+        "wallTokensDesc": "A television cannot hold an MFA session. Its token is read-only, reaches aggregate counts only, and can be revoked here.",
+        "tokenLabel": "Label",
+        "tokenState": "State",
+        "tokenExpires": "Expires",
+        "tokenExpiryHint": "Empty means 30 days from now.",
+        "tokenLastUsed": "Last used",
+        "actions": "Actions",
+        "revoke": "Revoke",
+        "token": {
+          "active": "Active",
+          "expired": "Expired",
+          "revoked": "Revoked"
+        },
+        "tokenOnce": "Copy this token now — it is never shown again.",
+        "copyToken": "Copy token",
+        "copied": "Copied",
+        "wallHint": "Open /wall?token=… on the television once. The token stays in memory only.",
+        "tokenIp": "IP range (optional)",
+        "createToken": "Create a wall token",
+        "noTokens": "No wall tokens",
+        "tokenConfirmTitle": "Create a wall token?",
+        "tokenConfirmDesc": "The token is readable once, immediately after creation.",
+        "tokenRevokeTitle": "Revoke this wall token?",
+        "tokenRevokeDesc": "The television using it stops updating at its next poll.",
+        "wallTitle": "Hisabche — live monitor",
+        "wallSubtitle": "Aggregate counts only. No customer, no money, no names.",
+        "wallTokenPrompt": "Enter the wall token created in Operations → Monitor.",
+        "wallOpen": "Open the wall",
+        "wallTokenInvalid": "This wall token is not valid, has expired, or is bound to another address."
+      },
       "healthProbesTitle": "Infrastructure health",
       "jobId": "ID",
       "jobType": "Job type",
@@ -6364,7 +6661,336 @@
       "stepUpFailed": "Two-step check failed. Enter the code again.",
       "totpHint": "Enter the 6-digit code from your authenticator app (e.g. Google Authenticator).",
       "totpPrompt": "Two-step code",
-      "when": "When"
+      "when": "When",
+      "allowlist": {
+        "title": "Admin IP allow-list",
+        "cidr": "IP address or range",
+        "label": "Label",
+        "cidrHint": "An address or CIDR (for example 203.0.113.0/24). An empty list disables the restriction.",
+        "add": "Add range",
+        "remove": "Remove",
+        "removeFor": "Remove {cidr}",
+        "confirm": "Confirm",
+        "error": "The allow-list could not be read.",
+        "empty": "The restriction is off",
+        "emptyHint": "Add the office and VPN ranges. Until then an admin session is accepted from any network.",
+        "enforcedHint": "Only these ranges may reach the admin API. The break-glass admin can still edit this list.",
+        "disabledHint": "The list is empty, so the console accepts admin sessions from any network.",
+        "addConfirmTitle": "Add this range?",
+        "addConfirmDesc": "Administrators on other networks will be refused after this change: {cidr}",
+        "removeConfirmTitle": "Remove this range?",
+        "removeConfirmDesc": "Administrators whose only allowed network is {cidr} will be refused.",
+        "removalProposed": "Removal requested. The address stays on the list until another admin approves it under Revenue."
+      },
+      "posture": {
+        "title": "Security posture",
+        "description": "Every line is measured now. «Unknown» means it could not be read — that is not a pass.",
+        "error": "The security posture could not be read.",
+        "summary": "{pass} passing · {fail} failing · {unknown} unknown",
+        "pass": "Passing",
+        "fail": "Failing",
+        "unknown": "Unknown"
+      }
+    },
+    "gateways": {
+      "title": "Payment gateways",
+      "description": "Which provider takes the product money, in which mode. A secret is never shown or typed here — it is staged in Security → Secrets and applied by a second admin.",
+      "provider": "Gateway",
+      "mode": "Mode",
+      "stateLabel": "State",
+      "updatedAt": "Last change",
+      "actions": "Actions",
+      "live": "Live",
+      "test": "Test",
+      "testConnection": "Test connection",
+      "enable": "Enable",
+      "disable": "Disable",
+      "error": "The gateways could not be read.",
+      "testResult": "Test result",
+      "copyWebhook": "Copy webhook URL",
+      "copied": "Copied",
+      "pendingApproval": "Waiting for a second admin to approve request {id}.",
+      "enableConfirmTitle": "Enable this gateway?",
+      "enableLiveDesc": "This is a LIVE gateway: it files a maker-checker request, and a different admin must approve it before it takes money.",
+      "disableConfirmTitle": "Disable this gateway?",
+      "disableDesc": "This stops new payments through this gateway immediately. Customers already in a checkout may fail to pay.",
+      "testConfirmTitle": "Test this gateway?",
+      "testDesc": "This checks the configuration. Nothing is charged and no secret is read.",
+      "confirm": "Confirm",
+      "state": {
+        "ready": "Ready",
+        "notConfigured": "Not configured",
+        "disabled": "Disabled"
+      },
+      "configure": "Configure",
+      "note": {
+        "incomplete": "Not complete yet: enter the keys or the payment address under «Configure».",
+        "ownerDecision": "The local gateway has not been chosen yet (owner decision)."
+      },
+      "config": {
+        "title": "Configure gateway",
+        "description": "Enter the public settings here. Keys are write-only and take effect after another admin approves them.",
+        "paypalManualHint": "Live PayPal works by manual transfer: the customer sends money to your PayPal address and an admin confirms it. No API key is needed.",
+        "publicTitle": "Public settings",
+        "displayName": "Display name",
+        "fields": {
+          "paypal_email": "PayPal address (receiving email)",
+          "bank_details": "Bank account details for transfers",
+          "publishable_key": "Stripe publishable key"
+        },
+        "localPending": "The local Afghan gateway has not been chosen yet, so there is nothing to configure.",
+        "savePublic": "Save public settings",
+        "secretsTitle": "Keys (write-only)",
+        "secretsHint": "A key is sent once and never shown again; only its last four characters are visible. Another admin must approve it.",
+        "secretsError": "Could not read the key list.",
+        "stored": "Stored ••••{last4}",
+        "pending": "Waiting for approval ••••{last4}",
+        "notStored": "Not stored",
+        "stage": "Save key",
+        "replace": "Replace key",
+        "close": "Close",
+        "saved": "Public settings saved.",
+        "secretStaged": "Key saved; it waits for another admin to approve it (request {id}).",
+        "failed": "That did not work. Try again.",
+        "saveConfirmTitle": "Save gateway settings",
+        "saveConfirmDesc": "This gateway's public settings will change.",
+        "stageConfirmTitle": "Save gateway key",
+        "stageConfirmDesc": "The key is stored in the vault and takes effect after another admin approves it.",
+        "errors": {
+          "GATEWAY_CONFIG_KEY_IS_SECRET": "That looks like a secret; enter it under «Keys».",
+          "GATEWAY_CONFIG_VALUE_INVALID": "One of the values is not valid.",
+          "GATEWAY_PAYPAL_EMAIL_INVALID": "The PayPal address is not a valid email."
+        }
+      }
+    },
+    "insights": {
+      "loadError": "This section could not be read.",
+      "notConfigured": "Not set up yet",
+      "truncated": "Only the newest rows are grouped; the total above is exact.",
+      "checkedAt": "Last checked: {time}",
+      "window": "Window",
+      "days": "{days} days",
+      "percent": "{value}%",
+      "sections": {
+        "events": "Events",
+        "failedLogins": "Failed sign-ins",
+        "checks": "Checks",
+        "certificates": "SSL certificates",
+        "probes": "Services",
+        "migrations": "Migrations",
+        "jobs": "Jobs",
+        "email": "Email delivery",
+        "announcements": "Announcements",
+        "maintenance": "Maintenance mode",
+        "gateways": "Gateways",
+        "gatewayAnalytics": "Analytics & events",
+        "oauthApps": "Apps",
+        "apiUsage": "API usage"
+      },
+      "failedLogins": {
+        "title": "Failed sign-ins",
+        "description": "Refused sign-ins in the last {hours} hours, by IP address or by account.",
+        "ip": "IP address",
+        "account": "Account (one-way fingerprint)",
+        "attempts": "Attempts",
+        "accountsTried": "Accounts tried",
+        "addressesUsed": "Addresses used",
+        "lastAttempt": "Last attempt",
+        "flag": "Flag",
+        "flagged": "Suspicious",
+        "groupBy": "Group by",
+        "byIp": "By IP",
+        "byAccount": "By account",
+        "summary": "{total} failed attempts · {ips} suspicious addresses · {accounts} accounts under attack",
+        "scope": "Only the app sign-in is counted. Signing in to this console goes straight through Supabase and is not here. Email addresses are not stored.",
+        "none": "No failed sign-ins recorded",
+        "noneHint": "No sign-in was refused in the last {hours} hours.",
+        "notConfiguredHint": "The security events table does not exist yet."
+      },
+      "matrix": {
+        "title": "Permission matrix",
+        "description": "Every permission against the seven fixed roles. This is the same catalogue the server enforces; roles are defined in code and are not edited here.",
+        "permission": "Permission",
+        "granted": "Granted",
+        "notGranted": "Not granted",
+        "area": "Area",
+        "allAreas": "All areas",
+        "empty": "No permission in this area",
+        "roleSummary": "{role}: {permissions} permissions · {admins} active admins",
+        "roles": {
+          "SUPER": "Super admin",
+          "BILLING": "Billing",
+          "SUPPORT": "Support",
+          "CONTENT": "Content",
+          "MARKET": "Market",
+          "OPS": "Operations",
+          "SECURITY": "Security"
+        },
+        "areas": {
+          "billing": "Billing",
+          "offline": "Offline edition",
+          "customers": "Customers",
+          "product": "Product",
+          "operations": "Operations",
+          "content": "Content",
+          "security": "Security",
+          "admin": "General"
+        }
+      },
+      "certificates": {
+        "title": "SSL certificate expiry",
+        "description": "The app’s own domains (and any listed in TLS_MONITORED_HOSTS) are checked once an hour.",
+        "recheck": "Check again",
+        "host": "Domain",
+        "state": "State",
+        "daysLeft": "Days left",
+        "validTo": "Valid until",
+        "issuer": "Issuer",
+        "notConfiguredHint": "No https domain is configured for checking.",
+        "states": {
+          "ok": "Healthy",
+          "warning": "Under 30 days",
+          "critical": "Under 7 days",
+          "expired": "Expired",
+          "unreachable": "Unreachable"
+        }
+      },
+      "maintenance": {
+        "title": "Maintenance mode",
+        "description": "While on, every customer write is refused as “service read-only”; reads, sign-in and this console keep working.",
+        "on": "On — writes are paused",
+        "off": "Off",
+        "changedAt": "Last changed: {time}",
+        "reasonShown": "Reason: {reason}",
+        "scope": "Every server follows a change within ten seconds. Each change is written to the security events.",
+        "unreadable": "The state could not be read from the database; the last known value is shown.",
+        "turnOn": "Turn maintenance on",
+        "turnOff": "Turn maintenance off",
+        "confirmOnTitle": "Pause writes for every customer?",
+        "confirmOnDesc": "Until you turn it off, no customer can create or edit anything.",
+        "confirmOffTitle": "Reopen writes?",
+        "confirmOffDesc": "Customers will be able to create and edit again.",
+        "reason": "Reason (for the record)"
+      },
+      "migrations": {
+        "title": "Migration status",
+        "description": "Read-only. Migrations are run by a person in the SQL editor. “Applied” means the object the file creates exists — the proof is running its VERIFY file.",
+        "file": "Migration file",
+        "state": "State",
+        "probe": "Checked object",
+        "verify": "Verify with",
+        "empty": "No pending migration",
+        "states": {
+          "applied": "Applied",
+          "not_applied": "Not applied",
+          "unknown": "Unknown"
+        }
+      },
+      "email": {
+        "title": "Email delivery",
+        "description": "From the outgoing email queue. Counts are exact; the list is the last fifty failures.",
+        "to": "To",
+        "subject": "Subject",
+        "attempts": "Attempts",
+        "lastError": "Last error",
+        "createdAt": "Queued at",
+        "sent24h": "Sent in 24 h",
+        "oldestPending": "Oldest waiting email: {time}",
+        "failuresTitle": "Failed emails",
+        "noFailures": "No failed email",
+        "notConfiguredHint": "The outgoing email queue does not exist yet.",
+        "status": {
+          "pending": "Queued",
+          "sending": "Sending",
+          "sent": "Sent",
+          "failed": "Failed"
+        }
+      },
+      "gateways": {
+        "title": "Gateway analytics and webhook events",
+        "description": "From the events the gateway sent and the server processed.",
+        "stripeRate": "Stripe success rate, {days} days",
+        "succeeded": "Successful payments",
+        "failed": "Failed payments",
+        "noEvents": "No payment outcome arrived from the gateway in this window; there is no rate.",
+        "scope": "The rate is Stripe’s only. Manual PayPal and bank transfer are confirmed by an admin and have no outcome events. Event replay is not built.",
+        "logTitle": "Processed events",
+        "eventType": "Event",
+        "eventId": "Event id",
+        "processedAt": "Processed at",
+        "noLog": "No event processed",
+        "noLogHint": "When the gateway sends an event with a valid signature, it appears here.",
+        "notConfiguredHint": "The webhook events table does not exist yet."
+      },
+      "usage": {
+        "title": "Usage",
+        "notConfigured": "Not set up",
+        "notMeasured": "Not measured",
+        "metrics": {
+          "members": "Members",
+          "activeDevices": "Active devices",
+          "invoices": "Invoices",
+          "aiQueries": "AI questions, {days} days",
+          "apiRequests": "API requests, {days} days",
+          "activeApiKeys": "Active API keys",
+          "storageBytes": "Storage"
+        }
+      },
+      "activity": {
+        "open": "Activity",
+        "title": "Activity of {user}",
+        "caption": "Activity timeline",
+        "when": "When",
+        "action": "Action",
+        "workspace": "Business",
+        "ip": "IP",
+        "newer": "Newer",
+        "older": "Older",
+        "empty": "No activity recorded",
+        "emptyHint": "This user has not done anything that the audit log records yet."
+      },
+      "funnel": {
+        "title": "Signup funnel",
+        "description": "Of the people who signed up in this window, how many created a business and how many paid.",
+        "share": "{ofFirst} of signups · {ofPrevious} of the step before",
+        "truncated": "Only the newest {shown} of {total} signups were checked.",
+        "scope": "Sandbox businesses are not counted. “Paid” means a payment row in the billing ledger.",
+        "steps": {
+          "signed_up": "Signed up",
+          "created_business": "Created a business",
+          "paid": "Paid"
+        }
+      },
+      "forecast": {
+        "title": "Revenue and forecast",
+        "description": "Net receipts per month (payments minus refunds) from the platform billing ledger.",
+        "history": "Last six months",
+        "next": "Next three months",
+        "insufficient": "Only {months} complete months of data; a forecast needs at least three.",
+        "method": "Mean of the last three complete months. The current month is left out because it is not over.",
+        "noHistory": "No payment in the ledger yet",
+        "noHistoryHint": "History and forecast appear with the first recorded payment.",
+        "notConfiguredHint": "The platform billing ledger does not exist yet."
+      },
+      "api": {
+        "title": "API usage",
+        "description": "Public API requests, by key or by route.",
+        "key": "Key",
+        "route": "Route",
+        "requests": "Requests",
+        "clientErrors": "4xx errors",
+        "serverErrors": "5xx errors",
+        "p95": "p95",
+        "ms": "{value} ms",
+        "workspace": "Business",
+        "groupBy": "Group by",
+        "byKey": "By key",
+        "byRoute": "By route",
+        "summary": "{total} requests in {days} days",
+        "none": "No request yet",
+        "noneHint": "No API key was used in this window.",
+        "notConfiguredHint": "The API request log does not exist yet."
+      }
     }
   },
   "till": {
@@ -11344,7 +11970,9 @@
       "deadStock": "Dead stock",
       "shelfMap": "Shelf map",
       "transfers": "Transfer requests",
-      "holds": "Holds"
+      "holds": "Holds",
+      "rfqs": "Quotation requests",
+      "consignments": "Consignment"
     }
   },
   "accountingHub": {
@@ -11370,7 +11998,8 @@
       "followUp": "Follow Up",
       "campaigns": "Campaigns",
       "stale": "Stale opportunities",
-      "contracts": "Contracts & Leases"
+      "contracts": "Contracts & Leases",
+      "rfm": "Customer segments"
     },
     "sessionSectionsLabel": "Session sections",
     "sessionSections": {
@@ -11636,7 +12265,10 @@
       "employees": "Employees",
       "branches": "Branches",
       "attendance": "Attendance",
-      "timesheets": "Timesheets"
+      "timesheets": "Timesheets",
+      "expenses": "Expense claims",
+      "orgChart": "Org chart",
+      "sellers": "Sales per person"
     }
   },
   "approvalsHub": {
@@ -11653,7 +12285,8 @@
     "tabs": {
       "overview": "Status",
       "details": "Details"
-    }
+    },
+    "snapshots": "Record snapshots"
   },
   "billingHub": {
     "sectionsLabel": "Section",
@@ -13445,6 +14078,440 @@
     },
     "onboarding": {
       "title": "Suggested modules for your business"
+    }
+  },
+  "cheques": {
+    "intro": "A cheque is a promise, not cash. Its status moves the money: a bounced cheque reverses the payment and the customer owes again.",
+    "moved": "Cheque status saved.",
+    "saved": "Cheque saved.",
+    "loading": "Loading…",
+    "loadFailed": "Could not read the cheques.",
+    "retry": "Try again",
+    "emptyTitle": "No cheques yet",
+    "emptyDescription": "Record a received or issued cheque with the form above.",
+    "columns": {
+      "number": "Number",
+      "direction": "Type",
+      "bank": "Bank",
+      "due": "Due",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Action"
+    },
+    "direction": {
+      "in": "Received",
+      "out": "Issued"
+    },
+    "status": {
+      "received": "Received",
+      "issued": "Issued",
+      "deposited": "Deposited",
+      "endorsed": "Endorsed",
+      "cleared": "Cleared",
+      "bounced": "Bounced",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "received": "Receive",
+      "issued": "Issue",
+      "deposited": "Deposit",
+      "endorsed": "Endorse to supplier",
+      "cleared": "Mark cleared",
+      "bounced": "Mark bounced",
+      "cancelled": "Cancel"
+    },
+    "form": {
+      "direction": "Cheque type",
+      "number": "Cheque number",
+      "bank": "Bank",
+      "due": "Due date",
+      "amount": "Amount",
+      "currency": "Currency",
+      "save": "Save cheque"
+    },
+    "endorse": {
+      "to": "Endorse to",
+      "confirm": "Confirm endorsement",
+      "cancel": "Cancel"
+    },
+    "filter": {
+      "all": "All statuses"
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "formIncomplete": "Fill in the cheque number, amount and currency.",
+      "CHEQUE_ILLEGAL_TRANSITION": "This status change is not allowed for this cheque.",
+      "CHEQUE_ENDORSED_CANNOT_DEPOSIT": "An endorsed cheque cannot be deposited.",
+      "CHEQUE_DIRECTION_INVALID_FOR_TRANSITION": "Only a received cheque can do this.",
+      "ENDORSED_SUPPLIER_REQUIRED": "Choose who the cheque is endorsed to.",
+      "CHEQUE_ALREADY_ENDORSED": "This cheque is already endorsed.",
+      "CHEQUE_CHANGED": "Someone else just changed this cheque. Refresh the list."
+    }
+  },
+  "expenseClaims": {
+    "intro": "An employee records what they paid for out of their own pocket; a manager approves it, and the reimbursement leaves as a real payment.",
+    "approvalNote": "Approval records the decision only. The expense is not booked to the ledger yet — that needs an expense account to be chosen in the chart of accounts.",
+    "unknownEmployee": "Unknown employee",
+    "mixedCurrency": "Several currencies — no total",
+    "loading": "Loading…",
+    "loadFailed": "Could not read the expense claims.",
+    "retry": "Try again",
+    "emptyTitle": "No expense claims yet",
+    "emptyDescription": "Record the first expense to start.",
+    "columns": {
+      "title": "Title",
+      "employee": "Employee",
+      "created": "Recorded",
+      "total": "Total",
+      "status": "Status",
+      "actions": "Action"
+    },
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "reimbursed": "Reimbursed"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "reimburse": "Reimburse"
+    },
+    "form": {
+      "employee": "Employee",
+      "title": "Title",
+      "category": "Expense type",
+      "amount": "Amount",
+      "currency": "Currency",
+      "addLine": "Add line",
+      "lines": "Lines",
+      "noLines": "No line added yet",
+      "removeLine": "Remove",
+      "submit": "Submit for approval",
+      "saveDraft": "Save draft"
+    },
+    "categories": {
+      "travel": "Travel",
+      "meals": "Meals",
+      "transport": "Transport",
+      "supplies": "Supplies",
+      "other": "Other"
+    },
+    "reject": {
+      "reason": "Reason for rejection",
+      "confirm": "Record rejection",
+      "cancel": "Cancel"
+    },
+    "filter": {
+      "all": "All statuses"
+    },
+    "messages": {
+      "saved": "Saved.",
+      "approved": "Approved.",
+      "rejected": "Rejected.",
+      "reimbursed": "Reimbursement recorded."
+    },
+    "errors": {
+      "general": "That did not work. Try again.",
+      "formIncomplete": "Fill in the employee, the title, and at least one line with an amount and currency.",
+      "EXPENSE_CLAIM_CANNOT_APPROVE": "This claim cannot be approved in its current status.",
+      "EXPENSE_CLAIM_CANNOT_REJECT": "This claim cannot be rejected in its current status.",
+      "EXPENSE_CLAIM_ALREADY_REIMBURSED_OR_UNAPPROVED": "This claim is already reimbursed, or is not approved yet.",
+      "EXPENSE_CLAIM_HAS_NO_LINES": "This claim has no line, so there is nothing to reimburse.",
+      "EXPENSE_CLAIM_MIXED_CURRENCY": "The lines of this claim are not in one currency, so it has no total.",
+      "EXPENSE_CLAIM_CURRENCY_MISMATCH": "The reimbursement currency differs from the currency of the lines."
+    }
+  },
+  "erpCore": {
+    "rfq": {
+      "intro": "Ask several suppliers for a price and choose one. Choosing records no purchase; record the purchase invoice afterwards.",
+      "viewLabel": "Section",
+      "views": {
+        "requests": "Requests",
+        "contractPrices": "Contract prices"
+      },
+      "columns": {
+        "title": "Title",
+        "status": "Status",
+        "quotations": "Quotations",
+        "created": "Date",
+        "actions": "Action",
+        "supplier": "Supplier",
+        "total": "Total",
+        "validUntil": "Valid until",
+        "leadTime": "Lead time (days)",
+        "product": "Product",
+        "agreedPrice": "Agreed price",
+        "period": "Valid"
+      },
+      "rfqStatus": {
+        "open": "Open",
+        "awarded": "Awarded",
+        "cancelled": "Cancelled"
+      },
+      "quotationStatus": {
+        "submitted": "Submitted",
+        "chosen": "Chosen",
+        "rejected": "Rejected",
+        "expired": "Expired"
+      },
+      "open": "Open",
+      "close": "Close",
+      "choose": "Choose this quotation",
+      "chosen": "Quotation chosen. Now record the purchase invoice.",
+      "chooseHint": "Choosing one quotation rejects the others and closes the request. The cheapest in each currency is marked; amounts in two currencies are not compared.",
+      "lowest": "Lowest",
+      "created": "Request created.",
+      "quotationSaved": "Quotation saved.",
+      "priceSaved": "Contract price saved.",
+      "noQuotations": "No quotations yet",
+      "noPrices": "No contract prices yet",
+      "noPricesDescription": "Record each product's agreed price against the supplier's contract.",
+      "contractHint": "A price is recorded against a contract; the supplier and currency come from that contract.",
+      "emptyTitle": "No requests yet",
+      "emptyDescription": "For your next purchase, create a request and record the suppliers’ quotations.",
+      "form": {
+        "title": "Request title",
+        "create": "Create request",
+        "supplier": "Supplier",
+        "currency": "Currency",
+        "validUntil": "Valid until",
+        "leadTime": "Lead time (days)",
+        "product": "Product",
+        "quantity": "Quantity",
+        "unitPrice": "Unit price",
+        "addLine": "Add line",
+        "removeLine": "Remove line",
+        "saveQuotation": "Save quotation",
+        "contract": "Contract",
+        "agreedPrice": "Agreed price",
+        "validFrom": "From",
+        "validTo": "To",
+        "savePrice": "Save price"
+      },
+      "errors": {
+        "general": "That did not work. Try again.",
+        "titleRequired": "Write a title for the request.",
+        "quotationIncomplete": "Fill in the supplier, currency, and each line’s product, quantity and price.",
+        "priceIncomplete": "Fill in the contract, product and price.",
+        "RFQ_NOT_OPEN": "This request is no longer open.",
+        "QUOTATION_NOT_OPEN": "This quotation can no longer be chosen.",
+        "QUOTATION_EXPIRED": "This quotation has expired.",
+        "RFQ_SUPPLIER_NOT_FOUND": "Supplier not found.",
+        "RFQ_PRODUCT_NOT_FOUND": "One of the products was not found.",
+        "RFQ_CHOOSE_NOT_INSTALLED": "This feature is not enabled on the server yet.",
+        "CONTRACT_NOT_FOUND": "Contract not found.",
+        "CONTRACT_SUPPLIER_MISMATCH": "This contract is not with this supplier.",
+        "CONTRACT_PRICE_CURRENCY_MISMATCH": "The price's currency is not the contract's currency.",
+        "CONTRACT_PRICE_DATES_REVERSED": "The end date cannot be before the start date."
+      },
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again"
+    },
+    "consignment": {
+      "intro": "Record consignment goods: goods you hold for a supplier, or goods you left with someone else. This record does not change stock or the books; it is a register.",
+      "saved": "Consignment recorded.",
+      "direction": {
+        "in": "Held by us",
+        "out": "Ours, held by others"
+      },
+      "status": {
+        "open": "Open",
+        "settled": "Settled",
+        "returned": "Returned"
+      },
+      "columns": {
+        "product": "Product",
+        "direction": "Type",
+        "party": "Party",
+        "warehouse": "Warehouse",
+        "quantity": "Quantity",
+        "price": "Agreed price",
+        "status": "Status",
+        "created": "Date"
+      },
+      "form": {
+        "direction": "Type",
+        "party": "Party",
+        "warehouse": "Warehouse",
+        "product": "Product",
+        "quantity": "Quantity",
+        "price": "Agreed unit price",
+        "currency": "Currency",
+        "save": "Record consignment"
+      },
+      "emptyTitle": "No consignments yet",
+      "emptyDescription": "Record consignment goods with the form above.",
+      "errors": {
+        "general": "That did not work. Try again.",
+        "formIncomplete": "Fill in the party, warehouse, product, quantity, price and currency.",
+        "CONSIGNMENT_PARTY_NOT_FOUND": "Party not found.",
+        "CONSIGNMENT_WAREHOUSE_NOT_FOUND": "Warehouse not found.",
+        "CONSIGNMENT_PRODUCT_NOT_FOUND": "Product not found."
+      },
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again"
+    },
+    "orgChart": {
+      "intro": "Who reports to whom. Pick each person's manager in the «Reports to» column; each person's file holds their documents and appraisals.",
+      "noManager": "No one (top level)",
+      "saved": "Saved.",
+      "openFile": "File",
+      "fileTitle": "File",
+      "close": "Close",
+      "columns": {
+        "name": "Name",
+        "position": "Position",
+        "reportsTo": "Reports to",
+        "actions": "File",
+        "document": "Document",
+        "kind": "Type",
+        "created": "Date",
+        "period": "Period",
+        "criteria": "Appraisal",
+        "notes": "Notes"
+      },
+      "documents": "Documents",
+      "appraisals": "Appraisals",
+      "appraisalHint": "A recorded appraisal is not edited; to correct one, record a new appraisal.",
+      "documentSaved": "Document saved.",
+      "appraisalSaved": "Appraisal saved.",
+      "noDocuments": "No documents yet",
+      "noAppraisals": "No appraisals yet",
+      "emptyTitle": "No employees to show",
+      "emptyDescription": "This business's employees, or the people who report to you, appear here.",
+      "form": {
+        "documentTitle": "Document title",
+        "documentKind": "Document type",
+        "documentUrl": "File link (https)",
+        "saveDocument": "Save document",
+        "period": "Period (e.g. Spring 2026)",
+        "criterion": "Criterion",
+        "observation": "Observation",
+        "notes": "Notes",
+        "saveAppraisal": "Save appraisal"
+      },
+      "errors": {
+        "general": "That did not work. Try again.",
+        "documentIncomplete": "Enter a title and an https link to the file.",
+        "appraisalIncomplete": "Enter the period and a criterion.",
+        "ORG_CYCLE_DETECTED": "That makes a loop: no one can report to someone below them.",
+        "ORG_MANAGER_NOT_FOUND": "That manager is not among current employees.",
+        "EMPLOYEE_DOCUMENT_URL_HTTPS": "The file link must start with https."
+      },
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again"
+    },
+    "bundle": {
+      "title": "Bundle (kit)",
+      "intro": "If this product is made of other products, list them here. For now, selling a bundle reduces the bundle's own stock, not its components'.",
+      "empty": "This product is not a bundle.",
+      "component": "Component",
+      "quantity": "Quantity per bundle",
+      "remove": "Remove",
+      "add": "Add component",
+      "save": "Save components",
+      "saved": "Bundle components saved.",
+      "cleared": "This product is no longer a bundle.",
+      "errors": {
+        "general": "That did not work. Try again.",
+        "incomplete": "Choose a product and a quantity above zero on every line.",
+        "BUNDLE_COMPONENT_IS_SELF": "A product cannot be a component of itself.",
+        "BUNDLE_COMPONENT_DUPLICATE": "A product appears twice.",
+        "BUNDLE_COMPONENT_NOT_FOUND": "One of the components was not found.",
+        "BUNDLE_COMPONENT_IS_BUNDLE": "A bundle cannot be a component of another bundle.",
+        "BUNDLE_PRODUCT_IS_COMPONENT": "This product is a component of another bundle, so it cannot be a bundle itself.",
+        "BUNDLE_ITEM_INVALID": "Each quantity must be above zero.",
+        "BUNDLE_SAVE_NOT_INSTALLED": "This feature is not enabled on the server yet."
+      },
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again"
+    },
+    "rfm": {
+      "intro": "Customers by how recently, how often and how much they buy. Each currency is counted separately; amounts in two currencies are never added.",
+      "allSegments": "All segments",
+      "segments": {
+        "champions": "Champions",
+        "loyal": "Loyal",
+        "at_risk": "At risk",
+        "dormant": "Dormant",
+        "no_data": "No purchases yet"
+      },
+      "columns": {
+        "customer": "Customer",
+        "segment": "Segment",
+        "recency": "Last purchase (days ago)",
+        "frequency": "Purchases",
+        "monetary": "Total bought"
+      },
+      "emptyTitle": "No customers to show",
+      "emptyDescription": "This list fills as you record sales invoices for customers.",
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again",
+      "errors": {
+        "general": "That did not work. Try again."
+      }
+    },
+    "snapshots": {
+      "intro": "A snapshot keeps how many records the business had at one moment, to compare with today. It is not a backup and nothing is restored from it.",
+      "compare": "Compare with today",
+      "comparisonTitle": "Then and now",
+      "close": "Close",
+      "taken": "Snapshot saved.",
+      "unknown": "Unknown",
+      "unreadable": "This snapshot cannot be compared with the current version.",
+      "noChanges": "Nothing to compare",
+      "columns": {
+        "label": "Name",
+        "takenAt": "Taken",
+        "actions": "Action",
+        "table": "Area",
+        "then": "Then",
+        "now": "Now",
+        "added": "Change"
+      },
+      "form": {
+        "label": "Snapshot name",
+        "take": "Save snapshot"
+      },
+      "emptyTitle": "No snapshots yet",
+      "emptyDescription": "Save one before a big change, such as importing a file.",
+      "errors": {
+        "general": "That did not work. Try again.",
+        "labelRequired": "Write a name for the snapshot."
+      },
+      "loading": "Loading…",
+      "loadFailed": "Could not load.",
+      "retry": "Try again"
+    },
+    "sellers": {
+      "intro": "Sales by each member of this business. An invoice’s seller is whoever issued it, unless another member was chosen on it. Each currency is counted separately.",
+      "introOwn": "Sales where you are the seller. Each currency is counted separately.",
+      "notInstalled": "A separate seller is not enabled on the server yet; for now every invoice counts as its issuer’s.",
+      "period": "Period",
+      "periods": {
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "all": "All time"
+      },
+      "columns": {
+        "seller": "Seller",
+        "invoices": "Invoices",
+        "total": "Total sales"
+      },
+      "formerMember": "Former member",
+      "emptyTitle": "No sales in this period",
+      "emptyDescription": "Sales invoices will show each person’s sales here.",
+      "unattributed": "{count} invoices have neither a seller nor an issuer and were not counted for anyone.",
+      "loading": "Loading…",
+      "loadFailed": "Could not be loaded.",
+      "retry": "Try again"
     }
   }
 }

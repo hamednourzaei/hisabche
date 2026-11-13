@@ -23,6 +23,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '../lib/client'
+import { asList } from '../lib/as-list'
+import { responseBody } from '../lib/response-body'
 import { useAuthReady } from './useAuthReady'
 import { useIntentKey } from '../lib/intent-key'
 import { accountingKeys } from './accounting'
@@ -411,9 +413,13 @@ export function useCheques(status?: string) {
   const authReady = useAuthReady()
   return useQuery({
     queryKey: [...paymentKeys.all, 'cheques', status] as const,
+    // `{ data: rows }` inside the axios response — two layers (lib/response-body).
     queryFn: async () =>
-      unwrap<Record<string, unknown>[]>(
-        await apiClient.get('/payments/cheques', { params: status ? { status } : undefined }),
+      asList<Record<string, unknown>>(
+        responseBody<unknown>(
+          await apiClient.get('/payments/cheques', { params: status ? { status } : undefined }),
+        ),
+        'payments/cheques',
       ),
     enabled: authReady,
   })
@@ -423,7 +429,7 @@ export function useCreateCheque() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: Record<string, unknown>) =>
-      unwrap<Record<string, unknown>>(await apiClient.post('/payments/cheques', input)),
+      responseBody<Record<string, unknown>>(await apiClient.post('/payments/cheques', input)),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: paymentKeys.all }),
   })
 }
@@ -437,7 +443,7 @@ export function useTransitionCheque() {
       endorsed_to_supplier_id?: string
       note?: string
     }) =>
-      unwrap<Record<string, unknown>>(
+      responseBody<Record<string, unknown>>(
         await apiClient.post(`/payments/cheques/${input.id}/transition`, {
           status: input.status,
           endorsed_to_supplier_id: input.endorsed_to_supplier_id,

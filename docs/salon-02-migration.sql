@@ -49,27 +49,6 @@ CREATE INDEX IF NOT EXISTS service_delivery_status_audit_idx
 
 ALTER TABLE service_delivery_status_audit ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS service_delivery_status_audit_tenant ON service_delivery_status_audit;
-CREATE POLICY service_delivery_status_audit_tenant ON service_delivery_status_audit
-  FOR ALL TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = service_delivery_status_audit.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = service_delivery_status_audit.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.has_access = true
-        AND wm.suspended_at IS NULL
-    )
-  );
 
 REVOKE ALL ON public.service_delivery_status_audit
   FROM PUBLIC, anon, authenticated, service_role;
@@ -200,5 +179,33 @@ REVOKE ALL ON FUNCTION public.service_sessions_status_audit() FROM PUBLIC, anon,
 REVOKE ALL ON FUNCTION public.service_sessions_practitioner_guard() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.service_delivery_move_status(uuid, uuid, text, uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.service_delivery_move_status(uuid, uuid, text, uuid) TO service_role;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['service_delivery_status_audit'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.service_delivery_status_audit ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.service_delivery_status_audit FROM PUBLIC, anon, authenticated;
 
 COMMIT;

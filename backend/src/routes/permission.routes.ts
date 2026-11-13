@@ -21,6 +21,7 @@ import { authenticate } from '../middleware/auth.middleware'
 // Platform support only — a workspace manages its people through the matrix
 // routes at the end of this file, which resolve a workspace and a capability.
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -92,7 +93,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/permissions/seed',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         response: { 200: toJsonSchema(z.object({ success: z.boolean() })) },
       },
@@ -137,7 +142,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/roles',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         body: toJsonSchema(createRoleSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -185,7 +194,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/roles/:id',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateRoleSchema),
@@ -214,7 +227,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/roles/:id',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -245,6 +262,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.roles.read'),
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'user-roles' }),
       ],
       schema: {
@@ -268,7 +286,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/users/:userId/roles',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         params: toJsonSchema(z.object({ userId: z.string().uuid() })),
         body: toJsonSchema(assignRoleSchema),
@@ -296,7 +318,11 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/users/:userId/roles/:roleId',
     {
-      preHandler: [authenticate, platformAdminGuard],
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('security.roles.write'),
+      ],
       schema: {
         params: toJsonSchema(z.object({ userId: z.string().uuid(), roleId: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -326,6 +352,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         platformAdminGuard,
+        requireAdminPermission('security.roles.read'),
         requireWorkspaceContext,
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'user-permissions' }),
       ],

@@ -69,6 +69,46 @@ export function buildProviderEndpoint(provider: AiProvider, baseUrl: string | nu
 }
 
 /**
+ * What the provider reported about the size of an exchange.
+ *
+ * ⚠️ NULL MEANS «NOT REPORTED», NEVER ZERO. A gateway that omits `usage` says
+ * nothing about the tokens it spent; recording 0 would put a smaller number on
+ * the bill than the provider will charge, with no warning beside it.
+ */
+export interface AiTokenUsage {
+  promptTokens: number | null
+  completionTokens: number | null
+}
+
+function tokenCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.trunc(value)
+    : null
+}
+
+/**
+ * Read `usage` out of a provider's JSON body.
+ *
+ * Anthropic calls them `input_tokens` / `output_tokens`; OpenAI (and every
+ * OpenAI-compatible gateway) calls them `prompt_tokens` / `completion_tokens`.
+ * Anything else — including a body with no `usage` at all — is null, not zero.
+ */
+export function providerUsage(provider: AiProvider, body: unknown): AiTokenUsage {
+  const usage = (body as { usage?: Record<string, unknown> } | null)?.usage
+  if (!usage || typeof usage !== 'object') {
+    return { promptTokens: null, completionTokens: null }
+  }
+  return {
+    promptTokens: tokenCount(
+      provider === 'anthropic' ? usage['input_tokens'] : usage['prompt_tokens'],
+    ),
+    completionTokens: tokenCount(
+      provider === 'anthropic' ? usage['output_tokens'] : usage['completion_tokens'],
+    ),
+  }
+}
+
+/**
  * One request, one provider, no retry. Retrying is the caller's job because
  * only the caller knows whether a partial result is worth resuming.
  */
@@ -81,6 +121,12 @@ export async function callProvider(
     timeoutMs?: number
     /** One image for the model to look at, base64 without a data: prefix. */
     image?: { mediaType: string; base64: string } | undefined
+    /**
+     * Called once with what the provider reported. The answer is returned
+     * exactly as before, so a caller that does not care about tokens — the
+     * pipeline, the admin's «test» button — changes nothing.
+     */
+    onUsage?: ((usage: AiTokenUsage) => void) | undefined
   },
 ): Promise<string> {
   const maxTokens = input.maxTokens ?? 2048
@@ -122,7 +168,11 @@ export async function callProvider(
 
     if (!response.ok) throw await providerError(config, response)
 
-    const body = (await response.json()) as { content?: { text?: string }[] }
+    const body = (await response.json()) as {
+      content?: { text?: string }[]
+      usage?: Record<string, unknown>
+    }
+    input.onUsage?.(providerUsage('anthropic', body))
     return body.content?.map((part) => part.text ?? '').join('') ?? ''
   }
 
@@ -158,7 +208,11 @@ export async function callProvider(
 
   if (!response.ok) throw await providerError(config, response)
 
-  const body = (await response.json()) as { choices?: { message?: { content?: string } }[] }
+  const body = (await response.json()) as {
+    choices?: { message?: { content?: string } }[]
+    usage?: Record<string, unknown>
+  }
+  input.onUsage?.(providerUsage('openai', body))
   return body.choices?.[0]?.message?.content ?? ''
 }
 

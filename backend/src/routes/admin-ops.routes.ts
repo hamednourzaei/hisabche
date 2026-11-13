@@ -17,6 +17,7 @@ import { requireAdminPermission, requireAdminStepUp } from '../middleware/admin-
 import { AdminOpsService } from '../services/admin/admin-ops.service'
 import { AdminSecurityService } from '../services/admin/admin-security.service'
 import { supabase } from '../db'
+import { isReservedFlagKey } from '../runtime/maintenance-mode'
 
 const upsertFlagBody = z.object({
   key: z.string().min(1),
@@ -98,6 +99,14 @@ export default async function adminOpsRoutes(fastify: FastifyInstance) {
     async (req: FastifyRequest, reply: FastifyReply) => {
       const body = upsertFlagBody.parse(req.body)
       const actorEmail = req.user?.email ?? 'admin'
+      // V63 #68 — the maintenance switch is a reserved row. It needs
+      // `operations.maintenance.write`, not the product flag editor's permission.
+      if (isReservedFlagKey(body.key)) {
+        return reply.code(403).send({
+          error: 'This flag is the maintenance switch — use Operations › announcements',
+          code: 'FLAG_KEY_RESERVED',
+        })
+      }
       return handle(reply, async () => {
         return AdminOpsService.upsertFeatureFlag({
           ...body,

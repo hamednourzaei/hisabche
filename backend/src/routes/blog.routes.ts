@@ -13,7 +13,7 @@
 //              POST /api/blog/posts/:id/comments         comment (rate limit + honeypot)
 //              PUT  /api/blog/posts/:id/reaction         like / dislike / withdraw (upsert)
 //              PUT  /api/blog/posts/:id/rating           1..5 stars (upsert)
-//   ADMIN      /api/admin/blog/…                         authenticate + platformAdminGuard
+//   ADMIN      /api/admin/blog/…                         RBAC + AAL2 (+ step-up on writes)
 //
 // ⚠️ PERSON-SCOPED. `request.user.id` is the only user id used; no body field
 // can name another person.
@@ -36,7 +36,7 @@ import {
 } from '@hisabche/validation'
 
 import { authenticate } from '../middleware/auth.middleware'
-import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { adminRouteByMethod } from '../middleware/admin-rbac.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { BlogError, BlogService } from '../services/blog'
 import { createBrief, getBrief, PLATFORM_SCOPE } from '../services/blog/brief.service'
@@ -224,7 +224,14 @@ export async function blogRoutes(fastify: FastifyInstance) {
   }
 
   const userOf = (request: FastifyRequest) => (request.user as { id: string }).id
-  const admin = { preHandler: [authenticate, platformAdminGuard] }
+  // V63 · S-1 — the CMS/blog admin surface used to carry only the email
+  // allow-list. One shared constant serves reads and mutations, so the guard
+  // picks the permission by method and demands a fresh step-up on writes.
+  const admin = {
+    preHandler: adminRouteByMethod('content.blog.read', 'content.blog.write', {
+      stepUpOnWrite: true,
+    }),
+  }
 
   // ─── public ────────────────────────────────────────────────────────────────
 

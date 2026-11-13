@@ -39,7 +39,8 @@ describe('three tabs, each with one switch', () => {
   it('books, treasury and reports — ten screens under them', () => {
     expect([...ACCOUNTING_HUB_TABS]).toEqual(['books', 'treasury', 'reports'])
     expect([...ACCOUNTING_BOOK_SECTIONS]).toEqual(['accounts', 'journal', 'monthEnd'])
-    expect([...ACCOUNTING_TREASURY_SECTIONS]).toEqual(['bank', 'assets', 'financing'])
+    // 12 Nov 2026 (V61 B.2.5): the cheque register joined Treasury, beside the bank.
+    expect([...ACCOUNTING_TREASURY_SECTIONS]).toEqual(['bank', 'cheques', 'assets', 'financing'])
     expect([...ACCOUNTING_REPORT_SECTIONS]).toEqual([
       'trialBalance',
       'balanceSheet',

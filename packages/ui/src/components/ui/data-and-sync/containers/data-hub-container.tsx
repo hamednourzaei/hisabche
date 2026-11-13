@@ -36,6 +36,9 @@ const ConflictsContainer = lazy(() =>
     default: m.ConflictsContainer,
   })),
 )
+const SnapshotsSection = lazy(() =>
+  import('../../erp-core/snapshots-section').then((m) => ({ default: m.SnapshotsSection })),
+)
 const DataMigrationContainer = lazy(() =>
   import('../../data-migration/containers/data-migration-container').then((m) => ({
     default: m.DataMigrationContainer,
@@ -55,7 +58,11 @@ export function DataHubContainer() {
 
 function DataHub() {
   const t = useTranslations()
-  const blocked = useMyCapabilities().data?.blockedModules ?? []
+  const capabilities = useMyCapabilities().data
+  const blocked = capabilities?.blockedModules ?? []
+  // Snapshots are manager and up on the server; the role here only decides
+  // whether to OFFER the section (the server still checks every request).
+  const mayTakeSnapshots = ['owner', 'admin', 'manager'].includes(capabilities?.role ?? '')
   const syncLocked = isNavLocked(DATA_HUB_SOURCES.sync, blocked)
   return (
     <PageHub
@@ -92,6 +99,15 @@ function DataHub() {
               source: DATA_HUB_SOURCES.migration,
               render: () => <DataMigrationContainer />,
             },
+            ...(mayTakeSnapshots
+              ? [
+                  {
+                    id: 'snapshots',
+                    label: t('dataHub.snapshots'),
+                    render: () => <SnapshotsSection />,
+                  },
+                ]
+              : []),
           ],
         },
       ]}

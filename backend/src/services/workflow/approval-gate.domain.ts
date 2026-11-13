@@ -32,6 +32,28 @@
 // rejection needs no reversal.
 // ============================================
 
+/**
+ * Owner decision (12 Nov 2026, V61 open decision 2): ONE approval engine —
+ * `/approvals` (rules + workflow templates). The V61 policy engine beside it
+ * was retired; its one rule the workflow engine lacked lives here now.
+ *
+ * ⚠️ THE PERSON WHO ISSUED A DOCUMENT DOES NOT APPROVE IT. A manager who
+ * writes an invoice over the threshold and approves it themself has approved
+ * nothing. The OWNER is the exception: the owner is the business's last word,
+ * and in a one-person business refusing them would hold the document for ever.
+ * Rejecting or withdrawing your own document is always allowed.
+ */
+export function refusesSelfApproval(input: {
+  action: string
+  actorId: string
+  actorRole: string
+  issuerId: string | null
+}): boolean {
+  if (input.action !== 'approved') return false
+  if (input.actorRole === 'owner') return false
+  return input.issuerId !== null && input.issuerId === input.actorId
+}
+
 /** The document kinds an approval template can be written against. */
 export type ApprovableEntity = 'invoice' | 'purchase_order' | 'expense'
 

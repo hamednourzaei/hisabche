@@ -26,6 +26,7 @@ import { barcodeTakenMessage } from '../../../../lib/barcode/barcode-errors'
 import { ProductExpiryPanel } from '../product-expiry-panel'
 import { ProductWastePanel } from '../product-waste-panel'
 import { ProductUnitsPanel } from '../product-units-panel'
+import { BundleEditor } from '../../erp-core/bundle-editor'
 import { ProductSerialsPanel } from '../product-serials-panel'
 import { ProductVariantsSection } from '../../warehouse/product-variants-section'
 import { VariantStockPanel } from '../../business-packs/variant-stock-panel'
@@ -347,6 +348,8 @@ ${t('warehouse.deactivateInstead')}`)
               />
             ) : null}
             {isStocked ? <ProductUnitsPanel t={safeT} productId={id} /> : null}
+            {/* V61 B.2.8: what a bundle (kit) is made of. */}
+            {isStocked ? <BundleEditor productId={id} /> : null}
             {profile.capabilities.includes('serialized_items') ? (
               <ProductSerialsPanel
                 t={safeT}

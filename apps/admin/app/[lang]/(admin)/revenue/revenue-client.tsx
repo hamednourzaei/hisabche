@@ -21,6 +21,9 @@ import { PlanLimitsPanel } from '../subscriptions/plan-limits-panel'
 import { SubscriptionsClient } from '../subscriptions/subscriptions-client'
 import { UpgradeRequestsPanel } from '../subscriptions/upgrade-requests-panel'
 import { WalletClient } from '../wallet/wallet-client'
+import { GatewaysPanel } from './gateways/gateways-panel'
+import { GatewayAnalyticsPanel } from './gateways/gateway-analytics-panel'
+import { TabSections } from '@/components/admin-shell/tab-sections'
 import {
   useAdminPlanPrices,
   useAdminBillingLedger,
@@ -35,7 +38,14 @@ import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDate, adminDateTime, adminMoney, UNKNOWN_VALUE } from '@/lib/admin-format'
 
-const REVENUE_TABS = ['plans', 'subscriptions', 'ledger', 'maker_checker', 'wallet'] as const
+const REVENUE_TABS = [
+  'plans',
+  'subscriptions',
+  'ledger',
+  'maker_checker',
+  'wallet',
+  'gateways',
+] as const
 type RevenueTab = (typeof REVENUE_TABS)[number]
 
 export function RevenueClient() {
@@ -52,6 +62,7 @@ export function RevenueClient() {
           { id: 'ledger', label: t('admin.hubs.revenue.ledger') },
           { id: 'maker_checker', label: t('admin.hubs.revenue.makerChecker') },
           { id: 'wallet', label: t('admin.hubs.revenue.wallet') },
+          { id: 'gateways', label: t('admin.hubs.revenue.gateways') },
         ]}
         active={tab}
         onSelect={setTab}
@@ -76,6 +87,24 @@ export function RevenueClient() {
       {tab === 'maker_checker' && <MakerCheckerTabContent />}
 
       {tab === 'wallet' && <WalletClient />}
+
+      {tab === 'gateways' && (
+        <TabSections
+          label={t('admin.hubs.revenue.gateways')}
+          sections={[
+            {
+              id: 'gateways',
+              label: t('admin.insights.sections.gateways'),
+              render: () => <GatewaysPanel />,
+            },
+            {
+              id: 'analytics',
+              label: t('admin.insights.sections.gatewayAnalytics'),
+              render: () => <GatewayAnalyticsPanel />,
+            },
+          ]}
+        />
+      )}
     </div>
   )
 }

@@ -48,23 +48,41 @@ ALTER TABLE overhead_policies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE overhead_allocation_runs ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON overhead_policies, public.overhead_allocation_runs FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON overhead_policies, public.overhead_allocation_runs TO authenticated;
+GRANT SELECT ON overhead_policies, public.overhead_allocation_runs TO service_role;
 GRANT ALL ON overhead_policies, public.overhead_allocation_runs TO service_role;
 
-DROP POLICY IF EXISTS overhead_policies_members_read ON overhead_policies;
-CREATE POLICY overhead_policies_members_read ON overhead_policies
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.workspace_members m
-                  WHERE m.workspace_id = overhead_policies.workspace_id AND m.user_id = auth.uid()
-                    AND m.has_access = true AND m.suspended_at IS NULL));
 
-DROP POLICY IF EXISTS overhead_runs_members_read ON overhead_allocation_runs;
-CREATE POLICY overhead_runs_members_read ON overhead_allocation_runs
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.workspace_members m
-                  WHERE m.workspace_id = overhead_allocation_runs.workspace_id AND m.user_id = auth.uid()
-                    AND m.has_access = true AND m.suspended_at IS NULL));
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.overhead_allocation_runs;
 -- DROP TABLE IF EXISTS public.overhead_policies;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['overhead_policies', 'overhead_allocation_runs'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.overhead_policies ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.overhead_policies FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.overhead_allocation_runs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.overhead_allocation_runs FROM PUBLIC, anon, authenticated;

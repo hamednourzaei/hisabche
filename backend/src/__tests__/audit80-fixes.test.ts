@@ -19,7 +19,10 @@ describe('AUDIT-80 #14 — /api/debug is for platform admins only', () => {
 
   it('declares the admin guard', () => {
     expect(source).toContain('platformAdminGuard')
-    expect(source).toContain('const adminOnly = { preHandler: [authenticate, platformAdminGuard] }')
+    // V63 · S-1 — the allow-list alone was not authorization; the guard now
+    // carries a permission too.
+    expect(source).toContain("requireAdminPermission('operations.health.read')")
+    expect(source).toMatch(/const adminOnly = \{\s*preHandler: \[authenticate, platformAdminGuard,/)
   })
 
   it('every debug route carries it', () => {

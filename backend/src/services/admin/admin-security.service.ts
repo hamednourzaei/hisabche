@@ -54,6 +54,9 @@ export interface AdminSessionView {
 export interface AdminTokenClaims {
   aal?: string | undefined
   amr?: Array<{ method?: string | undefined; timestamp?: number | undefined } | string> | undefined
+  /** Issued-at, seconds since epoch. Used for the absolute session timeout. */
+  iat?: number | undefined
+  exp?: number | undefined
 }
 
 /**

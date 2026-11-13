@@ -122,15 +122,19 @@ describe('the user-scoped client cannot silently degrade', () => {
     // A fallback here would turn RLS off for every AI read while everything
     // continued to work — the worst possible failure mode, because it is
     // invisible.
+    // Slice to the END of this function: the file has grown (GoTrue helpers
+    // below it) and a slice-to-EOF would report their imports as its body.
     const start = db.indexOf('export function createUserScopedClient')
-    const body = db.slice(start)
+    const end = db.indexOf('\nexport ', start + 1)
+    const body = db.slice(start, end === -1 ? undefined : end)
     expect(body).toContain('throw new Error')
     expect(body).not.toContain('SUPABASE_SERVICE_KEY')
   })
 
   it('sends the caller token as the Authorization header', () => {
     const start = db.indexOf('export function createUserScopedClient')
-    const body = db.slice(start)
+    const end = db.indexOf('\nexport ', start + 1)
+    const body = db.slice(start, end === -1 ? undefined : end)
     expect(body).toMatch(/Authorization.*Bearer \$\{accessToken\}/)
   })
 })
@@ -192,7 +196,7 @@ describe('⚠️ the provider key never leaves the server', () => {
     // The detail reaches a client only through the admin-guarded test route.
     const routes = code(join(__dirname, '..', 'routes', 'ai-chat.routes.ts'))
     expect(routes).not.toContain('providerDetail')
-    expect(routes).toMatch(/'\/api\/ai\/config\/test',\s*\{ preHandler: adminOnly/)
+    expect(routes).toMatch(/'\/api\/ai\/config\/test',\s*\{ preHandler: adminWrite/)
   })
 
   it('the caller access token is never sent to the provider', () => {
@@ -206,15 +210,17 @@ describe('⚠️ the provider key never leaves the server', () => {
 describe('the admin surface is platform-level, not workspace-level', () => {
   const routes = code(join(SRC, 'routes', 'ai-chat.routes.ts'))
 
-  it('config routes are behind the platform admin guard', () => {
+  it('config routes are behind the platform admin chain', () => {
     // A workspace `owner` must not reach these: the key bills the product
-    // owner, not the shop.
-    expect(routes).toContain('platformAdminGuard')
+    // owner, not the shop. V63 · S-1 replaced the bare allow-list with
+    // `adminRoute`, whose chain is authenticate → platformAdminGuard → RBAC
+    // (→ step-up). The chain itself is guarded by admin-route-chain.test.ts.
+    const adminAt = routes.indexOf("const adminRead = adminRoute('product.ai.read')")
+    expect(adminAt).toBeGreaterThan(-1)
 
     const configAt = routes.indexOf("'/api/ai/config'")
-    const adminAt = routes.indexOf('const adminOnly')
-    expect(adminAt).toBeGreaterThan(-1)
     expect(configAt).toBeGreaterThan(adminAt)
+    expect(routes).toContain("adminRoute('product.ai.write', { stepUp: true })")
   })
 
   it('quota is checked BEFORE the provider is called', () => {

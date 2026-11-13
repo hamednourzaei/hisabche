@@ -150,7 +150,9 @@ describe('a signed-in user is not a platform administrator', () => {
     (file) => {
       const source = code(read('backend', 'src', 'routes', file))
       expect(source).not.toContain('preHandler: [authenticate],')
-      expect(source).toContain('preHandler: [authenticate, platformAdminGuard],')
+      // V63 · S-1 — the platform guard is still there, now followed by an
+      // explicit admin permission, so a session alone never reaches a write.
+      expect(source).toContain('platformAdminGuard,')
     },
   )
 

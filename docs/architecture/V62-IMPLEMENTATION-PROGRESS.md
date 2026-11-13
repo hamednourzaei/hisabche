@@ -37,4 +37,59 @@
 - `packs.delivery` defaults to `'off'`; `packs.installer` defaults to `'full'`; Wi-Fi-only download defaults to `true`.
 - CDN bucket/domain, Ed25519 signing key pair, Play/Apple WebView JS policy confirmation, `sync-scope-01` + staging `EXPLAIN`, and mobile real-device spike are owner actions.
 
-NEXT: §9 Final Verification (sequential builds -> `scripts/packs/report.mjs` -> `bundle-budgets.json` -> `tsc` -> `vitest` -> `jest` -> `eslint` -> Persian final report).
+## §9 Final Verification — DONE (12 Nov 2026)
+
+Shell renderer Vite build (one config serves both hosts: desktop `electron.vite.config.ts` and mobile
+`vite.shell.config.mjs` both call `shellRendererConfig`, singleFile:false) into a temp outDir, then
+`node scripts/packs/report.mjs`:
+
+| Measure                   | Before (E1/E3)                                      | After                                                                                                                             |
+| ------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile entry              | 7,313,539 B single `index.html`, everything inlined | 387,920 B raw / 117,817 B gzip core entry                                                                                         |
+| Desktop entry chunk       | 9,352,893 B (75% of all JS)                         | 387,920 B raw / 117,817 B gzip                                                                                                    |
+| Total JS                  | 12.4 MB (desktop, 8 Nov build)                      | 7,273,438 B raw / 1,999,138 B gzip, 40 files                                                                                      |
+| Locale payload per device | 2.26 MB raw (fa+af+en, all bundled)                 | one locale chunk: fa 733 KB · af 722 KB · en 509 KB raw (194/194/169 KB gzip)                                                     |
+| Packs (gzip)              | —                                                   | approvals 10.8 KB · manufacturing 46.3 KB · marketplace 10.7 KB · workforce 73.9 KB · operations 452.4 KB · intelligence 526.1 KB |
+
+Every pack is within `bundle-budgets.json`.
+
+### Fixed during §9 (root causes, not loosened)
+
+- `scripts/packs/report.mjs` parsed the pack id from the FILE NAME. A content hash may contain '-'
+  (`pack-marketplace-v-Nxw5pK.js`), which reported a pack `marketplace-v` whose budget was never checked.
+  Now it reads the chunk `name` from Vite's manifest.
+- `bundle-budgets.test.ts`:
+  - a budgeted pack missing from the report counted as 0 bytes (`?? 0`); it now fails;
+  - with no report the test returned GREEN; it is now SKIPPED (`it.skip`, reported as skipped);
+  - `REQUIRE_PACK_REPORT=1` (for CI after the build) makes a missing report a failure;
+  - no `expect(x, msg)` second argument, because desktop runs this file under Jest.
+  - Proven: no report → "1 skipped"; REQUIRE_PACK_REPORT=1 without a report → fails.
+- `packages/api/src/hooks/guide-progress.ts`: an implicit `any` under apps/mobile's tsconfig (pre-V62) is typed.
+- `packages/app-shell/src/features/settings/settings-page.tsx`: dead imports `LogOut`, `Button` (pre-V62) removed.
+- The generated `capability-matrix.csv` and the industry coverage table were regenerated (stale only because
+  the uncommitted V63 work moved lines in `oauth.routes.ts`).
+
+### Results (sequential, TMP=.esbuild-tmp)
+
+| Package                                     | tsc                                                                                                      | tests                                                                                                                                                                              |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| validation                                  | 0                                                                                                        | 1004 total; the 3 earlier reds are fixed (2 generated docs regenerated; architecture-boundaries passes alone, load-only)                                                           |
+| api                                         | 0                                                                                                        | 293/293                                                                                                                                                                            |
+| store, i18n, app-bridge, local-engine, sync | 0                                                                                                        | i18n 29/29 · app-bridge 35/35 · local-engine 565/565 · sync 40/40                                                                                                                  |
+| ui                                          | 0                                                                                                        | 2699 passed, 2 skipped                                                                                                                                                             |
+| app-shell                                   | 0                                                                                                        | runs inside desktop Jest                                                                                                                                                           |
+| apps/desktop                                | 0                                                                                                        | Jest 335/335 (incl. bundle-budgets)                                                                                                                                                |
+| apps/mobile                                 | 0                                                                                                        | Jest 220/220                                                                                                                                                                       |
+| apps/web, apps/admin                        | 0                                                                                                        | —                                                                                                                                                                                  |
+| backend                                     | 3 errors, all in **uncommitted V63 files** (`admin-rate-limit.middleware.ts`, `runtime/test-runtime.ts`) | 27 failures, all in **V63 work in progress** (admin route chain, rate limit, AI, blog/cms/oauth/market guards, monitoring, job guard). The V62 sync tests (`sync-scope-http`) pass |
+| admin (vitest)                              | —                                                                                                        | 3 failures in `admin-redesign.guard`, from V63 WIP screens                                                                                                                         |
+| ESLint (41 V62 files + edits)               | 0 errors, 0 warnings                                                                                     |                                                                                                                                                                                    |
+
+- pg tests (`sync-scope-01.pg.test.ts`): BLOCKED; `initdb.exe` is missing on this machine.
+- No electron-builder, Gradle, EAS or next build was run.
+
+### Status
+
+- V62 code: IMPLEMENTED_NOT_LIVE_VERIFIED.
+- sync-scope-01: Post-migration verification query generated — PENDING HUMAN CONFIRMATION.
+- Pack delivery over the network: flag OFF (owner actions pending).

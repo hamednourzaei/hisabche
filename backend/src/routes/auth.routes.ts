@@ -15,12 +15,15 @@ import {
   updateProfileSchema,
 } from '@hisabche/validation'
 import { createAuthClient, supabase } from '../db'
+import { sendFailure } from '../errors/http-failure'
 import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { writeProfile } from '../services/profile-write'
 import { WorkspaceService } from '../services/workspace.service'
+import { AdminSecurityService } from '../services/admin/admin-security.service'
+import { LOGIN_FAILED_EVENT, accountFingerprint } from '../services/admin/admin-insights.domain'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import {
   clearRefreshCookie,
@@ -577,6 +580,15 @@ export async function authRoutes(fastify: FastifyInstance) {
         })
 
         if (error || !data.session) {
+          // V63 #49 — the brute-force view reads these. The address is never
+          // stored: a one-way fingerprint groups attempts against one account.
+          // Never awaited and never allowed to fail the answer.
+          void AdminSecurityService.logSecurityEvent({
+            eventType: LOGIN_FAILED_EVENT,
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent'] ?? null,
+            details: { account: accountFingerprint(body.email), surface: 'app' },
+          }).catch(() => undefined)
           return reply.code(401).send({ error: 'Invalid email or password' })
         }
 
@@ -919,50 +931,118 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // V61 B.2.25 — Workspace-level 2FA enrollment & recovery code step-up
-  fastify.post(
-    '/api/auth/workspace-2fa/enroll',
-    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+  // ─── Two-step verification (V61 B.2.25) ──────────────────────────────────
+  // The authenticator factor is Supabase Auth's (see workspace-2fa.service).
+  // Every route acts as the signed-in person with their OWN token; nothing
+  // here can enrol, verify or recover for someone else.
+  const bearer = (request: FastifyRequest): string =>
+    String(request.headers.authorization ?? '').replace(/^Bearers+/i, '')
+  const mfaRateLimit = {
+    rateLimit: {
+      max: 10,
+      timeWindow: '1 minute',
+      keyGenerator: (request: FastifyRequest) =>
+        `mfa:${(request as FastifyRequest & { userId?: string }).userId ?? request.ip}`,
+    },
+  }
+
+  fastify.get(
+    '/api/auth/mfa/status',
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const body = z
-          .object({
-            totpSecretRef: z.string().min(1),
-            recoveryCodes: z.array(z.string().min(6)).min(1),
-          })
-          .parse(request.body)
         const { workspace2faService } =
           await import('../services/authorization/workspace-2fa.service')
         return reply.send({
-          data: await workspace2faService.enroll(
-            request.tenancy,
-            body.totpSecretRef,
-            body.recoveryCodes,
-          ),
+          data: await workspace2faService.status(request.tenancy, bearer(request)),
         })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to enroll workspace 2FA' })
+        return sendFailure(reply, fastify.log, err, 'Failed to read two-step verification')
       }
     },
   )
 
   fastify.post(
-    '/api/auth/workspace-2fa/verify-recovery',
+    '/api/auth/mfa/enroll',
+    { preHandler: [authenticate], config: mfaRateLimit },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { workspace2faService } =
+          await import('../services/authorization/workspace-2fa.service')
+        return reply.send({ data: await workspace2faService.startEnrollment(bearer(request)) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to start two-step verification')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/auth/mfa/verify',
+    { preHandler: [authenticate, requireWorkspaceContext], config: mfaRateLimit },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({ factorId: z.string().min(1).max(100), code: z.string().regex(/^d{6}$/) })
+          .parse(request.body)
+        const { workspace2faService } =
+          await import('../services/authorization/workspace-2fa.service')
+        const result = await workspace2faService.verify(
+          request.tenancy,
+          bearer(request),
+          body.factorId,
+          body.code,
+        )
+        if (!result.ok) return reply.code(400).send({ error: result.code, code: result.code })
+        // The AAL2 session in the same shape as login/refresh (cookie on the web).
+        return reply.send({
+          ...sessionBody(request, reply, result.session),
+          recoveryCodes: result.recoveryCodes,
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to verify the code')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/auth/mfa/recover',
+    { preHandler: [authenticate, requireWorkspaceContext], config: mfaRateLimit },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { code } = z.object({ code: z.string().min(6).max(32) }).parse(request.body)
+        const { workspace2faService } =
+          await import('../services/authorization/workspace-2fa.service')
+        const result = await workspace2faService.recover(request.tenancy, code)
+        if (!result.ok) {
+          return reply
+            .code(result.code === 'TWO_FACTOR_LOCKED' ? 429 : 400)
+            .send({ error: result.code, code: result.code })
+        }
+        return reply.send({ data: { recovered: true } })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to use the recovery code')
+      }
+    },
+  )
+
+  // Protected by its own policy: when `workspace.manage` is behind a step-up,
+  // changing the policy needs a fresh code too.
+  fastify.put(
+    '/api/auth/mfa/policy',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { code } = z.object({ code: z.string().min(4) }).parse(request.body)
+        const body = z
+          .object({
+            capabilities: z.array(z.string().min(1).max(60)).max(20),
+            requireOwner: z.boolean(),
+          })
+          .parse(request.body)
         const { workspace2faService } =
           await import('../services/authorization/workspace-2fa.service')
-        const res = await workspace2faService.verifyRecoveryCode(request.tenancy, code)
-        if (!res.ok) {
-          return reply.code(res.status).send({ error: res.code, code: res.code })
-        }
-        return reply.send({ verified: true })
+        return reply.send({ data: await workspace2faService.savePolicy(request.tenancy, body) })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to verify recovery code' })
+        return sendFailure(reply, fastify.log, err, 'Failed to save the two-step policy')
       }
     },
   )

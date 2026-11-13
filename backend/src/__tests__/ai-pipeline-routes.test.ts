@@ -100,6 +100,11 @@ vi.mock('../services/ai/ai-settings.service', () => ({
     async getStatus() {
       return { topupContact: 'support' }
     }
+    // V63 (ai-usage-01) added fallback providers; [] means «no fallback», the
+    // pipeline's behaviour before V63. Without it every run answered 500.
+    async getFallbacks() {
+      return []
+    }
   },
 }))
 vi.mock('../services/ai/ai-quota.service', () => ({

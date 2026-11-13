@@ -16,7 +16,11 @@ import {
 import { useToast } from '../../toast-provider'
 import { WorkflowTemplatesView } from '../workflow-templates-view'
 import { EscalationPolicyEditor } from '../escalation-policy-editor'
-import { approvalConditionOf, invoiceApprovalRule } from '../../../../lib/workflow/approval-rule'
+import {
+  approvalConditionOf,
+  invoiceApprovalRule,
+  type ApprovalInvoiceType,
+} from '../../../../lib/workflow/approval-rule'
 
 export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContainer() {
   const tOriginal = useTranslations()
@@ -54,12 +58,13 @@ export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContain
       entity_type: WorkflowEntityType
       steps: WorkflowStep[]
       minTotal: number | null
+      invoiceType: ApprovalInvoiceType
     }) => {
-      const { minTotal, ...template } = input
+      const { minTotal, invoiceType, ...template } = input
       try {
         const created = (await createWorkflow(template)) as { id?: string } | null
         if (template.entity_type === 'invoice' && created?.id) {
-          await createRule(invoiceApprovalRule(template.name, created.id, minTotal))
+          await createRule(invoiceApprovalRule(template.name, created.id, minTotal, invoiceType))
         }
       } catch (error) {
         sayFailed(error)
@@ -71,9 +76,9 @@ export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContain
   )
 
   const handleSetCondition = useCallback(
-    async (workflow: Workflow, minTotal: number | null) => {
+    async (workflow: Workflow, minTotal: number | null, invoiceType: ApprovalInvoiceType) => {
       try {
-        await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal))
+        await createRule(invoiceApprovalRule(workflow.name, workflow.id, minTotal, invoiceType))
       } catch (error) {
         sayFailed(error)
       }

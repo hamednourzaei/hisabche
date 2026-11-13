@@ -17,11 +17,12 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
-import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { adminRoute } from '../middleware/admin-rbac.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { AiChatService } from '../services/ai/ai-chat.service'
 import { AiQuotaService } from '../services/ai/ai-quota.service'
 import { AiSettingsService } from '../services/ai/ai-settings.service'
+import { AdminSecurityService } from '../services/admin/admin-security.service'
 import { AiBusyError, AiReaderNotConfiguredError } from '../services/ai/ai-chat.service'
 
 // instantiates recursively over the schema type; naming it `ZodTypeAny` makes
@@ -167,15 +168,17 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
 
   // ─── Platform admin ──────────────────────────────────────────────────
   //
-  // `platformAdminGuard` is the existing gate for owner-level operations.
-  // A workspace role — even `owner` — must not reach these: the API key bills
-  // the product owner, not the workspace, so `requireWorkspaceContext` plus a
-  // role check would be the wrong boundary entirely.
-  const adminOnly = [authenticate, platformAdminGuard]
+  // ⚠️ V63 · S-1 — these used to carry only `platformAdminGuard` (the email
+  // allow-list). They change the key that BILLS THE OWNER and the per-workspace
+  // allowance, so they now use the same chain as every other admin route:
+  // RBAC + AAL2, and a fresh step-up for anything that writes.
+  const adminRead = adminRoute('product.ai.read')
+  const adminWrite = adminRoute('product.ai.write', { stepUp: true })
+  const adminQuota = adminRoute('product.ai.quota', { stepUp: true })
 
   fastify.get(
     '/api/ai/config',
-    { preHandler: adminOnly },
+    { preHandler: adminRead },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
         // `getStatus`, never `getConfig`. The latter carries the key.
@@ -188,15 +191,20 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/ai/config',
-    { preHandler: adminOnly, schema: { body: toJsonSchema(configSchema) } },
+    { preHandler: adminWrite, schema: { body: toJsonSchema(configSchema) } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = configSchema.parse(request.body)
+        // ⚠️ V63 · A — the change is recorded, the content is not. `before`
+        // exists only to say whether the prompt or the base URL moved; neither
+        // value is written to the audit row.
+        const before = await settings.getStatus()
         // Rebuilt rather than spread: `exactOptionalPropertyTypes` treats an
         // explicitly-undefined `baseUrl` as different from an absent one, and
         // the service's contract is «absent means null».
-        return reply.send(
-          await settings.save(request.userId, {
+        const status = await settings.save(
+          request.userId,
+          {
             provider: body.provider,
             baseUrl: body.baseUrl ?? null,
             model: body.model,
@@ -204,8 +212,26 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
             systemPrompt: body.systemPrompt,
             topupContact: body.topupContact,
             isEnabled: body.isEnabled,
-          }),
+          },
+          request.user?.email,
         )
+
+        await AdminSecurityService.logSecurityEvent({
+          eventType: 'AI_CONFIG_UPDATED',
+          adminEmail: request.user?.email ?? null,
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'] ?? null,
+          details: {
+            provider: body.provider,
+            model: body.model,
+            isEnabled: body.isEnabled,
+            promptChanged: before?.systemPrompt !== body.systemPrompt,
+            baseUrlChanged: (before?.baseUrl ?? null) !== (body.baseUrl ?? null),
+            keyRotationStaged: Boolean(body.apiKey),
+          },
+        })
+
+        return reply.send(status)
       } catch (err) {
         return fail(reply, err, 'Failed to save the AI configuration')
       }
@@ -217,7 +243,7 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
   // on save.
   fastify.post(
     '/api/ai/config/test',
-    { preHandler: adminOnly, schema: { body: toJsonSchema(testSchema) } },
+    { preHandler: adminWrite, schema: { body: toJsonSchema(testSchema) } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = testSchema.parse(request.body)
@@ -244,7 +270,7 @@ export async function aiChatRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/ai/quota/:workspaceId',
-    { preHandler: adminOnly, schema: { body: toJsonSchema(quotaSchema) } },
+    { preHandler: adminQuota, schema: { body: toJsonSchema(quotaSchema) } },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { workspaceId } = workspaceParam.parse(request.params)

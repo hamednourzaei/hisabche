@@ -49,7 +49,10 @@ export const STOREFRONT_PREFIX = '/api/public/v1'
  */
 export function isPublicApiPath(url: string): boolean {
   const path = url.split('?')[0] ?? ''
-  return path.startsWith('/api/public/')
+  // /api/wall/* is the TV display: the wall token is its credential, so the
+  // browser may call it from any origin — but without credentials, like the
+  // storefront. The token travels in a header (or a path-scoped cookie).
+  return path.startsWith('/api/public/') || path.startsWith('/api/wall/')
 }
 
 const catalogQuery = z.object({

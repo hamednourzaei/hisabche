@@ -4,11 +4,11 @@
 
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut } from 'lucide-react'
 
-import { Badge, Button, Card, cn } from '@/components/ui/primitives'
+import { Badge, Card, cn } from '@/components/ui/primitives'
 import { SelectField, useDisplayBasis } from '@hisabche/ui'
 import { DeviceModulesPanel } from '@hisabche/ui/settings/device-modules-panel'
+import { TwoFactorSection } from '@hisabche/ui/settings/two-factor-section'
 import {
   getInstalledPacks,
   getPackDeliveryFlag,
@@ -145,6 +145,7 @@ function DesktopSettings() {
               gone. It called a main-process function that returned `void`, so it
               could report nothing — see `update-section.tsx`. */}
               <UpdateSection />
+              <TwoFactorSection />
               <DeviceModulesPanel
                 installedPacks={getInstalledPacks()}
                 deliveryEnabled={getPackDeliveryFlag() === 'on'}

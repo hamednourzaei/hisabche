@@ -2,7 +2,9 @@ import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
-import { canTransitionCheque, type ChequeStatus } from '@hisabche/validation'
+import { canTransitionCheque, tillMinorToMajor, type ChequeStatus } from '@hisabche/validation'
+import { ConflictError } from '../../errors/database.error'
+import { businessDayOf } from '../../utils/local-day'
 import { PaymentsService } from './payments.service'
 
 export class ChequesService {
@@ -91,17 +93,28 @@ export class ChequesService {
       if (endorsedPaymentId) {
         throw new ValidationError('CHEQUE_ALREADY_ENDORSED')
       }
-      const endorsedPay = await this.paymentsService.recordPayment(tenancy, {
-        direction: 'out',
-        partyType: 'supplier',
-        partyId: input.endorsed_to_supplier_id,
-        amount: cheque.amount_minor / 100,
-        currency: cheque.currency,
-        method: 'cheque',
-        reference: cheque.cheque_number,
-        entryDate: new Date().toISOString().slice(0, 10),
-        notes: input.note ?? `Endorsed cheque ${cheque.cheque_number}`,
-      })
+      const endorsedPay = await this.paymentsService.recordPayment(
+        tenancy,
+        {
+          direction: 'out',
+          partyType: 'supplier',
+          partyId: input.endorsed_to_supplier_id,
+          // ⚠️ minor → major with the CURRENCY'S digits. This was `/ 100`: an
+          // endorsed 5,000 AFN cheque (AFN has no minor unit) paid the supplier 50.
+          amount: tillMinorToMajor(Number(cheque.amount_minor), String(cheque.currency)),
+          currency: cheque.currency,
+          method: 'cheque',
+          reference: cheque.cheque_number,
+          // The business's day, not the UTC date of the server's clock.
+          entryDate: businessDayOf(new Date(), tenancy.timeZone),
+          notes: input.note ?? `Endorsed cheque ${cheque.cheque_number}`,
+        },
+        {
+          // One endorsement = one payment, even when the request is retried or
+          // two people press the button at the same moment.
+          clientRequestId: `cheque-endorse-${cheque.id}`,
+        },
+      )
       endorsedPaymentId = endorsedPay.id
     }
 
@@ -125,10 +138,14 @@ export class ChequesService {
       })
       .eq('id', cheque.id)
       .eq('workspace_id', tenancy.workspaceId)
+      // Conditional: only from the state we checked. Someone else moving the
+      // cheque in between is a conflict, never a silent second transition.
+      .eq('status', cheque.status)
       .select('*')
-      .single()
+      .maybeSingle()
 
-    if (updErr || !updated) throw new DatabaseError('Failed to transition cheque', updErr)
+    if (updErr) throw new DatabaseError('Failed to transition cheque', updErr)
+    if (!updated) throw new ConflictError('CHEQUE_CHANGED')
     return updated
   }
 }

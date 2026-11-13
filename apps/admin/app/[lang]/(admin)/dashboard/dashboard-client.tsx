@@ -20,6 +20,8 @@ import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminMetrics } from '@/hooks/use-admin-api'
 import { useAdminPastDue } from '@/hooks/use-admin-past-due'
 import { cn } from '@/lib/utils'
+import { RevenueForecastPanel } from './revenue-forecast-panel'
+import { SignupFunnelPanel } from './signup-funnel-panel'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDateTime, adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
 
@@ -238,6 +240,9 @@ export function DashboardClient() {
               </div>
             </section>
           )}
+
+          {/* V63 #94 */}
+          <SignupFunnelPanel />
         </div>
       )}
 
@@ -246,16 +251,15 @@ export function DashboardClient() {
           <h2 id="revenue-heading" className="text-base font-semibold">
             {t('admin.hubs.dashboard.revenue')}
           </h2>
-          <Card className="p-8">
-            <EmptyState
-              title={t('admin.dashboard.revenueUnavailableTitle')}
-              description={t('admin.dashboard.revenueUnavailableHint')}
-              action={{
-                label: t('admin.hubs.revenue.ledger'),
-                onClick: () => router.push(`/${locale}/revenue?tab=ledger`),
-              }}
-            />
-          </Card>
+          {/* V63 #103 — net receipts from the billing ledger and the next months */}
+          <RevenueForecastPanel />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/${locale}/revenue?tab=ledger`)}
+          >
+            {t('admin.hubs.revenue.ledger')}
+          </Button>
         </section>
       )}
 

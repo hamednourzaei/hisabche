@@ -703,6 +703,21 @@ export class AdminService {
     return this.getMemberView(membershipId)
   }
 
+  /**
+   * Refuses, BEFORE a two-person request is proposed, a removal that could
+   * never be carried out: no such membership, or the owner.
+   */
+  async assertMemberRemovable(membershipId: string): Promise<void> {
+    const { data: membership, error } = await supabase
+      .from('workspace_members')
+      .select('id, role')
+      .eq('id', membershipId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read membership', error)
+    if (!membership) throw new NotFoundError('Membership')
+    if (membership.role === 'owner') throw new ForbiddenError('Cannot remove owner')
+  }
+
   async removeMember(actor: AdminActorContext, membershipId: string) {
     const { data: membership, error } = await supabase
       .from('workspace_members')

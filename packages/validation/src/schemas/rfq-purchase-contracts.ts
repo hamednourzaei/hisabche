@@ -1,7 +1,8 @@
 import { z } from 'zod'
+import { currencyCodeSchema } from './common.schema'
 
 export const createRfqSchema = z.object({
-  title: z.string().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
 })
 
 export const quotationLineSchema = z.object({
@@ -12,8 +13,8 @@ export const quotationLineSchema = z.object({
 
 export const createQuotationSchema = z.object({
   supplier_id: z.string().uuid(),
-  currency: z.string().min(3).max(8),
-  valid_until: z.string().min(8).max(32),
+  currency: currencyCodeSchema,
+  valid_until: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
   lead_time_days: z.number().int().nonnegative().default(0),
   lines: z.array(quotationLineSchema).min(1),
 })
@@ -23,9 +24,9 @@ export const createPurchaseContractPriceSchema = z.object({
   supplier_id: z.string().uuid(),
   product_id: z.string().uuid(),
   agreed_unit_price_minor: z.number().int().nonnegative(),
-  currency: z.string().min(3).max(8),
-  valid_from: z.string().min(8).max(32),
-  valid_to: z.string().min(8).max(32),
+  currency: currencyCodeSchema,
+  valid_from: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
+  valid_to: z.string().regex(/^\d{4}-\d{2}-\d{2}/),
 })
 
 export interface QuotationLike {

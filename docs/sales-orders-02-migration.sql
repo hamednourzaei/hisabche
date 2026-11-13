@@ -67,22 +67,10 @@ ALTER TABLE sales_order_deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales_order_delivery_lines ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON sales_order_deliveries, public.sales_order_delivery_lines FROM PUBLIC, anon, authenticated;
-GRANT SELECT ON sales_order_deliveries, public.sales_order_delivery_lines TO authenticated;
+GRANT SELECT ON sales_order_deliveries, public.sales_order_delivery_lines TO service_role;
 GRANT ALL ON sales_order_deliveries, public.sales_order_delivery_lines TO service_role;
 
-DROP POLICY IF EXISTS sales_order_deliveries_members_read ON sales_order_deliveries;
-CREATE POLICY sales_order_deliveries_members_read ON sales_order_deliveries
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.workspace_members m
-                  WHERE m.workspace_id = sales_order_deliveries.workspace_id AND m.user_id = auth.uid()
-                    AND m.has_access = true AND m.suspended_at IS NULL));
 
-DROP POLICY IF EXISTS sales_order_delivery_lines_members_read ON sales_order_delivery_lines;
-CREATE POLICY sales_order_delivery_lines_members_read ON sales_order_delivery_lines
-  FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.workspace_members m
-                  WHERE m.workspace_id = sales_order_delivery_lines.workspace_id AND m.user_id = auth.uid()
-                    AND m.has_access = true AND m.suspended_at IS NULL));
 
 -- 4. transition_sales_order rev2: atomic reservation on confirm, release on cancel, settle on invoice
 CREATE OR REPLACE FUNCTION public.transition_sales_order(
@@ -414,3 +402,33 @@ GRANT EXECUTE ON FUNCTION public.deliver_sales_order_partial(uuid, uuid, uuid, u
 -- DROP FUNCTION IF EXISTS public.deliver_sales_order_partial(uuid, uuid, uuid, uuid, jsonb, text, uuid, text);
 -- DROP TABLE IF EXISTS public.sales_order_delivery_lines;
 -- DROP TABLE IF EXISTS public.sales_order_deliveries;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['sales_order_deliveries', 'sales_order_delivery_lines'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.sales_order_deliveries ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.sales_order_deliveries FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.sales_order_delivery_lines ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.sales_order_delivery_lines FROM PUBLIC, anon, authenticated;

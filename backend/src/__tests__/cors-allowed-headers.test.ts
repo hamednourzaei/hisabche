@@ -27,7 +27,13 @@ function files(dir: string): string[] {
 
 describe('CORS allow-list covers the headers the web client sends', () => {
   const sent = new Set<string>()
-  for (const file of files(join(ROOT, 'packages/api/src'))) {
+  // 12 Nov 2026 (V63 audit): the admin app is a browser client too; its wall
+  // sent `x-wall-token`, which the list did not name.
+  const clientFiles = [
+    ...files(join(ROOT, 'packages/api/src')),
+    ...['hooks', 'lib', 'app'].flatMap((dir) => files(join(ROOT, 'apps/admin', dir))),
+  ]
+  for (const file of clientFiles) {
     const src = readFileSync(file, 'utf8')
     for (const m of src.matchAll(/headers(?:\[\s*|:\s*\{\s*)'([A-Za-z][A-Za-z-]+)'/g))
       sent.add(m[1]!.toLowerCase())

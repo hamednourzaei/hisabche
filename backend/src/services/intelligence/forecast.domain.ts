@@ -260,6 +260,104 @@ export function findStaleOpportunities(
   return stale.sort((a, b) => b.daysSilent - a.daysSilent)
 }
 
+// ---------------------------------------------------------------------------
+// V63 #103 — PLATFORM REVENUE, NEXT MONTHS
+// ---------------------------------------------------------------------------
+
+export interface MonthlyRevenuePoint {
+  /** `YYYY-MM`, UTC. */
+  month: string
+  /** Net receipts that month (payments − refunds), minor units. Zero is a real zero. */
+  netMinor: number
+}
+
+export interface MonthlyRevenueForecast {
+  status: ForecastConfidenceStatus
+  /** Complete months the average was taken from. */
+  basisMonths: number
+  /** Mean net receipts of those months; `null` with `insufficient_data` — never 0. */
+  averageMinor: number | null
+  /** The months ahead, each `null` when the history is insufficient. */
+  next: Array<{ month: string; projectedMinor: number | null }>
+}
+
+/**
+ * The next months' receipts, as the mean of the last complete months.
+ *
+ * ⚠️ THE CURRENT MONTH NEVER COUNTS. It is half-way through; averaging it in
+ * drags every forecast down by however much of the month is still to come.
+ *
+ * ⚠️ FEWER THAN `MIN_FORECAST_HISTORY_SAMPLES` COMPLETE MONTHS IS
+ * `insufficient_data` — the same threshold the cash forecast uses — and every
+ * projected figure is `null`, not a guess built on one or two months.
+ *
+ * `series` must already be zero-filled from the first month that had any
+ * entry: a month with no payment is a real zero, a month before the ledger
+ * existed is not part of the history at all (`zeroFilledMonths`).
+ */
+export function forecastMonthlyRevenue(input: {
+  asOf: Date
+  series: readonly MonthlyRevenuePoint[]
+  basisMonths?: number
+  horizonMonths?: number
+}): MonthlyRevenueForecast {
+  const current = monthKey(input.asOf)
+  const complete = input.series.filter((point) => point.month < current)
+  const take = Math.max(MIN_FORECAST_HISTORY_SAMPLES, input.basisMonths ?? 3)
+  const basis = complete.slice(-take)
+  const sufficient = basis.length >= MIN_FORECAST_HISTORY_SAMPLES
+  const average = sufficient
+    ? Math.round(basis.reduce((sum, point) => sum + point.netMinor, 0) / basis.length)
+    : null
+
+  const next: MonthlyRevenueForecast['next'] = []
+  const horizon = Math.max(1, input.horizonMonths ?? 3)
+  for (let step = 0; step < horizon; step += 1) {
+    const at = new Date(Date.UTC(input.asOf.getUTCFullYear(), input.asOf.getUTCMonth() + step, 1))
+    next.push({ month: monthKey(at), projectedMinor: average })
+  }
+
+  return {
+    status: sufficient ? 'ok' : 'insufficient_data',
+    basisMonths: basis.length,
+    averageMinor: average,
+    next,
+  }
+}
+
+/**
+ * Net receipts per month from the first month that has an entry up to the
+ * month of `asOf`, with empty months as real zeros.
+ */
+export function zeroFilledMonths(
+  entries: ReadonlyArray<{ at: string; signedMinor: number }>,
+  asOf: Date,
+): MonthlyRevenuePoint[] {
+  if (entries.length === 0) return []
+  const totals = new Map<string, number>()
+  let first: string | null = null
+  for (const entry of entries) {
+    const month = entry.at.slice(0, 7)
+    totals.set(month, (totals.get(month) ?? 0) + entry.signedMinor)
+    if (first === null || month < first) first = month
+  }
+  const out: MonthlyRevenuePoint[] = []
+  const last = monthKey(asOf)
+  const [year, month] = (first ?? last).split('-').map(Number)
+  for (let cursor = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, 1)); ;) {
+    const key = monthKey(cursor)
+    if (key > last) break
+    out.push({ month: key, netMinor: totals.get(key) ?? 0 })
+    cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1))
+  }
+  return out
+}
+
+/** `YYYY-MM` of a date, UTC. */
+export function monthKey(date: Date): string {
+  return date.toISOString().slice(0, 7)
+}
+
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / 86_400_000)
 }

@@ -15,6 +15,9 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 
 import { holds, minRoleFor, type Capability } from '../services/authorization'
+import { isFreshStepUp, isStepUpCapability } from '../services/authorization/step-up.domain'
+import { workspace2faService } from '../services/authorization/workspace-2fa.service'
+import { verifiedTokenClaims } from '../services/admin/admin-security.service'
 
 /**
  * Refuse the request unless the caller's workspace role holds `capability`.
@@ -52,6 +55,45 @@ export function requireCapability(capability: Capability) {
         // could say "a manager can do this", and instead the client rendered
         // the literal string «ForbiddenError».
         requiredRole: minRoleFor(capability),
+      })
+    }
+
+    // ─── Two-step verification (V61 B.2.25) ──────────────────────────────────
+    // Only the closed set of sensitive capabilities can be put behind a fresh
+    // authenticator code, and only when the workspace's policy says so. Every
+    // other capability returns above without touching the database.
+    if (!isStepUpCapability(capability)) return
+
+    let required: boolean
+    try {
+      required = await workspace2faService.requiresStepUp(tenancy.workspaceId, capability)
+    } catch (err) {
+      // Fail CLOSED: an unreadable policy is not "no policy".
+      request.log.error({ err, capability }, 'two-step policy unavailable')
+      return reply.status(503).send({
+        error: 'Two-step policy unavailable',
+        code: 'TWO_FACTOR_POLICY_UNAVAILABLE',
+      })
+    }
+    if (!required) return
+
+    // A key cannot type a code: a protected action needs a person.
+    if (request.apiKey) {
+      return reply.status(403).send({
+        error: 'This action needs a person with two-step verification',
+        code: 'STEP_UP_NOT_AVAILABLE_FOR_API_KEYS',
+        capability,
+      })
+    }
+
+    // `authenticate` verified this very token with Supabase before we got here,
+    // so its claims are not forged.
+    const claims = verifiedTokenClaims(request.headers.authorization)
+    if (!isFreshStepUp(claims, Date.now())) {
+      return reply.status(403).send({
+        error: 'Enter the code from your authenticator app to continue',
+        code: 'WORKSPACE_STEP_UP_REQUIRED',
+        capability,
       })
     }
   }

@@ -63,6 +63,9 @@ import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
 import { OfflineGate } from '../../offline-gate'
 import { BranchTreeView } from '../branch-tree-view'
 import { AttendanceSheet } from '../attendance-sheet'
+import { ExpenseClaimsSection } from '../expense-claims-section'
+import { OrgChartSection } from '../../erp-core/org-chart-section'
+import { SellersSection } from '../../erp-core/sellers-section'
 import { BranchForm, type BranchFormValues } from '../branch-form'
 import { useLocalePush, useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
@@ -79,6 +82,7 @@ const TimesheetsContainer = lazy(() =>
 //
 //   تیم            who works here   — کارمندان · شعب
 //   حقوق و حضور    when they worked — حضور و غیاب · ساعات کار (was /timesheets)
+//                                    · مطالبات هزینه (V61 B.2.18)
 //
 // ⚠️ NO «حقوق» SECTION (owner, 18 Oct 2026: «دقیقاً همین صفحه در
 // /team-and-payroll هست»). The payroll total is on the team page; a person's
@@ -92,15 +96,22 @@ const TimesheetsContainer = lazy(() =>
 // `SegmentedControl` / `useHubTab` / `useHubSection`.
 
 export const TEAM_HUB_TABS = ['team', 'pay'] as const
-export const TEAM_SECTIONS = ['employees', 'branches'] as const
-export const PAY_SECTIONS = ['attendance', 'timesheets'] as const
+// «چارت سازمانی» (V61 B.2.17): who reports to whom, and each person's file.
+// «فروش هر نفر» (owner decision, 12 Nov 2026): each seller is a member.
+export const TEAM_SECTIONS = ['employees', 'branches', 'orgChart', 'sellers'] as const
+// «مطالبات هزینه» (V61 B.2.18) sits with pay, not with «who works here»: a
+// claim is money the business owes a person, decided by whoever approves pay.
+export const PAY_SECTIONS = ['attendance', 'timesheets', 'expenses'] as const
 
 /** Which feature each section is, for the offline gate (the endpoint matrix decides the rest). */
 const SECTION_FEATURE = {
   employees: 'employee.list',
   branches: 'branch.manage',
+  orgChart: 'hr.org_chart',
+  sellers: 'sales.by_seller',
   attendance: 'hr.attendance',
   timesheets: 'timesheet.manage',
+  expenses: 'hr.expense_claims',
 } as const
 
 /** The address «ساعات کار» used to live at — the key of its lock in `NAV_MODULE`. */
@@ -126,6 +137,17 @@ export function teamAddressOf(oldTab: string | null, view: string | null = null)
  */
 function employeeFieldsMessage(error: unknown, fallback: string): string | null {
   return apiErrorFields(error).length > 0 ? null : apiErrorMessage(error, fallback)
+}
+
+/** The org chart is its own screen; every other section is this file's screen. */
+function TeamSectionBody({
+  section,
+}: {
+  section: (typeof TEAM_SECTIONS)[number] | (typeof PAY_SECTIONS)[number]
+}) {
+  if (section === 'orgChart') return <OrgChartSection />
+  if (section === 'sellers') return <SellersSection />
+  return <TeamAndPayrollScreen section={section} />
 }
 
 export function TeamAndPayrollContainer() {
@@ -201,7 +223,7 @@ function TeamHub() {
               <TimesheetsContainer />
             </Suspense>
           ) : (
-            <TeamAndPayrollScreen section={tab === 'pay' ? pay : team} />
+            <TeamSectionBody section={tab === 'pay' ? pay : team} />
           )}
         </div>
       </OfflineGate>
@@ -484,6 +506,7 @@ function TeamAndPayrollScreen({ section }: { section: TeamTab | 'timesheets' }) 
       permissionProfiles={permissionProfiles}
       branchesTab={branchesTab}
       attendanceTab={tab === 'attendance' ? <AttendanceSheet /> : null}
+      expensesTab={tab === 'expenses' ? <ExpenseClaimsSection /> : null}
       employeeFormError={employeeFormError}
       employeeFieldErrors={employeeFields.fields}
     />

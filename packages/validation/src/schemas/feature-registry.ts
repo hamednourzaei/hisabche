@@ -372,6 +372,15 @@ export const FEATURE_REGISTRY = {
   'operations.quality': { execution: 'server', plans: ALL },
   'payments.cheques': { execution: 'server', plans: ALL },
   'hr.expense_claims': { execution: 'server', plans: ALL },
+  // V61 audit (12 Nov 2026): the screens for routes that had no client.
+  'purchase.rfq': { execution: 'server', plans: ALL },
+  'hr.org_chart': { execution: 'server', plans: ALL },
+  'inventory.consignment': { execution: 'server', plans: ALL },
+  'product.bundles': { execution: 'server', plans: ALL },
+  'crm.rfm': { execution: 'server', plans: ALL, alwaysAllowed: true },
+  'data.snapshots': { execution: 'server', plans: ALL },
+  // Owner decision (12 Nov 2026): sales per seller, a read.
+  'sales.by_seller': { execution: 'server', plans: ALL, alwaysAllowed: true },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

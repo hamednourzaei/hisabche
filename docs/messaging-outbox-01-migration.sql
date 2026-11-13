@@ -27,23 +27,39 @@ CREATE TABLE IF NOT EXISTS public.messaging_outbox (
 );
 
 REVOKE ALL ON messaging_outbox FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON messaging_outbox TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE ON messaging_outbox TO service_role;
 
 ALTER TABLE messaging_outbox ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-     WHERE schemaname = 'public' AND tablename = 'messaging_outbox' AND policyname = 'messaging_outbox_ws_isolation'
-  ) THEN
-    CREATE POLICY messaging_outbox_ws_isolation ON messaging_outbox
-      FOR ALL TO authenticated
-      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()))
-      WITH CHECK (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()));
-  END IF;
-END $$;
 
 -- Rollback (manual reference):
 -- DROP TABLE IF EXISTS public.messaging_outbox;
 -- ALTER TABLE public.customers DROP COLUMN IF EXISTS sms_opt_out;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['messaging_outbox'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.messaging_outbox ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.messaging_outbox FROM PUBLIC, anon, authenticated;

@@ -112,8 +112,11 @@ describe('admin redesign guards', () => {
   })
 
   it('converted screens list through the shared DataTable', () => {
+    // One entry per TABLE the screen draws, so replacing a DataTable with a raw
+    // <table> fails here as well as in the raw-table guard below. V63 added the
+    // network tab (IP allow-list) to the security screen: 4 → 5.
     const screens: Array<[string, number]> = [
-      ['app/[lang]/(admin)/security/security-client.tsx', 4],
+      ['app/[lang]/(admin)/security/security-client.tsx', 5],
       ['app/[lang]/(admin)/revenue/revenue-client.tsx', 3],
     ]
 

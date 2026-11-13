@@ -66,60 +66,38 @@ ALTER TABLE contract_obligations ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.contracts, public.contract_obligations
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT ALL ON TABLE public.contracts, public.contract_obligations TO service_role;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.contracts, public.contract_obligations TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.contracts, public.contract_obligations TO service_role;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'contracts' AND policyname = 'contracts_workspace_member'
-  ) THEN
-    CREATE POLICY contracts_workspace_member ON contracts
-      FOR ALL TO authenticated
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = contracts.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = contracts.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      );
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'contract_obligations' AND policyname = 'contract_obligations_workspace_member'
-  ) THEN
-    CREATE POLICY contract_obligations_workspace_member ON contract_obligations
-      FOR ALL TO authenticated
-      USING (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = contract_obligations.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      )
-      WITH CHECK (
-        EXISTS (
-          SELECT 1 FROM public.workspace_members wm
-          WHERE wm.workspace_id = contract_obligations.workspace_id
-            AND wm.user_id = auth.uid()
-            AND wm.has_access = true
-            AND wm.suspended_at IS NULL
-        )
-      );
-  END IF;
-END $$;
 
 -- ─── ROLLBACK BLOCK ──────────────────────────────────────────────────────────
 -- DROP TABLE IF EXISTS public.contract_obligations, public.contracts;
+
+
+-- ---------------------------------------------------------------------------
+-- CLIENT LOCKDOWN (V61 audit, 12 Nov 2026).
+--
+-- These tables are reached ONLY through the backend (service_role), which
+-- checks the capability of the person asking. A policy "FOR ALL TO
+-- authenticated USING (workspace member)" let ANY member of the workspace —
+-- a seller included — write these rows straight through the Supabase API and
+-- skip every capability check (e.g. approve their own request, overwrite
+-- another member's 2FA enrollment). RLS stays ON with NO policy; clients get
+-- nothing. Idempotent: on a database where the earlier version of this file
+-- already ran, it drops whatever policies exist on these tables.
+-- ---------------------------------------------------------------------------
+DO $lockdown$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename FROM pg_policies
+     WHERE schemaname = 'public'
+       AND tablename = ANY (ARRAY['contracts', 'contract_obligations'])
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, r.tablename);
+  END LOOP;
+END $lockdown$;
+ALTER TABLE public.contracts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.contracts FROM PUBLIC, anon, authenticated;
+ALTER TABLE public.contract_obligations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.contract_obligations FROM PUBLIC, anon, authenticated;

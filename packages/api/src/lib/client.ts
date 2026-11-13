@@ -456,6 +456,38 @@ function refreshOnce(): Promise<string | null> {
 }
 
 /**
+ * The server asks for a fresh authenticator code before a sensitive action
+ * (workspace two-step policy, V61 B.2.25). The UI registers ONE handler — a
+ * dialog — that resolves to the new access token, or null when the person
+ * cancels. Registered like `setRefreshSession`, so this package never imports
+ * the store or the UI.
+ */
+export const STEP_UP_REQUIRED_CODE = 'WORKSPACE_STEP_UP_REQUIRED'
+
+let stepUpHandler: ((capability: string | null) => Promise<string | null>) | null = null
+
+export function setStepUpHandler(
+  handler: ((capability: string | null) => Promise<string | null>) | null,
+): void {
+  stepUpHandler = handler
+}
+
+// One dialog for a burst of refused requests, like refreshOnce.
+let stepUpInFlight: Promise<string | null> | null = null
+
+function stepUpOnce(capability: string | null): Promise<string | null> {
+  if (!stepUpHandler) return Promise.resolve(null)
+  if (!stepUpInFlight) {
+    stepUpInFlight = stepUpHandler(capability)
+      .catch(() => null)
+      .finally(() => {
+        stepUpInFlight = null
+      })
+  }
+  return stepUpInFlight
+}
+
+/**
  * The server's code for a write refused because the workspace's subscription
  * has ended (HTTP 402). Stable — the backend guard in
  * `backend/src/middleware/subscription.middleware.ts` sends exactly this.
@@ -655,6 +687,35 @@ apiClient.interceptors.response.use(
           original.headers = original.headers ?? {}
           ;(original.headers as Record<string, string>).Authorization = `Bearer ${token}`
           return apiClient.request(original)
+        })
+      }
+    }
+
+    // ─── A sensitive action needs a fresh authenticator code → ask, retry once ─
+    {
+      const sent = error.config as
+        (typeof error.config & { _retriedAfterStepUp?: boolean }) | undefined
+      if (
+        error.response?.status === 403 &&
+        responseData?.code === STEP_UP_REQUIRED_CODE &&
+        sent &&
+        !sent._retriedAfterStepUp &&
+        stepUpHandler
+      ) {
+        sent._retriedAfterStepUp = true
+        const capability =
+          typeof responseData?.capability === 'string' ? responseData.capability : null
+        return stepUpOnce(capability).then((token) => {
+          if (!token) {
+            return Promise.reject({
+              message: (responseData?.error as string | undefined) || 'Two-step code required',
+              code: STEP_UP_REQUIRED_CODE,
+              status: 403,
+            } satisfies ApiError)
+          }
+          sent.headers = sent.headers ?? {}
+          ;(sent.headers as Record<string, string>).Authorization = `Bearer ${token}`
+          return apiClient.request(sent)
         })
       }
     }

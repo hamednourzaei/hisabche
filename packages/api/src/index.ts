@@ -50,6 +50,8 @@ export { createNotificationMutationCache } from './lib/notification-refresh'
 export {
   setOnUnauthorized,
   setRefreshSession,
+  setStepUpHandler,
+  STEP_UP_REQUIRED_CODE,
   setOnSubscriptionExpired,
   SUBSCRIPTION_EXPIRED_CODE,
 } from './lib/client'
@@ -194,6 +196,9 @@ export {
   usePartyLedger,
   usePartyActivity,
   useRecordPayment,
+  useCheques,
+  useCreateCheque,
+  useTransitionCheque,
   useCancelPayment,
   paymentKeys,
   type PaymentDirection,
@@ -1455,3 +1460,25 @@ export * from './hooks/guide-progress'
 export * from './hooks/dashboard-kpis'
 export * from './hooks/user-state'
 export * from './hooks/business-packs'
+
+export * from './hooks/two-factor'
+
+// ─── V61 B.2.18 — employee expense claims ───────────────────────────────────
+export {
+  EXPENSE_CLAIM_STATUSES,
+  expenseClaimKeys,
+  useExpenseClaims,
+  useCreateExpenseClaim,
+  useApproveExpenseClaim,
+  useRejectExpenseClaim,
+  useReimburseExpenseClaim,
+  type ExpenseClaim,
+  type ExpenseClaimStatus,
+  type ExpenseClaimLine,
+  type ExpenseClaimLineInput,
+} from './hooks/expense-claims'
+
+// ─── V61 audit (12 Nov 2026) — server routes that had no client ─────────────
+export * from './hooks/purchasing-rfq'
+export * from './hooks/org-chart'
+export * from './hooks/erp-registers'
