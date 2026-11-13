@@ -651,6 +651,11 @@ const TRADE_REGULATED: Readonly<Record<string, RegulatedDomain>> = {
   bakery: 'FOOD_SAFETY',
   cafe: 'FOOD_SAFETY',
   hotel: 'FOOD_SAFETY',
+  butcher: 'FOOD_SAFETY',
+  dairy: 'FOOD_SAFETY',
+  fruitVegetable: 'FOOD_SAFETY',
+  nuts: 'FOOD_SAFETY',
+  optician: 'PRESCRIPTION',
 }
 
 // What each trade actually sells ON: weight for gold, length for cloth, area
@@ -660,6 +665,16 @@ const TRADE_PRICING: Readonly<Record<string, readonly PricingBasis[]>> = {
   currencyExchange: ['RATE_BOARD'],
   clothing: ['UNIT', 'LENGTH'],
   hardware: ['UNIT', 'LENGTH', 'AREA'],
+  butcher: ['WEIGHT'],
+  fruitVegetable: ['WEIGHT'],
+  nuts: ['WEIGHT'],
+  carpet: ['AREA', 'UNIT'],
+  paint: ['VOLUME', 'UNIT'],
+  glass: ['AREA', 'UNIT'],
+  agriculture: ['WEIGHT'],
+  seedsFertilizer: ['WEIGHT', 'VOLUME'],
+  freightTransport: ['WEIGHT', 'CONTRACT'],
+  printing: ['AREA', 'UNIT'],
 }
 
 /**
@@ -1157,19 +1172,70 @@ export const operatingAnswersSchema = z
   .strict()
 
 /** Trades whose work is booked ahead. Onboarding metadata only — never read by a money rule. */
-const APPOINTMENT_TRADES = new Set(['barber', 'beautySalon', 'clinic'])
+const APPOINTMENT_TRADES = new Set(['barber', 'beautySalon', 'clinic', 'optician', 'photography'])
 const PACKAGE_TRADES = new Set(['education'])
-const REPAIR_TRADES = new Set(['repairs', 'mechanic'])
-const PRODUCER_TRADES = new Set(['manufacturing', 'bakery'])
-const COUNTER_TRADES = new Set(['retail', 'grocery'])
+const REPAIR_TRADES = new Set(['repairs', 'mechanic', 'autoParts'])
+const PRODUCER_TRADES = new Set([
+  'manufacturing',
+  'bakery',
+  'construction',
+  'agriculture',
+  'printing',
+])
+const COUNTER_TRADES = new Set([
+  'retail',
+  'grocery',
+  'butcher',
+  'fruitVegetable',
+  'dairy',
+  'nuts',
+  'carpet',
+  'paint',
+  'glass',
+  'furniture',
+  'kitchenware',
+  'homeAppliances',
+  'stationery',
+  'toys',
+  'giftShop',
+  'cosmetics',
+  'flowers',
+  'seedsFertilizer',
+])
 // V55 P1: the unit-tracking trades. A phone shop sells THIS unit (IMEI);
 // a pharmacy sells the batch that expires first (FEFO).
-const SERIAL_TRADES = new Set(['mobilePhones', 'repairs', 'mechanic'])
-const EXPIRY_TRADES = new Set(['pharmacy', 'grocery'])
+const SERIAL_TRADES = new Set([
+  'mobilePhones',
+  'repairs',
+  'mechanic',
+  'computers',
+  'computerComponents',
+  'electronics',
+  'homeAppliances',
+  'carDealer',
+  'livestock',
+  'optician',
+])
+const EXPIRY_TRADES = new Set([
+  'pharmacy',
+  'grocery',
+  'butcher',
+  'dairy',
+  'fruitVegetable',
+  'nuts',
+  'cosmetics',
+  'seedsFertilizer',
+])
 const WHOLESALE_TRADES = new Set(['wholesale'])
-const CONSULTING_TRADES = new Set(['consulting', 'itServices'])
-const COURIER_TRADES = new Set(['courier'])
-const RENTAL_TRADES = new Set(['wedding'])
+const CONSULTING_TRADES = new Set([
+  'consulting',
+  'itServices',
+  'realEstate',
+  'travelAgency',
+  'security',
+])
+const COURIER_TRADES = new Set(['courier', 'transport', 'freightTransport', 'passengerTransport'])
+const RENTAL_TRADES = new Set(['wedding', 'realEstate'])
 
 const DNA_HINT_SETS: readonly ReadonlySet<string>[] = [
   APPOINTMENT_TRADES,

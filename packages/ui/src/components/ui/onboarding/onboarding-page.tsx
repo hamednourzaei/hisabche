@@ -29,6 +29,7 @@ import type { OperatingAnswers, OperatingQuestion } from '@hisabche/validation'
 export interface OnboardingPageProps {
   step: number
   businessType: string | null
+  primaryTradeKey?: string | null | undefined
   storeSize: string | null
   /** Optional free text; never gates progress. */
   businessNote: string
@@ -41,6 +42,7 @@ export interface OnboardingPageProps {
   currencyLabel: string
   onSetStep: (step: number) => void
   onSetBusinessType: (type: string) => void
+  onSetPrimaryTradeKey?: ((key: string | null) => void) | undefined
   onSetStoreSize: (size: string) => void
   onSetCurrency: (currency: string) => void
   onSetBusinessNote: (note: string) => void
@@ -115,13 +117,17 @@ WelcomeStep.displayName = 'WelcomeStep'
 
 const BusinessTypeStep = memo(function BusinessTypeStep({
   businessType,
+  primaryTradeKey,
   onSetBusinessType,
+  onSetPrimaryTradeKey,
   onBack,
   onNext,
   t,
 }: {
   businessType: string | null
+  primaryTradeKey?: string | null | undefined
   onSetBusinessType: (type: string) => void
+  onSetPrimaryTradeKey?: ((key: string | null) => void) | undefined
   onBack: () => void
   onNext: () => void
   t: (key: string, fallback?: string) => string
@@ -207,6 +213,38 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
             }}
           />
         </div>
+
+        {selectedIds.size > 1 && (
+          <div className="mt-4 rounded-2xl border border-[hsl(var(--border-default))] p-4 bg-[hsl(var(--surface-elevated))]">
+            <h4 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+              {t('onboarding.primaryIndustry')}
+            </h4>
+            <p className="mt-1 text-xs text-[hsl(var(--fg-secondary))]">
+              {t('onboarding.primaryIndustryDesc')}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[...selectedIds].map((id) => {
+                const label = trades.find((tr) => tr.id === id)?.label ?? id
+                const isPrimary = (primaryTradeKey || [...selectedIds][0]) === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onSetPrimaryTradeKey?.(id)}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      isPrimary
+                        ? 'bg-[hsl(var(--color-primary))] text-white'
+                        : 'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] hover:border-[hsl(var(--color-primary)/0.4)]',
+                    )}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
       <div className="mt-4 flex shrink-0 justify-between border-t border-[hsl(var(--border-default))] pt-4 sm:mt-6">
         <button
@@ -265,22 +303,28 @@ const StoreSizeStep = memo(function StoreSizeStep({
 }) {
   const storeSizes = [
     {
+      id: 'solo',
+      icon: StoreIcon,
+      labelKey: 'onboarding.scaleSolo',
+      descKey: 'onboarding.scaleSolo',
+    },
+    {
       id: 'small',
       icon: StoreIcon,
-      labelKey: 'onboarding.smallStore',
-      descKey: 'onboarding.smallStoreDesc',
+      labelKey: 'onboarding.scaleSmall',
+      descKey: 'onboarding.scaleSmall',
     },
     {
       id: 'medium',
       icon: BuildingIcon,
-      labelKey: 'onboarding.mediumStore',
-      descKey: 'onboarding.mediumStoreDesc',
+      labelKey: 'onboarding.scaleMedium',
+      descKey: 'onboarding.scaleMedium',
     },
     {
       id: 'large',
       icon: ShoppingBag,
-      labelKey: 'onboarding.largeStore',
-      descKey: 'onboarding.largeStoreDesc',
+      labelKey: 'onboarding.scaleLarge',
+      descKey: 'onboarding.scaleLarge',
     },
   ]
 
@@ -606,6 +650,7 @@ CompleteStep.displayName = 'CompleteStep'
 export const OnboardingPage = memo(function OnboardingPage({
   step,
   businessType,
+  primaryTradeKey,
   storeSize,
   businessNote,
   defaultCurrency,
@@ -616,6 +661,7 @@ export const OnboardingPage = memo(function OnboardingPage({
   currencyLabel,
   onSetStep,
   onSetBusinessType,
+  onSetPrimaryTradeKey,
   onSetStoreSize,
   onSetCurrency,
   onSetBusinessNote,
@@ -655,7 +701,9 @@ export const OnboardingPage = memo(function OnboardingPage({
         {step === 1 && (
           <BusinessTypeStep
             businessType={businessType}
+            primaryTradeKey={primaryTradeKey}
             onSetBusinessType={onSetBusinessType}
+            onSetPrimaryTradeKey={onSetPrimaryTradeKey}
             onBack={handleBack1}
             onNext={handleNext1}
             t={t}

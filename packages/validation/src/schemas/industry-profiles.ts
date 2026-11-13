@@ -337,6 +337,156 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     emphasizedFields: ['unit', 'quantity'],
     dashboard: ['manufacturing', 'workQueue', 'kpis', 'chart', 'insights', 'activities'],
   },
+  butcher: {
+    capabilities: ['measurement', 'multi_unit', 'batch_expiry'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  fruitVegetable: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  dairy: {
+    capabilities: ['batch_expiry', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  nuts: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  carpet: {
+    capabilities: ['measurement', 'multi_unit', 'variants'],
+    unit: 'meter',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  paint: {
+    capabilities: ['measurement', 'multi_unit', 'variants'],
+    unit: 'liter',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  glass: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  construction: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  furniture: {
+    capabilities: ['variants', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  kitchenware: {
+    capabilities: [],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  homeAppliances: {
+    capabilities: ['serialized_items', 'variants'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  stationery: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  toys: {
+    capabilities: ['variants', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  giftShop: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  cosmetics: {
+    capabilities: ['batch_expiry', 'variants', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  optician: {
+    capabilities: ['batch_expiry', 'serialized_items', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  agriculture: {
+    capabilities: ['measurement', 'multi_unit', 'batch_expiry'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  livestock: {
+    capabilities: ['measurement', 'serialized_items', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  seedsFertilizer: {
+    capabilities: ['measurement', 'multi_unit', 'batch_expiry'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  flowers: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  transport: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  freightTransport: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'kg',
+    emphasizedFields: ['unit', 'sellPrice'],
+  },
+  passengerTransport: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  travelAgency: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  realEstate: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  printing: {
+    capabilities: ['measurement', 'multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['unit', 'sellPrice', 'quantity'],
+  },
+  photography: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  laundry: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  security: {
+    capabilities: ['multi_unit'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  other: {
+    capabilities: [],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
 }
 
 /** Freezes a plain value and everything inside it. */

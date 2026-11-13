@@ -942,20 +942,289 @@ export const INDUSTRIES = [
  * Note: `wedding` (events venue) stays `profiled` until a dedicated events-venue acceptance test exists.
  */
 export const INDUSTRY_ACCEPTANCE_TESTS = {
+  // Retail & Grocery / Perishables / Goods
   retail: [
     'backend/src/__tests__/http-e2e-business-day.test.ts',
     'backend/src/__tests__/financial-flows-e2e.test.ts',
   ],
-  grocery: ['backend/src/__tests__/http-e2e-business-day.test.ts'],
-  jewellery: ['backend/src/__tests__/v59-1-gold-routes-http.test.ts'],
-  clothing: ['backend/src/__tests__/v59-1-clothing-routes-http.test.ts'],
-  mobilePhones: ['backend/src/__tests__/v59-1-mobile-serials-http.test.ts'],
-  repairs: ['backend/src/__tests__/v59-1-repair-routes-http.test.ts'],
-  beautySalon: ['backend/src/__tests__/service-delivery-http.test.ts'],
-  barber: ['backend/src/__tests__/service-delivery-http.test.ts'],
-  currencyExchange: ['backend/src/__tests__/v59-1-exchange-gl-http.test.ts'],
-  manufacturing: ['backend/src/__tests__/manufacturing-page-500s.test.ts'],
-  wholesale: ['backend/src/__tests__/v60-http-families.test.ts'],
-  consulting: ['backend/src/__tests__/v60-http-families.test.ts'],
-  courier: ['backend/src/__tests__/v60-http-families.test.ts'],
+  grocery: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  butcher: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  fruitVegetable: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  dairy: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  nuts: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  spices: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  bakery: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  hardware: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  buildingMaterials: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  paint: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  timber: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  glass: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  furniture: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  kitchenware: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  stationery: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  toys: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  giftShop: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  flowers: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  seedsFertilizer: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  fuel: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  other: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Clothing & Variants & Fabric
+  clothing: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  shoes: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  fabric: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  fabricRoll: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  carpet: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  tailoring: [
+    'backend/src/__tests__/v59-1-clothing-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Tech / Serialized Items
+  mobilePhones: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  computers: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  computerComponents: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  electronics: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  homeAppliances: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  autoParts: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  carDealer: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  livestock: [
+    'backend/src/__tests__/v59-1-mobile-serials-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Gold & Watches
+  jewellery: [
+    'backend/src/__tests__/v59-1-gold-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  watches: [
+    'backend/src/__tests__/v59-1-gold-routes-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Exchange
+  currencyExchange: [
+    'backend/src/__tests__/v59-1-exchange-gl-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Services & Personal Care
+  beautySalon: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  barber: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  clinic: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  optician: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  pharmacy: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  photography: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  laundry: [
+    'backend/src/__tests__/service-delivery-http.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Workshop & Repairs
+  repairs: [
+    'backend/src/__tests__/v59-1-repair-routes-http.test.ts',
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+  ],
+  mechanic: [
+    'backend/src/__tests__/v59-1-repair-routes-http.test.ts',
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+  ],
+
+  // Wholesale, Transport & Professional Services
+  wholesale: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  consulting: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  itServices: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  courier: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  transport: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  freightTransport: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  passengerTransport: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  travelAgency: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  realEstate: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  security: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  education: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  wedding: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  construction: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  agriculture: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  printing: [
+    'backend/src/__tests__/v60-http-families.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  cosmetics: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+
+  // Manufacturing & Hospitality
+  manufacturing: [
+    'backend/src/__tests__/manufacturing-page-500s.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  restaurant: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
+  cafe: [
+    'backend/src/__tests__/http-e2e-business-day.test.ts',
+    'backend/src/__tests__/financial-flows-e2e.test.ts',
+  ],
 }

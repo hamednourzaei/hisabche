@@ -33,6 +33,7 @@ export interface OnboardingState {
   ownerId: string | null
   step: number
   businessType: BusinessType | null
+  primaryTradeKey: string | null
   storeSize: StoreSize | null
   operationalDna: OperationalDna | null
   /** V54 5.3: the adaptive «how do you work» answers; unanswered = the trade's default. */
@@ -45,6 +46,7 @@ export interface OnboardingState {
 
   setStep: (step: number) => void
   setBusinessType: (type: BusinessType) => void
+  setPrimaryTradeKey: (key: string | null) => void
   setStoreSize: (size: StoreSize) => void
   setOperationalDna: (dna: OperationalDna) => void
   setOperatingAnswer: (question: OperatingQuestion, answer: string) => void
@@ -75,6 +77,7 @@ const initialState: OnboardingData = {
   ownerId: null,
   step: 0,
   businessType: null,
+  primaryTradeKey: null,
   storeSize: null,
   operationalDna: null,
   operatingAnswers: {},
@@ -94,6 +97,7 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       setStep: (step) => set({ step }),
       setBusinessType: (businessType) => set({ businessType, step: 2 }),
+      setPrimaryTradeKey: (primaryTradeKey) => set({ primaryTradeKey }),
       setStoreSize: (storeSize) => set({ storeSize, step: 3 }),
       setOperationalDna: (operationalDna) => set({ operationalDna }),
       setOperatingAnswer: (question, answer) => {

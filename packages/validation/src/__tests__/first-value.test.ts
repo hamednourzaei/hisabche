@@ -22,10 +22,14 @@ const stepsFor = (tradeKey: string, answers: Record<string, string> = {}) => {
   return { dna, steps: firstValueSteps(dna, resolveDnaCapabilities(dna).activeModules) }
 }
 
+const CATALOGUES: Record<string, Record<string, unknown>> = {
+  fa: JSON.parse(readFileSync(resolve(REPO_ROOT, 'packages/i18n/messages/fa/common.json'), 'utf8')),
+  af: JSON.parse(readFileSync(resolve(REPO_ROOT, 'packages/i18n/messages/af/common.json'), 'utf8')),
+  en: JSON.parse(readFileSync(resolve(REPO_ROOT, 'packages/i18n/messages/en/common.json'), 'utf8')),
+}
+
 function messageAt(lang: string, key: string): string | undefined {
-  const catalogue = JSON.parse(
-    readFileSync(resolve(REPO_ROOT, 'packages/i18n/messages', lang, 'common.json'), 'utf8'),
-  ) as Record<string, unknown>
+  const catalogue = CATALOGUES[lang] ?? {}
   let node: unknown = catalogue
   for (const part of key.split('.')) {
     if (typeof node !== 'object' || node === null) return undefined
@@ -88,7 +92,75 @@ describe('firstValueSteps — the domain decides', () => {
       '/customers?tab=sessions',
       '/invoices/new',
     ])
-    const trades = ['retail', 'wholesale', 'consulting', 'barber', 'repairs', 'other', 'pharmacy']
+    const trades = [
+      'retail',
+      'wholesale',
+      'grocery',
+      'bakery',
+      'butcher',
+      'restaurant',
+      'cafe',
+      'fruitVegetable',
+      'dairy',
+      'nuts',
+      'spices',
+      'jewellery',
+      'watches',
+      'currencyExchange',
+      'clothing',
+      'fabric',
+      'fabricRoll',
+      'shoes',
+      'carpet',
+      'tailoring',
+      'mobilePhones',
+      'computers',
+      'computerComponents',
+      'electronics',
+      'itServices',
+      'hardware',
+      'buildingMaterials',
+      'paint',
+      'timber',
+      'glass',
+      'construction',
+      'manufacturing',
+      'autoParts',
+      'carDealer',
+      'mechanic',
+      'fuel',
+      'furniture',
+      'kitchenware',
+      'homeAppliances',
+      'stationery',
+      'toys',
+      'giftShop',
+      'pharmacy',
+      'cosmetics',
+      'clinic',
+      'barber',
+      'beautySalon',
+      'optician',
+      'agriculture',
+      'livestock',
+      'seedsFertilizer',
+      'flowers',
+      'transport',
+      'freightTransport',
+      'passengerTransport',
+      'courier',
+      'travelAgency',
+      'realEstate',
+      'printing',
+      'photography',
+      'education',
+      'laundry',
+      'repairs',
+      'wedding',
+      'security',
+      'consulting',
+      'other',
+    ]
     for (const tradeKey of trades) {
       const { steps } = stepsFor(tradeKey)
       expect(steps.length).toBeGreaterThan(0)

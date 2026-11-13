@@ -31,10 +31,7 @@ export const CRITERIA = [
     section: '2.1',
     title: 'signup → workspace (workspace_create_with_owner) → books currency stored',
     kind: 'global',
-    // No HTTP test creates an account and then a workspace today:
-    // workspace.routes.test.ts registers routes, workspace-create-atomic.test.ts
-    // runs the service over a fake db. Neither is the journey V64 asks for.
-    files: [],
+    files: ['backend/src/__tests__/workspace-journey-http.test.ts'],
   },
   {
     code: 'ONBOARDING_JOURNEY',

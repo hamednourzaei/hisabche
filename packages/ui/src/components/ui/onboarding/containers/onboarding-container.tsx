@@ -39,10 +39,11 @@ import { useLocalePush } from '../../../../hooks/use-locale-push'
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** The same keys the size cards use — one name per size in every language. */
-const STORE_SIZE_LABEL_KEY: Record<StoreSize, string> = {
-  small: 'onboarding.smallStore',
-  medium: 'onboarding.mediumStore',
-  large: 'onboarding.largeStore',
+const STORE_SIZE_LABEL_KEY: Record<string, string> = {
+  solo: 'onboarding.scaleSolo',
+  small: 'onboarding.scaleSmall',
+  medium: 'onboarding.scaleMedium',
+  large: 'onboarding.scaleLarge',
 }
 
 export const OnboardingContainer = memo(function OnboardingContainer() {
@@ -62,10 +63,12 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const {
     step,
     businessType,
+    primaryTradeKey,
     storeSize,
     defaultCurrency,
     setStep,
     setBusinessType,
+    setPrimaryTradeKey,
     setStoreSize,
     setDefaultCurrency,
     completeOnboarding,
@@ -118,7 +121,11 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
         : [],
     [businessType],
   )
-  const primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined
+  let primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined
+  if (primaryTradeKey) {
+    primaryTrade =
+      (primaryIndustryKeyOf(businessType, primaryTradeKey) ?? undefined) || primaryTrade
+  }
   // EVERY selected activity pre-fills its own answers (V64 §5): the wizard and
   // the inferred DNA must never see only the primary trade.
   const operatingAnswers = useMemo<OperatingAnswers>(
@@ -382,6 +389,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     <OnboardingPage
       step={step}
       businessType={businessType}
+      primaryTradeKey={primaryTradeKey}
       storeSize={storeSize}
       defaultCurrency={defaultCurrency}
       lang={lang}
@@ -391,6 +399,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
       currencyLabel={currencyLabel}
       onSetStep={setStep}
       onSetBusinessType={handleSetBusinessType}
+      onSetPrimaryTradeKey={setPrimaryTradeKey}
       onSetStoreSize={handleSetStoreSize}
       businessNote={businessNote}
       onSetBusinessNote={setBusinessNote}
