@@ -265,7 +265,7 @@ export interface ReorderSuggestion {
  * is. Being 10 units below the level means nothing on its own — ten units is a
  * week for one product and an hour for another.
  */
-export function suggestReorders(items: ReorderInput[], asOfDays = 0): ReorderSuggestion[] {
+export function suggestReorders(items: ReorderInput[], _asOfDays = 0): ReorderSuggestion[] {
   return (
     items
       .map((item) => {

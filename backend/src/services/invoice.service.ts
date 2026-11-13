@@ -18,6 +18,8 @@ import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { assertMayUseWarehouse } from './inventory/warehouse-access'
 import { supabase } from '../db'
+import { rowOf, rowsOf, type DbRow } from '../utils/db-row'
+import type { PostgrestError } from '@supabase/supabase-js'
 import { holds, sod } from './authorization'
 import { creditLimitModeOf, creditLimitOf } from './credit-limit'
 import { serializeBy } from '../utils/keyed-lock'
@@ -43,6 +45,7 @@ import {
   quoteGoldItemPrice,
   type AccountRole,
   type GoldLineSnapshot,
+  type InvoiceItem,
 } from '@hisabche/validation'
 import { fractionDigits } from '@hisabche/formatting'
 import { ledger, type DraftLine } from './accounting'
@@ -225,8 +228,69 @@ export type LedgerPostResult =
   | { status: 'not_postable'; reason: string }
 
 /** A list from a row that may carry it under either key, or not at all. */
-function asArray(value: unknown): any[] {
-  return Array.isArray(value) ? value : []
+/**
+ * One component of an invoice line ("گردنبند" → زنجیر / سنگ / اجرت), as the helpers below read it.
+ */
+/** An invoice as read back: every stored column, plus the customer's name resolved. */
+export type InvoiceRecord = DbRow & {
+  id: string
+  customerName: string | null
+  customer: DbRow | null
+}
+
+interface InvoiceLineDetail {
+  title?: string | undefined
+  quantity?: number | undefined
+  amount?: number | undefined
+  unit?: string | undefined
+  unitLabel?: string | null | undefined
+  weightGrams?: number | null | undefined
+  sortOrder?: number | undefined
+}
+
+/**
+ * An invoice line as the line helpers read it: the validated request line, or a stored line
+ * re-read for an edit or a reversal. Only the fields used here — every one is read and checked
+ * where it is used. (13 Nov 2026: these helpers took `any[]`.)
+ */
+interface InvoiceLine {
+  id?: string | undefined
+  productId?: string | null | undefined
+  variantId?: string | null | undefined
+  productName?: string | undefined
+  quantity: number
+  unit?: string | undefined
+  unitLabel?: string | null | undefined
+  weightGrams?: number | null | undefined
+  unitPrice?: number | undefined
+  discount?: number | undefined
+  totalPrice?: number | undefined
+  notes?: string | null | undefined
+  details?: InvoiceLineDetail[] | undefined
+  goldSnapshot?: GoldLineSnapshot | undefined
+  warehouseId?: string | null | undefined
+  categoryId?: string | null | undefined
+}
+
+/** A stored value as text, or null when absent. */
+function textOrNull(value: unknown): string | null {
+  return value === null || value === undefined ? null : String(value)
+}
+
+/** A stored line (either naming) as the line helpers read it. */
+function storedLine(item: DbRow): InvoiceLine {
+  const details = Array.isArray(item.details) ? (item.details as InvoiceLineDetail[]) : undefined
+  return {
+    ...(item.id === undefined || item.id === null ? {} : { id: String(item.id) }),
+    productId: textOrNull(item.productId ?? item.product_id),
+    warehouseId: textOrNull(item.warehouseId ?? item.warehouse_id),
+    quantity: Number(item.quantity) || 0,
+    ...(item.unitPrice !== undefined || item.unit_price !== undefined
+      ? { unitPrice: Number(item.unitPrice ?? item.unit_price) || 0 }
+      : {}),
+    discount: Number(item.discount) || 0,
+    ...(details ? { details } : {}),
+  }
 }
 
 /**
@@ -474,15 +538,15 @@ export class InvoiceService {
       items && items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
     const nextCursor = hasMore && last ? encodeCursor(last, sortBy) : null
 
-    const invoices = (items || []).map((inv: any) => ({
-      ...inv,
-      customerName: (inv.customer as any)?.full_name || null,
-      customer: (inv.customer as any) || null,
-      itemsSent: ((inv.invoice_items as any[]) || []).reduce(
-        (sum, i) => sum + (Number(i.quantity) || 0),
-        0,
-      ),
-    }))
+    const invoices = rowsOf(items).map((inv) => {
+      const customer = rowOf(inv.customer)
+      return {
+        ...inv,
+        customerName: customer?.full_name ? String(customer.full_name) : null,
+        customer,
+        itemsSent: rowsOf(inv.invoice_items).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
+      }
+    })
 
     const result = {
       invoices,
@@ -653,11 +717,11 @@ export class InvoiceService {
   }
 
   // ─── Get Invoice By ID ───
-  async getById(id: string, ctx: TenancyContext) {
+  async getById(id: string, ctx: TenancyContext): Promise<InvoiceRecord> {
     const { workspaceId } = ctx
     // The select string is built at runtime, so Supabase cannot infer a row
     // type from it — same reason the previous implementation used `any` here.
-    const read = async (): Promise<{ data: any; error: any }> =>
+    const read = async (): Promise<{ data: DbRow | null; error: PostgrestError | null }> =>
       supabase
         .from('invoices')
         .select(this.invoiceSelect())
@@ -680,10 +744,12 @@ export class InvoiceService {
       throw new NotFoundError('Invoice')
     }
 
+    const customer = rowOf(data.customer)
     return {
       ...data,
-      customerName: (data.customer as any)?.full_name || null,
-      customer: (data.customer as any) || null,
+      id: String(data.id),
+      customerName: customer?.full_name ? String(customer.full_name) : null,
+      customer,
     }
   }
 
@@ -722,14 +788,11 @@ export class InvoiceService {
       )
     `
 
-    let data: any = null
-    let error: any = null
-
-    ;({ data, error } = await supabase
+    const { data, error } = await supabase
       .from('invoices')
       .select(columns)
       .eq('public_token', token)
-      .single())
+      .single()
 
     if (error && (error.code === '42703' || /public_token/.test(error.message || ''))) {
       // ⚠️ SECURITY — there was a fallback here that retried the lookup as
@@ -794,7 +857,8 @@ export class InvoiceService {
       if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('invoice')
       throw new DatabaseError('Failed to look up the request', error)
     }
-    return data as Record<string, unknown> | null
+    const row = rowOf(data)
+    return row ? Object.assign(row, { id: String(row.id) }) : null
   }
 
   /**
@@ -1897,7 +1961,8 @@ export class InvoiceService {
     // the second silently won. A line edit without `version` is refused; a
     // stale one is a 409, and nothing is written.
     // ═══════════════════════════════════════════════════════════════════════
-    const lines = (data as { items?: any[] }).items
+    // The validated update payload's lines (`invoiceItemSchema`).
+    const lines = (data as { items?: InvoiceItem[] }).items
     const editingLines = Array.isArray(lines) && lines.length > 0
     const expectedVersion = (data as { version?: number }).version
 
@@ -1985,7 +2050,9 @@ export class InvoiceService {
       currentInvoice.status !== 'paid'
 
     const isFullyPaid =
-      data.paidAmount !== undefined && data.paidAmount >= (data.total ?? currentInvoice.total)
+      data.paidAmount !== undefined &&
+      // A missing stored total reads NaN, so this stays false — never «paid» against a made-up 0.
+      data.paidAmount >= (data.total ?? Number(currentInvoice.total))
 
     if (isNowPaid || isFullyPaid) {
       try {
@@ -2240,7 +2307,7 @@ export class InvoiceService {
     ctx: TenancyContext,
     invoiceId: string,
     customerId: string | null | undefined,
-    lines: any[],
+    lines: InvoiceLine[],
     itemRows: Array<{ id: string; product_id?: string; quantity?: number; unit?: string }>,
     effectiveDate?: string,
     exchangeRate = 1,
@@ -2425,7 +2492,7 @@ export class InvoiceService {
       const now = new Date().toISOString()
       const effDate = now.split('T')[0]!
 
-      const reversals = grants.map((g: any) => ({
+      const reversals = rowsOf(grants).map((g) => ({
         id: randomUUID(),
         workspace_id: ctx.workspaceId,
         customer_id: g.customer_id,
@@ -2545,28 +2612,38 @@ export class InvoiceService {
     // «فروش امروز» و «بدهی» فقط از فروش می‌آیند. فاکتور خرید نه فروش است و نه
     // طلب ما از مشتری. فاکتورهای قدیمیِ بدون type فروش در نظر گرفته می‌شوند تا
     // معنایشان عوض نشود.
-    const invoices = (allInvoices || []).filter((i: any) => i.type !== 'purchase')
-    const purchases = (allInvoices || []).filter((i: any) => i.type === 'purchase')
+    const allRows = rowsOf(allInvoices)
+    const invoices = allRows.filter((i) => i.type !== 'purchase')
+    const purchases = allRows.filter((i) => i.type === 'purchase')
 
     const todaySales = invoices
-      .filter((i: any) => isOnDay(i.date, today, tomorrow))
-      .reduce((sum: number, i: any) => sum + (i.total || 0), 0)
+      .filter((i) => isOnDay(i.date, today, tomorrow))
+      .reduce((sum: number, i) => sum + (Number(i.total) || 0), 0)
 
     const todayPurchases = purchases
-      .filter((i: any) => isOnDay(i.date, today, tomorrow))
-      .reduce((sum: number, i: any) => sum + (i.total || 0), 0)
+      .filter((i) => isOnDay(i.date, today, tomorrow))
+      .reduce((sum: number, i) => sum + (Number(i.total) || 0), 0)
 
     const totalDebt = invoices
       .filter((i) => i.status !== 'paid')
-      .reduce((sum: number, i: any) => sum + Math.max(0, (i.total || 0) - (i.paid_amount || 0)), 0)
+      .reduce(
+        (sum: number, i) =>
+          sum + Math.max(0, (Number(i.total) || 0) - (Number(i.paid_amount) || 0)),
+        0,
+      )
 
     const totalPayable = purchases
       .filter((i) => i.status !== 'paid')
-      .reduce((sum: number, i: any) => sum + Math.max(0, (i.total || 0) - (i.paid_amount || 0)), 0)
+      .reduce(
+        (sum: number, i) =>
+          sum + Math.max(0, (Number(i.total) || 0) - (Number(i.paid_amount) || 0)),
+        0,
+      )
 
-    const lowStockCount = (products || []).filter(
-      (p: any) => (p.min_stock_level || 0) > 0 && (p.quantity || 0) <= (p.min_stock_level || 0),
-    ).length
+    const lowStockCount = rowsOf(products).filter((p) => {
+      const min = Number(p.min_stock_level) || 0
+      return min > 0 && (Number(p.quantity) || 0) <= min
+    }).length
 
     return { todaySales, totalDebt, lowStockCount, todayPurchases, totalPayable }
   }
@@ -2584,7 +2661,7 @@ export class InvoiceService {
    * `withDerivedLineTotals` is the single derivation, and the same array is what
    * this writes, what the stock plan reads and what the costing consumes.
    */
-  private withDerivedLineTotals(items: any[], currency: string): any[] {
+  private withDerivedLineTotals<T extends InvoiceLine>(items: T[], currency: string): T[] {
     const scale = Math.pow(10, fractionDigits(currency as Parameters<typeof fractionDigits>[0]))
     return items.map((raw) => {
       let item = raw
@@ -2632,7 +2709,7 @@ export class InvoiceService {
    * this writes that value and never reads the request's.
    */
   private buildItemRows(
-    items: any[],
+    items: InvoiceLine[],
     invoiceId: string,
     userId: string,
     workspaceId: string,
@@ -2675,14 +2752,14 @@ export class InvoiceService {
    * Index i of `items` is index i of `itemRows`: both come from the same map.
    */
   private buildDetailRows(
-    items: any[],
+    items: InvoiceLine[],
     itemRows: Array<{ id: string }>,
   ): Array<Record<string, unknown>> {
     return items.flatMap((item, index) => {
       const parentId = itemRows[index]?.id
       if (!parentId || !item.details?.length) return []
 
-      return item.details.map((detail: any, order: number) => ({
+      return item.details.map((detail, order: number) => ({
         invoice_item_id: parentId,
         title: detail.title,
         quantity: detail.quantity ?? 1,
@@ -2949,7 +3026,7 @@ export class InvoiceService {
    */
   private async replaceInvoiceItems(
     invoiceId: string,
-    items: any[],
+    items: InvoiceLine[],
     ctx: TenancyContext,
     type: string,
     /** The invoice's own currency: its new lines are rounded in it (F2-01). */
@@ -2981,7 +3058,7 @@ export class InvoiceService {
 
     const newPkgIds = await this.findPackageProductIds(
       ctx.workspaceId,
-      lines.map((l: any) => l.productId).filter(Boolean),
+      lines.flatMap((l) => (l.productId ? [l.productId] : [])),
     )
     if (newPkgIds.size > 0) {
       throw new ValidationError(
@@ -3292,7 +3369,7 @@ export class InvoiceService {
   }
 
   private async batchUpdateStock(
-    items: any[],
+    items: InvoiceLine[],
     ctx: TenancyContext,
     direction: 1 | -1 = -1,
     invoiceId?: string | undefined,
@@ -3338,7 +3415,7 @@ export class InvoiceService {
    * create path can write them in the same transaction as the document.
    */
   private async planStockMovements(
-    items: any[],
+    items: InvoiceLine[],
     ctx: TenancyContext,
     direction: 1 | -1,
     invoiceId: string | undefined,
@@ -3347,7 +3424,7 @@ export class InvoiceService {
     const { workspaceId, userId } = ctx
     if (!items || items.length === 0) return []
 
-    const productIds = items.filter((item) => item.productId).map((item) => item.productId)
+    const productIds = items.flatMap((item) => (item.productId ? [item.productId] : []))
 
     if (productIds.length === 0) return []
 
@@ -3415,7 +3492,10 @@ export class InvoiceService {
     const rows = items
       // Products outside this workspace never entered productMap, so naming
       // another shop's product id moves nothing (lesson 17).
-      .filter((item) => item.productId && productMap.has(item.productId))
+      .filter(
+        (item): item is InvoiceLine & { productId: string } =>
+          Boolean(item.productId) && productMap.has(item.productId ?? ''),
+      )
       .map((item) => {
         // L1 — the line's own unit, converted to the product's base.
         //
@@ -3663,7 +3743,7 @@ export class InvoiceService {
     data: {
       type?: string | undefined
       date?: string | undefined
-      items?: any[] | undefined
+      items?: InvoiceLine[] | undefined
       customerId?: string | null | undefined
     },
   ): Promise<void> {
@@ -3749,7 +3829,7 @@ export class InvoiceService {
     ctx: TenancyContext,
     invoiceId: string,
     type: string,
-    items: any[],
+    items: InvoiceLine[],
     date?: string,
     /**
      * When given, a sale line refused with INVENTORY_INSUFFICIENT_STOCK is
@@ -3772,7 +3852,10 @@ export class InvoiceService {
     const entryDate = date ? String(date).slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone)
     // Lines without a product are services; they hold no stock and cost
     // nothing to deliver from inventory.
-    const stocked = (items ?? []).filter((item) => item?.productId && Number(item.quantity) > 0)
+    const stocked = (items ?? []).filter(
+      (item): item is InvoiceLine & { productId: string } =>
+        Boolean(item?.productId) && Number(item.quantity) > 0,
+    )
     if (stocked.length === 0) return 0
 
     const productIds = [...new Set(stocked.map((item) => item.productId))]
@@ -3877,7 +3960,7 @@ export class InvoiceService {
       type: string
       total: number
       taxTotal?: number | undefined
-      items?: any[] | undefined
+      items?: InvoiceLine[] | undefined
       invoiceNumber?: string | undefined
       date?: string | undefined
       /**
@@ -4127,7 +4210,7 @@ export class InvoiceService {
     uncostedProducts: string[]
   }> {
     await scopes.assertMay(ctx, 'invoice', id, 'invoice.update')
-    const invoice: any = await this.getById(id, ctx)
+    const invoice = await this.getById(id, ctx)
     const none = { cost: 0, posted: 0, unposted: 0, uncostedProducts: [] as string[] }
 
     const status = String(invoice?.status ?? '')
@@ -4139,10 +4222,10 @@ export class InvoiceService {
       return { status: 'not_postable', ...none }
     }
 
-    const items = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
-      id: item.id,
-      productId: item.productId ?? item.product_id ?? null,
-      warehouseId: item.warehouseId ?? item.warehouse_id ?? null,
+    const items = rowsOf(invoice.items ?? invoice.invoice_items).map((item) => ({
+      id: textOrNull(item.id) ?? undefined,
+      productId: textOrNull(item.productId ?? item.product_id),
+      warehouseId: textOrNull(item.warehouseId ?? item.warehouse_id),
       quantity: Number(item.quantity) || 0,
     }))
     const date = String(invoice?.date ?? '')
@@ -4169,7 +4252,9 @@ export class InvoiceService {
       .select('id, offering_type')
       .eq('workspace_id', ctx.workspaceId)
       .in('id', itemProductIds)
-    const movesMap = new Map((itemProds ?? []).map((p: any) => [p.id, movesStock(p.offering_type)]))
+    const movesMap = new Map(
+      rowsOf(itemProds).map((p) => [String(p.id), movesStock(textOrNull(p.offering_type))]),
+    )
 
     for (const [index, item] of items.entries()) {
       if (!item.productId || item.quantity <= 0 || movesMap.get(item.productId) === false) continue
@@ -4296,7 +4381,7 @@ export class InvoiceService {
 
   /** Costing + journal entry for an invoice that exists. Idempotent. */
   private async bookToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {
-    const invoice: any = await this.getById(id, ctx)
+    const invoice = await this.getById(id, ctx)
 
     const status = String(invoice?.status ?? '')
     if (status === 'cancelled' || status === AWAITING_APPROVAL_STATUS) {
@@ -4304,15 +4389,7 @@ export class InvoiceService {
     }
 
     const type = String(invoice?.type ?? 'sale')
-    const rawItems = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
-      id: item.id,
-      productId: item.productId ?? item.product_id ?? null,
-      warehouseId: item.warehouseId ?? item.warehouse_id ?? null,
-      quantity: Number(item.quantity) || 0,
-      unitPrice: Number(item.unitPrice ?? item.unit_price) || 0,
-      discount: Number(item.discount) || 0,
-      details: item.details,
-    }))
+    const rawItems = rowsOf(invoice.items ?? invoice.invoice_items).map(storedLine)
     const items = this.withDerivedLineTotals(rawItems, String(invoice?.currency ?? 'AFN'))
     const date = String(invoice?.date ?? '')
 
@@ -4332,7 +4409,7 @@ export class InvoiceService {
       exchangeRate,
       total: Number(invoice?.total) || 0,
       items,
-      invoiceNumber: invoice?.invoiceNumber ?? invoice?.invoice_number,
+      invoiceNumber: textOrNull(invoice.invoiceNumber ?? invoice.invoice_number) ?? undefined,
       ...(date ? { date } : {}),
       costOfGoodsSold: cogs,
     })
@@ -4570,7 +4647,7 @@ export class InvoiceService {
     const invoice = await this.getById(invoiceId, ctx)
     if (!invoice) throw new NotFoundError('Invoice')
 
-    const raw = invoice as Record<string, any>
+    const raw: DbRow = invoice
 
     // ⚠️ `invoice_items`, and mapped to camelCase.
     //
@@ -4581,16 +4658,7 @@ export class InvoiceService {
     // the costing consumes no layers and the stock never moves — an approved
     // invoice with no effect, which is the exact failure this whole gate
     // exists to prevent.
-    const rawItems = ((raw.invoice_items ?? raw.items ?? []) as Record<string, any>[]).map(
-      (item) => ({
-        ...item,
-        productId: item.productId ?? item.product_id,
-        quantity: Number(item.quantity) || 0,
-        unitPrice: item.unitPrice ?? item.unit_price,
-        discount: Number(item.discount) || 0,
-        details: item.details,
-      }),
-    )
+    const rawItems = rowsOf(raw.invoice_items ?? raw.items).map(storedLine)
     const items = this.withDerivedLineTotals(rawItems, String(raw.currency ?? 'AFN'))
 
     const exchangeRate = await this.storedExchangeRate(ctx.workspaceId, invoiceId)
@@ -4599,7 +4667,7 @@ export class InvoiceService {
       invoiceId,
       String(raw.type ?? 'sale'),
       items,
-      raw.date,
+      textOrNull(raw.date) ?? undefined,
       undefined,
       exchangeRate,
     )

@@ -54,7 +54,7 @@ export function registerBackupRoutes(router: Router): void {
 
         resultData[table] = rows
         totalRows += rows.length
-      } catch (err) {
+      } catch {
         failedTables.push(table)
         resultData[table] = []
       }

@@ -6,7 +6,6 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -14,14 +13,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ProductUnitsService } from '../services/inventory/product-units.service'
-
-// route files: naming this `ZodTypeAny` makes the compiler unfold the schema
-// type recursively and hit its instantiation depth limit.
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as Record<string, unknown>
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 const unitSchema = z.object({
   unitId: z.string().uuid(),

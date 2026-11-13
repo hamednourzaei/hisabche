@@ -6,7 +6,7 @@ const CMS_CACHE_KEY = '@hisabche/cms_globals'
 const CMS_ETAG_KEY = '@hisabche/cms_globals_etag'
 
 export interface CmsGlobals {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 let memoryCache: CmsGlobals | null = null
@@ -15,7 +15,7 @@ export async function fetchAndCacheCmsGlobals(locale: string = 'fa') {
   try {
     const cachedEtag = await AsyncStorage.getItem(CMS_ETAG_KEY)
 
-    const config: any = {
+    const config: NonNullable<Parameters<typeof apiClient.get>[1]> = {
       validateStatus: (status: number) => (status >= 200 && status < 300) || status === 304,
     }
     if (cachedEtag) {
@@ -49,7 +49,7 @@ export async function getCachedCmsGlobals(): Promise<CmsGlobals> {
       memoryCache = JSON.parse(data)
       return memoryCache!
     }
-  } catch (e) {
+  } catch {
     // Corrupt cache
   }
   return {}

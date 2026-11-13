@@ -3,15 +3,21 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
-type Json = Record<string, any>
+/** A response body, read field by field (values are compared, never computed on). */
+interface Json {
+  readonly [key: string]: Json
+}
 const ACCOUNT = '9b2f4c1e-0000-4000-8000-0000000000a1'
 const BUDGET = '9b2f4c1e-0000-4000-8000-0000000000b1'
 
 function setup() {
   const db = createTestDb()
   const engine = createTestEngine(db)
-  const call = (method: any, path: string, body?: unknown) =>
-    engine.request<Json>({ method, path, ...(body === undefined ? {} : { body }) })
+  const call = (
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+    path: string,
+    body?: unknown,
+  ) => engine.request<Json>({ method, path, ...(body === undefined ? {} : { body }) })
   db.run(
     `INSERT INTO account (id, workspace_id, code, name, type, role, is_active, created_at, updated_at)
      VALUES (?, ?, '6500', 'اجاره', 'expense', NULL, 1, 'x', 'x')`,
@@ -94,8 +100,8 @@ describe('budgets (offline)', () => {
     spend(db, '2026-03-10', 80)
 
     const report = await call('GET', '/operations/budgets/report?onDate=2026-03-15')
-    expect(report.data.rows[0].performance.actualMinor).toBe(8000)
-    expect(report.data.totals.expense.budgetMinor).toBe(100000)
+    expect(report.data.rows?.[0]?.performance?.actualMinor).toBe(8000)
+    expect(report.data.totals?.expense?.budgetMinor).toBe(100000)
 
     const variance = await call('GET', '/operations/budgets/variance?onDate=2026-03-15')
     expect(variance.data[0]).toMatchObject({ budgetMinor: 100000, actualMinor: 8000 })
@@ -136,9 +142,9 @@ describe('budgets (offline)', () => {
     expect(revised.data.result).toEqual({ version: 2 })
     const history = await call('GET', `/operations/budgets/${BUDGET}/revisions`)
     expect(history.data[0]).toMatchObject({ version: 2, previous_version: 1, reason: 'more rent' })
-    expect(history.data[0].previous_values.amount_minor).toBe(100000)
-    expect(history.data[0].new_values.amount_minor).toBe(200000)
-    expect((await call('GET', '/operations/budgets')).data[0].amountMinor).toBe(200000)
+    expect(history.data[0]?.previous_values?.amount_minor).toBe(100000)
+    expect(history.data[0]?.new_values?.amount_minor).toBe(200000)
+    expect((await call('GET', '/operations/budgets')).data[0]?.amountMinor).toBe(200000)
   })
 
   it('archives once', async () => {

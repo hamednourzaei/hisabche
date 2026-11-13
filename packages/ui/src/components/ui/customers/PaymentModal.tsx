@@ -29,7 +29,7 @@ import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
 import { toIsoDay } from '@hisabche/formatting'
 
-interface InvoiceRecord {
+export interface InvoiceRecord {
   id: string
   invoiceNumber?: string
   total: number

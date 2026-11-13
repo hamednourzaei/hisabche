@@ -159,7 +159,7 @@ const nextConfig = {
         // so every visit re-checked each one. Names are not content-hashed, so
         // a day plus a week of stale-while-revalidate, not `immutable`.
         source:
-          '/:file(favicon\.ico|favicon-.*\.png|android-chrome-.*\.png|apple-touch-icon\.png|logo-icon\.png|dashboard-.*\.png|site\.webmanifest|llms\.txt)',
+          '/:file(favicon\\.ico|favicon-.*\\.png|android-chrome-.*\\.png|apple-touch-icon\\.png|logo-icon\\.png|dashboard-.*\\.png|site\\.webmanifest|llms\\.txt)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
         ],

@@ -13,7 +13,7 @@ const v = (patch: Partial<InvoicePaymentValue>): InvoicePaymentValue => ({
   ...emptyPaymentValue(),
   ...patch,
 })
-const row = (id: string, method: any, amount: string, note?: string) => ({
+const row = (id: string, method: InvoicePaymentValue['method'], amount: string, note?: string) => ({
   id,
   method,
   amount,

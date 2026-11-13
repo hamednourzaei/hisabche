@@ -6,7 +6,8 @@ export interface Customer {
   name?: string
   phone?: string
   email?: string
-  address?: any // ← تغییر: به any برای سازگاری با ساختارهای مختلف
+  /** A text line, or a structured address object from older rows — rendered via String(). */
+  address?: string | Record<string, unknown> | null
   openingBalance?: number
   isActive?: boolean
   createdAt?: string

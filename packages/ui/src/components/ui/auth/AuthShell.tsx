@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation'
 import { cn } from '../../../lib/utils'
 import { PhoneInput } from '../phone-input'
 import React from 'react'
+import type { UseFormRegister, UseFormRegisterReturn, UseFormWatch } from 'react-hook-form'
+import type { LoginInput } from '@hisabche/validation'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    AuthShell v14 — i18n-ready + Fixed Signup Card Background
@@ -267,7 +269,14 @@ const SpinnerIcon = () => (
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 type SafeT = (key: string, fallback: string) => string
-type AnyForm = any
+/** The fields the sign-up form renders. */
+export interface SignupFields {
+  fullName: string
+  businessName: string
+  phone?: string | undefined
+  email: string
+  password: string
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -706,9 +715,8 @@ interface LoginFormProps {
   serverError: string | null
   isLoading: boolean
   errors: Record<string, { message?: string } | undefined>
-  register: AnyForm
-  watch: AnyForm
-  handleSubmit: AnyForm
+  register: UseFormRegister<LoginInput>
+  watch: UseFormWatch<LoginInput>
   showPassword: boolean
   togglePassword: () => void
   onSwitchMode: () => void
@@ -835,7 +843,7 @@ function LoginForm({
 // ─── SignupForm ────────────────────────────────────────────────────────────
 
 interface SignupFieldOpts {
-  name: string
+  name: keyof SignupFields
   type: string
   label: string
   icon: ReactNode
@@ -851,9 +859,12 @@ interface SignupFormProps {
   serverError: string | null
   isLoading: boolean
   errors: Record<string, { message?: string } | undefined>
-  register: AnyForm
-  watch: AnyForm
-  handleSubmit: AnyForm
+  /**
+   * Web and Windows/Android pass different sign-up forms (only the web one has a phone);
+   * the shell needs just these two calls over the field names it renders.
+   */
+  register(name: keyof SignupFields): UseFormRegisterReturn
+  watch(name: keyof SignupFields): string | undefined
   showPassword: boolean
   togglePassword: () => void
   onSwitchMode: () => void
@@ -967,7 +978,7 @@ function SignupForm({
         <PhoneField
           value={watch('phone') || ''}
           onChange={(val) => {
-            const { ref, name, ...rest } = register('phone')
+            const { ref: _ref, name: _name, ...rest } = register('phone')
             rest.onChange({ target: { value: val, name: 'phone' } })
           }}
           placeholder={st('signup.phone', 'شماره تماس')}

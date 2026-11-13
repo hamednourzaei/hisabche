@@ -4,19 +4,13 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { aiQuerySchema } from '@hisabche/validation'
 import { AIService } from '../services/ai.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function aiRoutes(fastify: FastifyInstance) {
   const aiService = new AIService()

@@ -52,12 +52,12 @@ function ApprovalsHub() {
       <RegisterCustomizer
         groups={[
           {
-            title: t('pageLook.hubSections' as any),
+            title: t('pageLook.hubSections'),
             look,
             keepOne: true,
             items: APPROVALS_HUB_TABS.map((tab) => ({
               id: hubLookId(tab, tab),
-              label: t(`approvalsHub.tabs.${tab}` as any),
+              label: t(`approvalsHub.tabs.${tab}`),
             })),
           },
         ]}

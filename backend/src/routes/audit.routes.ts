@@ -50,7 +50,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createAuditLogSchema, auditFiltersSchema, type AuditFilters } from '@hisabche/validation'
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -59,12 +58,7 @@ import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 /**
  * G4 — what the member-facing audit tab may filter on.

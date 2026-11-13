@@ -3,7 +3,6 @@
 // ============================================
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
@@ -23,12 +22,8 @@ import { requireActiveSubscriptionForWorkspaceParam } from '../middleware/subscr
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { PlanLimitError } from '../services/plan-limits.service'
-
-const toJsonSchema = (schema: any) => {
-  const r = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete r.$schema
-  return r
-}
+import type { ZodTypeAny } from 'zod'
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const svc = new WorkspaceService()
@@ -165,7 +160,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        return reply.send(await svc.getWorkspace(req.userId, (req.params as any).id))
+        return reply.send(await svc.getWorkspace(req.userId, (req.params as { id: string }).id))
       } catch (e) {
         fastify.log.error(e)
         if (e instanceof BaseError && e.isOperational) {
@@ -198,10 +193,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       try {
         const result = await svc.updateWorkspace(
           req.userId,
-          (req.params as any).id,
+          (req.params as { id: string }).id,
           updateWorkspaceBodySchema.parse(req.body),
         )
-        await clearCache(`workspace:${(req.params as any).id}`)
+        await clearCache(`workspace:${(req.params as { id: string }).id}`)
         await clearCache('workspaces:*')
         return reply.send(result)
       } catch (e) {
@@ -226,7 +221,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        return reply.send(await svc.listMembers(req.userId, (req.params as any).id))
+        return reply.send(await svc.listMembers(req.userId, (req.params as { id: string }).id))
       } catch (e) {
         fastify.log.error(e)
         if (e instanceof BaseError && e.isOperational) {
@@ -247,10 +242,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       try {
         const result = await svc.updateMemberRole(
           req.userId,
-          (req.params as any).id,
+          (req.params as { id: string }).id,
           updateMemberRoleSchema.parse(req.body),
         )
-        await clearCache(`workspace-members:${(req.params as any).id}:*`)
+        await clearCache(`workspace-members:${(req.params as { id: string }).id}:*`)
         return reply.send(result)
       } catch (e) {
         if (e instanceof z.ZodError)
@@ -271,7 +266,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { id, memberId } = req.params as any
+        const { id, memberId } = req.params as { id: string; memberId: string }
         const result = await svc.removeMember(req.userId, id, memberId)
         await clearCache(`workspace-members:${id}:*`)
         return reply.send(result)
@@ -292,8 +287,8 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const result = await svc.leaveWorkspace(req.userId, (req.params as any).id)
-        await clearCache(`workspace-members:${(req.params as any).id}:*`)
+        const result = await svc.leaveWorkspace(req.userId, (req.params as { id: string }).id)
+        await clearCache(`workspace-members:${(req.params as { id: string }).id}:*`)
         await clearCache('workspaces:*')
         return reply.send(result)
       } catch (e) {
@@ -316,7 +311,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        return reply.send(await svc.listInvites(req.userId, (req.params as any).id))
+        return reply.send(await svc.listInvites(req.userId, (req.params as { id: string }).id))
       } catch (e) {
         fastify.log.error(e)
         if (e instanceof BaseError && e.isOperational) {
@@ -335,7 +330,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { id } = req.params as any
+        const { id } = req.params as { id: string }
         const data = createInviteSchema.omit({ workspaceId: true }).parse(req.body)
         const invite = await svc.createInvite(req.userId, { ...data, workspaceId: id })
         // ⚠️ Not logged: the result carries the raw invite token — anyone who
@@ -366,7 +361,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       try {
         const result = await svc.acceptInvite(
           req.userId,
-          (req.user as any)?.email || '',
+          req.user?.email || '',
           acceptInviteSchema.parse(req.body),
         )
         await clearCache('workspaces:*')
@@ -403,7 +398,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { id } = req.params as any
+        const { id } = req.params as { id: string }
         const data = createMemberDirectBodySchema.parse(req.body)
         const result = await svc.createMemberDirect(req.userId, id, { ...data, workspaceId: id })
         await clearCache(`workspace-members:${id}:*`)
@@ -436,7 +431,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { id } = req.params as any
+        const { id } = req.params as { id: string }
         const { memberId, suspended } = setMemberSuspensionSchema.parse(req.body)
         const result = await svc.setMemberSuspension(req.userId, id, memberId, suspended)
         await clearCache(`workspace-members:${id}:*`)
@@ -465,7 +460,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
-        const { id, inviteId } = req.params as any
+        const { id, inviteId } = req.params as { id: string; inviteId: string }
         const result = await svc.cancelInvite(req.userId, id, inviteId)
         await clearCache(`workspace-invites:${id}:*`)
         return reply.send(result)

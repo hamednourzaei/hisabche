@@ -6,7 +6,6 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { qualityEventCreateSchema, warrantyClaimCreateSchema } from '@hisabche/validation'
 import { sendFailure } from '../errors/http-failure'
 import { authenticate } from '../middleware/auth.middleware'
@@ -14,14 +13,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { qualityService } from '../services/quality/quality.service'
 import { readClientRequestId } from '../utils/client-request'
-
-const toJsonSchema = (schema: z.ZodTypeAny) => {
-  const result = zodToJsonSchema(schema as unknown as Parameters<typeof zodToJsonSchema>[0], {
-    target: 'jsonSchema7',
-  })
-  delete (result as Record<string, unknown>).$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function qualityRoutes(fastify: FastifyInstance) {
   fastify.get(

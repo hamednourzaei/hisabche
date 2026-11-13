@@ -5,6 +5,7 @@ import { useCallback, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { NavigationProvider } from '../../../hooks/menu/use-navigation-state'
 import { TopNav } from '../navigation/top-nav'
+import type { NavigationSection } from '../../../lib/menu/navigation-core'
 
 // ─── Main LandingPage ──────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ export interface LandingShellProps {
   backgroundClassName?: string
   className?: string
   hideNav?: boolean
-  sections?: Array<{ id: string; label: string; narrative?: any }>
+  sections?: NavigationSection[]
   customNav?: React.ReactNode
 }
 
@@ -73,7 +74,7 @@ export function LandingShell({
   const activeSections = sections ?? defaultSections
 
   return (
-    <NavigationProvider sections={activeSections as any}>
+    <NavigationProvider sections={activeSections}>
       <div
         className={`min-h-screen overflow-x-clip ${
           backgroundClassName ?? 'bg-[hsl(var(--surface-base))]'

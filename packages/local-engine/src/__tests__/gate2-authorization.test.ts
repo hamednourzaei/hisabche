@@ -117,7 +117,7 @@ describe('Gate 2: Critical Local Engine Authorization Verification', () => {
     const otherWsId = '99999999-9999-4999-8999-999999999999'
 
     // Create invoice in other workspace
-    const res = await engine.request<any>({
+    const res = await engine.request<{ code?: string; invoices?: unknown }>({
       method: 'GET',
       path: '/invoices',
       headers: { 'x-workspace-id': otherWsId },

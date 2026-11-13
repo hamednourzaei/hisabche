@@ -11,7 +11,7 @@ import type { RouteHandlerContext } from '../types'
 
 export function registerTaxRoutes(router: Router) {
   // GET /tax/config
-  router.get('/tax/config', async (ctx: RouteHandlerContext) => {
+  router.get('/tax/config', async (_ctx: RouteHandlerContext) => {
     return {
       settings: null,
       components: [],

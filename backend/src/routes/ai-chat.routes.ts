@@ -13,7 +13,6 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
@@ -24,15 +23,7 @@ import { AiQuotaService } from '../services/ai/ai-quota.service'
 import { AiSettingsService } from '../services/ai/ai-settings.service'
 import { AdminSecurityService } from '../services/admin/admin-security.service'
 import { AiBusyError, AiReaderNotConfiguredError } from '../services/ai/ai-chat.service'
-
-// instantiates recursively over the schema type; naming it `ZodTypeAny` makes
-// the compiler unfold that and hit its depth limit. Every other route file in
-// this repo takes the same escape for the same reason.
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as Record<string, unknown>
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 const askSchema = z.object({
   // Capped: the question is concatenated into a prompt that is billed by the

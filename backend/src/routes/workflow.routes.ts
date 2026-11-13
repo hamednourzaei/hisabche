@@ -6,7 +6,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createWorkflowSchema,
   updateWorkflowSchema,
@@ -22,13 +21,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { BaseError } from '../errors/base.error'
 import { NotFoundError } from '../errors/database.error'
-
-// ✅ Same pattern as analytics.routes.ts — use `any` to avoid deep instantiation
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function workflowRoutes(fastify: FastifyInstance) {
   const workflowService = new WorkflowService()

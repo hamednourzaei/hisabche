@@ -20,6 +20,7 @@ import type {
   PartyPaymentRow,
   PartyReturnRow,
 } from '@hisabche/validation'
+import type { DbRow } from '../../utils/db-row'
 
 const PAGE = 1000
 
@@ -29,9 +30,9 @@ async function readAll(
   page: (
     from: number,
     to: number,
-  ) => PromiseLike<{ data: Record<string, any>[] | null; error: { message: string } | null }>,
-): Promise<Record<string, any>[]> {
-  const rows: Record<string, any>[] = []
+  ) => PromiseLike<{ data: DbRow[] | null; error: { message: string } | null }>,
+): Promise<DbRow[]> {
+  const rows: DbRow[] = []
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await page(from, from + PAGE - 1)
     if (error) throw new DatabaseError(`Failed to fetch ${label}`, error)
@@ -138,7 +139,7 @@ export function domainErrorCode(error: unknown): string | null {
   return /\b([A-Z][A-Z_]{6,})\b/.exec(message)?.[1] ?? null
 }
 
-function mapPayment(raw: Record<string, any>): PaymentRow {
+function mapPayment(raw: DbRow): PaymentRow {
   return {
     id: raw.id,
     paymentNumber: raw.payment_number ?? null,
@@ -154,7 +155,7 @@ function mapPayment(raw: Record<string, any>): PaymentRow {
     status: raw.status ?? 'posted',
     journalEntryId: raw.journal_entry_id ?? null,
     createdAt: raw.created_at ?? null,
-    allocations: (raw.allocations ?? []).map((a: Record<string, any>) => ({
+    allocations: (raw.allocations ?? []).map((a: DbRow) => ({
       id: a.id,
       invoiceId: a.invoice_id,
       amount: Number(a.amount) || 0,
@@ -795,7 +796,7 @@ export class PaymentsRepository {
 
   /** Every line of the given invoices, in chunks of ids and pages of rows. */
   async invoiceLines(workspaceId: string, invoiceIds: string[]) {
-    const lines: Record<string, any>[] = []
+    const lines: DbRow[] = []
     for (let i = 0; i < invoiceIds.length; i += 200) {
       const chunk = invoiceIds.slice(i, i + 200)
       lines.push(

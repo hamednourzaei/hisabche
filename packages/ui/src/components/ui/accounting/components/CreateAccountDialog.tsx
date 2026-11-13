@@ -10,7 +10,7 @@ import { cn } from '../../../../lib/utils'
 export interface CreateAccountInput {
   code: string
   name: string
-  type: string
+  type: AccountTypeChoice
   parentId?: string
 }
 
@@ -23,6 +23,7 @@ interface CreateAccountDialogProps {
 }
 
 const ACCOUNT_TYPES = ['asset', 'liability', 'equity', 'revenue', 'expense'] as const
+type AccountTypeChoice = (typeof ACCOUNT_TYPES)[number]
 
 export const CreateAccountDialog = memo(function CreateAccountDialog({
   isOpen,
@@ -34,7 +35,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
   const t = useTranslations()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [type, setType] = useState<string>('asset')
+  const [type, setType] = useState<AccountTypeChoice>('asset')
   const [parentId, setParentId] = useState('')
 
   useEffect(() => {
@@ -143,7 +144,10 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
             </label>
             <SelectField
               value={type}
-              onChange={(value) => setType(value)}
+              onChange={(value) => {
+                const picked = ACCOUNT_TYPES.find((accType) => accType === value)
+                if (picked) setType(picked)
+              }}
               options={[
                 ...ACCOUNT_TYPES.map((accType) => ({
                   value: accType,

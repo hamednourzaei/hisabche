@@ -22,9 +22,6 @@ function isMissingBranchColumn(error: { code?: string; message?: string } | null
   if (error.code === '42703' || error.code === 'PGRST204') return true
   return /branch_id/i.test(error.message ?? '')
 }
-// ✅ Column Selection Constants (بهینه‌شده)
-const AUDIT_LOG_COLUMNS =
-  'id, user_id, action, entity_type, entity_id, old_data, new_data, ip_address, user_agent, created_at'
 const AUDIT_LIST_COLUMNS = 'id, user_id, action, entity_type, entity_id, ip_address, created_at'
 const AUDIT_STATS_COLUMNS = 'action, entity_type, user_id'
 

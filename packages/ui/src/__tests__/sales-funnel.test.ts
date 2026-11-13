@@ -223,7 +223,13 @@ describe('every string exists in all three locales', () => {
           join(__dirname, '..', '..', '..', 'i18n', 'messages', locale, 'common.json'),
           'utf8',
         ),
-      ) as { dashboard: Record<string, any> }
+      ) as {
+        dashboard: {
+          funnel?: Record<string, unknown> & { band?: Record<string, unknown> }
+          viewSwitch?: unknown
+          totalSales?: unknown
+        }
+      }
 
       const f = bundle.dashboard.funnel
       expect(f, `${locale}.dashboard.funnel`).toBeTruthy()

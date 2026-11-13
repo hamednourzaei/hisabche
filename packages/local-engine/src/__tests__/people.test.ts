@@ -5,12 +5,19 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb, TEST_WORKSPACE_ID, createTestEngine } from './test-db'
 
-type Json = Record<string, any>
+/** A response body, read field by field (values are compared, never computed on). */
+interface Json {
+  readonly [key: string]: Json
+}
 
 function setup() {
   const db = createTestDb()
   const engine = createTestEngine(db)
-  const call = async (method: any, path: string, body?: unknown) => {
+  const call = async (
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+    path: string,
+    body?: unknown,
+  ) => {
     const res = await engine.request<Json>({
       method,
       path,
@@ -34,7 +41,7 @@ async function seedEmployee(call: ReturnType<typeof setup>['call'], over: Json =
     ...over,
   })
   expect(res.status).toBe(201)
-  return { employee: res.data, branchId: branch.data.id as string }
+  return { employee: res.data, branchId: String(branch.data.id) }
 }
 
 describe('employees (offline)', () => {
@@ -55,7 +62,7 @@ describe('employees (offline)', () => {
 
     const list = await call('GET', '/employees')
     expect(list.data.total).toBe(1)
-    expect(list.data.employees[0].first_name).toBe('احمد')
+    expect(list.data.employees?.[0]?.first_name).toBe('احمد')
 
     const detail = await call('GET', `/employees/${employee.id}`)
     expect(detail.data.branches).toEqual([
@@ -109,7 +116,7 @@ describe('employees (offline)', () => {
       [TEST_WORKSPACE_ID],
     )
     const list = await call('GET', '/employees')
-    expect(list.data.employees[0]).toMatchObject({ first_name: 'نام قدیمی', last_name: '' })
+    expect(list.data.employees?.[0]).toMatchObject({ first_name: 'نام قدیمی', last_name: '' })
   })
 })
 
@@ -130,7 +137,7 @@ describe('leaves (offline)', () => {
     // Before the assignment started there is no branch to claim: unknown stays unknown.
     const list = await call('GET', `/leaves?employeeId=${employee.id}`)
     expect(list.data).toHaveLength(1)
-    expect(list.data[0].employee).toEqual({ first_name: 'احمد', last_name: 'کریمی' })
+    expect(list.data[0]?.employee).toEqual({ first_name: 'احمد', last_name: 'کریمی' })
     expect(branchId).toBeTruthy()
 
     const approved = await call('PATCH', `/leaves/${created.data.id}`, { status: 'approved' })
@@ -225,10 +232,14 @@ describe('payroll (offline)', () => {
 
     const summary = await call('GET', '/payrolls/summary')
     expect(summary.data.total).toBe(1060)
-    expect(summary.data.byEmployee[employee.id]).toBe(1060)
+    expect(summary.data.byEmployee?.[String(employee.id)]).toBe(1060)
     const list = await call('GET', '/payrolls')
-    expect(list.data.map((row: Json) => row.id).sort()).toEqual([a.data.id, b.data.id].sort())
-    expect(list.data[0].employee).toEqual({ first_name: 'احمد', last_name: 'کریمی' })
+    expect(
+      Object.values(list.data)
+        .map((row) => String(row.id))
+        .sort(),
+    ).toEqual([a.data.id, b.data.id].sort())
+    expect(list.data[0]?.employee).toEqual({ first_name: 'احمد', last_name: 'کریمی' })
   })
 })
 
@@ -299,10 +310,13 @@ describe('shifts and the shift plan (offline)', () => {
 
     const day = await call('GET', '/shift-assignments?date=2026-03-01')
     // Planned, nothing recorded: not «absent».
-    expect(day.data.assignments[0]).toMatchObject({ actual: 'unrecorded', shiftName: 'صبح' })
+    expect(day.data.assignments?.[0]).toMatchObject({ actual: 'unrecorded', shiftName: 'صبح' })
     expect(day.data.summary).toEqual({ planned: 1, worked: 0, absent: 0, unrecorded: 1 })
 
-    const cancelled = await call('POST', `/shift-assignments/${day.data.assignments[0].id}/cancel`)
+    const cancelled = await call(
+      'POST',
+      `/shift-assignments/${String(day.data.assignments?.[0]?.id)}/cancel`,
+    )
     expect(cancelled.status).toBe(200)
     expect((await call('GET', '/shift-assignments?date=2026-03-01')).data.assignments).toHaveLength(
       0,
@@ -317,7 +331,7 @@ describe('the attendance sheet (offline)', () => {
     await call('POST', '/branches', { code: 'B2', name: 'دوم' })
 
     const empty = await call('GET', '/attendance-sheet?date=2026-03-01')
-    expect(empty.data.rows[0]).toMatchObject({
+    expect(empty.data.rows?.[0]).toMatchObject({
       employeeId: employee.id,
       name: 'احمد کریمی',
       record: null,
@@ -340,7 +354,7 @@ describe('the attendance sheet (offline)', () => {
       checkIn: '08:00',
       checkOut: '16:30',
     })
-    expect(closed.data.result.workedHours).toBe(8.5)
+    expect(closed.data.result?.workedHours).toBe(8.5)
     const sheet = await call('GET', '/attendance-sheet?date=2026-03-01')
     expect(sheet.data.summary).toMatchObject({ recorded: 1, present: 1, open: 0 })
   })
@@ -360,7 +374,7 @@ describe('the attendance sheet (offline)', () => {
     expect(typo.data.message).toBe('ATTENDANCE_CHECK_OUT_BEFORE_CHECK_IN')
 
     const night = await call('PUT', '/attendance-sheet', { ...body, endsNextDay: true })
-    expect(night.data.result.workedHours).toBe(8)
+    expect(night.data.result?.workedHours).toBe(8)
 
     const absent = await call('PUT', '/attendance-sheet', {
       employeeId: employee.id,
@@ -397,8 +411,8 @@ describe('the attendance sheet (offline)', () => {
       status: 'absent',
     })
     const day = await call('GET', '/shift-assignments?date=2026-03-01')
-    expect(day.data.assignments[0].actual).toBe('absent')
-    expect(day.data.summary.absent).toBe(1)
+    expect(day.data.assignments?.[0]?.actual).toBe('absent')
+    expect(day.data.summary?.absent).toBe(1)
   })
 })
 

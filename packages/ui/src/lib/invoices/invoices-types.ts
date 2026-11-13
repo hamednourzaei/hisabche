@@ -2,32 +2,32 @@ import type { CurrencyCode } from '@hisabche/store'
 // packages/ui/src/lib/invoices/invoices-types.ts
 
 export interface RawInvoice {
-  id?: string
-  _id?: string
-  invoiceId?: string
-  invoice_id?: string
-  invoiceNumber?: string
-  invoice_number?: string
-  date?: string
-  created_at?: string
-  updated_at?: string
-  status?: string
-  total?: number
-  currency?: string
-  type?: string
-  customerName?: string | null
+  id?: string | undefined
+  _id?: string | undefined
+  invoiceId?: string | undefined
+  invoice_id?: string | undefined
+  invoiceNumber?: string | undefined
+  invoice_number?: string | undefined
+  date?: string | undefined
+  created_at?: string | undefined
+  updated_at?: string | undefined
+  status?: string | undefined
+  total?: number | undefined
+  currency?: string | undefined
+  type?: string | undefined
+  customerName?: string | null | undefined
   /** H2 — the API selects `customer_id`; both spellings are accepted because
    *  the list and the detail endpoint disagree about casing. */
-  customerId?: string | null
-  customer_id?: string | null
-  customer?: { id?: string; full_name?: string; company?: string | null } | null
-  paid_amount?: number
+  customerId?: string | null | undefined
+  customer_id?: string | null | undefined
+  customer?: { id?: string; full_name?: string; company?: string | null } | null | undefined
+  paid_amount?: number | undefined
   /** V53 OD-3: the server's answer about this sale's credit. `null` = no question was asked. */
-  credit_status?: string | null
-  creditStatus?: string | null
-  itemsSent?: number
-  publicToken?: string
-  public_token?: string
+  credit_status?: string | null | undefined
+  creditStatus?: string | null | undefined
+  itemsSent?: number | undefined
+  publicToken?: string | undefined
+  public_token?: string | undefined
 }
 
 export interface Invoice {

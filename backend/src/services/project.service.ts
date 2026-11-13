@@ -53,10 +53,6 @@ const TASK_MINIMAL = 'id, project_id, title, status, priority, order_index'
 const MEMBER_COLUMNS = 'id, project_id, employee_id, user_id, role, joined_at'
 const MEMBER_MINIMAL = 'id, user_id, role'
 
-const TIME_ENTRY_COLUMNS =
-  'id, project_id, task_id, employee_id, date, hours, description, billable, hourly_rate, created_at, updated_at'
-const TIME_ENTRY_MINIMAL = 'id, project_id, task_id, employee_id, date, hours'
-
 export class ProjectService {
   // ─── Cache Keys ──────────────────────────────────────────────
   private getProjectsCacheKey(workspaceId: string, status?: string) {
@@ -93,7 +89,7 @@ export class ProjectService {
 
   // ─── Projects ─────────────────────────────────────────────────
   async listProjects(ctx: TenancyContext, status?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getProjectsCacheKey(workspaceId, status)
 
     const cached = await memoryCache.get(cacheKey)
@@ -165,7 +161,7 @@ export class ProjectService {
   }
 
   async getProject(id: string, ctx: TenancyContext) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getProjectCacheKey(workspaceId, id)
 
     const cached = await memoryCache.get(cacheKey)
@@ -185,7 +181,7 @@ export class ProjectService {
   }
 
   async updateProject(ctx: TenancyContext, id: string, data: UpdateProject) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.description !== undefined) updates.description = data.description
@@ -214,7 +210,7 @@ export class ProjectService {
   }
 
   async deleteProject(ctx: TenancyContext, id: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const { error } = await supabase
       .from('projects')
       .delete()
@@ -231,7 +227,7 @@ export class ProjectService {
 
   // ─── Tasks ────────────────────────────────────────────────────
   async listTasks(ctx: TenancyContext, projectId: string, status?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getTasksCacheKey(workspaceId, projectId, status)
 
@@ -300,7 +296,7 @@ export class ProjectService {
   }
 
   async updateTask(ctx: TenancyContext, id: string, data: UpdateProjectTask) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.title !== undefined) updates.title = data.title
     if (data.description !== undefined) updates.description = data.description
@@ -342,7 +338,7 @@ export class ProjectService {
   }
 
   async deleteTask(ctx: TenancyContext, id: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const { data: task } = await supabase
       .from('project_tasks')
       .select('project_id')
@@ -368,7 +364,7 @@ export class ProjectService {
 
   // ─── Members ──────────────────────────────────────────────────
   async listMembers(ctx: TenancyContext, projectId: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, projectId)
     const cacheKey = this.getMembersCacheKey(workspaceId, projectId)
 
@@ -388,7 +384,7 @@ export class ProjectService {
   }
 
   async addMember(ctx: TenancyContext, data: CreateProjectMember) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, data.projectId)
     const { data: member, error } = await supabase
       .from('project_members')
@@ -410,7 +406,7 @@ export class ProjectService {
   }
 
   async removeMember(ctx: TenancyContext, projectId: string, memberId: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     await this.assertProjectOwned(workspaceId, projectId)
     const { error } = await supabase
       .from('project_members')
@@ -487,7 +483,7 @@ export class ProjectService {
 
   // ─── Helper ───────────────────────────────────────────────────
   private async recalculateProjectProgress(ctx: TenancyContext, projectId: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     // ✅ فقط status را انتخاب کن
     const { data: tasks } = await supabase
       .from('project_tasks')

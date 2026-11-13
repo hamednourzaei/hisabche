@@ -83,7 +83,7 @@ export const passwordResetService = {
       const token = randomBytes(32).toString('hex')
       const tokenHash = createHash('sha256').update(token).digest('hex')
 
-      const [memberResult, insertResult] = await Promise.all([
+      const [, insertResult] = await Promise.all([
         supabase
           .from('workspace_members')
           .select('workspace_id')

@@ -1,8 +1,9 @@
+import type { DbRow } from './db-row'
 // ============================================
 // backend/src/utils/product.mapper.ts
 // ============================================
 
-export function mapProduct(raw: Record<string, any>) {
+export function mapProduct(raw: DbRow) {
   return {
     id: raw.id,
     name: raw.name,

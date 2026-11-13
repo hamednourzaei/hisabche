@@ -15,7 +15,6 @@ import { sanitizeLicenseLogEvidence } from '../services/offline-license.service'
 
 const WS_ID = '11111111-1111-1111-1111-111111111111'
 const ADMIN_ID = '22222222-2222-2222-2222-222222222222'
-const MEMBER_ID = '33333333-3333-3333-3333-333333333333'
 const TEST_KEYPAIR = generateOfflineLicenseKeyPair()
 
 interface MockState {

@@ -485,7 +485,7 @@ export default function TransformScene({ t: externalT }: TransformSceneProps = {
     externalT ??
     ((key: string, fallback?: string) => {
       try {
-        const res = intlT(key as any)
+        const res = intlT(key)
         return typeof res === 'string' && res !== key ? res : (fallback ?? key)
       } catch {
         return fallback ?? key

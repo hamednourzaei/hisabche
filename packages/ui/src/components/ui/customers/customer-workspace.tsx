@@ -16,6 +16,39 @@ import { getOpportunityColumns, type OpportunityRow } from './datagrid/columns/o
 import { PaymentModal } from './PaymentModal'
 import { GHOST_ICON_BUTTON } from '../button-classes'
 
+/** An open invoice as the list returns it (camelCase from the API, snake_case on older rows). */
+export interface WorkspaceInvoice {
+  id?: string | undefined
+  invoiceNumber?: string | null | undefined
+  invoice_number?: string | null | undefined
+  date?: string | null | undefined
+  created_at?: string | null | undefined
+  total?: number | null | undefined
+  paidAmount?: number | null | undefined
+  paid_amount?: number | null | undefined
+  status?: string | null | undefined
+}
+
+export interface WorkspaceInteraction {
+  id?: string | undefined
+  type: string
+  subject?: string | null | undefined
+  content?: string | null | undefined
+  interactionDate?: string | null | undefined
+  interaction_date?: string | null | undefined
+  created_at?: string | null | undefined
+}
+
+export interface WorkspaceOpportunity {
+  id?: string | undefined
+  title: string
+  stage: string
+  value?: number | null | undefined
+  probability?: number | null | undefined
+  expectedCloseDate?: string | null | undefined
+  expected_close_date?: string | null | undefined
+}
+
 interface CustomerWorkspaceProps {
   t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
@@ -24,24 +57,26 @@ interface CustomerWorkspaceProps {
     phone?: string
     type: 'cash' | 'credit'
     tags: string[]
-    healthScore: number
+    healthScore: number | null
     totalDebt: number
-    lifetimeValue: number
+    lifetimeValue: number | null
     lastActivity: string
   }
   showCrmTabs: boolean
   activeTab: string
   onTabChange: (tab: string) => void
-  openInvoices: any[]
+  openInvoices: WorkspaceInvoice[]
   totalDebt: number
   payOpen: boolean
   onOpenPayment: () => void
   onClosePayment: () => void
   onPaymentSuccess: () => void
-  interactions: any[]
-  opportunities: any[]
+  interactions: WorkspaceInteraction[]
+  opportunities: WorkspaceOpportunity[]
   onQuickAction: (action: string) => void
   onBack: () => void
+  /** The customer this workspace is for — a payment is recorded against it. */
+  customerId: string
 }
 
 const tabs = [
@@ -50,7 +85,9 @@ const tabs = [
   { id: 'timeline', labelKey: 'customers.tabTimeline', fallback: 'خط زمانی', icon: Clock },
 ]
 
-export function customerWorkspace(props: CustomerWorkspaceProps) {
+// 13 Nov 2026: a real component (capitalised, rendered as an element). Called inline as a
+// lowercase function, its hooks belonged to the caller and the hooks lint could not check them.
+export function CustomerWorkspace(props: CustomerWorkspaceProps) {
   const {
     t,
     fmt,
@@ -61,13 +98,13 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
     openInvoices,
     totalDebt,
     payOpen,
-    onOpenPayment,
     onClosePayment,
     onPaymentSuccess,
     interactions,
     opportunities,
     onQuickAction,
     onBack,
+    customerId,
   } = props
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -83,32 +120,35 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
   }, [])
 
   // Map data to rows
-  const invoiceRows: InvoiceRow[] = openInvoices.map((inv: any) => ({
-    id: inv.id,
-    invoiceNumber: inv.invoiceNumber || inv.invoice_number,
-    date: inv.date || inv.created_at,
+  const invoiceRows: InvoiceRow[] = openInvoices.map((inv) => ({
+    id: inv.id ?? '',
+    invoiceNumber: inv.invoiceNumber || inv.invoice_number || '',
+    date: inv.date || inv.created_at || '',
     total: inv.total || 0,
     paidAmount: inv.paidAmount || inv.paid_amount || 0,
     remaining: (inv.total || 0) - (inv.paidAmount || inv.paid_amount || 0),
-    status: inv.status,
+    status: inv.status ?? '',
   }))
 
-  const interactionRows: InteractionRow[] = interactions.map((i: any) => ({
-    id: i.id,
+  const interactionRows: InteractionRow[] = interactions.map((i) => ({
+    id: i.id ?? '',
     type: i.type,
     subject: i.subject || i.type,
-    content: i.content,
-    date: i.interactionDate || i.interaction_date || i.created_at,
+    ...(i.content ? { content: i.content } : {}),
+    date: i.interactionDate || i.interaction_date || i.created_at || '',
   }))
 
-  const opportunityRows: OpportunityRow[] = opportunities.map((o: any) => ({
-    id: o.id,
-    title: o.title,
-    stage: o.stage,
-    value: o.value || 0,
-    probability: o.probability || 0,
-    expectedCloseDate: o.expectedCloseDate || o.expected_close_date,
-  }))
+  const opportunityRows: OpportunityRow[] = opportunities.map((o) => {
+    const close = o.expectedCloseDate || o.expected_close_date
+    return {
+      id: o.id ?? '',
+      title: o.title,
+      stage: o.stage,
+      value: o.value || 0,
+      probability: o.probability || 0,
+      ...(close ? { expectedCloseDate: close } : {}),
+    }
+  })
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -117,12 +157,20 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
         onClose={onClosePayment}
         onPaid={onPaymentSuccess}
         customer={{
-          id: '',
+          id: customerId,
           fullName: customer.name,
           name: customer.name,
           phone: customer.phone || '',
         }}
-        openInvoices={openInvoices}
+        openInvoices={invoiceRows.map((row) => ({
+          id: row.id,
+          invoiceNumber: row.invoiceNumber,
+          total: row.total,
+          paidAmount: row.paidAmount,
+          date: row.date,
+          status: row.status,
+          customerId,
+        }))}
       />
 
       <Drawer t={t} open={drawerOpen} onClose={() => setDrawerOpen(false)} title={drawerTitle}>
@@ -164,11 +212,13 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
           value={interactions.length}
           icon={Handshake}
         />
-        <KpiCard
-          label={t('customers.lifetimeValue', 'ارزش کل')}
-          value={fmt(customer.lifetimeValue)}
-          icon={DollarSign}
-        />
+        {customer.lifetimeValue !== null ? (
+          <KpiCard
+            label={t('customers.lifetimeValue', 'ارزش کل')}
+            value={fmt(customer.lifetimeValue)}
+            icon={DollarSign}
+          />
+        ) : null}
       </KpiGrid>
 
       {/* Tabs */}
@@ -296,7 +346,7 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
             daysSinceLastPurchase={0}
             lifetimeValue={customer.lifetimeValue}
             isVip={customer.tags.includes('vip')}
-            onAction={(action: any) => onQuickAction(action.type)}
+            onAction={(action) => onQuickAction(action.type)}
           />
         </div>
       </div>

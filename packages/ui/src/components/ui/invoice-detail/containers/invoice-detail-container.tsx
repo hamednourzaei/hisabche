@@ -306,6 +306,8 @@ export function InvoiceDetailContainer() {
         const item = raw as RawInvoiceItem
         return {
           id: item.id,
+          // The return dialog's exchange offers other models of this product (V64 §5.8).
+          productId: item.productId ?? item.product_id ?? null,
           productName: item.productName ?? item.product_name,
           product_name: item.product_name,
           quantity: item.quantity,

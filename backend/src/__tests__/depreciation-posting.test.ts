@@ -48,7 +48,6 @@ let owedRows: Record<string, unknown>[] = []
 /** Rows the service's own due query returns. */
 let dueRows: Record<string, unknown>[] = []
 /** Outcome the fake ledger reports back from postDocument. */
-let ledgerOutcome: { status: string; entryId: string } = { status: 'posted', entryId: 'je-1' }
 /** Thrown from postDue for a given workspace, to test failure isolation. */
 let failWorkspace: string | null = null
 
@@ -124,7 +123,6 @@ describe('capability #70 — depreciation posting, scheduled and multi-tenant', 
     owedRows = []
     dueRows = []
     failWorkspace = null
-    ledgerOutcome = { status: 'posted', entryId: 'je-1' }
   })
 
   it('does nothing at all when no schedule row is owed', async () => {

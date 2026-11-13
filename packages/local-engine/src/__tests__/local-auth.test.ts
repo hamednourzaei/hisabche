@@ -23,7 +23,7 @@ describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)',
       headers: { 'x-workspace-id': TEST_WORKSPACE_ID },
       body: { fullName: 'مشتری ۱' },
     })
-    const customerId = custRes.data.id
+    expect(custRes.data.id).toBeTruthy()
 
     const prodRes = await engine.request<{ id: string }>({
       method: 'POST',
@@ -31,7 +31,7 @@ describe('Local Engine Authorization & Safety Guards (Scenarios 30B, 06B, 15B)',
       headers: { 'x-workspace-id': TEST_WORKSPACE_ID },
       body: { name: 'کالای ۱', sellPrice: 100 },
     })
-    const productId = prodRes.data.id
+    expect(prodRes.data.id).toBeTruthy()
 
     // Create an invoice as owner
     const createRes = await engine.request<{ id: string }>({

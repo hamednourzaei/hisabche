@@ -19,8 +19,6 @@ interface Row {
 }
 
 const tables = new Map<string, Row[]>()
-let sequence = 0
-
 function reset(): void {
   tables.clear()
   for (const name of [
@@ -37,7 +35,6 @@ function reset(): void {
   ]) {
     tables.set(name, [])
   }
-  sequence = 0
 }
 
 function matches(row: Row, filters: Array<[string, unknown]>): boolean {

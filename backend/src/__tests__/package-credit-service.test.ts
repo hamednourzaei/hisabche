@@ -42,13 +42,11 @@ function createMockSupabase(initialRows: Row[] = []) {
       if (rpcHandler) return rpcHandler(name, args)
       return { data: null, error: { code: 'PGRST202', message: 'Function not found' } }
     }),
-    from: vi.fn((table: string) => {
+    from: vi.fn((_table: string) => {
       const filters: Array<(r: Row) => boolean> = []
-      let selectedFields: string | null = null
 
       const builder: Record<string, unknown> = {
-        select: (fields = '*') => {
-          selectedFields = fields
+        select: () => {
           return builder
         },
         eq: (col: string, val: unknown) => {

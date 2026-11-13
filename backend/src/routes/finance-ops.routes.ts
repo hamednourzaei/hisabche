@@ -21,7 +21,6 @@ import { rateSchema, baseCurrencySchema } from '@hisabche/validation'
 import { describeBaseCurrency, setBaseCurrency } from '../services/base-currency'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { AssetsService } from '../services/assets'
 import { BankingService } from '../services/banking'
@@ -32,12 +31,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { invalidateMoneyCaches } from '../utils/money-cache'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 

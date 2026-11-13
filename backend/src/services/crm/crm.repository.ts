@@ -13,6 +13,7 @@
 
 import { supabase } from '../../db'
 import { DatabaseError, isFailedRead } from '../../errors/database.error'
+import type { DbRow } from '../../utils/db-row'
 
 export const INTERACTION_COLUMNS =
   'id, workspace_id, customer_id, type, subject, content, interaction_date, created_at, status, public_token, employee_id, employee_name, customers_snapshot, status_history, customer_outcomes'
@@ -24,7 +25,7 @@ const OPPORTUNITY_COLUMNS =
 
 const PAGE = 1000
 
-type Row = Record<string, any>
+type Row = DbRow
 
 const isMissingColumn = (error: { code?: string; message?: string } | null) =>
   !!error && (error.code === '42703' || /column/.test(error.message || ''))

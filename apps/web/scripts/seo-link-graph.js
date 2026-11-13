@@ -89,7 +89,7 @@ const anchorText = new Map(); // `${from}=>${to}` -> text
 
 for (const file of sourceFiles) {
   const content = fs.readFileSync(file, "utf8");
-  let fromRoute = null;
+  let fromRoute;
   if (file.startsWith(langRoot) && path.basename(file) === "page.tsx") {
     let rel = path.dirname(path.relative(langRoot, file)).replace(/\\/g, "/");
     if (rel === ".") rel = "";
@@ -586,7 +586,7 @@ function analyzeCanonical(pageMeta) {
 
   for (const [route, meta] of pageMeta) {
     if (!meta.canonical) continue;
-    let targetRoute = null;
+    let targetRoute;
     try {
       const u = new URL(meta.canonical, CRAWL_BASE_URL);
       if (u.origin !== new URL(CRAWL_BASE_URL).origin) {

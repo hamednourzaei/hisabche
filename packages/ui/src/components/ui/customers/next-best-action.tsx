@@ -8,9 +8,9 @@ interface NextBestActionProps {
   t: (key: string, fallback?: string) => string
   hasOverdueInvoices: boolean
   daysSinceLastPurchase: number
-  lifetimeValue: number
+  lifetimeValue: number | null
   isVip: boolean
-  onAction: (action: any) => void
+  onAction: (action: { type: 'payment' }) => void
 }
 
 export function NextBestAction({ t, hasOverdueInvoices, onAction }: NextBestActionProps) {

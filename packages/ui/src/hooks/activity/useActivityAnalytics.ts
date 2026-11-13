@@ -5,7 +5,7 @@ import { useCallback } from 'react'
 
 type AnalyticsProvider = 'ga4' | 'posthog' | 'mixpanel' | 'custom'
 
-export function useActivityAnalytics(provider: AnalyticsProvider = 'ga4') {
+export function useActivityAnalytics(_provider: AnalyticsProvider = 'ga4') {
   // ─── Track ──────────────────────────────────────────────────────────────
   const track = useCallback((name: string, properties?: Record<string, unknown>) => {
     // ✅ فقط در Development لاگ کن
@@ -20,8 +20,7 @@ export function useActivityAnalytics(provider: AnalyticsProvider = 'ga4') {
       typeof window !== 'undefined'
     ) {
       try {
-        // @ts-ignore
-        window.gtag?.('event', name, {
+        ;(window as Window & { gtag?: (...args: unknown[]) => void }).gtag?.('event', name, {
           ...properties,
           send_to: 'G-T5XG907W4R',
         })
@@ -38,7 +37,17 @@ export function useActivityAnalytics(provider: AnalyticsProvider = 'ga4') {
 
   // ─── Track Activity Event ──────────────────────────────────────────────
   const trackActivityEvent = useCallback(
-    (action: string, group?: any) => {
+    (
+      action: string,
+      group?: {
+        entityType?: string | undefined
+        entityId?: string | undefined
+        hasUnread?: boolean | undefined
+        unreadCount?: number | undefined
+        priority?: string | undefined
+        entitySummary?: { activityCount?: number | undefined } | undefined
+      },
+    ) => {
       track(`activity_${action}`, {
         entity_type: group?.entityType,
         entity_id: group?.entityId,

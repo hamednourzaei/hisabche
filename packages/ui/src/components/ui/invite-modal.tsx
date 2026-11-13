@@ -58,10 +58,10 @@ export const InviteModal = memo(function InviteModal({ open, onClose, workspaceI
       const link = `${window.location.origin}/${currentLangSegment}/accept-invite?token=${response?.token ?? ''}`
       setInviteLink(link)
       setSent(true)
-    } catch (err: any) {
+    } catch (err) {
       setError(
         planLimitMessage(err, (key, values) => t(key, values as never)) ||
-          err?.message ||
+          (err instanceof Error ? err.message : '') ||
           t('workspace.inviteError', 'خطا در ارسال دعوت'),
       )
     }

@@ -325,7 +325,7 @@ function readSheet(
 
       const type = attribute(tag, 't')
       const raw = /<v>([\s\S]*?)<\/v>/.exec(body)?.[1]
-      let text = ''
+      let text: string
 
       if (type === 'inlineStr') text = textRuns(body)
       else if (raw === undefined) text = ''

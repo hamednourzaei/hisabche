@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { apiClient } from '@hisabche/api'
-import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios'
 import { useWorkspaceStore } from '../workspace.slice'
 
 /**
@@ -44,16 +43,21 @@ function withStoredWorkspace(id: string) {
  * base URL, session renewal), so the server is simulated at its adapter.
  */
 function mockFetch(handler: (url: string) => { ok: boolean; body?: unknown }) {
-  const adapter = async (config: InternalAxiosRequestConfig) => {
+  // `@hisabche/api` owns the axios dependency; this package does not declare it,
+  // so importing `AxiosError` here failed CI with
+  // `TS2307: Cannot find module 'axios'` (pnpm isolates node_modules per
+  // package). The client's own failure shape is a plain `Error` carrying
+  // `response` (packages/api/src/lib/client.ts), so the adapter reproduces that
+  // with no import at all.
+  const adapter = async (config: { url?: string }) => {
     const { ok, body } = handler(String(config.url))
     if (ok) return { data: body, status: 200, statusText: 'OK', headers: {}, config }
-    throw new AxiosError('failed', '503', config, null, {
-      status: 503,
-      statusText: '',
-      headers: {},
-      config: { ...config, headers: new AxiosHeaders() },
-      data: {},
+    const error = Object.assign(new Error('failed'), {
+      isAxiosError: true,
+      config,
+      response: { status: 503, statusText: '', headers: {}, config, data: {} },
     })
+    throw error
   }
   // Two axios type copies (store vs api) disagree on optional-property
   // strictness; the adapter's runtime contract is the same.

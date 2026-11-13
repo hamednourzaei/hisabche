@@ -221,10 +221,6 @@ export class BillingService {
     return `subscription-access:ws:${workspaceId}`
   }
 
-  private getPlanCacheKey(plan: string) {
-    return `plan:${plan}`
-  }
-
   private getUsageCacheKey(userId: string) {
     return `usage:${userId}`
   }
@@ -813,9 +809,6 @@ export class BillingService {
 
   // ─── Get Plan Features ──────────────────────────────────────
   getPlanFeatures(plan: Plan) {
-    // ✅ کش برای Plan
-    const cacheKey = this.getPlanCacheKey(plan)
-
     // چک کردن کش (Planها ثابت هستند)
     const config = PLANS[plan]
     return {

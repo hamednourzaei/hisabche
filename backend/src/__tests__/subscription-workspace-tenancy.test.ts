@@ -64,7 +64,7 @@ function makeQuery(table: string) {
         ? { data: found, error: null }
         : { data: null, error: { code: 'PGRST116', message: 'no rows' } }
     },
-    then: (resolve: (v: { data: unknown; error: unknown }) => unknown) => api.commit as never,
+    then: (_resolve: (v: { data: unknown; error: unknown }) => unknown) => api.commit as never,
     commit: async () => {
       if (pending?.kind === 'insert') {
         const row = { id: `sub-${rowsOf(table).length + 1}`, ...pending.values }

@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/customers/customer-ai-summary.tsx
-"use client"
+'use client'
 
-import { Sparkles } from "lucide-react"
+import { Sparkles } from 'lucide-react'
 
 interface CustomerAISummaryProps {
   t: (key: string, fallback?: string) => string
@@ -9,7 +9,7 @@ interface CustomerAISummaryProps {
   customerName: string
 }
 
-export function CustomerAISummary({ t, customerId, customerName }: CustomerAISummaryProps) {
+export function CustomerAISummary({ t }: CustomerAISummaryProps) {
   return (
     <div className="glass-card animate-fade-in-up">
       <div className="p-4">
@@ -18,11 +18,11 @@ export function CustomerAISummary({ t, customerId, customerName }: CustomerAISum
             <Sparkles className="size-3.5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           </div>
           <p className="text-xs font-medium text-[hsl(var(--fg-tertiary))]">
-            🤖 {t("customers.aiSummary", "خلاصه هوش مصنوعی")}
+            🤖 {t('customers.aiSummary', 'خلاصه هوش مصنوعی')}
           </p>
         </div>
         <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
-          {t("customers.aiComingSoon", "به زودی — تحلیل هوشمند وضعیت مشتری")}
+          {t('customers.aiComingSoon', 'به زودی — تحلیل هوشمند وضعیت مشتری')}
         </p>
       </div>
     </div>

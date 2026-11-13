@@ -24,6 +24,7 @@ import {
   type MdmEntity,
   type MdmRecord,
 } from './mdm.domain'
+import type { DbRow } from '../../utils/db-row'
 
 /**
  * Where each entity lives, what points at it, and how a record is retired.
@@ -105,7 +106,7 @@ export class MdmService {
 
     if (error) throw new DatabaseError('Failed to load records for duplicate detection', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
+    return (data ?? []).map((row: DbRow) => ({
       id: row.id,
       name: row[config.nameColumn] ?? '',
       phone: row.phone ?? null,

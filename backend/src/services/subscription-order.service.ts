@@ -20,6 +20,7 @@ import { supabase } from '../db'
 import { BaseError } from '../errors/base.error'
 import { DatabaseError, NotFoundError, ConflictError } from '../errors/database.error'
 import { PLAN_PRICING, type PricingPlan } from './plan-pricing'
+import type { DbRow } from '../utils/db-row'
 
 export class SubscriptionOrderError extends BaseError {
   public readonly code: string
@@ -316,7 +317,7 @@ export class SubscriptionOrderService {
     }
   }
 
-  private mapRow(row: Record<string, any>): SubscriptionOrder {
+  private mapRow(row: DbRow): SubscriptionOrder {
     return {
       id: row.id,
       plan: row.plan,

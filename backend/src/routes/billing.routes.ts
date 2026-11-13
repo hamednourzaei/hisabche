@@ -5,7 +5,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { BillingService, PLANS, PLAN_PRICING } from '../services/billing.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -40,12 +39,7 @@ import {
   provisionFromOrderSchema,
 } from '@hisabche/validation'
 import { subscriptionOrderService } from '../services/subscription-order.service'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 /**
  * One failure shape for the subscription-order routes. An operational error

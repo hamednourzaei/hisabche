@@ -7,15 +7,13 @@
 // ============================================
 
 import { supabase } from '../db'
+import type { DbRow } from './db-row'
 
 // ═══════════════════════════════════════════
 // Batch Fetchers — N کوئری → ۱ کوئری
 // ═══════════════════════════════════════════
 
-export async function batchGetProducts(
-  productIds: string[],
-  workspaceId: string,
-): Promise<Record<string, any>> {
+export async function batchGetProducts(productIds: string[], workspaceId: string): Promise<DbRow> {
   if (!productIds.length) return {}
 
   const { data, error } = await supabase
@@ -26,7 +24,7 @@ export async function batchGetProducts(
 
   if (error) throw error
 
-  const map: Record<string, any> = {}
+  const map: DbRow = {}
   for (const item of data || []) {
     map[item.id] = item
   }
@@ -36,7 +34,7 @@ export async function batchGetProducts(
 export async function batchGetCustomers(
   customerIds: string[],
   workspaceId: string,
-): Promise<Record<string, any>> {
+): Promise<DbRow> {
   if (!customerIds.length) return {}
 
   const { data, error } = await supabase
@@ -47,17 +45,14 @@ export async function batchGetCustomers(
 
   if (error) throw error
 
-  const map: Record<string, any> = {}
+  const map: DbRow = {}
   for (const item of data || []) {
     map[item.id] = item
   }
   return map
 }
 
-export async function batchGetInvoices(
-  invoiceIds: string[],
-  workspaceId: string,
-): Promise<Record<string, any>> {
+export async function batchGetInvoices(invoiceIds: string[], workspaceId: string): Promise<DbRow> {
   if (!invoiceIds.length) return {}
 
   const { data, error } = await supabase
@@ -68,7 +63,7 @@ export async function batchGetInvoices(
 
   if (error) throw error
 
-  const map: Record<string, any> = {}
+  const map: DbRow = {}
   for (const item of data || []) {
     map[item.id] = item
   }

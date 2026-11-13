@@ -191,7 +191,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = request.body as any
-        const { workspaceId, userId } = request.tenancy
+        const { workspaceId } = request.tenancy
 
         const data = {
           type: body.type ?? 'sale',

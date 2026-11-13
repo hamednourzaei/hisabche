@@ -33,6 +33,7 @@ import { PayrollOutcome } from '../team-and-payroll/payroll-outcome'
 import { PayslipDownload } from '../team-and-payroll/payslip-download'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { toIsoDay } from '@hisabche/formatting'
+import type { LucideIcon } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EmployeeDetailView v2 — Memoized · Performance Optimized
@@ -213,9 +214,8 @@ const Field = memo(function Field({
   form,
   setForm,
   isEditing,
-  t,
 }: {
-  icon: any
+  icon: LucideIcon
   label: string
   value: string | number
   field?: keyof EmployeeData

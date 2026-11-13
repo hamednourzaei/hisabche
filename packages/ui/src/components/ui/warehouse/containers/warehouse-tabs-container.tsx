@@ -48,7 +48,7 @@ import {
 import { HoldsSection } from '../holds-section'
 import { ConsignmentSection } from '../../erp-core/consignment-section'
 import { RfqSection } from '../../erp-core/rfq-section'
-import { warehouseContainer } from './Warehouse-container'
+import { WarehouseContainer } from './Warehouse-container'
 import { useLocaleReplace } from '../../../../hooks/use-locale-push'
 import { HubTabs, useHubSection, useHubTab } from '../../hub-tabs'
 import { usePageLook } from '../../../../lib/page-look'
@@ -128,9 +128,9 @@ export type WarehouseTab = 'stock' | 'products'
 /**
  * ⚠️ A COMPONENT, not an inline call. This crashed production.
  *
- * `warehouseContainer` is written as a plain function that calls a dozen hooks
+ * `WarehouseContainer` was written as a plain function (`warehouseContainer`) that calls a dozen hooks
  * — useTranslations, useRouter, useQueryClient, useState, useEffect, useMemo.
- * Calling it inline, as `warehouseContainer()`, runs those hooks as part of the
+ * Calling it inline, as `warehouseContainer()`, ran those hooks as part of the
  * CALLER's hook list.
  *
  * The first version of this file did exactly that, conditionally:
@@ -149,7 +149,7 @@ export type WarehouseTab = 'stock' | 'products'
  * state on every keystroke.
  */
 function WarehouseStockTab() {
-  return warehouseContainer()
+  return <WarehouseContainer />
 }
 
 /** Anything that is not the catalogue is stock — what «انبار» means by default. */

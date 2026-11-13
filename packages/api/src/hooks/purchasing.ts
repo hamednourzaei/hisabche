@@ -8,6 +8,7 @@ import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
 import { useIntentKey } from '../lib/intent-key'
+import type { CreatePurchaseOrder } from '@hisabche/validation'
 
 // ═══ Types ═══
 export interface PurchaseOrder {
@@ -79,7 +80,7 @@ export function useCreatePurchaseOrder() {
   // server returns the first order instead of creating (and budgeting) a second.
   const intent = useIntentKey('po')
   return useMutation({
-    mutationFn: async (input: any) => {
+    mutationFn: async (input: CreatePurchaseOrder) => {
       const { data } = await apiClient.post('/purchase-orders', input, {
         headers: { 'Idempotency-Key': intent.current() },
       })

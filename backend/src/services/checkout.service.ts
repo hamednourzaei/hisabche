@@ -18,9 +18,6 @@ const CHECKOUT_CACHE_TTL = 60 // 1 minute
 // ─── Column Selection ──────────────────────────────────────
 const CHECKOUT_SESSION_COLUMNS =
   'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key, created_at, expires_at, updated_at'
-const CHECKOUT_MINIMAL_COLUMNS =
-  'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key'
-
 // ─── Interface for Payment Provider ────────────────────────
 export interface PaymentProvider {
   createCheckoutSession(params: CheckoutParams): Promise<CheckoutResult>

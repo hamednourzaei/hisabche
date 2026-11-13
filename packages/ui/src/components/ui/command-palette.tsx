@@ -43,7 +43,8 @@ export function CommandPalette({ commands, shortcutKey = '.' }: CommandPalettePr
       if (e.key === shortcutKey && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
         e.stopPropagation()
-        open ? handleClose() : handleOpen()
+        if (open) handleClose()
+        else handleOpen()
       }
       if (e.key === 'Escape' && open) {
         e.preventDefault()

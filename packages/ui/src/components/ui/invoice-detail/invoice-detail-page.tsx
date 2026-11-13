@@ -24,6 +24,7 @@ interface InvoiceItemDetail {
 
 interface InvoiceItem {
   id?: string | undefined
+  productId?: string | null | undefined
   productName?: string | undefined
   product_name?: string | undefined
   quantity?: number | undefined

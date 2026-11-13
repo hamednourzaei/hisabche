@@ -61,7 +61,7 @@ export const Customer360Container = memo(function Customer360Container({
   if (customer.error) return <ErrorNote message={(customer.error as Error).message} />
   if (!customer.data) return null
 
-  const data = customer.data as Record<string, any>
+  const data: Record<string, unknown> = { ...customer.data }
   const toMinor = (value: unknown) => Math.round((Number(value) || 0) * 100)
 
   const sections: Partial<Record<DetailSection, React.ReactNode>> = {
@@ -89,7 +89,7 @@ export const Customer360Container = memo(function Customer360Container({
   // that failed to load are different facts, and only one of them means the
   // customer owes nothing.
   if (ledger.data) {
-    const summary = ledger.data as Record<string, any>
+    const summary: Record<string, unknown> = { ...ledger.data }
     sections.financial = (
       <StatGrid>
         <Stat

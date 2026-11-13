@@ -6,7 +6,6 @@ import { sendFailure } from '../errors/http-failure'
 import { IdempotencyUnavailableError, readClientRequestId } from '../utils/client-request'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createDraftFromSuggestionsSchema,
   createPurchaseOrderSchema,
@@ -18,12 +17,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function purchasingRoutes(fastify: FastifyInstance) {
   const purchasingService = new PurchasingService()

@@ -11,5 +11,6 @@ export const useWarehouseStore = create<WarehouseState>((set) => ({
   selectedGodamId: null,
   warehouseList: [{ id: 'default', name: 'گدام اصلی' }],
   setSelectedWarehouse: (id) => set({ selectedGodamId: id }),
-  addWarehouse: (name) => set((s) => ({ warehouseList: [...s.warehouseList, { id: `warehouse-${Date.now()}`, name }] })),
+  addWarehouse: (name) =>
+    set((s) => ({ warehouseList: [...s.warehouseList, { id: `warehouse-${Date.now()}`, name }] })),
 }))

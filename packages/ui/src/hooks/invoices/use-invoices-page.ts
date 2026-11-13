@@ -73,16 +73,10 @@ export function useInvoicesPage() {
   // The reader's calendar. `mapInvoices` formats dates, so it needs it.
   const lang = useLocale()
 
-  const invoices = useMemo(
-    () => mapInvoices(data?.invoices as any[] | undefined, lang),
-    [data, lang],
-  )
+  const invoices = useMemo(() => mapInvoices(data?.invoices, lang), [data, lang])
 
   /** One page of matching invoices — for the CSV export only, never for a figure. */
-  const statsInvoices = useMemo(
-    () => mapInvoices(statsData?.invoices as any[] | undefined, lang),
-    [statsData, lang],
-  )
+  const statsInvoices = useMemo(() => mapInvoices(statsData?.invoices, lang), [statsData, lang])
 
   /** `null` when the server sent no summary — the cards are then not shown. */
   const statsSummary = statsData?.summary ?? null

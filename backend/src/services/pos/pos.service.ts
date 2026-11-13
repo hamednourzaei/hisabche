@@ -54,6 +54,8 @@ import {
   toShiftHistoryRow,
   transferLines,
 } from '@hisabche/validation'
+import type { PostgrestError } from '@supabase/supabase-js'
+import type { DbRow } from '../../utils/db-row'
 
 // The columns finance-gaps-migration created. Everything `mapSession` reads.
 const SESSION_COLUMNS =
@@ -129,7 +131,7 @@ export class PosService {
       }
     }
 
-    const payload: Record<string, any> = {
+    const payload: DbRow = {
       workspace_id: ctx.workspaceId,
       branch_id: input.branchId ?? null,
       status: 'open',
@@ -146,8 +148,8 @@ export class PosService {
       payload.label = labelValue
     }
 
-    let data: Record<string, any> | null = null
-    let error: any = null
+    let data: DbRow | null
+    let error: PostgrestError | null
 
     const initial = await supabase
       .from('pos_sessions')
@@ -155,7 +157,7 @@ export class PosService {
       .select(`${SESSION_COLUMNS}, currency`)
       .single()
 
-    data = initial.data as Record<string, any> | null
+    data = initial.data as DbRow | null
     error = initial.error
 
     if (error && isMissingCurrencyColumn(error)) {
@@ -182,7 +184,7 @@ export class PosService {
         .insert(payload)
         .select(SESSION_COLUMNS)
         .single()
-      data = retry.data as Record<string, any> | null
+      data = retry.data as DbRow | null
       error = retry.error
     }
 
@@ -199,7 +201,7 @@ export class PosService {
     // The currency this till was opened in is known here whatever columns the
     // fallback read brought back.
     const result = {
-      ...mapSession(data as Record<string, any>, booksCurrency),
+      ...mapSession(data as DbRow, booksCurrency),
       currency: targetCurrency,
     }
     if (labelValue !== null && !result.label) {
@@ -210,8 +212,8 @@ export class PosService {
 
   async getSession(ctx: TenancyContext, sessionId: string): Promise<PosSession> {
     const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
-    let data: Record<string, any> | null = null
-    let error: any = null
+    let data: DbRow | null
+    let error: PostgrestError | null
 
     const res = await supabase
       .from('pos_sessions')
@@ -220,7 +222,7 @@ export class PosService {
       .eq('id', sessionId)
       .maybeSingle()
 
-    data = res.data as Record<string, any> | null
+    data = res.data as DbRow | null
     error = res.error
 
     if (error && isMissingCurrencyColumn(error)) {
@@ -230,7 +232,7 @@ export class PosService {
         .eq('workspace_id', ctx.workspaceId)
         .eq('id', sessionId)
         .maybeSingle()
-      data = fallback.data as Record<string, any> | null
+      data = fallback.data as DbRow | null
       error = fallback.error
     }
 
@@ -268,9 +270,7 @@ export class PosService {
     }
     if (res.error) throw new DatabaseError('Failed to fetch the open session', res.error)
 
-    const sessions = ((res.data ?? []) as Record<string, any>[]).map((row) =>
-      mapSession(row, booksCurrency),
-    )
+    const sessions = ((res.data ?? []) as DbRow[]).map((row) => mapSession(row, booksCurrency))
     // Asked for a currency: that till or none. Not asked: the books-currency
     // till, as before there were others; failing that, the oldest.
     const wanted = currency ?? booksCurrency
@@ -296,7 +296,7 @@ export class PosService {
     session: PosSession,
   ): Promise<CashSettlement[]> {
     const PAGE = 1000
-    const rows: Record<string, any>[] = []
+    const rows: DbRow[] = []
 
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await supabase
@@ -319,7 +319,7 @@ export class PosService {
         throw new DatabaseError('Failed to fetch cash settlements', error)
       }
 
-      const page = (data ?? []) as Record<string, any>[]
+      const page = (data ?? []) as DbRow[]
       rows.push(...page)
       if (page.length < PAGE) break
     }
@@ -345,7 +345,7 @@ export class PosService {
     session: PosSession,
   ): Promise<CashSettlement[]> {
     const PAGE = 1000
-    const rows: Record<string, any>[] = []
+    const rows: DbRow[] = []
     const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
     const sessionCurrency = session.currency ?? booksCurrency
 
@@ -368,7 +368,7 @@ export class PosService {
       const { data, error } = await query
       if (error) throw new DatabaseError('Failed to fetch cash settlements', error)
 
-      const page = (data ?? []) as Record<string, any>[]
+      const page = (data ?? []) as DbRow[]
       rows.push(...page)
       if (page.length < PAGE) break
     }
@@ -380,12 +380,12 @@ export class PosService {
           (row.currency ?? booksCurrency) === sessionCurrency,
       )
       .map((row) => ({
-        id: row.id,
-        paymentNumber: row.payment_number ?? '',
+        id: String(row.id),
+        paymentNumber: String(row.payment_number ?? ''),
         direction: row.direction === 'out' ? ('out' as const) : ('in' as const),
         // payments.amount is major units (numeric); the drawer counts minor.
         amountMinor: majorToTillMinor(Number(row.amount) || 0, sessionCurrency),
-        createdAt: row.created_at,
+        createdAt: String(row.created_at),
       }))
   }
 
@@ -517,7 +517,7 @@ export class PosService {
 
     if (error) throw new DatabaseError('Failed to read the shift history', error)
 
-    return (data ?? []).map((raw: Record<string, any>) => toShiftHistoryRow(raw))
+    return (data ?? []).map((raw: DbRow) => toShiftHistoryRow(raw))
   }
 
   // ─── Orders ───────────────────────────────────────────────────────────────
@@ -975,7 +975,7 @@ export class PosService {
     const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
     const isForeign = session.currency && session.currency !== booksCurrency
 
-    let posted = false
+    let posted: boolean
     let ledgerResult: { status: string; reason?: string }
     if (isForeign) {
       posted = false
@@ -1062,13 +1062,18 @@ export class PosService {
 
     const since = cashFlowSince(days, offsetMinutes)
 
-    const pageAll = async (build: (from: number, to: number) => any) => {
+    const pageAll = async (
+      build: (
+        from: number,
+        to: number,
+      ) => PromiseLike<{ data: unknown; error: PostgrestError | null }>,
+    ) => {
       const PAGE = 1000
-      const rows: Record<string, any>[] = []
+      const rows: DbRow[] = []
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await build(from, from + PAGE - 1)
         if (error) throw new DatabaseError('Failed to read cash flow', error)
-        const page = (data ?? []) as Record<string, any>[]
+        const page = (data ?? []) as DbRow[]
         rows.push(...page)
         if (page.length < PAGE) break
       }
@@ -1281,8 +1286,8 @@ export class PosService {
     statuses: SessionStatus[] = ['open'],
   ) {
     const booksCurrency = await baseCurrencyOf(ctx.workspaceId)
-    let rows: Record<string, any>[] | null = null
-    let error: any = null
+    let rows: DbRow[] | null
+    let error: PostgrestError | null
 
     const res = await supabase
       .from('pos_sessions')
@@ -1291,7 +1296,7 @@ export class PosService {
       .in('status', statuses)
       .limit(200)
 
-    rows = res.data as Record<string, any>[] | null
+    rows = res.data as DbRow[] | null
     error = res.error
 
     if (error && isMissingCurrencyColumn(error)) {
@@ -1301,7 +1306,7 @@ export class PosService {
         .eq('workspace_id', ctx.workspaceId)
         .in('status', statuses)
         .limit(200)
-      rows = fallback.data as Record<string, any>[] | null
+      rows = fallback.data as DbRow[] | null
       error = fallback.error
     }
 

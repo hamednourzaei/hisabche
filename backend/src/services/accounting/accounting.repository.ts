@@ -15,6 +15,8 @@
 import { restateAtRates, type ProfitInvoice, type ProfitLine } from './profit-report.domain'
 import { baseCurrencyOf } from '../base-currency'
 import { supabase } from '../../db'
+import { rowOf, rowsOf, type DbRow } from '../../utils/db-row'
+import { accountRootTypes, journalEntryStatuses } from '@hisabche/validation'
 import { DatabaseError } from '../../errors/database.error'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
@@ -77,42 +79,64 @@ export interface JournalLineRow {
   credit: number
 }
 
-function mapAccount(raw: Record<string, any>): AccountRow {
+/** A stored value as text, or null when absent. */
+function text(value: unknown): string | null {
+  return value === null || value === undefined ? null : String(value)
+}
+
+/** The account's root type. The column is CHECK-constrained, so anything else is a fault. */
+function rootTypeOf(value: unknown): AccountRootType {
+  const found = accountRootTypes.find((type) => type === value)
+  if (!found) throw new DatabaseError(`Account has an unknown type «${String(value)}»`)
+  return found
+}
+
+function entryStatusOf(value: unknown): JournalEntryRow['status'] {
+  if (value === null || value === undefined) return 'draft'
+  const found = journalEntryStatuses.find((status) => status === value)
+  if (!found) throw new DatabaseError(`Journal entry has an unknown status «${String(value)}»`)
+  return found
+}
+
+function mapAccount(raw: DbRow): AccountRow {
   return {
-    id: raw.id,
-    code: raw.code,
-    name: raw.name,
-    type: raw.type,
-    role: raw.role ?? null,
+    id: String(raw.id),
+    code: String(raw.code ?? ''),
+    name: String(raw.name ?? ''),
+    type: rootTypeOf(raw.type),
+    role: text(raw.role),
     kind: raw.kind === 'memorandum' ? 'memorandum' : 'standard',
-    parentId: raw.parent_id ?? null,
+    parentId: text(raw.parent_id),
     isGroup: raw.is_group === true,
     isActive: raw.is_active !== false,
-    createdAt: raw.created_at ?? null,
+    createdAt: text(raw.created_at),
   }
 }
 
-function mapEntry(raw: Record<string, any>): JournalEntryRow {
+function mapEntry(raw: DbRow): JournalEntryRow {
   return {
-    id: raw.id,
-    entryNumber: raw.entry_number ?? null,
+    id: String(raw.id),
+    entryNumber: text(raw.entry_number),
     date: String(raw.date ?? '').slice(0, 10),
-    description: raw.description ?? '',
-    reference: raw.reference ?? '',
-    status: raw.status ?? 'draft',
-    sourceType: raw.source_type ?? null,
-    sourceId: raw.source_id ?? null,
-    reversalOf: raw.reversal_of ?? null,
-    postedAt: raw.posted_at ?? null,
-    createdAt: raw.created_at ?? null,
-    lines: (raw.lines ?? []).map((line: Record<string, any>) => ({
-      id: line.id,
-      accountId: line.account_id,
-      accountCode: line.account?.code,
-      accountName: line.account?.name,
-      debit: Number(line.debit) || 0,
-      credit: Number(line.credit) || 0,
-    })),
+    description: String(raw.description ?? ''),
+    reference: String(raw.reference ?? ''),
+    status: entryStatusOf(raw.status),
+    sourceType: text(raw.source_type),
+    sourceId: text(raw.source_id),
+    reversalOf: text(raw.reversal_of),
+    postedAt: text(raw.posted_at),
+    createdAt: text(raw.created_at),
+    lines: rowsOf(raw.lines).map((line) => {
+      const account = rowOf(line.account)
+      return {
+        id: String(line.id),
+        accountId: String(line.account_id),
+        accountCode: text(account?.code) ?? undefined,
+        accountName: text(account?.name) ?? undefined,
+        debit: Number(line.debit) || 0,
+        credit: Number(line.credit) || 0,
+      }
+    }),
   }
 }
 
@@ -498,10 +522,10 @@ export class AccountingRepository {
       throw new DatabaseError('Failed to read the period locks', error)
     }
 
-    return (data ?? []).map((row: Record<string, any>) => ({
-      branchId: row.branch_id ?? null,
+    return (data ?? []).map((row: DbRow) => ({
+      branchId: text(row.branch_id),
       lockedUntil: String(row.locked_until).slice(0, 10),
-      reason: row.reason ?? '',
+      reason: String(row.reason ?? ''),
     }))
   }
 
@@ -625,13 +649,13 @@ export class AccountingRepository {
 
     return (
       data
-        .map((row: Record<string, any>) => {
-          const entry = Array.isArray(row.journal_entries)
-            ? row.journal_entries[0]
-            : row.journal_entries
+        .map((row: DbRow) => {
+          const entry = rowOf(
+            Array.isArray(row.journal_entries) ? row.journal_entries[0] : row.journal_entries,
+          )
           return {
-            lineId: row.id,
-            entryId: row.journal_id,
+            lineId: String(row.id),
+            entryId: String(row.journal_id),
             entryNumber: String(entry?.entry_number ?? ''),
             date: String(entry?.date ?? '').slice(0, 10),
             description: String(entry?.description ?? ''),
@@ -640,8 +664,8 @@ export class AccountingRepository {
             // came from no document» (a manual entry) from «this line came
             // from a document whose type we failed to read» — the first is
             // normal and gets no link, the second is a defect.
-            sourceType: entry?.source_type ?? null,
-            sourceId: entry?.source_id ?? null,
+            sourceType: text(entry?.source_type),
+            sourceId: text(entry?.source_id),
             debit: Number(row.debit) || 0,
             credit: Number(row.credit) || 0,
           }
@@ -669,7 +693,7 @@ export class AccountingRepository {
 
     if (error) throw new DatabaseError('Failed to aggregate the ledger', error)
 
-    return (data ?? []).map((row: Record<string, any>) => ({
+    return (data ?? []).map((row: DbRow) => ({
       accountId: row.account_id,
       accountCode: row.account_code,
       accountName: row.account_name,
@@ -727,12 +751,12 @@ export class AccountingRepository {
   }
 
   private async profitDetails(workspaceId: string, invoiceIds: string[]) {
-    const lines: Record<string, any>[] = []
-    const consumptions: Record<string, any>[] = []
+    const lines: DbRow[] = []
+    const consumptions: DbRow[] = []
     for (let i = 0; i < invoiceIds.length; i += 200) {
       const chunk = invoiceIds.slice(i, i + 200)
       const [chunkLines, chunkCosts] = await Promise.all([
-        this.pages<Record<string, any>>('invoice lines', (from, to) =>
+        this.pages<DbRow>('invoice lines', (from, to) =>
           supabase
             .from('invoice_items')
             .select('id, invoice_id, product_id, product_name, quantity, total_price')
@@ -740,7 +764,7 @@ export class AccountingRepository {
             .order('id', { ascending: true })
             .range(from, to),
         ),
-        this.pages<Record<string, any>>('cost consumptions', (from, to) =>
+        this.pages<DbRow>('cost consumptions', (from, to) =>
           supabase
             .from('cost_consumptions')
             .select('id, consumer_id, product_id, quantity, amount, is_estimated')
@@ -772,7 +796,7 @@ export class AccountingRepository {
     }
   }
 
-  private mapProfitInvoice(row: Record<string, any>, booksCurrency: string) {
+  private mapProfitInvoice(row: DbRow, booksCurrency: string) {
     return {
       id: String(row.id),
       currency: String(row.currency || booksCurrency),
@@ -825,7 +849,7 @@ export class AccountingRepository {
   /** Sale invoices (not cancelled) dated in [from, to], their lines, costs and the period's payrolls. */
   async profitSources(workspaceId: string, from: string, to: string) {
     const [invoiceRows, payrollRows] = await Promise.all([
-      this.pages<Record<string, any>>('sale invoices', (a, b) =>
+      this.pages<DbRow>('sale invoices', (a, b) =>
         supabase
           .from('invoices')
           .select('id, currency, subtotal, discount_total')
@@ -837,7 +861,7 @@ export class AccountingRepository {
           .order('id', { ascending: true })
           .range(a, b),
       ),
-      this.pages<Record<string, any>>('payrolls', (a, b) =>
+      this.pages<DbRow>('payrolls', (a, b) =>
         supabase
           .from('payrolls')
           .select('id, currency, base_salary, bonuses, overtime_amount, status')
@@ -1044,7 +1068,7 @@ export class AccountingRepository {
   async profitSourcesForInvoices(workspaceId: string, invoiceIds: string[]) {
     const unique = [...new Set(invoiceIds)]
     if (unique.length === 0) return { invoices: [], lines: [], consumptions: [] }
-    const invoiceRows: Record<string, any>[] = []
+    const invoiceRows: DbRow[] = []
     for (let i = 0; i < unique.length; i += 200) {
       const { data, error } = await supabase
         .from('invoices')
@@ -1077,7 +1101,7 @@ export class AccountingRepository {
     const invoice = sources.invoices[0]
     if (!invoice) return null
 
-    const consumptionRows = await this.pages<Record<string, any>>('cost consumptions', (a, b) =>
+    const consumptionRows = await this.pages<DbRow>('cost consumptions', (a, b) =>
       supabase
         .from('cost_consumptions')
         .select('id, consumer_id, product_id, layer_id, quantity, unit_cost, amount, is_estimated')
@@ -1090,7 +1114,7 @@ export class AccountingRepository {
     const layerIds = [
       ...new Set(consumptionRows.map((r) => r.layer_id).filter(Boolean)),
     ] as string[]
-    const layers = new Map<string, Record<string, any>>()
+    const layers = new Map<string, DbRow>()
     for (let i = 0; i < layerIds.length; i += 200) {
       const { data, error } = await supabase
         .from('cost_layers')
@@ -1108,7 +1132,7 @@ export class AccountingRepository {
         .eq('workspace_id', workspaceId)
         .eq('source_type', 'invoice')
         .eq('source_id', invoiceId),
-      this.pages<Record<string, any>>('payment allocations', (a, b) =>
+      this.pages<DbRow>('payment allocations', (a, b) =>
         supabase
           .from('payment_allocations')
           .select('id, payment_id, amount')
@@ -1172,7 +1196,7 @@ export class AccountingRepository {
     // A cost layer with no stored currency is denominated in the books currency.
     const booksCurrency = await baseCurrencyOf(workspaceId)
     const [layers, consumptions] = await Promise.all([
-      this.pages<Record<string, any>>('cost layers', (a, b) =>
+      this.pages<DbRow>('cost layers', (a, b) =>
         supabase
           .from('cost_layers')
           .select('id, source_type, received_qty, remaining_qty, unit_cost, currency, entry_date')
@@ -1181,7 +1205,7 @@ export class AccountingRepository {
           .order('id', { ascending: true })
           .range(a, b),
       ),
-      this.pages<Record<string, any>>('cost consumptions', (a, b) =>
+      this.pages<DbRow>('cost consumptions', (a, b) =>
         supabase
           .from('cost_consumptions')
           .select('id, consumer_type, quantity, amount')
@@ -1219,7 +1243,7 @@ export class AccountingRepository {
       costMinor: number | null
     }>
   > {
-    const variants = await this.pages<Record<string, any>>('product variants', (a, b) =>
+    const variants = await this.pages<DbRow>('product variants', (a, b) =>
       supabase
         .from('product_variants')
         .select('id, sku, attributes')
@@ -1248,7 +1272,7 @@ export class AccountingRepository {
       referenceType: string | null
     }>
   > {
-    const moves = await this.pages<Record<string, any>>('variant stock movements', (a, b) =>
+    const moves = await this.pages<DbRow>('variant stock movements', (a, b) =>
       supabase
         .from('stock_movements')
         .select('variant_id, quantity, reference_type')

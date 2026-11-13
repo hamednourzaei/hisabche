@@ -98,7 +98,7 @@ export function useTransactions(
         '/transactions',
         { params: filters },
       )
-      return (response as any).data || response
+      return response.data
     },
     enabled: authReady,
     staleTime: 1000 * 60 * 2,
@@ -114,7 +114,7 @@ export function useCreateTransaction() {
       const response = await apiClient.post<Transaction>('/transactions', input, {
         headers: { 'Idempotency-Key': intent.current() },
       })
-      return (response as any).data || response
+      return response.data
     },
     onError: (error) => intent.settle(error),
     onSuccess: () => {
@@ -136,7 +136,7 @@ export function useLedger(customerId?: string, supplierId?: string) {
     queryFn: async () => {
       const params = customerId ? { customerId } : { supplierId }
       const response = await apiClient.get<LedgerSummary>('/transactions/ledger', { params })
-      return (response as any).data || response
+      return response.data
     },
     enabled: authReady && !!(customerId || supplierId),
   })

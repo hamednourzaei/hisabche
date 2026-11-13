@@ -11,7 +11,6 @@
 import { businessDayOf } from '../utils/local-day'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import {
   approveBudgetBodySchema,
@@ -35,18 +34,7 @@ import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { readClientRequestId } from '../utils/client-request'
 import { invalidateMoneyCaches } from '../utils/money-cache'
-
-// A type boundary only — the same call and output as before, without `any`
-// (the generic signature trips TS2589 on deep schemas; see conflict.routes.ts).
-const toJsonSchema = (schema: unknown): Record<string, unknown> => {
-  const convert = zodToJsonSchema as unknown as (
-    schema: unknown,
-    options: { target: 'jsonSchema7' },
-  ) => Record<string, unknown>
-  const result = convert(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 const receiveBatchSchema = z.object({
   productId: z.string().uuid(),

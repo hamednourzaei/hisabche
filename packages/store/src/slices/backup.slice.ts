@@ -119,52 +119,52 @@ export const useBackupStore = create<BackupState>()(
       getTrashItems: () => get().trashBin.filter((i) => !i.restored),
 
       createBackup: () => {
-  const state = get()
-  
-  // ═══ جمع‌آوری همه دیتا از localStorage ═══
-  const allData: Record<string, unknown> = {}
-  
-  // همه کلیدهای hisabche-* رو جمع کن
-  if (typeof window !== 'undefined') {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('hisabche-')) {
-        try {
-          allData[key] = JSON.parse(localStorage.getItem(key) || '')
-        } catch {
-          allData[key] = localStorage.getItem(key)
+        const state = get()
+
+        // ═══ جمع‌آوری همه دیتا از localStorage ═══
+        const allData: Record<string, unknown> = {}
+
+        // همه کلیدهای hisabche-* رو جمع کن
+        if (typeof window !== 'undefined') {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('hisabche-')) {
+              try {
+                allData[key] = JSON.parse(localStorage.getItem(key) || '')
+              } catch {
+                allData[key] = localStorage.getItem(key)
+              }
+            }
+          }
         }
-      }
-    }
-  }
-  
-  const exportPayload = {
-    backups: state.backups,
-    auditLog: state.auditLog,
-    trashBin: state.trashBin,
-    allData, // ✅ کل دیتای برنامه
-    exportedAt: new Date().toISOString(),
-    version: '1.0',
-  }
-  
-  const data = JSON.stringify(exportPayload)
-  const sizeKB = Math.floor(new Blob([data]).size / 1024)
-  
-  const backup: BackupRecord = {
-    id: `backup-${Date.now()}`,
-    timestamp: Date.now(),
-    size: sizeKB > 0 ? `${sizeKB} KB` : '< 1 KB',
-    type: 'auto',
-    status: 'completed',
-  }
-  
-  // ذخیره خود backup توی localStorage
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`hisabche-backup-${backup.id}`, data)
-  }
-  
-  return backup
-},
+
+        const exportPayload = {
+          backups: state.backups,
+          auditLog: state.auditLog,
+          trashBin: state.trashBin,
+          allData, // ✅ کل دیتای برنامه
+          exportedAt: new Date().toISOString(),
+          version: '1.0',
+        }
+
+        const data = JSON.stringify(exportPayload)
+        const sizeKB = Math.floor(new Blob([data]).size / 1024)
+
+        const backup: BackupRecord = {
+          id: `backup-${Date.now()}`,
+          timestamp: Date.now(),
+          size: sizeKB > 0 ? `${sizeKB} KB` : '< 1 KB',
+          type: 'auto',
+          status: 'completed',
+        }
+
+        // ذخیره خود backup توی localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`hisabche-backup-${backup.id}`, data)
+        }
+
+        return backup
+      },
       scheduleAutoBackup: () => {
         if (typeof window === 'undefined') return
         const runBackup = () => {
@@ -198,7 +198,11 @@ export const useBackupStore = create<BackupState>()(
       exportData: () => {
         const state = get()
         return JSON.stringify(
-          { backups: state.backups, auditLog: state.auditLog, exportedAt: new Date().toISOString() },
+          {
+            backups: state.backups,
+            auditLog: state.auditLog,
+            exportedAt: new Date().toISOString(),
+          },
           null,
           2,
         )
@@ -209,7 +213,8 @@ export const useBackupStore = create<BackupState>()(
     {
       name: 'hisabche-backup',
       storage: createJSONStorage(() => {
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') return localStorage
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined')
+          return localStorage
         return { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       }),
     },

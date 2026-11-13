@@ -1,6 +1,19 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+/** Battery Status API — what this slice reads. */
+interface BatteryInfo extends EventTarget {
+  level: number
+  charging: boolean
+}
+
+/** Optional navigator members (Device Memory, Network Information, Battery Status). */
+interface DeviceNavigator {
+  deviceMemory?: number
+  connection?: { saveData?: boolean }
+  getBattery?: () => Promise<BatteryInfo>
+}
+
 export type PerformanceMode = 'auto' | 'lite' | 'normal'
 
 interface DeviceState {
@@ -19,7 +32,7 @@ interface DeviceState {
 
 export const useDeviceStore = create<DeviceState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       performanceMode: 'auto',
       dataSaver: false,
       reducedMotion: false,
@@ -29,17 +42,20 @@ export const useDeviceStore = create<DeviceState>()(
       setPerformanceMode: (mode) => set({ performanceMode: mode }),
       setDataSaver: (enabled) => set({ dataSaver: enabled }),
       setReducedMotion: (enabled) => set({ reducedMotion: enabled }),
-      setBatteryInfo: (level, charging) => set({
-        batteryLevel: level,
-        lowBattery: level < 0.2 && !charging,
-      }),
+      setBatteryInfo: (level, charging) =>
+        set({
+          batteryLevel: level,
+          lowBattery: level < 0.2 && !charging,
+        }),
 
       detectDevice: () => {
         if (typeof navigator === 'undefined') return
 
-        const memory = (navigator as any).deviceMemory
+        // Not in every browser's DOM typings: read through a declared optional shape.
+        const nav = navigator as Navigator & DeviceNavigator
+        const memory = nav.deviceMemory
         const cores = navigator.hardwareConcurrency || 4
-        const connection = (navigator as any).connection
+        const connection = nav.connection
 
         if (memory && memory < 4) {
           set({ performanceMode: 'lite', reducedMotion: true })
@@ -52,7 +68,7 @@ export const useDeviceStore = create<DeviceState>()(
         }
 
         if ('getBattery' in navigator) {
-          (navigator as any).getBattery().then((battery: any) => {
+          void nav.getBattery?.().then((battery: BatteryInfo) => {
             set({
               batteryLevel: battery.level,
               lowBattery: battery.level < 0.2 && !battery.charging,
@@ -70,7 +86,8 @@ export const useDeviceStore = create<DeviceState>()(
     {
       name: 'hisabche-device',
       storage: createJSONStorage(() => {
-        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') return localStorage
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined')
+          return localStorage
         return { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       }),
     },

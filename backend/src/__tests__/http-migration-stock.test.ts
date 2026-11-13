@@ -117,7 +117,6 @@ async function run(file: string, entity?: string) {
 }
 
 const mine = (table: string) => db.rows(table).filter((row) => row.workspace_id === SHOP)
-const productId = (name: string) => String(mine('products').find((row) => row.name === name)?.id)
 
 /** What the movements say is where: «product name @ warehouse» → quantity. */
 function stockByPlace(): Record<string, number> {

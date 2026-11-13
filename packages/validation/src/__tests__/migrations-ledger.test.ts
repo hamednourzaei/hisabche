@@ -27,7 +27,8 @@ const migrations = readdirSync(resolve(ROOT, 'docs'))
 
 const rows = doc
   .split(/\r?\n/)
-  .filter((line) => /^\| \d+ \| `/.test(line))
+  // Prettier pads table cells (`| 1   |`), so match the cell, not its spacing.
+  .filter((line) => /^\|\s*\d+\s*\|/.test(line))
   .map((line) => line.split('|').map((cell) => cell.trim()))
 
 describe('docs/MIGRATIONS-PENDING.md — the canonical ledger', () => {
@@ -61,7 +62,14 @@ describe('docs/MIGRATIONS-PENDING.md — the canonical ledger', () => {
   it('names the gaps instead of hiding them', () => {
     const withoutVerify = rows.filter((cells) => cells[4] === '—').length
     const withoutTest = rows.filter((cells) => cells[6] === '—').length
-    expect(doc).toContain(`| Migration without a \`VERIFY-*\` file | ${withoutVerify} |`)
-    expect(doc).toContain(`| Migration without a \`*.pg.test.ts\` | ${withoutTest} |`)
+    // Prettier pads the count cell, so the row is matched as a whole.
+    const verifyRow = new RegExp(
+      `\\| Migration without a \`VERIFY-\\*\` file \\|\\s*${withoutVerify}\\s*\\|`,
+    )
+    const testRow = new RegExp(
+      `\\| Migration without a \`\\*\\.pg\\.test\\.ts\`\\s*\\|\\s*${withoutTest}\\s*\\|`,
+    )
+    expect(doc).toMatch(verifyRow)
+    expect(doc).toMatch(testRow)
   })
 })

@@ -9,6 +9,27 @@ import { apiClient } from '@hisabche/api'
 // برای وب و موبایل) — این فایل دیگر تعریف موازی ندارد.
 import { ROLE_RANK, type WorkspaceRole } from '@hisabche/auth-core'
 
+/** Rank of a role name; a role outside the four ranked ones ranks 0. */
+const rankOf = (role: string): number => (ROLE_RANK as Readonly<Record<string, number>>)[role] ?? 0
+
+/** A row of `GET /workspaces` — the fields this slice reads. */
+interface WorkspaceListRow {
+  id: string
+  name?: string | null
+}
+
+/** A row of `GET /workspaces/:id/members` (raw database columns). */
+interface MemberRow {
+  id: string
+  user_id: string
+  role: string
+  full_name?: string | null
+  email?: string | null
+  joined_at?: string | null
+  created_at?: string | null
+  user?: { full_name?: string | null; email?: string | null } | null
+}
+
 export type { WorkspaceRole }
 
 export interface WorkspaceMember {
@@ -16,7 +37,11 @@ export interface WorkspaceMember {
   userId: string
   fullName: string
   email: string
-  role: WorkspaceRole
+  /**
+   * The server's role name. Besides the four ranked roles the database holds others (manager,
+   * seller…); they are shown as they are and rank 0 here — the server decides permission.
+   */
+  role: string
   joinedAt: number
   isActive: boolean
 }
@@ -46,7 +71,7 @@ interface WorkspaceState {
   hasNoWorkspace: boolean | null
   members: WorkspaceMember[]
   invites: WorkspaceInvite[]
-  currentUserRole: WorkspaceRole
+  currentUserRole: string
   loading: boolean
 
   setWorkspace: (id: string, name: string) => void
@@ -130,30 +155,32 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           // picked it, and silently moving them to a different set of books
           // would be worse than asking. Otherwise fall back to the first.
           const storedId = get().workspaceId
-          const ws = workspaces.find((w: any) => w.id === storedId) ?? workspaces[0]
+          const list = workspaces as WorkspaceListRow[]
+          const ws = list.find((w) => w.id === storedId) ?? list[0]!
 
-          let members: any[]
+          let members: MemberRow[]
           try {
             const body = (await apiClient.get(`/workspaces/${ws.id}/members`)).data
-            members = Array.isArray(body) ? body : []
+            members = Array.isArray(body) ? (body as MemberRow[]) : []
           } catch {
             set({ loading: false })
             return
           }
 
-          const me = members?.find((m: any) => m.user_id === userId)
+          const me = members.find((m) => m.user_id === userId)
           if (ws && members && me) {
             set({
               workspaceId: ws.id,
               workspaceName: ws.name || '',
               currentUserRole: me.role || 'member',
-              members: members.map((m: any) => ({
+              members: members.map((m) => ({
                 id: m.id,
                 userId: m.user_id,
                 fullName: m.full_name || m.user?.full_name || m.user?.email || 'Unknown',
                 email: m.email || m.user?.email || '',
                 role: m.role,
-                joinedAt: new Date(m.joined_at || m.created_at).getTime(),
+                // NaN when the server sent neither date, as before — never a made-up «now».
+                joinedAt: Date.parse(m.joined_at || m.created_at || ''),
                 isActive: true,
               })),
               hasNoWorkspace: false,
@@ -198,9 +225,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         })),
       setCurrentUserRole: (role) => set({ currentUserRole: role }),
 
-      canEdit: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
+      canEdit: () => rankOf(get().currentUserRole) >= ROLE_RANK.admin,
       canDelete: () => get().currentUserRole === 'owner',
-      canInvite: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
+      canInvite: () => rankOf(get().currentUserRole) >= ROLE_RANK.admin,
     }),
     {
       name: 'hisabche-workspace',

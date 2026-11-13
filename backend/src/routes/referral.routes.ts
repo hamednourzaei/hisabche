@@ -15,16 +15,10 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { authenticate } from '../middleware/auth.middleware'
 import { referralService } from '../services/referral'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 // ⚠️ THIS SCHEMA IS THE RESPONSE, NOT A DESCRIPTION OF IT.
 //

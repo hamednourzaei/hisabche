@@ -11,6 +11,7 @@ import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
 import { baseCurrencyOf } from './base-currency'
+import type { DbRow } from '../utils/db-row'
 
 // ✅ Type for response
 interface AIResponse {
@@ -18,7 +19,7 @@ interface AIResponse {
   confidence: number
   sources: { type: string; description: string }[]
   suggestions: string[]
-  data: Record<string, any>
+  data: DbRow
 }
 
 export class AIService {
@@ -405,7 +406,7 @@ export class AIService {
   }
 
   // ─── General Query ──────────────────────────────────────
-  private handleGeneralQuery(userId: string, question: string): AIResponse {
+  private handleGeneralQuery(_userId: string, _question: string): AIResponse {
     return {
       answer: `من می‌توانم درباره فروش، موجودی، مشتریان، هزینه‌ها و وضعیت مالی کمک کنم. لطفاً سوال خود را دقیق‌تر بپرسید.
 

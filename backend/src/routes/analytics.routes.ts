@@ -6,7 +6,6 @@
 import { resolveTimeZone } from '../utils/local-day'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { AnalyticsService } from '../services/analytics.service'
 import { OrderDepositService } from '../services/sales/order-deposit.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -19,18 +18,7 @@ import {
   hiddenDashboardGroups,
   maskDashboardKpis,
 } from '../services/analytics/dashboard-visibility.domain'
-
-// A type boundary only — the same call and output as before, without `any`
-// (the generic signature trips TS2589 on deep schemas; see conflict.routes.ts).
-const toJsonSchema = (schema: unknown): Record<string, unknown> => {
-  const convert = zodToJsonSchema as unknown as (
-    schema: unknown,
-    options: { target: 'jsonSchema7' },
-  ) => Record<string, unknown>
-  const result = convert(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 // ═══════════════════════════════════════════════════════════
 // ✅ Production Schemas

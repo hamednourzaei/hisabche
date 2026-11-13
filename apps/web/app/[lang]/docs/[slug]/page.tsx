@@ -13,6 +13,16 @@ import { DocsShell } from '../docs-shell'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
 import { localeUrl, locales, resolveLocale } from '../../i18n-config'
 
+/** What this page reads from the `docs` catalog: one article's texts, and the shared labels. */
+interface DocsMessages {
+  docs?: Record<
+    string,
+    { title?: string; seoTitle?: string; summary?: string; seoDescription?: string }
+  > & {
+    breadcrumbHome?: string
+  }
+}
+
 export const revalidate = 3600
 
 // ⚠️ STATIC — ONLY BECAUSE THE LOCALE COMES FROM THE ROUTE.
@@ -45,7 +55,7 @@ export async function generateMetadata({
   // `/xx/docs/anything` a 500 instead of a not-found.
   const locale = resolveLocale(lang)
   setRequestLocale(locale)
-  const messages = (await getMessages({ locale })) as Record<string, any>
+  const messages = (await getMessages({ locale })) as DocsMessages
   const article = messages?.docs?.[slug] ?? {}
 
   // ⚠️ `seoTitle`, not `title`.
@@ -80,7 +90,7 @@ export default async function DocsArticlePage({
   // Resolved, not passed through — see generateMetadata above.
   const locale = resolveLocale(lang)
   setRequestLocale(locale)
-  const messages = (await getMessages({ locale })) as Record<string, any>
+  const messages = (await getMessages({ locale })) as DocsMessages
   const text = messages?.docs?.[slug] ?? {}
   const site = messages?.docs ?? {}
 

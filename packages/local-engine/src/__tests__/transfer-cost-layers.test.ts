@@ -176,7 +176,7 @@ describe('Target D: Transfer cost layers with stock transfer', () => {
     })
 
     expect(res.status).toBe(409)
-    expect((res.data as any)?.code).toBe('INSUFFICIENT_COST_LAYERS')
+    expect(Reflect.get(Object(res.data), 'code')).toBe('INSUFFICIENT_COST_LAYERS')
 
     // Stock should not be deducted due to transaction rollback
     const sourceStock = db.get<{ qty: number }>(
@@ -243,7 +243,7 @@ describe('Target D: Transfer cost layers with stock transfer', () => {
       },
     })
     expect([200, 201]).toContain(replayRes.status)
-    expect((replayRes.data as any).replayed).toBe(true)
+    expect(Reflect.get(Object(replayRes.data), 'replayed')).toBe(true)
 
     // Replay with mismatched quantity -> 409 Conflict
     const mismatchRes = await engine.request({
@@ -258,6 +258,6 @@ describe('Target D: Transfer cost layers with stock transfer', () => {
       },
     })
     expect(mismatchRes.status).toBe(409)
-    expect((mismatchRes.data as any).code).toBe('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
+    expect(Reflect.get(Object(mismatchRes.data), 'code')).toBe('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
   })
 })

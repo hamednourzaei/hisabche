@@ -38,6 +38,7 @@ import {
   planPayrollOutcome,
   summarizePayrolls,
 } from '@hisabche/validation'
+import type { DbRow } from '../utils/db-row'
 
 /**
  * G2 — does this error mean `employee_branch_assignments` has not been created
@@ -118,7 +119,7 @@ export class HumanResourcesService {
 
   // ─── Departments ─────────────────────────────────────────────
   async listDepartments(ctx: TenancyContext) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getDepartmentsCacheKey(workspaceId)
 
     const cached = await memoryCache.get(cacheKey)
@@ -161,7 +162,7 @@ export class HumanResourcesService {
   }
 
   async updateDepartment(ctx: TenancyContext, id: string, data: UpdateDepartment) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.nameEn !== undefined) updates.name_en = data.nameEn
@@ -218,7 +219,7 @@ export class HumanResourcesService {
   }
 
   async listEmployees(ctx: TenancyContext, departmentId?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getEmployeesCacheKey(workspaceId, departmentId)
 
     const cached = await memoryCache.get(cacheKey)
@@ -240,7 +241,7 @@ export class HumanResourcesService {
   }
 
   async getEmployee(id: string, ctx: TenancyContext) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getEmployeeCacheKey(workspaceId, id)
 
     const cached = await memoryCache.get(cacheKey)
@@ -300,7 +301,7 @@ export class HumanResourcesService {
       return []
     }
 
-    return (data ?? []).map((row: Record<string, any>) => {
+    return (data ?? []).map((row: DbRow) => {
       // PostgREST hands back an embedded to-one as an ARRAY when it cannot
       // prove the relationship — a missing FK, which this schema has several
       // of. Both shapes are handled or the branch name renders blank on
@@ -477,7 +478,7 @@ export class HumanResourcesService {
   }
 
   async updateEmployee(ctx: TenancyContext, id: string, data: UpdateEmployee) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.firstName !== undefined) updates.first_name = data.firstName
     if (data.lastName !== undefined) updates.last_name = data.lastName
@@ -506,7 +507,7 @@ export class HumanResourcesService {
 
   // ─── Attendance ─────────────────────────────────────────────
   async listAttendance(ctx: TenancyContext, employeeId: string, month?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getAttendanceCacheKey(workspaceId, employeeId, month)
 
     const cached = await memoryCache.get(cacheKey)
@@ -554,7 +555,7 @@ export class HumanResourcesService {
   }
 
   async updateAttendance(ctx: TenancyContext, id: string, data: UpdateAttendance) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     // ✅ ابتدا employeeId را برای invalidate کش بگیر
     const { data: existing } = await supabase
       .from('attendance')
@@ -587,7 +588,7 @@ export class HumanResourcesService {
 
   // ─── Payroll ────────────────────────────────────────────────
   async listPayrolls(ctx: TenancyContext, employeeId?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getPayrollsCacheKey(workspaceId, employeeId)
 
     const cached = await memoryCache.get(cacheKey)
@@ -710,7 +711,7 @@ export class HumanResourcesService {
   }
 
   async updatePayrollStatus(ctx: TenancyContext, id: string, data: UpdatePayroll) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     // The reason rule and what a settle changes are the shared rule
     // (@hisabche/validation planPayrollOutcome). Finality is enforced below,
     // in the WHERE clause, so two people settling at once cannot both pass.
@@ -904,7 +905,7 @@ export class HumanResourcesService {
 
   // ─── Leaves ─────────────────────────────────────────────────
   async listLeaves(ctx: TenancyContext, employeeId?: string) {
-    const { workspaceId, userId } = ctx
+    const { workspaceId } = ctx
     const cacheKey = this.getLeavesCacheKey(workspaceId, employeeId)
 
     const cached = await memoryCache.get(cacheKey)

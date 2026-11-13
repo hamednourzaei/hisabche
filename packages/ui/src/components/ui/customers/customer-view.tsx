@@ -89,8 +89,6 @@ function filterCustomers(customers: CustomerWithDebt[], search: string): Custome
 function CustomersHeader({
   t,
   isMobile,
-  totalCustomers,
-  debtorCount,
   onOpenAddModal,
   role = 'all',
 }: {
@@ -435,7 +433,9 @@ function CustomersContent({
 // 🎯 کامپوننت اصلی (ورودی برنامه)
 // ============================================================
 
-export function customersView(props: CustomersViewProps) {
+// 13 Nov 2026: a real component (capitalised, rendered as an element). Called inline as a
+// lowercase function, its hooks belonged to the caller and the hooks lint could not check them.
+export function CustomersView(props: CustomersViewProps) {
   const {
     t,
     fmt,
@@ -445,13 +445,9 @@ export function customersView(props: CustomersViewProps) {
     totalCustomers,
     debtorCount,
     totalDebt,
-    overdueCount,
-    vipCount,
-    todaySales,
     totalSales,
     topCustomerName,
     topCustomerAmount,
-    openDealsCount,
     isLoading,
     isError = false,
     errorMessage = '',
@@ -465,10 +461,8 @@ export function customersView(props: CustomersViewProps) {
     showPaymentModal,
     paymentCustomer,
     paymentInvoices,
-    onOpenPayment,
     onClosePayment,
     onPaymentSuccess,
-    onNewCreditInvoice,
     role = 'all',
     currency = '',
     customersDelta = null,

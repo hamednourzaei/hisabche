@@ -48,7 +48,9 @@ function clearAuthStorage() {
   if (typeof window === 'undefined') return
   try {
     localStorage.removeItem('hisabche-auth')
-  } catch {}
+  } catch {
+    // No storage (private mode, SSR): there is nothing persisted to clear.
+  }
 }
 
 // ============================================

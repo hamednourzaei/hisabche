@@ -215,7 +215,7 @@ export function useCustomers(
     queryFn: async ({ signal }) => fetchCustomers(filters, options, signal),
     enabled: authReady,
     staleTime: 60_000,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
     // ⚠️ React Query PAUSES an offline query by default, so the device branch
     // would never be reached at all — the same trap the product list had
     // (packages/api/src/hooks/products.ts).

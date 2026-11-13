@@ -4,7 +4,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -26,12 +25,7 @@ import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { requireRole } from '../services/tenancy.service'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function projectRoutes(fastify: FastifyInstance) {
   const projectService = new ProjectService()

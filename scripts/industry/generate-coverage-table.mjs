@@ -21,6 +21,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+import { formatMarkdown } from '../lib/format-markdown.mjs'
+
 import {
   ACCESSED,
   CAPABILITIES,
@@ -407,17 +409,19 @@ if (problems.length) {
 
 const csv = csvLines.join('\n') + '\n'
 const levelsCsv = levelsCsvLines.join('\n') + '\n'
+const mdFormatted = await formatMarkdown(path.join(ROOT, OUT_MD), md)
+const supportFormatted = await formatMarkdown(path.join(ROOT, OUT_SUPPORT), supportMd)
 
 if (CHECK_ONLY) {
   const stale =
     !exists(OUT_MD) ||
-    read(OUT_MD) !== md ||
+    read(OUT_MD) !== mdFormatted ||
     !exists(OUT_CSV) ||
     read(OUT_CSV) !== csv ||
     !exists(OUT_LEVELS_CSV) ||
     read(OUT_LEVELS_CSV) !== levelsCsv ||
     !exists(OUT_SUPPORT) ||
-    read(OUT_SUPPORT) !== supportMd
+    read(OUT_SUPPORT) !== supportFormatted
   if (stale) {
     console.error('STALE: run node scripts/industry/generate-coverage-table.mjs')
     process.exit(1)
@@ -425,9 +429,9 @@ if (CHECK_ONLY) {
   console.log(`OK: ${rows.length} rows match the repository.`)
 } else {
   fs.mkdirSync(path.join(ROOT, OUT_DIR), { recursive: true })
-  fs.writeFileSync(path.join(ROOT, OUT_MD), md)
+  fs.writeFileSync(path.join(ROOT, OUT_MD), mdFormatted)
   fs.writeFileSync(path.join(ROOT, OUT_CSV), csv)
   fs.writeFileSync(path.join(ROOT, OUT_LEVELS_CSV), levelsCsv)
-  fs.writeFileSync(path.join(ROOT, OUT_SUPPORT), supportMd)
+  fs.writeFileSync(path.join(ROOT, OUT_SUPPORT), supportFormatted)
   console.log(`Wrote ${rows.length} rows and ${industryKeys.size} industry levels to ${OUT_DIR}`)
 }

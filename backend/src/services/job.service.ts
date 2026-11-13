@@ -1,18 +1,19 @@
+import type { DbRow } from '../utils/db-row'
 // ============================================
 // backend/src/services/job.service.ts — Optimized v2.2
 // FIXED: TypeScript types for job object
 // ============================================
 
-import { supabase } from "../db";
-import type { CreateJobInput } from "@hisabche/validation";
-import { memoryCache } from "../utils/pagination";
+import { supabase } from '../db'
+import type { CreateJobInput } from '@hisabche/validation'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Types
 export interface Job {
   id: string
   job_type: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
-  payload: Record<string, any>
+  payload: DbRow
   scheduled_at: string
   max_retries: number
   retry_count: number
@@ -31,11 +32,11 @@ export interface JobMinimal {
 }
 
 // ✅ Column Selection Constants
-const JOB_COLUMNS = 'id, job_type, status, payload, scheduled_at, max_retries, retry_count, last_error, started_at, completed_at, created_at'
+const JOB_COLUMNS =
+  'id, job_type, status, payload, scheduled_at, max_retries, retry_count, last_error, started_at, completed_at, created_at'
 const JOB_MINIMAL_COLUMNS = 'id, job_type, status, scheduled_at, created_at'
 
 export class JobService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
   private getPendingCacheKey() {
     return `jobs:pending`
@@ -52,7 +53,7 @@ export class JobService {
   // ─── Create Job ──────────────────────────────────────────────
   async create(input: CreateJobInput): Promise<Job> {
     const { data, error } = await supabase
-      .from("background_jobs")
+      .from('background_jobs')
       .insert({
         job_type: input.job_type,
         payload: input.payload ?? {},
@@ -60,31 +61,31 @@ export class JobService {
         max_retries: input.max_retries ?? 3,
       })
       .select(JOB_COLUMNS)
-      .single();
+      .single()
 
-    if (error) throw error;
+    if (error) throw error
 
     await memoryCache.invalidate(this.getPendingCacheKey())
     await memoryCache.invalidate(this.getStatsCacheKey())
 
-    return data as Job;
+    return data as Job
   }
 
   // ─── Fetch Pending Jobs ──────────────────────────────────────
   async fetchPending(limit: number = 5): Promise<JobMinimal[]> {
     const cacheKey = this.getPendingCacheKey()
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as JobMinimal[]
 
-    const now = new Date().toISOString();
+    const now = new Date().toISOString()
     const { data, error } = await supabase
-      .from("background_jobs")
+      .from('background_jobs')
       .select(JOB_MINIMAL_COLUMNS)
-      .eq("status", "pending")
-      .lte("scheduled_at", now)
-      .order("scheduled_at", { ascending: true })
-      .limit(Math.min(limit, 20));
+      .eq('status', 'pending')
+      .lte('scheduled_at', now)
+      .order('scheduled_at', { ascending: true })
+      .limit(Math.min(limit, 20))
 
     if (error) {
       console.error('Failed to fetch pending jobs:', error)
@@ -98,22 +99,22 @@ export class JobService {
 
   // ─── Fetch Pending Jobs with Count ──────────────────────────
   async fetchPendingWithCount(limit: number = 5): Promise<{ jobs: JobMinimal[]; total: number }> {
-    const now = new Date().toISOString();
-    
+    const now = new Date().toISOString()
+
     const [jobsResult, countResult] = await Promise.all([
       supabase
-        .from("background_jobs")
+        .from('background_jobs')
         .select(JOB_MINIMAL_COLUMNS)
-        .eq("status", "pending")
-        .lte("scheduled_at", now)
-        .order("scheduled_at", { ascending: true })
+        .eq('status', 'pending')
+        .lte('scheduled_at', now)
+        .order('scheduled_at', { ascending: true })
         .limit(Math.min(limit, 20)),
       supabase
-        .from("background_jobs")
-        .select("id", { count: "estimated", head: true })
-        .eq("status", "pending")
-        .lte("scheduled_at", now),
-    ]);
+        .from('background_jobs')
+        .select('id', { count: 'estimated', head: true })
+        .eq('status', 'pending')
+        .lte('scheduled_at', now),
+    ])
 
     return {
       jobs: (jobsResult.data || []) as JobMinimal[],
@@ -124,14 +125,14 @@ export class JobService {
   // ─── Mark Job as Processing ──────────────────────────────────
   async markProcessing(id: string): Promise<JobMinimal | null> {
     const { data, error } = await supabase
-      .from("background_jobs")
-      .update({ 
-        status: "processing", 
-        started_at: new Date().toISOString() 
+      .from('background_jobs')
+      .update({
+        status: 'processing',
+        started_at: new Date().toISOString(),
       })
-      .eq("id", id)
+      .eq('id', id)
       .select(JOB_MINIMAL_COLUMNS)
-      .single();
+      .single()
 
     if (error) {
       console.error(`Failed to mark job ${id} as processing:`, error)
@@ -148,14 +149,14 @@ export class JobService {
   // ─── Mark Job as Completed ──────────────────────────────────
   async markCompleted(id: string): Promise<JobMinimal | null> {
     const { data, error } = await supabase
-      .from("background_jobs")
-      .update({ 
-        status: "completed", 
-        completed_at: new Date().toISOString() 
+      .from('background_jobs')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
       })
-      .eq("id", id)
+      .eq('id', id)
       .select(JOB_MINIMAL_COLUMNS)
-      .single();
+      .single()
 
     if (error) {
       console.error(`Failed to mark job ${id} as completed:`, error)
@@ -172,15 +173,15 @@ export class JobService {
   // ─── Mark Job as Failed ─────────────────────────────────────
   async markFailed(id: string, errorMessage: string): Promise<JobMinimal | null> {
     const { data, error } = await supabase
-      .from("background_jobs")
-      .update({ 
-        status: "failed", 
-        last_error: errorMessage, 
-        completed_at: new Date().toISOString() 
+      .from('background_jobs')
+      .update({
+        status: 'failed',
+        last_error: errorMessage,
+        completed_at: new Date().toISOString(),
       })
-      .eq("id", id)
+      .eq('id', id)
       .select(JOB_MINIMAL_COLUMNS)
-      .single();
+      .single()
 
     if (error) {
       console.error(`Failed to mark job ${id} as failed:`, error)
@@ -197,15 +198,15 @@ export class JobService {
   // ─── Get Job by ID ──────────────────────────────────────────
   async getJob(id: string): Promise<Job | null> {
     const cacheKey = this.getJobCacheKey(id)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Job
 
     const { data, error } = await supabase
-      .from("background_jobs")
+      .from('background_jobs')
       .select(JOB_COLUMNS)
-      .eq("id", id)
-      .single();
+      .eq('id', id)
+      .single()
 
     if (error) {
       console.error(`Failed to fetch job ${id}:`, error)
@@ -221,18 +222,21 @@ export class JobService {
   }
 
   // ─── Get Jobs by Status ─────────────────────────────────────
-  async getJobsByStatus(status: 'pending' | 'processing' | 'completed' | 'failed', limit: number = 50): Promise<JobMinimal[]> {
+  async getJobsByStatus(
+    status: 'pending' | 'processing' | 'completed' | 'failed',
+    limit: number = 50,
+  ): Promise<JobMinimal[]> {
     const cacheKey = `jobs:status:${status}:${limit}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as JobMinimal[]
 
     const { data, error } = await supabase
-      .from("background_jobs")
+      .from('background_jobs')
       .select(JOB_MINIMAL_COLUMNS)
-      .eq("status", status)
-      .order("created_at", { ascending: false })
-      .limit(Math.min(limit, 100));
+      .eq('status', status)
+      .order('created_at', { ascending: false })
+      .limit(Math.min(limit, 100))
 
     if (error) {
       console.error(`Failed to fetch jobs with status ${status}:`, error)
@@ -253,24 +257,39 @@ export class JobService {
     total: number
   }> {
     const cacheKey = this.getStatsCacheKey()
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as any
 
     const [pendingResult, processingResult, completedResult, failedResult] = await Promise.all([
-      supabase.from("background_jobs").select("id", { count: "estimated", head: true }).eq("status", "pending"),
-      supabase.from("background_jobs").select("id", { count: "estimated", head: true }).eq("status", "processing"),
-      supabase.from("background_jobs").select("id", { count: "estimated", head: true }).eq("status", "completed"),
-      supabase.from("background_jobs").select("id", { count: "estimated", head: true }).eq("status", "failed"),
-    ]);
+      supabase
+        .from('background_jobs')
+        .select('id', { count: 'estimated', head: true })
+        .eq('status', 'pending'),
+      supabase
+        .from('background_jobs')
+        .select('id', { count: 'estimated', head: true })
+        .eq('status', 'processing'),
+      supabase
+        .from('background_jobs')
+        .select('id', { count: 'estimated', head: true })
+        .eq('status', 'completed'),
+      supabase
+        .from('background_jobs')
+        .select('id', { count: 'estimated', head: true })
+        .eq('status', 'failed'),
+    ])
 
     const result = {
       pending: pendingResult.count || 0,
       processing: processingResult.count || 0,
       completed: completedResult.count || 0,
       failed: failedResult.count || 0,
-      total: (pendingResult.count || 0) + (processingResult.count || 0) + 
-             (completedResult.count || 0) + (failedResult.count || 0),
+      total:
+        (pendingResult.count || 0) +
+        (processingResult.count || 0) +
+        (completedResult.count || 0) +
+        (failedResult.count || 0),
     }
 
     await memoryCache.set(cacheKey, result, 10)
@@ -298,16 +317,16 @@ export class JobService {
 
     // ✅ به‌روزرسانی status به pending با retry_count + 1
     const { data, error } = await supabase
-      .from("background_jobs")
-      .update({ 
-        status: "pending",
+      .from('background_jobs')
+      .update({
+        status: 'pending',
         retry_count: currentRetryCount + 1,
         last_error: null,
         scheduled_at: new Date(Date.now() + 5000).toISOString(),
       })
-      .eq("id", id)
+      .eq('id', id)
       .select(JOB_MINIMAL_COLUMNS)
-      .single();
+      .single()
 
     if (error) {
       console.error(`Failed to retry job ${id}:`, error)
@@ -327,11 +346,11 @@ export class JobService {
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
 
     const { data, error } = await supabase
-      .from("background_jobs")
+      .from('background_jobs')
       .delete()
-      .eq("status", "completed")
-      .lt("completed_at", cutoffDate.toISOString())
-      .select("id")
+      .eq('status', 'completed')
+      .lt('completed_at', cutoffDate.toISOString())
+      .select('id')
 
     if (error) {
       console.error('Failed to cleanup old jobs:', error)

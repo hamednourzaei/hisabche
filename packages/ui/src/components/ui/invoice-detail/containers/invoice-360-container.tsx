@@ -72,8 +72,12 @@ export const Invoice360Container = memo(function Invoice360Container({
   if (invoice.error) return <ErrorNote message={(invoice.error as Error).message} />
   if (!invoice.data) return null
 
-  const data = invoice.data as Record<string, any>
-  const items: Array<Record<string, any>> = Array.isArray(data['items']) ? data['items'] : []
+  const data: Record<string, unknown> = { ...invoice.data }
+  const items: Array<Record<string, unknown>> = Array.isArray(data['items'])
+    ? data['items'].filter(
+        (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
+      )
+    : []
 
   // Money crosses no unit boundary here — the invoice endpoint reports major
   // units, so it is converted once, at the display edge, exactly as elsewhere.

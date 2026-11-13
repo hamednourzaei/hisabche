@@ -31,7 +31,7 @@ export { CustomersHubContainer } from './components/ui/customers/containers/cust
 export { CustomerDetailContainer } from './components/ui/customers/containers/customer-detail-container'
 
 // ---------- Inventory ----------
-export { warehouseContainer as WarehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
+export { WarehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
 // G1: the warehouse destination now carries two tabs — stock and the product
 // catalogue. Both renderers mount this, so neither gets the tab and the other
 // not.

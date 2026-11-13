@@ -31,6 +31,7 @@
 import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
+import type { DbRow } from '../../utils/db-row'
 
 export interface InvoicePaymentLink {
   paymentId: string
@@ -130,10 +131,10 @@ export class InvoiceRelatedService {
 
     const extras = await this.paymentExtras(
       ctx,
-      (data ?? []).map((row: Record<string, any>) => String(row.payment_id)),
+      (data ?? []).map((row: DbRow) => String(row.payment_id)),
     )
 
-    return (data ?? []).map((row: Record<string, any>) => {
+    return (data ?? []).map((row: DbRow) => {
       const extra = extras.get(String(row.payment_id))
       // PostgREST returns an embedded to-one as an object, but as a
       // single-element ARRAY when it cannot prove the relationship is to-one

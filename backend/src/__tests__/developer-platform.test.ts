@@ -577,7 +577,6 @@ describe('creating a key', () => {
 
 describe('wiring', () => {
   const routeFiles = readdirSync(join(SRC, 'routes')).filter((f) => f.endsWith('.ts'))
-  const routes = routeFiles.map((f) => read('routes', f)).join('\n')
 
   // Routes registered under a prefix in index.ts are written without it, in
   // their own file — looked up THERE, so a '/' in another file cannot match.

@@ -85,8 +85,6 @@ describe('M3 Financial Integrity Audit', () => {
       const invoiceId = 'inv-audit-200'
       const lineId = 'line-pkg-200'
       const grantKey = `invoice:${invoiceId}:${lineId}`
-      const cancelKey = `reversal:invoice:${invoiceId}:${grantKey}`
-
       const ledgerStore: PackageCreditEntry[] = []
 
       // 1. Initial Grant +10

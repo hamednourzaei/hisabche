@@ -8,9 +8,10 @@ import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { bodyOf } from './people-common'
 
 interface RowRecord {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function registerMetalRatesRoutes(router: Router) {
@@ -40,7 +41,7 @@ export function registerMetalRatesRoutes(router: Router) {
   router.post('/metal-rates', async (c: RouteHandlerContext) => {
     requireCapability(c.ctx, 'product.write')
     const { db, ctx, body } = c
-    const payload = body as any
+    const payload = bodyOf(body)
     if (!payload?.rateDate || payload?.rate24kMinorPerGram === undefined) {
       throw new ValidationError('rateDate and rate24kMinorPerGram are required')
     }

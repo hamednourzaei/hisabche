@@ -568,7 +568,7 @@ The persisted artefact is `public.workspaces.operational_dna`, a `jsonb` column 
 nothing beyond that. Adding keys needs no DDL. The largest profile the code can now produce — all 67
 registered activities at once — serialises to 862 bytes, 21% of the limit.
 
-The five-band business size (`solo / 2-5 / 6-20 / 21-50 / 50+`) also needs no migration:
-`docs/onboarding-server-state-migration.sql:27` declares `store_size` as plain `text` with no CHECK.
-It is not implemented because mapping the existing `small|medium|large` rows is an owner decision,
-not because of the schema.
+The four-band business size V64 §5.1 asks for (`solo / 2-5 / 6-20 / more`, measured in headcount)
+also needs no migration: `docs/onboarding-server-state-migration.sql:27` declares `store_size` as
+plain `text` with no CHECK. It is not implemented because mapping the existing `small|medium|large`
+rows onto the four bands is an owner decision, not because of the schema.

@@ -32,6 +32,7 @@
 import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
+import type { DbRow } from '../../utils/db-row'
 
 export interface StockMovementRecord {
   id: string
@@ -108,7 +109,7 @@ export class StockHistoryService {
     if (error) throw new DatabaseError('Failed to load the stock history', error)
 
     let running = 0
-    const movements: StockMovementRecord[] = (data ?? []).map((row: Record<string, any>) => {
+    const movements: StockMovementRecord[] = (data ?? []).map((row: DbRow) => {
       const quantity = Number(row.quantity) || 0
       // ⚠️ A transfer is one row with both warehouses and a POSITIVE quantity.
       // Adding it here counted every transfer as new stock: 11 on hand read

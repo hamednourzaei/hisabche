@@ -13,6 +13,7 @@ import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { asList } from '../lib/as-list'
+import type { CreateOpportunity } from '@hisabche/validation'
 
 // ═══ Types ═══
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
@@ -268,7 +269,7 @@ export function useOpportunities(customerId?: string) {
 export function useCreateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: any) => {
+    mutationFn: async (input: CreateOpportunity) => {
       const { data } = await apiClient.post('/opportunities', input)
       return data
     },

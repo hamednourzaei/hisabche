@@ -12,18 +12,18 @@ Every status word below is one of: `IMPLEMENTED_NOT_LIVE_VERIFIED`, `VERIFIED_*`
 
 ## 1. Deliverables
 
-| #   | Deliverable                                              | Status                                           | Evidence                                                         |
-| --- | -------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
-| D1  | Multi-activity Operational DNA (`tradeKeys`)             | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | `dna-multi-industry.test.ts` — 12 tests                          |
-| D2  | `branches` / `warehouses` split, legacy `locations` read | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | same suite, group «warehouses and branches are independent»      |
-| D3  | First Value Checklist derived from the domain            | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | `first-value.test.ts` — 8 tests                                  |
-| D4  | `profiled` column derived from code, not a hand list     | `VERIFIED` (generator `--check`)                 | `generate-coverage-table.mjs --check` → `OK: 118 rows`           |
-| D5  | `sellable-industries.json`                               | `VERIFIED` (generator `--check` + guard)         | `sellable-industries.test.ts` — 6 tests                          |
-| D6  | `ENGINE-WIRING.csv` from disk                            | `VERIFIED` (generator `--check`)                 | `wiring-matrix.mjs --check` → `OK: 20 engines … 38 capabilities` |
-| D7  | Claim guard + the false serial claim corrected           | `VERIFIED` (guard + injection)                   | `capability-claims-match-code.test.ts` — 20 tests                |
-| D8  | 5-band business size (`solo / 2-5 / 6-20 / 21-50 / 50+`) | `NEEDS_OWNER_DECISION`                           | see §5.1                                                         |
-| D9  | 53 hooks with no consumer                                | `NEEDS_OWNER_DECISION`                           | generated ledger, see §5.2                                       |
-| D10 | Migration                                                | none produced — see `docs/MIGRATIONS-PENDING.md` | —                                                                |
+| #   | Deliverable                                                     | Status                                           | Evidence                                                         |
+| --- | --------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
+| D1  | Multi-activity Operational DNA (`tradeKeys`)                    | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | `dna-multi-industry.test.ts` — 12 tests                          |
+| D2  | `branches` / `warehouses` split, legacy `locations` read        | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | same suite, group «warehouses and branches are independent»      |
+| D3  | First Value Checklist derived from the domain                   | `IMPLEMENTED_NOT_LIVE_VERIFIED`                  | `first-value.test.ts` — 8 tests                                  |
+| D4  | `profiled` column derived from code, not a hand list            | `VERIFIED` (generator `--check`)                 | `generate-coverage-table.mjs --check` → `OK: 118 rows`           |
+| D5  | `sellable-industries.json`                                      | `VERIFIED` (generator `--check` + guard)         | `sellable-industries.test.ts` — 6 tests                          |
+| D6  | `ENGINE-WIRING.csv` from disk                                   | `VERIFIED` (generator `--check`)                 | `wiring-matrix.mjs --check` → `OK: 20 engines … 38 capabilities` |
+| D7  | Claim guard + the false serial claim corrected                  | `VERIFIED` (guard + injection)                   | `capability-claims-match-code.test.ts` — 20 tests                |
+| D8  | 4-band business size (`solo / 2-5 / 6-20 / more`, in headcount) | `NEEDS_OWNER_DECISION`                           | see §5.1                                                         |
+| D9  | 53 hooks with no consumer                                       | `NEEDS_OWNER_DECISION`                           | generated ledger, see §5.2                                       |
+| D10 | Migration                                                       | none produced — see `docs/MIGRATIONS-PENDING.md` | —                                                                |
 
 ---
 
@@ -212,7 +212,7 @@ The worst case the code can produce is 21% of the limit.
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Real Postgres (`*.pg.test.ts`)                     | `BLOCKED` — no `initdb.exe` on this machine                                                    |
 | Live Supabase / real HTTP against a running server | `BLOCKED` — not available here                                                                 |
-| Browser E2E of the onboarding → dashboard path     | `BLOCKED_EXTERNAL` — Playwright not installed                                                  |
+| Browser E2E of the onboarding → dashboard path     | `NOT_RUN` — Playwright is installed (see §6.6), but no scenario completes a family journey     |
 | `next build` / Electron / Gradle                   | not run — forbidden by the task                                                                |
 | Native round-trip of the DNA into SQLite/JSONB     | not run — the write path is unchanged and the schema is versioned; see `MIGRATIONS-PENDING.md` |
 
@@ -222,20 +222,23 @@ The worst case the code can produce is 21% of the limit.
 
 ### 5.1 Business size — `NEEDS_OWNER_DECISION`
 
-V64 §5.1 asks for five bands (`solo / 2-5 / 6-20 / 21-50 / 50+`). The persisted value today is
-`StoreSize = 'small' | 'medium' | 'large'` (`packages/store/src/slices/onboarding.slice.ts:14`,
+V64 §5.1 asks for a scale measured in **headcount**, in four bands: alone / 2–5 / 6–20 / more. An
+earlier V65 draft described five bands (`solo / 2-5 / 6-20 / 21-50 / 50+`) and said the unit was
+unspecified; the reference text says otherwise, so this section is corrected. The persisted value
+today is `StoreSize = 'small' | 'medium' | 'large'`
+(`packages/store/src/slices/onboarding.slice.ts:14`,
 `packages/validation/src/schemas/auth.schema.ts:108`).
 
-**Corrected during V65:** an earlier assumption in this task said five bands need a database enum
+**Corrected during V65:** an earlier assumption in this task said the bands need a database enum
 migration. Measured, that is false — `store_size` is plain `text` with no CHECK constraint
 (`docs/onboarding-server-state-migration.sql:27`; `MIGRATIONS-PENDING.md` §6). The change is
 code-only.
 
-It is still `NEEDS_OWNER_DECISION`, for the reasons the code cannot decide: existing rows hold
-`small` / `medium` / `large`, and mapping them onto five bands would silently change what those
-stored values **mean** for every existing customer; and V64 does not say whether a band is headcount,
-revenue or invoice volume, which the label and the analytics event both depend on. V65 therefore
-**only changed the wording** («business size», not «store size») and left the values alone.
+It is still `NEEDS_OWNER_DECISION`, for the reason the code cannot decide: existing rows hold
+`small` / `medium` / `large` with no headcount attached, and mapping them onto four bands would
+silently change what those stored values **mean** for every existing customer. The unit is not open
+— V64 names headcount — but the mapping is. V65 therefore **only changed the wording** («business
+size», not «store size») and left the values alone.
 
 ### 5.2 The hooks with no consumer — now a measured ledger, still `NEEDS_OWNER_DECISION`
 
@@ -357,15 +360,15 @@ warnings before, 0 after**.
 
 ### 6.6 What this round did not close
 
-| Item                             | Status                 | Why                                                                                                                                                                                                                                                  |
-| -------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PostgreSQL journeys              | `BLOCKED`              | `embedded-postgres` is installed but the platform binary package (`@embedded-postgres/windows-x64`) is not; `initdb.exe`, `psql`, Docker and `C:\Program Files\PostgreSQL` are all absent. Fixing it is a dependency install the owner must approve. |
-| Browser journeys                 | `BLOCKED_EXTERNAL`     | `@playwright/test` and `playwright` are not installed; adding them is a new dependency.                                                                                                                                                              |
-| 5-band business size             | `NEEDS_OWNER_DECISION` | needs no migration (`store_size` is plain `text`), needs the mapping of existing `small\|medium\|large` rows and a decision on what the bands measure. Recorded as `D-01` in `docs/architecture/OPEN-DECISIONS.md` (`Blocks: none`).                 |
-| 53 unused hooks                  | `NEEDS_OWNER_DECISION` | ledger delivered; each hook needs a product answer, not a wire. Recorded as `D-02` in `docs/architecture/OPEN-DECISIONS.md` (`Blocks: none`).                                                                                                        |
-| 279 migrations applied/unapplied | owner action           | read-only query in `MIGRATIONS-PENDING.md` §2.                                                                                                                                                                                                       |
+| Item                             | Status                 | Why                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL journeys              | `BLOCKED`              | `embedded-postgres` is installed but the platform binary package (`@embedded-postgres/windows-x64`) is not; `initdb.exe`, `psql`, Docker and `C:\Program Files\PostgreSQL` are all absent. Fixing it is a dependency install the owner must approve.                                                                                                                                              |
+| Browser journeys                 | `NOT_RUN`              | `@playwright/test` **is** installed (`apps/web` devDependency, Chromium cached), so the earlier «not installed» line was wrong. `apps/web/playwright.config.ts` targets `https://hisabche.com` with `channel: 'chrome'`, and no spec completes an onboarding → first document → report journey for a family. Writing and pointing them at a local server is the remaining work, not a dependency. |
+| 4-band business size             | `NEEDS_OWNER_DECISION` | needs no migration (`store_size` is plain `text`); needs the mapping of existing `small\|medium\|large` rows onto V64's four headcount bands. Recorded as `D-01` in `docs/architecture/OPEN-DECISIONS.md` (`Blocks: none`).                                                                                                                                                                       |
+| 53 unused hooks                  | `NEEDS_OWNER_DECISION` | ledger delivered; each hook needs a product answer, not a wire. Recorded as `D-02` in `docs/architecture/OPEN-DECISIONS.md` (`Blocks: none`).                                                                                                                                                                                                                                                     |
+| 279 migrations applied/unapplied | owner action           | read-only query in `MIGRATIONS-PENDING.md` §2.                                                                                                                                                                                                                                                                                                                                                    |
 
-### 6.7 Verification run for this round
+### 6.7 Verification run for this round (commit `fa4fd32`)
 
 Sequential, from each package, on the final tree:
 
@@ -388,12 +391,18 @@ The two new ledger guards are not decorative: undoing the sellable predicate mad
 `sellable-industries.test.ts` fail in three places (13 industries sold on HTTP evidence), and the
 registries stay stale-proof through their `--check` runs inside the suites.
 
+These numbers describe `fa4fd32`, the commit this round ended on. The tree has since moved to
+`ac7b040`: the acceptance artifact was re-recorded there with the rewritten runner — **15/15 files,
+135/135 tests** — but over a **dirty** tree, so `EVIDENCE_NOT_ON_COMMITTED_TREE` keeps every
+industry at `sellable: false`. Until the runner is re-run on a clean tree, the artifact is not
+evidence about `ac7b040`; `scripts/release/check-acceptance-commit.mjs` says so.
+
 ---
 
 ## 7. The two open product decisions, recorded
 
-`docs/architecture/OPEN-DECISIONS.md` is now the register: `D-01` (three business-size bands versus
-the five-band scale) and `D-02` (the 53 hooks with no consumer). Each row carries the decision, the
+`docs/architecture/OPEN-DECISIONS.md` is now the register: `D-01` (three stored bands versus V64's
+four headcount bands) and `D-02` (the 53 hooks with no consumer). Each row carries the decision, the
 code that would change, the reversible default the repository already runs on, and one more field
 that matters more than the rest: **`Blocks: none`**.
 

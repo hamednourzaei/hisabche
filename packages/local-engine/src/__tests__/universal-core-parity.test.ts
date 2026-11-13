@@ -6,7 +6,7 @@
 // across shared domain rules and local engine execution.
 // ============================================
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   calculateAreaDimension,
   calculateAreaLineTotal,
@@ -28,17 +28,8 @@ import {
   type SerialRecord,
   type ProductUnitOption,
 } from '@hisabche/validation'
-import { createTestDb, createTestEngine } from './test-db'
 
 describe('Universal Core Parity & Golden Numeric Vectors', () => {
-  let db: ReturnType<typeof createTestDb>
-  let engine: ReturnType<typeof createTestEngine>
-
-  beforeEach(() => {
-    db = createTestDb()
-    engine = createTestEngine(db)
-  })
-
   // ─── Vector 1: 2 cartons × 24 pieces = 48 pieces ──────────────
   it('Vector 1 (Pack Barcodes): 2 cartons × 24 = 48 pieces base stock', async () => {
     const pack = {

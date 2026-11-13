@@ -10,9 +10,10 @@ import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 import { checkVariantBinding, type VariantBindingRow } from '@hisabche/validation'
 import type { LocalDb } from '../db'
+import { bodyOf } from './people-common'
 
 interface RowRecord {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -81,7 +82,7 @@ export function registerVariantsRoutes(router: Router) {
       templateProductId: r.template_product_id,
       sku: r.sku,
       barcode: r.barcode,
-      attributes: JSON.parse(r.attributes || '[]'),
+      attributes: JSON.parse(String(r.attributes || '[]')),
       priceOverrideMinor: r.price_override_minor,
       costOverrideMinor: r.cost_override_minor,
       isActive: Boolean(r.is_active),
@@ -92,7 +93,7 @@ export function registerVariantsRoutes(router: Router) {
     requireCapability(c.ctx, 'product.write')
     const { db, ctx, params, body } = c
     const templateProductId = params.id
-    const payload = body as any
+    const payload = bodyOf(body)
     if (!payload?.sku) throw new ValidationError('sku is required')
 
     // V55 P2: the id MUST be a uuid. An invoice line's `variantId` is a uuid

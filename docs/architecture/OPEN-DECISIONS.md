@@ -18,10 +18,10 @@ Companion documents, so this is not a third list of the same thing:
 
 ## 1. The register
 
-| ID   | Decision                                                                                                                   | Status                 | Measured today | Blocks | Reversible default in force                       | Revisit when                                                                          |
-| ---- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------- | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| D-01 | Business size: three bands (`small` / `medium` / `large`) or the five-band scale `solo` / `2-5` / `6-20` / `21-50` / `50+` | `NEEDS_OWNER_DECISION` | 3 bands        | none   | three bands, unchanged; no migration, no backfill | the owner says what a band measures and how today's rows map onto the new bands       |
-| D-02 | The 53 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                    | `NEEDS_OWNER_DECISION` | 53 hooks       | none   | kept, unwired, undeleted                          | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
+| ID   | Decision                                                                                                                                             | Status                 | Measured today | Blocks | Reversible default in force                       | Revisit when                                                                          |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------- | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| D-01 | Business size: the code stores three bands (`small` / `medium` / `large`); V64 §5.1 asks for four headcount bands (`solo` / `2-5` / `6-20` / `more`) | `NEEDS_OWNER_DECISION` | 3 bands        | none   | three bands, unchanged; no migration, no backfill | the owner maps today's rows onto V64's four headcount bands                           |
+| D-02 | The 52 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                                              | `NEEDS_OWNER_DECISION` | 52 hooks       | none   | kept, unwired, undeleted                          | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
 
 No agent adds a row here for a decision nobody asked for: an invented decision is worse than a
 visible open one.
@@ -52,43 +52,45 @@ visible open one.
   required to store one.**
 - `packages/validation/src/schemas/operational-dna.ts:1330` — `z.string().max(32)`, which also fits
   `21-50` and `50+`.
-- The open part is **meaning and mapping**, not schema. The five bands do not say whether a band is
-  headcount, monthly invoice count or turnover. `solo` is unambiguous on its own; `2-5` is not until
-  the unit is named — a shop with two staff and four hundred invoices a month is in a different band
-  depending on the answer.
+- The unit is **settled by V64**: §5.1 says «تعداد نفرات» (headcount), in four bands — alone,
+  2–5, 6–20, more. An earlier V65 report described a five-band `21-50 / 50+` scale and called the
+  unit unspecified; that was wrong and is corrected here. The open part is the **mapping**, not the
+  meaning: `small|medium|large` was written to `profiles.store_size` without a headcount attached,
+  so a shop with three staff and one with twenty may share a value. «more» is open-ended on
+  purpose; whether it needs a ceiling is part of the answer.
 
 ### Options
 
-| Option                                                              | Code change                                                           | Existing rows                                                             | Risk                                                                          |
-| ------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| A. Keep three bands, fix the wording only                           | none                                                                  | untouched                                                                 | lowest; the copy stays vague                                                  |
-| B. Adopt five bands with a stated unit, map the old three onto them | five files above, plus three i18n keys per band in `fa` / `af` / `en` | needs a stated mapping (`small` → `solo` or `2-5` is genuinely ambiguous) | a wrong mapping is not reversible in a report a customer has already read     |
-| C. Store three, display five by deriving a band on read             | a derivation next to the reader, no schema change                     | untouched                                                                 | two vocabularies, and the stored value no longer matches what the screen says |
+| Option                                                           | Code change                                                                  | Existing rows                                                             | Risk                                                                          |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| A. Keep three bands, fix the wording only                        | none                                                                         | untouched                                                                 | lowest; the copy stays vague                                                  |
+| B. Adopt V64's four headcount bands, map the old three onto them | the files above, one extra card, one i18n key per band in `fa` / `af` / `en` | needs a stated mapping (`small` → `solo` or `2-5` is genuinely ambiguous) | a wrong mapping is not reversible in a report a customer has already read     |
+| C. Store three, display four by deriving a band on read          | a derivation next to the reader, no schema change                            | untouched                                                                 | two vocabularies, and the stored value no longer matches what the screen says |
 
 ### Recommended default (reversible)
 
 **A.** The three bands stay exactly as they are. Nothing is renamed, deleted or backfilled. If the
-owner later picks B, the change is additive: widen the enum in the two type/schema files, add two
-cards, add `onboarding.soloStore` / `onboarding.workers6to20`… keys in three languages, and choose a
-mapping for the rows that already exist. Until that mapping is chosen, the current wording is the
-only vocabulary that has ever been written to `profiles.store_size`.
+owner later picks B, the change is additive: widen the enum in the two type/schema files, add the
+one missing card, add its label in three languages, and choose a mapping for the rows that already
+exist. Until that mapping is chosen, the current wording is the only vocabulary that has ever been
+written to `profiles.store_size`.
 
 ### Revisit when
 
-The owner answers two things: **what a band measures**, and **where today's `small` / `medium` /
-`large` rows go**. Both answers are needed before any code changes; neither is needed for a test
-run.
+The owner answers one thing: **where today's `small` / `medium` / `large` rows go** on V64's four
+headcount bands. The unit itself is no longer open — V64 §5.1 names headcount. The answer is needed
+before any code changes; it is not needed for a test run.
 
 ---
 
-## 3. D-02 — the 53 hooks with no consumer
+## 3. D-02 — the 52 hooks with no consumer
 
 ### Measured
 
 - **685** exported hooks in `packages/api/src/hooks` (`scripts/api/unused-hooks.mjs`).
-- **53** of them are called by no application, package or sibling hook. They are the 53 data rows
+- **52** of them are called by no application, package or sibling hook (53 until 13 Nov 2026, when the return dialog's exchange began calling `useExchangeInvoice`). They are the 52 data rows
   of `docs/architecture/universal-core/UNUSED-HOOKS.csv`.
-- **36** of the 53 name a request path that matches a registered route, quoted as `file:line`; the
+- **36** of the 52 name a request path that matches a registered route, quoted as `file:line`; the
   other 17 name no route that either the Fastify backend or the local engine has.
 - Every row's `decision` cell reads `NEEDS_OWNER_DECISION`, and
   `packages/validation/src/__tests__/unused-hooks-ledger.test.ts` fails if the CSV goes stale.
@@ -103,7 +105,7 @@ the owner can tell which:
 3. a library surface kept for a client that is not in this repository — wiring or deleting it both
    break somebody's build.
 
-The mistake is cheap in the wrong direction: 53 screens is weeks of work and a larger surface to
+The mistake is cheap in the wrong direction: 52 screens is weeks of work and a larger surface to
 support, and 53 deletions is irreversible in practice once a customer has used them.
 
 ### Options

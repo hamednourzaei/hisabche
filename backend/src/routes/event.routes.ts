@@ -4,7 +4,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createEventLogSchema } from '@hisabche/validation'
 import { eventService } from '../services/event.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -15,12 +14,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function eventRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════

@@ -10,7 +10,6 @@ export function initCrashReporting(): void {
 
   try {
     // Required lazily so a missing/optional dependency cannot break startup.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Sentry = require('@sentry/electron/main') as typeof import('@sentry/electron/main')
 
     Sentry.init({
@@ -29,7 +28,6 @@ export function reportError(error: unknown, context: Record<string, unknown> = {
   if (!DSN) return
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Sentry = require('@sentry/electron/main') as typeof import('@sentry/electron/main')
     Sentry.captureException(error, { extra: context })
   } catch {

@@ -50,7 +50,7 @@ export async function migrateLegacyOutbox(): Promise<LegacyMigrationResult> {
     return { moved: 0, skipped: 0, reason: 'nothing-stored' }
   }
 
-  let entries: LegacyEntry[] = []
+  let entries: LegacyEntry[]
   try {
     // zustand/persist wraps the value: `{ state: {...}, version: n }`.
     const parsed = JSON.parse(raw) as { state?: { entries?: unknown } }

@@ -104,29 +104,32 @@ function distributionOf(raw: unknown): Array<{ start: string; amountMinor: numbe
 }
 
 /** A stored budget row (either database) as the planning layer's budget. */
-export function mapBudget(raw: Record<string, any>, baseCurrency: string): PlannedBudget {
+export function mapBudget(raw: Record<string, unknown>, baseCurrency: string): PlannedBudget {
+  const text = (value: unknown): string | null =>
+    value === null || value === undefined ? null : String(value)
+  const currency = String(raw.currency ?? '')
   return {
-    id: raw.id,
-    accountId: raw.account_id,
-    dimensionValueId: raw.dimension_value_id ?? null,
-    branchId: raw.branch_id ?? null,
+    id: String(raw.id),
+    accountId: String(raw.account_id),
+    dimensionValueId: text(raw.dimension_value_id),
+    branchId: text(raw.branch_id),
     period: raw.period as BudgetPeriod,
     startsOn: String(raw.starts_on ?? '').slice(0, 10),
     amountMinor: Number(raw.amount_minor) || 0,
     action: raw.action as BudgetAction,
     warnAtPercent: Number(raw.warn_at_percent) || 0,
     isActive: raw.is_active !== false && raw.is_active !== 0,
-    name: raw.name ?? null,
+    name: text(raw.name),
     // Legacy rows (no column yet) were expense controls — see the migration.
     type: raw.budget_type === 'revenue' ? 'revenue' : 'expense',
     status: (raw.status as BudgetStatusCode | undefined) ?? 'approved',
     version: Number(raw.version) || 1,
     distribution: distributionOf(raw.distribution ?? null),
-    notes: raw.notes ?? null,
-    approvedBy: raw.approved_by ?? null,
-    approvedAt: raw.approved_at ?? null,
-    createdBy: raw.created_by ?? null,
-    currency: budgetCurrencies(baseCurrency).includes(raw.currency) ? raw.currency : baseCurrency,
+    notes: text(raw.notes),
+    approvedBy: text(raw.approved_by),
+    approvedAt: text(raw.approved_at),
+    createdBy: text(raw.created_by),
+    currency: budgetCurrencies(baseCurrency).includes(currency) ? currency : baseCurrency,
     // NULL on rows entered before the column existed: they were entered in the books currency.
     amountCurrencyMinor:
       raw.amount_currency_minor === null || raw.amount_currency_minor === undefined

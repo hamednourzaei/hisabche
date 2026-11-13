@@ -156,7 +156,6 @@ RejectModal.displayName = 'RejectModal'
    ═══════════════════════════════════════════════════════════════ */
 
 export const ApprovalActions = memo(function ApprovalActions({
-  instanceId,
   isPending,
   onAction,
   t,
@@ -186,7 +185,7 @@ export const ApprovalActions = memo(function ApprovalActions({
   }, [])
 
   const handleConfirmReject = useCallback(
-    (commentText: string) => {
+    (_commentText: string) => {
       handleAction('rejected')
     },
     [handleAction],

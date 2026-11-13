@@ -12,6 +12,7 @@
 // ============================================
 
 import { round2 } from '../../utils/money'
+import type { DbRow } from '../../utils/db-row'
 
 // ─── Vocabulary ──────────────────────────────────────────────────────────────
 
@@ -102,7 +103,7 @@ export interface Opportunity {
 const list = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
 
 /** snake_case row → camelCase. Missing this once made every CRM date render «-». */
-export function toInteraction(raw: Record<string, any>): Interaction {
+export function toInteraction(raw: DbRow): Interaction {
   return {
     id: raw.id,
     customerId: raw.customer_id ?? null,
@@ -127,7 +128,7 @@ export function toInteraction(raw: Record<string, any>): Interaction {
  * the client type (and UI) read `customerId` / `expectedCloseDate` — both were
  * always undefined on the client.
  */
-export function toOpportunity(raw: Record<string, any>): Opportunity {
+export function toOpportunity(raw: DbRow): Opportunity {
   return {
     id: raw.id,
     customerId: raw.customer_id ?? null,

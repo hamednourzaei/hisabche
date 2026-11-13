@@ -49,7 +49,9 @@ function bare(cell: string): string {
   return cell.replace(/`/g, '').trim()
 }
 
-const headerLine = lines.find((line) => line.trimStart().startsWith('| ID |'))
+// The register is a padded markdown table (`| ID   | Decision …`), so the
+// header is matched by cell, not by exact spacing.
+const headerLine = lines.find((line) => /^\|\s*ID\s*\|/.test(line.trimStart()))
 const header = headerLine ? cellsOf(headerLine) : []
 
 const decisionRows = lines

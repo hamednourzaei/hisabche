@@ -28,6 +28,7 @@ import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { toIsoDay } from '@hisabche/formatting'
+import type { UseFormRegister } from 'react-hook-form'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HumanResourcesView v11 — تیم و حقوق (merged workspace + employees)
@@ -85,7 +86,6 @@ interface HumanResourcesViewProps {
   payrollTotal: number
   payrollByEmployee: Record<string, number>
   onPageChange: (page: number) => void
-  onSearch: (query: string) => void
   onCreate: (values: Record<string, unknown>, access?: AccessGrant) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onView: (id: string) => void
@@ -164,7 +164,7 @@ const FormField = memo(function FormField({
   name: keyof EmployeeForm
   label: string
   type?: string
-  register: any
+  register: UseFormRegister<EmployeeForm>
   errors: Record<string, { message?: string } | undefined>
 }) {
   const err = errors[name]
@@ -195,14 +195,13 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   payrollTotal,
   payrollByEmployee,
   onPageChange,
-  onSearch,
   onCreate,
   onDelete,
   onView,
 }: HumanResourcesViewProps) {
   const fmtNum = useNumberFormat()
   // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
-  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+  const { date: fmtIntlDate } = useDateFormat()
 
   const [showForm, setShowForm] = useState(false)
   const [phoneValue, setPhoneValue] = useState('')

@@ -159,7 +159,7 @@ describe('⛔ no formula or algorithm is published', () => {
    */
   const FORMULA_SHAPES: { name: string; pattern: RegExp }[] = [
     { name: 'an equals-sign formula', pattern: /\w\s*=\s*\w+\s*[×*+\-/]/ },
-    { name: 'a multiplication of named terms', pattern: /\b\w+\s*[×*]\s*\w+\s*[+\-]/ },
+    { name: 'a multiplication of named terms', pattern: /\b\w+\s*[×*]\s*\w+\s*[+-]/ },
     { name: 'a code fence', pattern: /```/ },
     { name: 'SQL', pattern: /\bSELECT\b[\s\S]*\bFROM\b/i },
     { name: 'a snake_case identifier', pattern: /\b[a-z]+_[a-z]+\b/ },

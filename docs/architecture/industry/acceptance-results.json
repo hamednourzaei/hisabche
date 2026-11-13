@@ -1,47 +1,13 @@
 {
-  "generatedAt": "2026-11-13T10:44:59.687Z",
-  "commit": "fa4fd32f9f75307015de1988dc8f4c927870f165",
+  "generatedAt": "2026-11-13T11:29:36.677Z",
+  "commit": "ac7b0400c6badf70f3b910f4332b644f24d17b3c",
   "worktreeDirty": true,
   "dirtyFiles": [
-    "M docs/architecture/capability-matrix.csv",
-    " M docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md",
-    " M docs/architecture/industry/acceptance-results.json",
-    " M docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.md",
-    " M packages/api/src/hooks/useOfflineActivities.ts",
-    " M packages/api/src/index.ts",
-    " M packages/i18n/messages/af/common.json",
-    " M packages/i18n/messages/en/common.json",
-    " M packages/i18n/messages/fa/common.json",
-    " M packages/ui/src/__tests__/operating-profile-wiring.test.ts",
-    " M packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx",
-    " M packages/ui/src/components/ui/dashboard/first-value-checklist.tsx",
-    " M packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx",
-    " M packages/ui/src/components/ui/onboarding/operating-questions.tsx",
-    " M packages/ui/src/components/ui/settings/operating-profile-settings.tsx",
-    " M packages/ui/src/hooks/activity/useOfflineActivities.ts",
-    " M packages/validation/src/index.ts",
-    " M packages/validation/src/schemas/business-capabilities.ts",
-    " M packages/validation/src/schemas/operational-dna.ts",
-    " M scripts/industry/generate-coverage-table.mjs",
-    "?? docs/MIGRATIONS-PENDING.md",
-    "?? docs/architecture/V65-IMPLEMENTATION-PROGRESS.md",
-    "?? docs/architecture/V65-PREFLIGHT.md",
-    "?? docs/architecture/industry/sellable-industries.json",
-    "?? docs/architecture/universal-core/ENGINE-WIRING.csv",
-    "?? docs/architecture/universal-core/UNUSED-HOOKS.csv",
-    "?? packages/validation/src/__tests__/capability-claims-match-code.test.ts",
-    "?? packages/validation/src/__tests__/dna-multi-industry.test.ts",
-    "?? packages/validation/src/__tests__/first-value.test.ts",
-    "?? packages/validation/src/__tests__/migrations-ledger.test.ts",
-    "?? packages/validation/src/__tests__/sellable-industries.test.ts",
-    "?? packages/validation/src/__tests__/unused-hooks-ledger.test.ts",
-    "?? packages/validation/src/schemas/capability-claims.domain.ts",
-    "?? packages/validation/src/schemas/first-value.ts",
-    "?? scripts/api/",
-    "?? scripts/capability/",
-    "?? scripts/industry/generate-sellable.mjs",
-    "?? scripts/industry/run-acceptance.mjs",
-    "?? scripts/migrations/"
+    "M packages/store/src/slices/__tests__/workspace-staleness.test.ts",
+    " M scripts/industry/generate-sellable.mjs",
+    " M scripts/industry/run-acceptance.mjs",
+    "?? scripts/industry/sellable-criteria.mjs",
+    "?? scripts/release/check-acceptance-commit.mjs"
   ],
   "results": {
     "backend/src/__tests__/financial-flows-e2e.test.ts": {
@@ -51,7 +17,7 @@
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 20.419677734375
+      "durationMs": 22.3037109375
     },
     "backend/src/__tests__/http-e2e-business-day.test.ts": {
       "status": "passed",
@@ -60,7 +26,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 175.0341796875
+      "durationMs": 150.83447265625
     },
     "backend/src/__tests__/manufacturing-page-500s.test.ts": {
       "status": "passed",
@@ -69,7 +35,7 @@
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 6.2265625
+      "durationMs": 4.209228515625
     },
     "backend/src/__tests__/service-delivery-http.test.ts": {
       "status": "passed",
@@ -78,7 +44,7 @@
       "passed": 10,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 158.997314453125
+      "durationMs": 115.67138671875
     },
     "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
       "status": "passed",
@@ -87,7 +53,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 177.901123046875
+      "durationMs": 118.3662109375
     },
     "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
       "status": "passed",
@@ -96,7 +62,7 @@
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 182.031982421875
+      "durationMs": 112.899169921875
     },
     "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
       "status": "passed",
@@ -105,7 +71,7 @@
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 171.258544921875
+      "durationMs": 98.53271484375
     },
     "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
       "status": "passed",
@@ -114,7 +80,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 181.090087890625
+      "durationMs": 85.330810546875
     },
     "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
       "status": "passed",
@@ -123,7 +89,7 @@
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 176.7431640625
+      "durationMs": 115.884033203125
     },
     "backend/src/__tests__/v60-http-families.test.ts": {
       "status": "passed",
@@ -132,8 +98,63 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 261.87158203125
+      "durationMs": 148.91259765625
+    },
+    "packages/api/src/__tests__/offline-matrix-guard.test.ts": {
+      "status": "passed",
+      "date": "2026-11-13",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 14.732666015625
+    },
+    "packages/ui/src/__tests__/landing-claims.test.ts": {
+      "status": "passed",
+      "date": "2026-11-13",
+      "tests": 48,
+      "passed": 48,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 14.17724609375
+    },
+    "packages/ui/src/__tests__/operating-profile-wiring.test.ts": {
+      "status": "passed",
+      "date": "2026-11-13",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 38.360107421875
+    },
+    "packages/validation/src/__tests__/dna-multi-industry.test.ts": {
+      "status": "passed",
+      "date": "2026-11-13",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 28.27392578125
+    },
+    "packages/validation/src/__tests__/first-value.test.ts": {
+      "status": "passed",
+      "date": "2026-11-13",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 827.827392578125
     }
+  },
+  "postgres": {
+    "ran": false,
+    "reason": "NOT_REQUESTED",
+    "results": {}
+  },
+  "browser": {
+    "ran": false,
+    "reason": "NOT_REQUESTED",
+    "results": {}
   },
   "environment": {
     "runner": "scripts/industry/run-acceptance.mjs",
@@ -144,11 +165,11 @@
   },
   "limitations": ["POSTGRES_EVIDENCE_NOT_INCLUDED", "BROWSER_VERIFICATION_NOT_RUN"],
   "totals": {
-    "files": 10,
-    "filesPassed": 10,
+    "files": 15,
+    "filesPassed": 15,
     "filesFailed": 0,
     "filesNotRun": 0,
-    "tests": 54,
-    "testsPassed": 54
+    "tests": 135,
+    "testsPassed": 135
   }
 }

@@ -5,7 +5,6 @@
 
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { flagFilter } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { BaseError } from '../errors/base.error'
@@ -17,13 +16,6 @@ import {
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
-
-// ✅ تنظیمات برای حذف $schema از خروجی
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
 
 import { requireCapability } from '../middleware/authorize.middleware'
 

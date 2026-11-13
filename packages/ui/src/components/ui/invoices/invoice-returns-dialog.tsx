@@ -24,6 +24,7 @@ import {
   apiErrorCode,
   apiErrorMessage,
   useCreateInvoiceReturn,
+  useExchangeInvoice,
   useMyCapabilities,
   useRefundInvoiceReturn,
 } from '@hisabche/api'
@@ -41,6 +42,7 @@ import {
   type ReturnCondition,
   type ReturnDeductionRequest,
   type ReturnReason,
+  unitSchema,
 } from '@hisabche/validation'
 import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useActionAvailability } from '../../../lib/capability/use-action-availability'
@@ -53,9 +55,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '../input'
 import { SelectField, type SelectFieldOption } from '../select-field'
 import { RefundFields } from './invoice-return-refund-fields'
+import { InvoiceExchangeField } from './invoice-exchange-field'
 
 export interface ReturnInvoiceItemOption {
   id?: string | undefined
+  /** The product the line sold — what an exchange offers other models of (V64 §5.8). */
+  productId?: string | null | undefined
+  unit?: string | null | undefined
   productName?: string | undefined
   product_name?: string | undefined
   quantity?: number | undefined
@@ -85,6 +91,8 @@ interface Row {
   qty: string
   condition: ReturnCondition
   destination: RestockChoice
+  /** The model given in exchange; '' = an ordinary return of this line. */
+  replacement: string
 }
 
 interface DeductionDraft {
@@ -117,6 +125,7 @@ function initialRows(
         qty: String(Math.max(1, item.quantity ?? 1)),
         condition: 'sealed' as ReturnCondition,
         destination: policy.defaultDestination('sealed'),
+        replacement: '',
       },
     ]),
   )
@@ -230,6 +239,9 @@ interface ReturnFormProps {
 function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) {
   const createReturn = useCreateInvoiceReturn(invoiceId)
   const refund = useRefundInvoiceReturn(invoiceId)
+  // An exchange is a return plus a new sale in one request; it needs the server.
+  const exchange = useExchangeInvoice()
+  const exchangeOnline = useActionAvailability('invoice.exchange').requiresOnline
   // The return itself is recorded on the device; paying the customer back needs the server.
   const canRefund = !useActionAvailability('invoice.return_refund').requiresOnline
   const fmt = useNumberFormat()
@@ -306,6 +318,11 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
   )
 
   const pickedCount = lines.filter((item) => qtyOf(item.id as string, item) > 0).length
+  // Exchange mode: at least one returned line is swapped for another model. The customer's
+  // credit then pays for the replacement, so cash refunds and deductions do not apply.
+  const exchanging = lines.some(
+    (item) => qtyOf(item.id as string, item) > 0 && Boolean(rows[item.id as string]?.replacement),
+  )
   const money = (minor: number) => `${fmt(minor / factor, digits)} ${currency}`.trim()
 
   // What could be paid back in cash right now, by the same rule the database applies.
@@ -333,7 +350,7 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
       setError(tr('returnErrNoLines', 'حداقل یک قلم را برای مرجوعی انتخاب کنید.'))
       return
     }
-    if (preview.error) {
+    if (!exchanging && preview.error) {
       setError(
         preview.error === 'RETURN_DEDUCTION_EXCEEDS_BASE'
           ? tr('returnErrDeductionExceeds', 'مجموع کسورات از مبلغ کالای برگشتی بیشتر است.')
@@ -365,6 +382,55 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
     }
 
     setError(null)
+    if (exchanging) {
+      const picked = lines.filter((item) => qtyOf(item.id as string, item) > 0)
+      try {
+        await exchange.mutateAsync({
+          invoiceId,
+          returnNumber: number,
+          returnDate: toIsoDay(new Date()),
+          reasonCode: reason,
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+          returnedLines: picked.map((item) => {
+            const row = rows[item.id as string]!
+            return {
+              originalLineId: item.id as string,
+              quantity: qtyOf(item.id as string, item),
+              restockChoice: row.destination,
+              conditionCode: row.condition,
+            }
+          }),
+          // The same quantity, at the price of the original line: an even swap of models.
+          replacementItems: picked.flatMap((item) => {
+            const row = rows[item.id as string]!
+            if (!row.replacement || !item.productId) return []
+            const unit = unitSchema.safeParse(item.unit)
+            return [
+              {
+                productId: item.productId,
+                variantId: row.replacement,
+                productName: item.productName ?? item.product_name ?? '',
+                quantity: qtyOf(item.id as string, item),
+                unitPrice: item.unitPrice ?? 0,
+                ...(unit.success ? { unit: unit.data } : {}),
+              },
+            ]
+          }),
+          paymentMethod: 'credit',
+          paidAmount: 0,
+        })
+      } catch (cause) {
+        setError(sentence(cause))
+        return
+      }
+      setOutcome(
+        tr(
+          'exchangeDone',
+          'تعویض ثبت شد: کالای برگشتی به حساب مشتری برگشت و فاکتور کالای جایگزین با همان مبلغ صادر شد.',
+        ),
+      )
+      return
+    }
     let created: Awaited<ReturnType<typeof createReturn.mutateAsync>>
     try {
       created = await createReturn.mutateAsync({
@@ -598,13 +664,38 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
                       </div>
                     </div>
                   ) : null}
+                  {row.on && item.productId ? (
+                    <InvoiceExchangeField
+                      productId={item.productId}
+                      value={row.replacement}
+                      onChange={(value) => patchRow(id, { replacement: value })}
+                      disabled={exchangeOnline}
+                      tr={tr}
+                    />
+                  ) : null}
                 </li>
               )
             })}
           </ul>
+          {exchangeOnline ? (
+            <p className="text-xs text-[hsl(var(--fg-secondary))]">
+              {tr(
+                'exchangeOnlineOnly',
+                'تعویض کالا فقط آنلاین انجام می‌شود؛ مرجوعی عادی همچنان ثبت می‌شود.',
+              )}
+            </p>
+          ) : null}
+          {exchanging ? (
+            <p role="note" className="text-xs text-[hsl(var(--fg-secondary))]">
+              {tr(
+                'exchangeNote',
+                'در تعویض، اعتبار کالای برگشتی صرف کالای جایگزین می‌شود؛ کسورات و بازپرداخت نقدی اعمال نمی‌شود.',
+              )}
+            </p>
+          ) : null}
         </section>
 
-        <section className="space-y-2">
+        <section className="space-y-2" hidden={exchanging}>
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
               {tr('deductionsTitle', 'کسورات (آنچه فروشگاه نگه می‌دارد)')}
@@ -746,7 +837,7 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
           </p>
         </section>
 
-        <section className="space-y-2">
+        <section className="space-y-2" hidden={exchanging}>
           <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
             {tr('refundTitle', 'بازپرداخت به مشتری')}
           </h3>
@@ -809,10 +900,16 @@ function ReturnForm({ invoiceId, onClose, items, invoice, t }: ReturnFormProps) 
         <Button
           onClick={submit}
           disabled={
-            !returnNumber.trim() || pickedCount === 0 || createReturn.isPending || refund.isPending
+            !returnNumber.trim() ||
+            pickedCount === 0 ||
+            createReturn.isPending ||
+            refund.isPending ||
+            exchange.isPending
           }
         >
-          {tr('submitReturn', 'ثبت و اعمال مرجوعی')}
+          {exchanging
+            ? tr('submitExchange', 'ثبت تعویض')
+            : tr('submitReturn', 'ثبت و اعمال مرجوعی')}
         </Button>
       </DialogFooter>
     </>

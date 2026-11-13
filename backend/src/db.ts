@@ -118,7 +118,7 @@ export function createAuthClient() {
 
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.from('products').select('id').limit(1)
+    const { error } = await supabase.from('products').select('id').limit(1)
     return !error
   } catch {
     return false
@@ -238,7 +238,7 @@ export async function gotrueRequest(
     signal: AbortSignal.timeout(10_000),
   })
   const text = await res.text()
-  let body: Record<string, unknown> = {}
+  let body: Record<string, unknown>
   try {
     body = text ? (JSON.parse(text) as Record<string, unknown>) : {}
   } catch {

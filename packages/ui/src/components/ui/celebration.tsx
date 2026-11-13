@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -35,7 +34,6 @@ const Celebration: React.FC<CelebrationProps> = ({
   duration = 3000,
   onComplete,
 }) => {
-  const t = useTranslations()
   const [open, setOpen] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
   const handleComplete = useCallback(() => onComplete?.(), [onComplete])

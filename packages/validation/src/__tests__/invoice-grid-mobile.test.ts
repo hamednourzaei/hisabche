@@ -113,8 +113,6 @@ describe('what the mobile card shows on its face', () => {
 })
 
 describe('which rows become cards', () => {
-  const columns = defaultColumns('IRR')
-
   it('skips the grid trailing blank row so no empty card is drawn', () => {
     const rows = [
       row('a', { description: 'کالا', quantity: '1', unitPrice: '100' }),

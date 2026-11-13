@@ -125,7 +125,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
         }
 
         const { ids } = parsed.data
-        const { userId, workspaceId } = request.tenancy
+        const { userId } = request.tenancy
 
         const marked = await activityService.markAsRead(request.tenancy, ids)
         await clearCache(`activities:${userId}:*`)
@@ -167,7 +167,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
         }
         const filter = queryParsed.data?.filter || bodyParsed.data?.filter
 
-        const { userId, workspaceId } = request.tenancy
+        const { userId } = request.tenancy
 
         const marked = await activityService.markAllAsRead(request.tenancy, filter)
         await clearCache(`activities:${userId}:*`)
@@ -200,7 +200,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const { userId, workspaceId } = request.tenancy
+        const { userId } = request.tenancy
 
         await activityService.deleteActivity(request.tenancy, id)
         await clearCache(`activities:${userId}:*`)

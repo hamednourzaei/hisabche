@@ -62,7 +62,7 @@ import { bodyOf, newId, nowIso, parseWith } from './people-common'
 
 function budgetsOf(db: LocalDb, ctx: LocalContext): PlannedBudget[] {
   return db
-    .all<Record<string, any>>(
+    .all<Record<string, unknown>>(
       'SELECT * FROM budget WHERE workspace_id = ? ORDER BY starts_on DESC, id LIMIT 500',
       [ctx.workspaceId],
     )
@@ -464,7 +464,8 @@ export function registerBudgetRoutes(router: Router): void {
   router.get('/operations/budgets/:id/revisions', (c: RouteHandlerContext) => {
     const { db, ctx, params } = c
     const budget = oneBudget(db, ctx, params.id ?? '')
-    const parse = (text: string | null) => {
+    const parse = (value: unknown) => {
+      const text = typeof value === 'string' ? value : null
       if (text === null) return null
       try {
         return JSON.parse(text)
@@ -473,7 +474,7 @@ export function registerBudgetRoutes(router: Router): void {
       }
     }
     return db
-      .all<Record<string, any>>(
+      .all<Record<string, unknown>>(
         'SELECT * FROM budget_revision WHERE workspace_id = ? AND budget_id = ? ORDER BY version DESC LIMIT 200',
         [ctx.workspaceId, budget.id],
       )

@@ -61,7 +61,10 @@ const HISTORY_LIMIT = 200
 // read and write the SAME saved rates as the dashboard and the invoice.
 const CHIP_DEFAULT = ['USD'] as const
 
-export function warehouseContainer() {
+// 12 Nov 2026: a real component (capitalised, rendered as an element). As a lowercase
+// function called inline, its ~40 hooks belonged to the caller and the hooks lint could
+// not check them (54 rules-of-hooks warnings).
+export function WarehouseContainer() {
   const t = useTranslations()
   const localeReplace = useLocaleReplace()
   const push = useLocalePush()
@@ -231,7 +234,8 @@ export function warehouseContainer() {
     refreshStock()
   }, [refreshStock])
 
-  const handleProductCreated = useCallback(refreshStock, [refreshStock])
+  // `refreshStock` is already a stable callback; wrapping it again added nothing.
+  const handleProductCreated = refreshStock
 
   const inWarehouse = warehouseParam !== null
   const isUnassigned = warehouseParam === UNASSIGNED_WAREHOUSE_ID

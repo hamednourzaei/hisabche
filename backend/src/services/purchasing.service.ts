@@ -54,8 +54,6 @@ const PO_MINIMAL = 'id, supplier_id, status, order_date'
 
 const PO_ITEM_COLUMNS =
   'id, purchase_order_id, product_id, variant_id, quantity, unit_price, total_price'
-const PO_ITEM_MINIMAL = 'id, product_id, variant_id, quantity, unit_price, total_price'
-
 export class PurchasingService {
   // ─── Cache ───────────────────────────────────────────────────
   // Keyed by WORKSPACE. The same shop's members must see the same orders.
@@ -740,7 +738,7 @@ export class PurchasingService {
     const targetInvoiceId =
       supplierInvoiceId ?? (order as { invoice_id?: string | null }).invoice_id ?? null
 
-    let linkedInvoice: { id: string } | null = null
+    let linkedInvoice: { id: string } | null
     if (targetInvoiceId) {
       const { data: inv, error: invErr } = await supabase
         .from('invoices')

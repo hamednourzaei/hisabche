@@ -21,7 +21,6 @@ export function HumanResourcesContainer() {
   const t = useTranslations()
   const push = useLocalePush()
   const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
   const [tab, setTab] = useState<'employees' | 'team'>('employees')
 
   const { data, isLoading } = useEmployees({ page, limit: 20 })
@@ -107,7 +106,6 @@ export function HumanResourcesContainer() {
           payrollTotal={payrollSummary?.total ?? 0}
           payrollByEmployee={payrollSummary?.byEmployee ?? {}}
           onPageChange={setPage}
-          onSearch={setSearch}
           onCreate={handleCreate}
           onDelete={handleDelete}
           // G1: canonical people route — see notification-bell.

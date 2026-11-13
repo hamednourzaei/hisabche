@@ -21,6 +21,7 @@ import {
   type BranchScope,
   type BranchTreeNode,
 } from './branch.domain'
+import type { DbRow } from '../../utils/db-row'
 
 const COLUMNS =
   'id, workspace_id, code, name, parent_branch_id, is_active, created_at, manager_employee_id'
@@ -45,7 +46,7 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
   )
 }
 
-function mapBranch(raw: Record<string, any>): Branch {
+function mapBranch(raw: DbRow): Branch {
   return {
     id: raw.id,
     workspaceId: raw.workspace_id,
@@ -93,7 +94,7 @@ export class BranchService {
 
     if (error) throw new DatabaseError('Failed to fetch branches', error)
 
-    const branches = ((data ?? []) as Record<string, any>[]).map(mapBranch)
+    const branches = ((data ?? []) as DbRow[]).map(mapBranch)
     await memoryCache.set(cacheKey, branches, 300)
     return branches
   }
@@ -154,7 +155,7 @@ export class BranchService {
     if (error) throw new DatabaseError('Failed to create branch', error)
 
     await this.invalidate(ctx.workspaceId)
-    return mapBranch(data as unknown as Record<string, any>)
+    return mapBranch(data as unknown as DbRow)
   }
 
   async update(
@@ -225,7 +226,7 @@ export class BranchService {
     if (error) throw new DatabaseError('Failed to update branch', error)
 
     await this.invalidate(ctx.workspaceId)
-    return mapBranch(data as unknown as Record<string, any>)
+    return mapBranch(data as unknown as DbRow)
   }
 
   /**
@@ -330,7 +331,7 @@ export class BranchService {
       return byBranch
     }
 
-    for (const row of (data ?? []) as Record<string, any>[]) {
+    for (const row of (data ?? []) as DbRow[]) {
       // PostgREST returns the embed as an object for a to-one relationship and
       // an array when it cannot tell; both shapes are handled rather than
       // assumed.
@@ -372,7 +373,7 @@ export class BranchService {
 
     if (error) throw new DatabaseError('Failed to fetch branch managers', error)
 
-    for (const row of (data ?? []) as Record<string, any>[]) {
+    for (const row of (data ?? []) as DbRow[]) {
       names.set(row.id, `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim())
     }
 

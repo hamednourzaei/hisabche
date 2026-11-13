@@ -86,7 +86,7 @@ export async function syncStreamRoutes(fastify: FastifyInstance) {
       let lastSeen = Date.now()
       let clientCursor = 0
 
-      let head = 0
+      let head: number
       try {
         head = await cursorWatcher.head(workspaceId)
       } catch (err) {

@@ -48,8 +48,6 @@ const WS_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const WS_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const USER = '11111111-1111-4111-8111-111111111111'
 const PRODUCT_1 = '20000000-0000-4000-8000-000000000001'
-const WH_1 = '30000000-0000-4000-8000-000000000001'
-
 describe('Postgres: atomic invoice returns (invoice-return-01)', () => {
   beforeAll(async () => {
     try {

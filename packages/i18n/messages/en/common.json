@@ -2130,7 +2130,13 @@
         "pre_sale": "Pre-sale",
         "pre_purchase": "Pre-purchase"
       }
-    }
+    },
+    "exchangeWith": "Exchange for another model",
+    "exchangeNone": "No exchange — return only",
+    "exchangeOnlineOnly": "Exchanges need the internet; an ordinary return can still be recorded.",
+    "exchangeNote": "In an exchange the returned goods pay for the replacement; deductions and cash refunds do not apply.",
+    "exchangeDone": "Exchange recorded: the returned goods were credited and an invoice for the replacement was issued at the same price.",
+    "submitExchange": "Record exchange"
   },
   "warehouse": {
     "deleteWarehouse": "Delete warehouse",

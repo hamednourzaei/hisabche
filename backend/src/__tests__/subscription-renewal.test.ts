@@ -28,7 +28,6 @@ interface Filter {
 
 function makeQuery(table: string) {
   const eqs: Filter[] = []
-  let pendingUpdate: Row | null = null
 
   const matching = () => rowsOf(table).filter((row) => eqs.every((f) => row[f.column] === f.value))
 
@@ -39,7 +38,6 @@ function makeQuery(table: string) {
       return api
     },
     update: (values: Row) => {
-      pendingUpdate = values
       const targets = matching()
       for (const row of targets) {
         Object.assign(row, values)

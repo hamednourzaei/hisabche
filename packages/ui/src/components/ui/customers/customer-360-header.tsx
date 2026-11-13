@@ -11,9 +11,11 @@ interface Customer360HeaderProps {
     phone?: string
     type: 'cash' | 'credit'
     tags: string[]
-    healthScore: number
+    /** null when nothing measures it — a made-up score is not shown (G1). */
+    healthScore: number | null
     totalDebt: number
-    lifetimeValue: number
+    /** null when the purchases total is not known. */
+    lifetimeValue: number | null
     lastActivity: string
   }
   fmt: (v: number) => string
@@ -73,14 +75,18 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
 
         {/* KPIs */}
         <div className="flex flex-wrap gap-4 sm:gap-6">
-          <div className="text-center">
-            <p className={cn('text-lg font-bold tabular-nums', healthColor(customer.healthScore))}>
-              {customer.healthScore}%
-            </p>
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {t('customers.health', 'سلامت')}
-            </p>
-          </div>
+          {customer.healthScore !== null ? (
+            <div className="text-center">
+              <p
+                className={cn('text-lg font-bold tabular-nums', healthColor(customer.healthScore))}
+              >
+                {customer.healthScore}%
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t('customers.health', 'سلامت')}
+              </p>
+            </div>
+          ) : null}
           {customer.type === 'credit' && (
             <div className="text-center">
               <p className="text-lg font-bold tabular-nums text-[hsl(var(--color-destructive))]">
@@ -91,14 +97,16 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
               </p>
             </div>
           )}
-          <div className="text-center">
-            <p className="text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-              {fmt(customer.lifetimeValue)}
-            </p>
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {t('customers.lifetimeValue', 'ارزش کل')}
-            </p>
-          </div>
+          {customer.lifetimeValue !== null ? (
+            <div className="text-center">
+              <p className="text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {fmt(customer.lifetimeValue)}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t('customers.lifetimeValue', 'ارزش کل')}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Quick Actions */}

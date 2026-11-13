@@ -32,7 +32,8 @@ export interface CustomizerItem {
 export interface CustomizerGroup {
   /** Shown above the group when the page has more than one. */
   title?: string | undefined
-  look: PageLook
+  /** Only what the customizer uses — the store's groups carry the same four members. */
+  look: Pick<PageLook, 'ready' | 'shows' | 'toggle' | 'reset'>
   items: readonly CustomizerItem[]
   /** At least one item of this group stays visible. */
   keepOne?: boolean | undefined

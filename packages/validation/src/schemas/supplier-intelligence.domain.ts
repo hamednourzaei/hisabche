@@ -113,7 +113,7 @@ export const MIN_PURCHASES_FOR_A_SCORE = 3
 export function scoreSupplier(
   supplier: SupplierFacts,
   purchases: readonly PurchaseRecord[],
-  asOf: string,
+  _asOf: string,
 ): SupplierRisk {
   const own = purchases.filter((p) => p.supplierId === supplier.supplierId)
 
@@ -311,7 +311,6 @@ export function supplierConcentration(
 
   for (const [productId, sources] of byProduct) {
     if (sources.size !== 1) continue
-    const supplierId = [...sources][0]!
     findings.push({
       kind: 'PRODUCT_SINGLE_SOURCE',
       subjectId: productId,

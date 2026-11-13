@@ -56,7 +56,10 @@ describe('Service line stock & costing isolation on device', () => {
     )
 
     // Sell 2 units of goods and 3 units of service in ONE invoice
-    const invoiceRes = await engine.request({
+    const invoiceRes = await engine.request<{
+      id: string
+      items: Array<{ id: string; productId: string | null }>
+    }>({
       method: 'POST',
       path: '/invoices',
       body: {
@@ -82,7 +85,7 @@ describe('Service line stock & costing isolation on device', () => {
     })
 
     expect(invoiceRes.status).toBe(201)
-    const invoiceBody = (invoiceRes as any).data
+    const invoiceBody = invoiceRes.data
     const invoiceId = invoiceBody.id
 
     // Check inventory movements
@@ -131,7 +134,7 @@ describe('Service line stock & costing isolation on device', () => {
         returnType: 'sale_return',
         lines: [
           {
-            originalLineId: invoiceBody.items.find((i: any) => i.productId === serviceId)?.id,
+            originalLineId: invoiceBody.items.find((i) => i.productId === serviceId)?.id,
             quantity: 1,
             restockChoice: 'restock',
             reasonCode: 'dissatisfied',

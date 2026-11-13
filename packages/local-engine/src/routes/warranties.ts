@@ -9,9 +9,10 @@ import { ValidationError } from '../errors'
 import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { bodyOf } from './people-common'
 
 interface RowRecord {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function registerWarrantiesRoutes(router: Router) {
@@ -41,7 +42,7 @@ export function registerWarrantiesRoutes(router: Router) {
   router.post('/warranties', async (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
     requireCapability(ctx, 'invoice.create')
-    const payload = body as any
+    const payload = bodyOf(body)
     if (
       !payload?.invoiceId ||
       !payload?.productId ||
@@ -53,7 +54,10 @@ export function registerWarrantiesRoutes(router: Router) {
 
     const id = payload.id || `war-${Date.now()}`
     const now = new Date().toISOString()
-    const endDate = calculateWarrantyEndDate(payload.startDate, payload.warrantyMonths)
+    const endDate = calculateWarrantyEndDate(
+      String(payload.startDate),
+      Number(payload.warrantyMonths),
+    )
 
     db.run(
       `INSERT INTO warranties

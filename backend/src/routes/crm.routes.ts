@@ -4,7 +4,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createInteractionSchema,
   updateInteractionStatusSchema,
@@ -19,12 +18,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 export async function crmRoutes(fastify: FastifyInstance) {
   // The CRM Core (services/crm). It invalidates its own route caches for the

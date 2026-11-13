@@ -11,7 +11,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { flagFilter } from '@hisabche/validation'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { SupplierService } from '../services/supplier'
 import { BaseError } from '../errors/base.error'
@@ -19,12 +18,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),

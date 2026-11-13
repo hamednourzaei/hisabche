@@ -64,7 +64,7 @@ function makeQuery(table: string) {
       eqs.push([column, value])
       return builder
     },
-    in: (column: string, values: unknown[]) => {
+    in: (_column: string, _values: unknown[]) => {
       return builder
     },
     order: () => builder,
@@ -106,11 +106,9 @@ function makeQuery(table: string) {
         return
       }
       if (pendingKind === 'update') {
-        let updatedCount = 0
         for (let i = 0; i < current.length; i++) {
           if (matches(current[i]!, eqs)) {
             current[i] = { ...current[i], ...(pendingValues as Row) }
-            updatedCount++
           }
         }
         resolve({ data: null, error: null })

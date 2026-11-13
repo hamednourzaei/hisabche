@@ -6,23 +6,24 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import type { LucideIcon } from 'lucide-react'
 
 // ═══ Types ═══
 export interface ColumnDef<T> {
   id: string
   header: string
-  accessor: (row: T) => any
+  accessor: (row: T) => unknown
   type?: 'text' | 'number' | 'currency' | 'date' | 'badge' | 'icon'
   width?: number
   sortable?: boolean
   align?: 'left' | 'center' | 'right'
-  render?: (value: any, row: T) => React.ReactNode
+  render?: (value: unknown, row: T) => React.ReactNode
 }
 
 export interface BulkAction {
   id: string
   label: string
-  icon: any
+  icon: LucideIcon
   onClick: (selectedIds: string[]) => void
 }
 
@@ -88,7 +89,11 @@ function renderCell<T>(column: ColumnDef<T>, row: T, locale: string): React.Reac
         </span>
       )
     default:
-      return <span className="text-sm">{value ?? '-'}</span>
+      return (
+        <span className="text-sm">
+          {value === null || value === undefined ? '-' : String(value)}
+        </span>
+      )
   }
 }
 

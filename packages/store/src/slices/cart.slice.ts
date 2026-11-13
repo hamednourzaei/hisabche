@@ -38,7 +38,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                   quantity: i.quantity + item.quantity,
                   totalPrice: (i.quantity + item.quantity) * i.unitPrice * (1 - i.discount / 100),
                 }
-              : i
+              : i,
           ),
         }
       }
@@ -53,7 +53,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       items: state.items.map((i) =>
         i.productId === productId
           ? { ...i, quantity, totalPrice: quantity * i.unitPrice * (1 - i.discount / 100) }
-          : i
+          : i,
       ),
     })),
 
@@ -62,7 +62,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       items: state.items.map((i) =>
         i.productId === productId
           ? { ...i, discount, totalPrice: i.quantity * i.unitPrice * (1 - discount / 100) }
-          : i
+          : i,
       ),
     })),
 

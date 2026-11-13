@@ -10,7 +10,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConflictError, NotFoundError } from '../errors/database.error'
 
 const WORKSPACE_A = '11111111-1111-1111-1111-111111111111'
-const WORKSPACE_B = '22222222-2222-2222-2222-222222222222'
 const INVOICE_A_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 const INVOICE_B_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 const LINE_A_ID = 'line-1111-1111-1111-111111111111'

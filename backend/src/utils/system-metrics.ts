@@ -116,7 +116,7 @@ export function createSampler(inflight: () => number) {
     const elapsedMicros = Number(now - lastAt) / 1000
     lastAt = now
 
-    let cpuPercent = 0
+    let cpuPercent: number
     const allowance = cpuAllowance()
     const container = containerCpuMicros()
     if (container !== null && lastContainer !== null && allowance !== null && elapsedMicros > 0) {

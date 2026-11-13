@@ -10,9 +10,10 @@ import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { bodyOf } from './people-common'
 
 interface RowRecord {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function registerFitmentsRoutes(router: Router) {
@@ -44,7 +45,7 @@ export function registerFitmentsRoutes(router: Router) {
     requireCapability(c.ctx, 'product.write')
     const { db, ctx, params, body } = c
     const productId = params.id
-    const payload = body as any
+    const payload = bodyOf(body)
     if (!payload?.make || !payload?.model || !payload?.yearStart || !payload?.yearEnd) {
       throw new ValidationError('make, model, yearStart, and yearEnd are required')
     }
@@ -116,11 +117,12 @@ export function registerFitmentsRoutes(router: Router) {
   router.post('/vehicles', async (c: RouteHandlerContext) => {
     requireCapability(c.ctx, 'product.write')
     const { db, ctx, body } = c
-    const payload = body as any
+    const payload = bodyOf(body)
     if (!payload?.vin || !payload?.make || !payload?.model || !payload?.year) {
       throw new ValidationError('vin, make, model, and year are required')
     }
-    if (!validateVin(payload.vin)) {
+    const vin = String(payload.vin)
+    if (!validateVin(vin)) {
       throw new ValidationError('INVALID_VIN')
     }
 
@@ -138,13 +140,15 @@ export function registerFitmentsRoutes(router: Router) {
           serialId,
           ctx.workspaceId,
           payload.productId || '',
-          payload.vin.toUpperCase(),
+          vin.toUpperCase(),
           payload.basePurchaseCostMinor || 0,
           payload.receivedDate || now.slice(0, 10),
           now,
         ],
       )
-    } catch {}
+    } catch {
+      // Best effort, as before: a fitment index that cannot be written is rebuilt on next read.
+    }
 
     // 2. Insert into vehicle_attributes
     db.run(
@@ -170,7 +174,7 @@ export function registerFitmentsRoutes(router: Router) {
       data: {
         id,
         serialId,
-        vin: payload.vin.toUpperCase(),
+        vin: vin.toUpperCase(),
         make: payload.make,
         model: payload.model,
         year: payload.year,

@@ -191,29 +191,6 @@ const ItemIcon = memo(function ItemIcon({
 })
 ItemIcon.displayName = 'ItemIcon'
 
-// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
-//
-// ⚠️ «بیشتر» IS GONE, AND THAT WAS THE WHOLE PROBLEM.
-//
-// Every destination outside the daily five lived behind one button labelled
-// «بیشتر», which opened an ABSOLUTELY POSITIONED panel floating over the rest
-// of the sidebar. That panel could not extend the sidebar's scroll area, so it
-// needed a hand-tuned `max-height`, its own click-outside listener and its own
-// Escape handler — and on a laptop screen the last groups still fell past the
-// bottom edge where the sidebar's own scrollbar could not reach them.
-//
-// Twenty-six destinations behind one word that names none of them is not
-// navigation. Somebody looking for «بانک» had no reason to guess it was there.
-//
-// The groups are now rows in the sidebar itself: click one and its
-// destinations open BENEATH it, in the document, where the scrollbar works.
-// Everything the panel needed — the height cap, the outside-click listener,
-// the Escape handler, the z-index — is deleted, because a section of a
-// scrolling list needs none of it.
-
-/** How many groups may stand open at once. */
-const OPEN_LIMIT = Infinity
-
 /** One destination row. */
 const NavRow = memo(function NavRow({
   item,

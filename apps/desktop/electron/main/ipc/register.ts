@@ -29,7 +29,7 @@ import {
   httpRequestSchema,
 } from '@hisabche/app-bridge'
 import { TITLE_BAR_HEIGHT } from '../window'
-import { sessionCan } from '@hisabche/auth-core'
+import { sessionCan, type Capability } from '@hisabche/auth-core'
 import type { AppInfo, ImportedFile } from '@hisabche/app-bridge'
 import * as db from '../db/database'
 import { secureDelete, secureGet, secureSet } from '../services/secure-store'
@@ -68,13 +68,13 @@ export function authenticate<I, O>(
 }
 
 /** Authorization middleware for specific capabilities */
-export function authorize(capability: string) {
+export function authorize(capability: Capability) {
   return <I, O>(handler: (input: I, event: Electron.IpcMainInvokeEvent) => O | Promise<O>) => {
     return async (input: I, event: Electron.IpcMainInvokeEvent): Promise<O> => {
       const { sessionStore } = await import('../../shared/lib/storage')
       const session = await sessionStore.read()
 
-      if (!sessionCan(session, capability as any)) {
+      if (!sessionCan(session, capability)) {
         throw new Error('FORBIDDEN: Insufficient permissions for ' + capability)
       }
 
@@ -85,8 +85,8 @@ export function authorize(capability: string) {
 
 /** Context middleware for IPC handlers */
 export function authenticateAndAuthorize(
-  capability: string | null = null,
-  validateInput?: boolean,
+  capability: Capability | null = null,
+  _validateInput?: boolean,
 ) {
   return <I, O>(handler: (input: I, event: Electron.IpcMainInvokeEvent) => O | Promise<O>) => {
     return async (input: I, event: Electron.IpcMainInvokeEvent): Promise<O> => {
@@ -98,7 +98,7 @@ export function authenticateAndAuthorize(
       }
 
       if (capability) {
-        if (!sessionCan(session, capability as any)) {
+        if (!sessionCan(session, capability)) {
           throw new Error('FORBIDDEN: Insufficient permissions for ' + capability)
         }
       }
@@ -119,7 +119,7 @@ function handle<TInput, TResult>(
       return await handler(schema.parse(raw), event)
     } catch (error) {
       console.error(`[ipc] ${channel} rejected:`, error)
-      throw new Error(`IPC_REJECTED:${channel}`)
+      throw new Error(`IPC_REJECTED:${channel}`, { cause: error })
     }
   })
 }

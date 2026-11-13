@@ -29,7 +29,7 @@ export function CycleCountContainer() {
   const t = useTranslations()
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
-  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+  const { date: fmtIntlDate } = useDateFormat()
   const [activeId, setActiveId] = useState<string | undefined>(undefined)
 
   const counts = useCycleCounts()

@@ -268,27 +268,6 @@ export function customerRisk(input: CustomerRiskInput): CustomerRisk {
 
   return { customerId: input.customerId, band, score: worst.weight, signals, facts, reason: null }
 }
-
-/**
- * The latest date the shop knows about, used to decide what is overdue.
- *
- * ⚠️ DERIVED FROM THE DATA, not from `Date.now()`. A rule that reads the clock
- * itself can only be tested at whatever time the suite happens to run, and a
- * scoring function whose answer changes with the wall clock is a function whose
- * history is unreadable — you cannot tell a customer's behaviour from their
- * record's vintage.
- *
- * ⚠️ AND IT IS THE LATEST UNSETTLED DUE DATE, NOT THE LATEST DATE OF ANY KIND.
- * The first version took the maximum across every field including `settledOn`,
- * so a customer whose last settled invoice was paid in March had a "today" of
- * March — and invoices due in May were never overdue. Two invoices past their
- * date produced no signal at all, which is the one thing the rule exists to
- * catch.
- */
-function todayIso(payments: readonly PaymentBehaviour[]): string {
-  return latestDateAnywhere(payments)
-}
-
 /** The latest date that appears anywhere in the record. */
 function latestDateAnywhere(payments: readonly PaymentBehaviour[]): string {
   return payments.reduce((latest, p) => {

@@ -3,7 +3,7 @@ import { apiClient } from '../../lib/client'
 import { readStorage, writeStorage } from '../../storage'
 
 export interface CmsGlobals {
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // 1 hour memory TTL to avoid reading from disk on every render mount
@@ -37,14 +37,14 @@ export function useCmsRemoteContent(locale: string = 'fa') {
           try {
             initialData = JSON.parse(diskCache)
             memoryCache[locale] = { etag: cachedEtag, data: initialData!, timestamp: Date.now() }
-          } catch (e) {
+          } catch {
             // corrupt cache
           }
         }
       }
 
       try {
-        const config: any = {
+        const config: NonNullable<Parameters<typeof apiClient.get>[1]> = {
           validateStatus: (status: number) => (status >= 200 && status < 300) || status === 304,
         }
         if (cachedEtag) {

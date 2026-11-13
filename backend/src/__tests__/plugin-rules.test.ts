@@ -131,7 +131,7 @@ describe('manifest validation', () => {
 
   it('REQUIRES a plugin that reads data to declare where it sends it', () => {
     // Before installation, not in a privacy policy nobody opens.
-    const { dataEgress, ...withoutEgress } = base
+    const { dataEgress: _dataEgress, ...withoutEgress } = base
     expect(validateManifest(withoutEgress)).toContain('PLUGIN_EGRESS_UNDECLARED')
   })
 

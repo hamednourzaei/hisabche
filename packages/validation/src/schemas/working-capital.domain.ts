@@ -215,7 +215,6 @@ export function instalment(
     // schedule engines use, and for the same reason: a schedule that does not
     // foot is one the borrower disputes.
     const base = Math.floor(principalMinor / count)
-    const last = principalMinor - base * (count - 1)
     // ⚠️ `totalMinor` is the sum of what is actually paid, which is what a
     // borrower compares against what they still owe. The first version returned
     // `last` there, so a zero-rate loan reported a total of ONE instalment for

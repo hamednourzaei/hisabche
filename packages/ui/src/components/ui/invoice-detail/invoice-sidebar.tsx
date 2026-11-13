@@ -174,7 +174,6 @@ const IconAction = ({
 export function InvoiceSidebar({
   t,
   statusInfo,
-  summary,
   metadata,
   actions,
   shareUrl,

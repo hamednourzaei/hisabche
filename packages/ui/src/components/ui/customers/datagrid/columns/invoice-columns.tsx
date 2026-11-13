@@ -1,5 +1,5 @@
 // packages/ui/src/components/ui/customers/datagrid/columns/invoice-columns.ts
-import type { ColumnDef } from "../datagrid"
+import type { ColumnDef } from '../datagrid'
 
 export interface InvoiceRow {
   id: string
@@ -12,24 +12,26 @@ export interface InvoiceRow {
   currency?: string
 }
 
-export function getInvoiceColumns(t: (key: string, fallback?: string) => string): ColumnDef<InvoiceRow>[] {
+export function getInvoiceColumns(
+  t: (key: string, fallback?: string) => string,
+): ColumnDef<InvoiceRow>[] {
   return [
     {
       id: 'invoiceNumber',
-      header: t("invoices.number", "شماره"),
+      header: t('invoices.number', 'شماره'),
       accessor: (row) => `#${row.invoiceNumber}`,
       width: 140,
     },
     {
       id: 'date',
-      header: t("invoices.date", "تاریخ"),
+      header: t('invoices.date', 'تاریخ'),
       accessor: (row) => row.date,
       type: 'date',
       width: 120,
     },
     {
       id: 'total',
-      header: t("invoices.total", "مبلغ کل"),
+      header: t('invoices.total', 'مبلغ کل'),
       accessor: (row) => row.total,
       type: 'currency',
       align: 'right',
@@ -37,7 +39,7 @@ export function getInvoiceColumns(t: (key: string, fallback?: string) => string)
     },
     {
       id: 'paidAmount',
-      header: t("invoices.paid", "پرداخت شده"),
+      header: t('invoices.paid', 'پرداخت شده'),
       accessor: (row) => row.paidAmount,
       type: 'currency',
       align: 'right',
@@ -45,20 +47,29 @@ export function getInvoiceColumns(t: (key: string, fallback?: string) => string)
     },
     {
       id: 'remaining',
-      header: t("invoices.remaining", "مانده"),
+      header: t('invoices.remaining', 'مانده'),
       accessor: (row) => row.remaining,
       type: 'currency',
       align: 'right',
       width: 130,
-      render: (value: number) => (
-        <span className={value > 0 ? "text-[hsl(var(--color-destructive))] font-bold tabular-nums" : "text-[hsl(var(--color-success))] tabular-nums"}>
-          {new Intl.NumberFormat('fa-IR').format(value)} AFN
-        </span>
-      ),
+      render: (raw) => {
+        const value = Number(raw) || 0
+        return (
+          <span
+            className={
+              value > 0
+                ? 'text-[hsl(var(--color-destructive))] font-bold tabular-nums'
+                : 'text-[hsl(var(--color-success))] tabular-nums'
+            }
+          >
+            {new Intl.NumberFormat('fa-IR').format(value)} AFN
+          </span>
+        )
+      },
     },
     {
       id: 'status',
-      header: t("invoices.status", "وضعیت"),
+      header: t('invoices.status', 'وضعیت'),
       accessor: (row) => row.status,
       type: 'badge',
       width: 110,

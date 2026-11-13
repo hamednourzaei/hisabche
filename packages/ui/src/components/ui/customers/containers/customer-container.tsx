@@ -7,18 +7,19 @@ import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { customersView } from '../customer-view'
+import { CustomersView } from '../customer-view'
 import { fmt } from '../../../../lib/customers/customers-format'
 import type { CustomerWithDebt } from '../../../../lib/customers/customers-types'
 import { useCustomersData } from '../../../../hooks/customers/use-customers-data'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import type { InvoiceRecord } from '../PaymentModal'
 
 // ============================================================
 // 📦 Typeهای محلی
 // ============================================================
 
 type CustomerWithInvoices = CustomerWithDebt & {
-  invoices: any[]
+  invoices: InvoiceRecord[]
 }
 
 // ============================================================
@@ -140,47 +141,51 @@ export function CustomersContainer({ role = 'all' }: CustomersContainerProps = {
   // ============================================================
   // 🎨 رندر
   // ============================================================
-  return customersView({
-    t,
-    fmt,
-    search,
-    onSearchChange: setSearch,
-    customersWithDebt: filteredCustomers,
-    totalCustomers,
-    debtorCount,
-    totalDebt,
-    overdueCount,
-    vipCount,
-    todaySales,
-    totalSales,
-    topCustomerName,
-    topCustomerAmount,
-    openDealsCount,
-    customersDelta,
-    salesDelta,
-    debtDelta,
-    topCustomerDelta,
-    statsCoverage,
-    isLoading,
-    isError,
-    errorMessage: error?.message || '',
-    onRetry: refetch,
-    selectedCustomerId,
-    role,
-    onSelectCustomer: handleSelectCustomer,
-    onClearSelection: handleClearSelection,
-    showAddModal,
-    onOpenAddModal: () => setShowAddModal(true),
-    onCloseAddModal: () => setShowAddModal(false),
-    showPaymentModal,
-    paymentCustomer,
-    paymentInvoices: paymentCustomer?.invoices || [],
-    onOpenPayment: handleOpenPayment,
-    onClosePayment: handleClosePayment,
-    onPaymentSuccess: handlePaymentSuccess,
-    onNewCreditInvoice: () => {},
-    currency: bookCurrency ?? '',
-  })
+  return (
+    <CustomersView
+      {...{
+        t,
+        fmt,
+        search,
+        onSearchChange: setSearch,
+        customersWithDebt: filteredCustomers,
+        totalCustomers,
+        debtorCount,
+        totalDebt,
+        overdueCount,
+        vipCount,
+        todaySales,
+        totalSales,
+        topCustomerName,
+        topCustomerAmount,
+        openDealsCount,
+        customersDelta,
+        salesDelta,
+        debtDelta,
+        topCustomerDelta,
+        statsCoverage,
+        isLoading,
+        isError,
+        errorMessage: error?.message || '',
+        onRetry: refetch,
+        selectedCustomerId,
+        role,
+        onSelectCustomer: handleSelectCustomer,
+        onClearSelection: handleClearSelection,
+        showAddModal,
+        onOpenAddModal: () => setShowAddModal(true),
+        onCloseAddModal: () => setShowAddModal(false),
+        showPaymentModal,
+        paymentCustomer,
+        paymentInvoices: paymentCustomer?.invoices || [],
+        onOpenPayment: handleOpenPayment,
+        onClosePayment: handleClosePayment,
+        onPaymentSuccess: handlePaymentSuccess,
+        onNewCreditInvoice: () => {},
+        currency: bookCurrency ?? '',
+      }}
+    />
+  )
 }
 
 // ✅ Alias برای backward compatibility

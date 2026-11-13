@@ -183,7 +183,6 @@ export const ApprovalCard = memo(function ApprovalCard({
   steps,
   currentStep,
   status,
-  instanceId,
   isPending,
   onAction,
   t,

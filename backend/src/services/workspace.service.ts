@@ -18,15 +18,6 @@ import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
 import crypto from 'crypto'
 import { assertWithinLimit } from './plan-limits.service'
-
-// ✅ Types
-interface WorkspaceMember {
-  id: string
-  user_id: string
-  role: 'owner' | 'admin' | 'member' | 'viewer'
-  joined_at: string
-}
-
 interface WorkspaceWithRole {
   id: string
   name: string
@@ -103,9 +94,6 @@ async function signaturesOf(workspaceIds: readonly string[]): Promise<Map<string
   return found
 }
 
-const WORKSPACE_MINIMAL = 'id, name, slug, is_active'
-
-const MEMBER_COLUMNS = 'id, user_id, role, joined_at'
 const MEMBER_MINIMAL = 'id, user_id, role'
 
 const INVITE_COLUMNS = 'id, email, role, status, invited_by, expires_at, created_at'

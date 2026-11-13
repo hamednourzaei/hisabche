@@ -185,7 +185,7 @@ function TopupForm({ methods }: { methods: WalletPaymentMethod[] }) {
     if (receipt && receipt.size > RECEIPT_MAX_BYTES) {
       return setLocalError(t('wallet.errors.WALLET_RECEIPT_TOO_LARGE'))
     }
-    let base64: string | null = null
+    let base64: string | null
     try {
       base64 = receipt ? await fileToBase64(receipt) : null
     } catch {

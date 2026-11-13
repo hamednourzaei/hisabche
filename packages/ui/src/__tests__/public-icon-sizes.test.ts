@@ -53,7 +53,9 @@ describe('icons are declared once and cached', () => {
   // Root-of-public files had no Cache-Control rule and were served max-age=0.
   it('root icons, screenshots and the manifest have a Cache-Control rule', () => {
     expect(config).toContain('favicon-.*')
-    expect(config).toContain('site\\.webmanifest')
+    // 13 Nov 2026: in the JS source the dot must be escaped TWICE — a single backslash in a
+    // string is dropped, and the route regex read «site.webmanifest» with «.» = any character.
+    expect(config).toContain('site\\\\.webmanifest')
     expect(config).toContain('public, max-age=86400, stale-while-revalidate=604800')
   })
 })

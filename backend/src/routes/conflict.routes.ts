@@ -13,13 +13,13 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { ConflictService } from '../services/conflict'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { toJsonSchema } from '../utils/json-schema'
 
 /**
  * `zodToJsonSchema` behind a shallow signature.
@@ -28,16 +28,6 @@ import { requireCapability } from '../middleware/authorize.middleware'
  * (TS2589 «excessively deep») as soon as the argument is `z.any()`. The cast
  * below is a type boundary only — same call, same output.
  */
-const toJsonSchema = (schema: unknown): Record<string, unknown> => {
-  const convert = zodToJsonSchema as unknown as (
-    schema: unknown,
-    options: { target: 'jsonSchema7' },
-  ) => Record<string, unknown>
-  const result = convert(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
-
 const resolveSchema = z.object({
   choice: z.enum(['keep_server', 'keep_client', 'merge']),
   /** Required for `merge`: which side each diverging field takes. */

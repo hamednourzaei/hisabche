@@ -143,7 +143,10 @@ export function useInfiniteActivities(filters?: ActivityFilter) {
   return useInfiniteQuery({
     queryKey: activityKeys.infinite(filters),
     queryFn: async ({ pageParam = null }) => {
-      const { data } = await apiClient.get('/v1/activities', {
+      const { data } = await apiClient.get<{
+        data: ActivityGroupDto[]
+        nextCursor?: string | null
+      }>('/v1/activities', {
         params: {
           ...filters,
           cursor: pageParam,
@@ -152,7 +155,7 @@ export function useInfiniteActivities(filters?: ActivityFilter) {
       })
       return data
     },
-    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
     initialPageParam: null as string | null,
     enabled: authReady,
     staleTime: 30_000,

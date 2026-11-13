@@ -16,6 +16,7 @@ import type {
   ClaimSubscriptionOrder,
   ProvisionFromOrder,
   ProvisionResponse,
+  UsageLimits,
 } from '@hisabche/validation'
 import { asList } from '../lib/as-list'
 
@@ -35,7 +36,7 @@ export interface BillingPlan {
    * long, and a wrong currency on a price is worse than a missing one.
    */
   currency?: string
-  limits: any
+  limits: UsageLimits
   featureKeys: string[]
 }
 
@@ -46,7 +47,7 @@ export interface UsageReport {
     workspaces: number
     transactions: number
   }
-  limits: any
+  limits: UsageLimits
   plan: Plan
   isTrial: boolean
 }

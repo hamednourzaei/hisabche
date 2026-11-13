@@ -16,11 +16,11 @@ module.exports = {
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/../../packages/app-shell/src/$1',
-    '\.css$': '<rootDir>/src/__mocks__/style.js',
+    '\\.css$': '<rootDir>/src/__mocks__/style.js',
   },
   transform: {
     // @noble/hashes (the local engine's checksum) ships ES modules only: it is compiled too.
-    '^.+\.(t|j)sx?$': [
+    '^.+\\.(t|j)sx?$': [
       'ts-jest',
       { tsconfig: { jsx: 'react-jsx', module: 'commonjs', allowJs: true } },
     ],

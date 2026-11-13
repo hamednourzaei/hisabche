@@ -19,7 +19,6 @@ import {
 } from '../services/authorization'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { SOD_RULES, SoDService } from '../services/authorization'
 import { BaseError } from '../errors/base.error'
@@ -28,12 +27,7 @@ import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { memberModuleBlocks } from '../services/authorization/member-module-blocks.service'
 import { PERMISSION_MODULES } from '../services/authorization/authorization.domain'
-
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+import { toJsonSchema } from '../utils/json-schema'
 
 const settingsSchema = z.object({
   mode: z.enum(['off', 'warn', 'strict']).optional(),

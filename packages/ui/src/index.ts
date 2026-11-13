@@ -277,7 +277,7 @@ export { PaymentModal } from './components/ui/customers'
 export { InviteModal } from './components/ui/invite-modal'
 
 // ---------- Pages — Customers ----------
-export { customersView, customersSkeleton } from './components/ui/customers'
+export { CustomersView, customersSkeleton } from './components/ui/customers'
 export { customersContainer as customersPage } from './components/ui/customers/containers/customer-container'
 
 // ---------- Pages — Warehouse ----------
@@ -321,7 +321,7 @@ export {
   DevelopersView,
   type DevelopersViewProps,
 } from './components/ui/developers/developers-view'
-export { warehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
+export { WarehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
 export { WarehouseTabsContainer } from './components/ui/warehouse/containers/warehouse-tabs-container'
 export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'

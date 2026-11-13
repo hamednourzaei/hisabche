@@ -164,7 +164,7 @@ export function verifyAssertion(
     input.authenticatorData,
     createHash('sha256').update(input.clientDataJSON).digest(),
   ])
-  let good = false
+  let good: boolean
   try {
     good = verify('sha256', signed, key, input.signature)
   } catch {

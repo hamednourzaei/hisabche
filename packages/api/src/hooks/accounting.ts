@@ -14,7 +14,12 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { CostObjectProfitReport, CreateJournalEntry } from '@hisabche/validation'
+import type {
+  CostObjectProfitReport,
+  CreateJournalEntry,
+  createAccountSchema,
+} from '@hisabche/validation'
+import type { z } from 'zod'
 import apiClient, { localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
@@ -233,7 +238,8 @@ export function useAccounts() {
 export function useCreateAccount() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: any) => {
+    // What a client sends — the schema's INPUT (isActive/isGroup have defaults).
+    mutationFn: async (input: z.input<typeof createAccountSchema>) => {
       const { data } = await apiClient.post('/accounting/accounts', input)
       return data
     },

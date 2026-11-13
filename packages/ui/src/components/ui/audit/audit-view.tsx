@@ -30,7 +30,7 @@ interface AuditLog {
   created_at: string
   ip_address?: string
   user_name?: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 interface AuditViewProps {
@@ -41,13 +41,14 @@ interface AuditViewProps {
   isLoading: boolean
   error?: string | null
   filters: {
-    action?: string
-    entityType?: string
-    startDate?: string
-    endDate?: string
-    search?: string
+    action?: string | undefined
+    entityType?: string | undefined
+    startDate?: string | undefined
+    endDate?: string | undefined
+    search?: string | undefined
   }
-  onFiltersChange: (filters: any) => void
+  /** The filters, and the page to show after the change (always back to 1 on a new filter). */
+  onFiltersChange: (filters: AuditViewProps['filters'] & { page?: number | undefined }) => void
   onPageChange: (page: number) => void
   onRefresh?: () => void
   onExport?: () => void

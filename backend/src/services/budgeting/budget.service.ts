@@ -67,6 +67,7 @@ import {
   type BudgetType,
   type PlannedBudget,
 } from '@hisabche/validation'
+import type { DbRow } from '../../utils/db-row'
 
 const LEGACY_COLUMNS =
   'id, account_id, dimension_value_id, branch_id, period, starts_on, amount_minor, action, warn_at_percent, is_active'
@@ -154,9 +155,7 @@ export class BudgetService {
     if (error) throw new DatabaseError('Failed to fetch budgets', error)
 
     const books = await baseCurrencyOf(ctx.workspaceId)
-    const budgets = ((data ?? []) as unknown as Record<string, any>[]).map((raw) =>
-      mapBudget(raw, books),
-    )
+    const budgets = ((data ?? []) as unknown as DbRow[]).map((raw) => mapBudget(raw, books))
     await memoryCache.set(cacheKey, budgets, 300)
     return budgets
   }
@@ -284,7 +283,7 @@ export class BudgetService {
     if (error) throw new DatabaseError('Failed to save the budget', error)
 
     await this.invalidate(ctx.workspaceId)
-    const saved = mapBudget(data as Record<string, any>, books)
+    const saved = mapBudget(data as DbRow, books)
     // SoD: index who drafted/edited this budget, so approval can be separated.
     await sod.recordAction(ctx, 'budget.manage', 'budget', saved.id)
     await this.writeAudit(
@@ -369,7 +368,7 @@ export class BudgetService {
     if (!data) throw new ConflictError('BUDGET_INVALID_TRANSITION')
 
     await this.invalidate(ctx.workspaceId)
-    const after = mapBudget(data as Record<string, any>, await baseCurrencyOf(ctx.workspaceId))
+    const after = mapBudget(data as DbRow, await baseCurrencyOf(ctx.workspaceId))
     await this.writeAudit(ctx, `budget.${to}`, id, { status: from }, { status: to })
     return after
   }

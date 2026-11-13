@@ -25,7 +25,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: async (input: LoginInput) => {
       const response = await apiClient.post<AuthResponse['data']>('/auth/login', input)
-      const data = (response as any).data || response
+      const data = response.data
       writeStorage(STORAGE_KEYS.token, data.token)
       return data
     },
@@ -36,7 +36,7 @@ export function useSignUp() {
   return useMutation({
     mutationFn: async (input: SignUpInput) => {
       const response = await apiClient.post<AuthResponse['data']>('/auth/signup', input)
-      const data = (response as any).data || response
+      const data = response.data
       writeStorage(STORAGE_KEYS.token, data.token)
       return data
     },
@@ -59,9 +59,8 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => {
-      const response = await apiClient.get<{ user: any }>('/auth/me')
-      const data = (response as any).data || response
-      return data.user
+      const response = await apiClient.get<{ user: AuthResponse['data']['user'] }>('/auth/me')
+      return response.data.user
     },
     enabled: authReady,
     staleTime: 1000 * 60 * 10,
