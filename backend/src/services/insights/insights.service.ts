@@ -26,7 +26,6 @@ import {
   periodGrossProfit,
   knownGrossMargin,
   knownGrossProfit,
-  round2,
   type LineForReview,
   type PeriodTotals,
 } from './insights.domain'

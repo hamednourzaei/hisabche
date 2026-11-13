@@ -9,7 +9,7 @@
 
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { supabase } from '../../db'
-import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
+import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'

@@ -6,7 +6,6 @@
 import { createHash } from 'node:crypto'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   loginSchema,
   signUpSchema,

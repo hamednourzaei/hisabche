@@ -34,7 +34,6 @@ import {
   discountedFirstPaymentMinor,
   eligibility,
   generateReferralCode,
-  isAttributionOpen,
   isReferralCodeShape,
   summarize,
   type ReferralListItem,

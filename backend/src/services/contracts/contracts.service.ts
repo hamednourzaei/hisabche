@@ -3,8 +3,15 @@
 //
 // V60 Slice 9 — Contracts, recurring obligations, lease return & SLAs.
 // Delegates billing to InvoiceService.create (idempotent per contract + periodKey),
-// keeps deposits as liability (no early revenue recognition), frees lease bookings
+// records the deposit ON THE CONTRACT (no revenue), frees lease bookings
 // through SalonService + routeReturnConditionDisposition.
+//
+// 12 Nov 2026 audit: the deposit was described as «held as liability» but nothing is posted
+// to the ledger — the contract only records the amount agreed. Receiving the money is a
+// payment; the log now says exactly that. Lease return wrote serial statuses the database
+// refuses (`quarantined` / `available`, CHECK allows in_stock · reserved · sold · returned ·
+// scrapped) and ignored the error, so it «succeeded» without changing anything. Three other
+// writes/reads here also dropped their error.
 // ============================================
 
 import { FRACTION_DIGITS } from '@hisabche/formatting'
@@ -49,6 +56,19 @@ export interface ContractRow {
   sla_breach_reason: string | null
   resource_booking_id: string | null
   serial_id: string | null
+}
+
+/**
+ * The serial's status after a lease return, in the values `stock_serials_status_check` allows:
+ * sellable → `in_stock` (rentable again); quarantine → `returned` (back, held, not rentable);
+ * scrap → `scrapped`.
+ */
+export function leaseReturnSerialStatus(
+  bucket: 'sellable_stock' | 'quarantine' | 'scrap',
+): 'in_stock' | 'returned' | 'scrapped' {
+  if (bucket === 'sellable_stock') return 'in_stock'
+  if (bucket === 'quarantine') return 'returned'
+  return 'scrapped'
 }
 
 export class ContractsService {
@@ -106,8 +126,8 @@ export class ContractsService {
         workspaceId: ctx.workspaceId,
         entityType: 'contract',
         entityId: String((data as { id: string }).id),
-        action: 'contract_deposit_liability_recorded',
-        title: `Security deposit held as liability for ${input.title}`,
+        action: 'contract_deposit_recorded',
+        title: `Security deposit agreed on contract ${input.title} (recorded on the contract, not posted to the books)`,
         metadata: { depositMinor: input.depositMinor, currency },
         notify: false,
       })
@@ -136,7 +156,7 @@ export class ContractsService {
       throw new ConflictError('CONTRACT_NOT_ACTIVE')
     }
 
-    const { data: existingOb } = await supabase
+    const { data: existingOb, error: existingErr } = await supabase
       .from('contract_obligations')
       .select('*')
       .eq('workspace_id', ctx.workspaceId)
@@ -144,6 +164,7 @@ export class ContractsService {
       .eq('kind', 'bill')
       .eq('period_key', input.periodKey)
       .maybeSingle()
+    if (existingErr) throw new DatabaseError('Failed to read the billing period', existingErr)
 
     if (existingOb && existingOb.status === 'completed' && existingOb.invoice_id) {
       return {
@@ -166,7 +187,7 @@ export class ContractsService {
       })
       if (obErr) {
         if (obErr.code === '23505') {
-          const { data: raced } = await supabase
+          const { data: raced, error: racedErr } = await supabase
             .from('contract_obligations')
             .select('invoice_id, status')
             .eq('workspace_id', ctx.workspaceId)
@@ -174,6 +195,7 @@ export class ContractsService {
             .eq('kind', 'bill')
             .eq('period_key', input.periodKey)
             .maybeSingle()
+          if (racedErr) throw new DatabaseError('Failed to read the billing period', racedErr)
           if (raced?.invoice_id) {
             return {
               replayed: true,
@@ -207,7 +229,7 @@ export class ContractsService {
     } as Parameters<InvoiceService['create']>[1])
 
     const invoiceId = String((created as { id: string }).id)
-    await supabase
+    const { error: closeErr } = await supabase
       .from('contract_obligations')
       .update({
         status: 'completed',
@@ -218,6 +240,9 @@ export class ContractsService {
       .eq('contract_id', contractId)
       .eq('kind', 'bill')
       .eq('period_key', input.periodKey)
+    // The invoice exists; a retry replays it through the same idempotency key and closes the
+    // period then. Saying «done» while the period still reads «pending» would be the lie.
+    if (closeErr) throw new DatabaseError('Failed to close the billing period', closeErr)
 
     await invalidateMoneyCaches(ctx.workspaceId)
     return { replayed: false, invoiceId, periodKey: input.periodKey }
@@ -240,12 +265,13 @@ export class ContractsService {
     if (!data) throw new NotFoundError('Contract')
 
     // Stops ONLY pending future obligations; completed history remains untouched.
-    await supabase
+    const { error: cancelErr } = await supabase
       .from('contract_obligations')
       .update({ status: 'cancelled' })
       .eq('workspace_id', ctx.workspaceId)
       .eq('contract_id', contractId)
       .eq('status', 'pending')
+    if (cancelErr) throw new DatabaseError('Failed to cancel pending obligations', cancelErr)
 
     return data as ContractRow
   }
@@ -319,20 +345,20 @@ export class ContractsService {
     if (!raw) throw new NotFoundError('Contract')
     const contract = raw as ContractRow
 
+    // A damaged rental comes back to quarantine, not to the scrap heap: writing an asset off is
+    // a person's decision, never a side effect of a return.
     const disposition = routeReturnConditionDisposition({
       conditionCode: input.conditionCode,
-      restockChoice:
-        input.conditionCode === 'damaged' || input.conditionCode === 'defective'
-          ? 'scrap'
-          : 'restock',
+      restockChoice: 'restock',
     })
 
     if (contract.serial_id) {
-      await supabase
+      const { error: serialErr } = await supabase
         .from('stock_serials')
-        .update({ status: disposition.bucket === 'quarantine' ? 'quarantined' : 'available' })
+        .update({ status: leaseReturnSerialStatus(disposition.bucket) })
         .eq('workspace_id', ctx.workspaceId)
         .eq('id', contract.serial_id)
+      if (serialErr) throw new DatabaseError('Failed to update the returned serial', serialErr)
     }
 
     if (contract.resource_booking_id) {

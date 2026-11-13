@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Button,
-  Card,
   EmptyState,
   Input,
   PaginationBar,

@@ -1,5 +1,5 @@
 // packages/ui/src/lib/activity/entity-registry.ts
-import { FileText, User, Package, DollarSign, Users, PackageOpen } from 'lucide-react'
+import { FileText, Package, DollarSign, Users, PackageOpen } from 'lucide-react'
 
 // ─── Status labels/colors used by invoice.statusRenderer ───────────────────
 const statusMap: Record<string, string> = {

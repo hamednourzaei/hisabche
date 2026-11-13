@@ -387,8 +387,15 @@ export type DnaSetupGap =
   | 'REGULATED_DOMAIN_UNRESOLVED'
   | 'REGULATED_DOMAIN_COMPLIANCE'
 
+/**
+ * The catalog key of a gap's message. The catalogs name gaps in camelCase
+ * (`onboarding.operating.gaps.regulatedDomainCompliance`); the first version returned the
+ * code itself (`…gaps.REGULATED_DOMAIN_COMPLIANCE`) and onboarding showed the raw key
+ * (12 Nov 2026).
+ */
 export function setupGapMessageKey(gap: DnaSetupGap): string {
-  return `onboarding.operating.gaps.${gap}`
+  const camel = gap.toLowerCase().replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())
+  return `onboarding.operating.gaps.${camel}`
 }
 
 /** Reads missing optional axes as UNRESOLVED so legacy DNAs never guess defaults. */

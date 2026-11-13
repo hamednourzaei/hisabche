@@ -17,9 +17,6 @@ import {
   reverseJournalEntrySchema,
   round2,
   type AccountRootType,
-  type ProfitConsumption,
-  type ProfitInvoice,
-  type ProfitLine,
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'

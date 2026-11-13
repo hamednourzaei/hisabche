@@ -28,7 +28,6 @@ import { selectAllPages } from '../../utils/fetch-all-pages'
 import {
   MARKABLE_STATUSES,
   buildAttendanceSheet,
-  hhmm,
   planAttendanceMark,
   sheetRecordOf,
   type AttendanceMark,

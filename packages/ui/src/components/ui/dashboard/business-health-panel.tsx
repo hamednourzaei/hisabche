@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import {
   TrendingUp,
-  TrendingDown,
   Receipt,
   AlertTriangle,
   Package,

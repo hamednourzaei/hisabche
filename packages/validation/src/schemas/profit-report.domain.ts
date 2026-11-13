@@ -593,8 +593,12 @@ export interface CostObjectProfitRow {
   readonly overheadStatus: 'not_allocated' | 'allocated'
   readonly overheadNote: string | null
   readonly overhead: number | null
+  /** null until an overhead rule allocates this object's share — unallocated is unknown, not 0. */
   readonly netProfit: number | null
+  /** Net margin: null whenever `netProfit` is. */
   readonly marginPercent: number | null
+  /** Gross profit over revenue; null when gross profit is unknown. */
+  readonly grossMarginPercent: number | null
   readonly costStatus: CostStatus
   readonly invoiceCount: number
 }
@@ -607,6 +611,11 @@ export interface CostObjectProfitReport {
   readonly overheadPolicyStatus: 'not_allocated' | 'allocated'
   readonly overheadNotice: string
   readonly rows: readonly CostObjectProfitRow[]
+  /**
+   * Sales in this currency that name no project or branch. They are in the period's profit but
+   * in no row here — counted, so the rows are never read as the whole business.
+   */
+  readonly untagged: { readonly invoiceCount: number; readonly revenue: number }
 }
 
 /**
@@ -678,12 +687,13 @@ export function buildCostObjectProfitReport(input: {
       ? round2(input.overheadPolicy!.allocatedByCostObjectId[group.costObjectId]!)
       : null
 
-    // Unknown gross profit stays null ("unknown is not zero").
-    const netVal = gp === null ? null : overheadVal === null ? gp : round2(gp - overheadVal)
-    const marginVal =
-      netVal === null || subReport.totals.revenue <= 0
-        ? null
-        : round2((netVal / subReport.totals.revenue) * 100)
+    // Unknown gross profit stays null ("unknown is not zero"). 12 Nov 2026 audit: with no
+    // overhead allocated, net profit was reported EQUAL to gross profit — overhead counted as 0.
+    // Net is known only when both gross profit and this object's overhead are.
+    const netVal = gp === null || overheadVal === null ? null : round2(gp - overheadVal)
+    const revenue = subReport.totals.revenue
+    const marginVal = netVal === null || revenue <= 0 ? null : round2((netVal / revenue) * 100)
+    const grossMarginVal = gp === null || revenue <= 0 ? null : round2((gp / revenue) * 100)
 
     rows.push({
       costObjectId: group.costObjectId,
@@ -698,6 +708,7 @@ export function buildCostObjectProfitReport(input: {
       overhead: overheadVal,
       netProfit: netVal,
       marginPercent: marginVal,
+      grossMarginPercent: grossMarginVal,
       costStatus: subReport.totals.costStatus,
       invoiceCount: subReport.totals.invoiceCount,
     })
@@ -712,5 +723,25 @@ export function buildCostObjectProfitReport(input: {
       ? input.overheadPolicy.policyKey
       : 'overhead not allocated',
     rows,
+    untagged: untaggedTotals(input, inCurrency),
   }
+}
+
+function untaggedTotals(
+  input: Parameters<typeof buildCostObjectProfitReport>[0],
+  inCurrency: readonly CostObjectInvoiceInput[],
+): { invoiceCount: number; revenue: number } {
+  const invoices = inCurrency.filter((inv) => !inv.costObjectId)
+  if (invoices.length === 0) return { invoiceCount: 0, revenue: 0 }
+  const ids = new Set(invoices.map((inv) => inv.id))
+  const report = buildProfitReport({
+    from: input.from,
+    to: input.to,
+    currency: input.currency,
+    invoices,
+    lines: input.lines.filter((line) => ids.has(line.invoiceId)),
+    consumptions: input.consumptions.filter((c) => c.invoiceId !== null && ids.has(c.invoiceId)),
+    payrolls: [],
+  })
+  return { invoiceCount: report.totals.invoiceCount, revenue: report.totals.revenue }
 }

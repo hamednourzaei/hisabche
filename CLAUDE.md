@@ -195,7 +195,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **بسته‌های صنفی سند QA روی هسته‌ی عمومی: لباس (موجودی هر واریانت، جدول سایز×رنگ، واریانت در فاکتور)، درخواست انتقال، تعمیرات/رزرو، صرافی/حواله، سالن/کمیسیون (۱۰ نوامبر)** | `docs/product/QA-2026-11-09-RESPONSE.md` § دور دوم · درس ۲۵۷ — variant-stock-01 (۵/۵)، retail-ops-01 (۸/۸)، exchange-01 (۱۰/۱۰)، salon-01 (۹/۹) اجرا و VERIFY شد، ۱۰ نوامبر |
 | **ممیزی V61/V63: سرویس‌های ۵۰۰، فرم درگاه، دیوار تلویزیون، ۱۱۳ مورد (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.1 · `V63-IMPLEMENTATION-PROGRESS.md` §8 · `admin/V63-113-ITEMS.md` — **۳ مهاجرت V61 تازه منتظر اجرا و VERIFY** |
 | **تصمیم‌های مالک V61: فروشنده = عضو، یک موتور تأیید، حذف دو نفره در کنسول (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.2 — **invoices-seller-01 و admin-action-types-03 منتظر اجرا و VERIFY** |
-| **همه‌ی درس‌ها با شماره (۱–۲۶۰)**                                     | `.claude/lessons-learned.md`                                                |
+| **ممیزی V60 با کد و پرامپت V64 «قابل فروش» (۱۲ نوامبر)** | `docs/architecture/V60-IMPLEMENTATION-PROGRESS.md` §13 · `docs/architecture/V64-PROMPT.md` — **۱۳ صنف workflowComplete، ۳۰ بی‌پروفایل** |
+| **همه‌ی درس‌ها با شماره (۱–۲۶۱)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |

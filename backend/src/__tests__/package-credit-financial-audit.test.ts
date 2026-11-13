@@ -16,7 +16,6 @@ import { describe, expect, it } from 'vitest'
 import {
   derivePackageBalance,
   movesStock,
-  isServiceOffering,
   isPackageOffering,
   type PackageCreditEntry,
   type PackageCreditEntryType,

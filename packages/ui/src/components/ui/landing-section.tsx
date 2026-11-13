@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, memo, type ReactNode } from 'react'
+import { useEffect, useRef, useState, memo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../lib/utils'

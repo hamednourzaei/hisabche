@@ -32,7 +32,6 @@
 
 import { KpiCard, KpiGrid, type KpiCardProps } from '../kpi-card'
 import { DocsHelpLink } from '../docs/docs-help-link'
-import type { LucideIcon } from 'lucide-react'
 
 import { SelectField as SharedSelectField } from '../select-field'
 import React from 'react'

@@ -11,8 +11,8 @@
 // `reducedMotion: 'reduce'`: the scene then draws exactly where the page is,
 // with no easing in between.
 
-/* global document, window, HTMLCanvasElement, getComputedStyle, Image, requestAnimationFrame */
-// (The functions handed to the page run in the browser, not in Node.)
+// The functions handed to the page run in the browser, not in Node (the lint config already
+// knows the browser globals; re-declaring them was a no-redeclare error).
 
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

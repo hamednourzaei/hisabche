@@ -25,7 +25,14 @@ import { accountingKeys } from './accounting'
 import { dashboardKeys } from './dashboard'
 import { paymentKeys } from './payments'
 import { warehouseKeys } from './warehouses'
-import type { Invoice, CreateInvoice, UpdateInvoice, InvoiceFilters } from '@hisabche/validation'
+import type {
+  Invoice,
+  CreateInvoice,
+  InvoiceExchangeRequest,
+  UpdateInvoice,
+  InvoiceFilters,
+} from '@hisabche/validation'
+import { useIntentKey } from '../lib/intent-key'
 
 // ============================================
 // Types
@@ -511,12 +518,19 @@ export function usePostUnpostedInvoices() {
 
 export function useExchangeInvoice() {
   const queryClient = useQueryClient()
+  // The same key while the same exchange is retried: the server then answers with the return
+  // and the replacement invoice it already made, instead of selling the replacement twice.
+  const intent = useIntentKey('exchange')
   return useMutation({
-    mutationFn: async ({ invoiceId, ...body }: { invoiceId: string } & Record<string, unknown>) => {
-      const { data } = await apiClient.post(`/invoices/${invoiceId}/exchange`, body)
+    mutationFn: async ({ invoiceId, ...body }: { invoiceId: string } & InvoiceExchangeRequest) => {
+      const { data } = await apiClient.post(`/invoices/${invoiceId}/exchange`, body, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
       return data
     },
+    onError: (error) => intent.settle(error),
     onSuccess: () => {
+      intent.settle()
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },

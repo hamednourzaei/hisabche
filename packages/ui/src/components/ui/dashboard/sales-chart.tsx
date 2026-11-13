@@ -8,12 +8,8 @@ import { memo, useMemo, useId } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import dynamic from 'next/dynamic'
-import { ArrowUp, ArrowDown, FileText } from 'lucide-react'
-import {
-  useMediaQuery,
-  useIsMobile,
-  useIsReducedMotion,
-} from '../../../hooks/dashboard/use-media-query'
+import { ArrowUp, ArrowDown } from 'lucide-react'
+import { useIsMobile, useIsReducedMotion } from '../../../hooks/dashboard/use-media-query'
 
 // Types
 export interface ChartDataPoint {

@@ -12,7 +12,7 @@ import { ForbiddenError } from '../errors/auth.error'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { ValidationError } from '../errors/validation.error'
 import {
-  invoiceItemSchema,
+  invoiceExchangeSchema,
   planReturnDisposition,
   routeReturnedSerial,
   routeReturnConditionDisposition,
@@ -239,25 +239,20 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
         const userId = request.tenancy.userId
         const { id } = request.params as { id: string }
         const clientRequestId = readClientRequestId(request)
-        const body = request.body as {
-          returnNumber: string
-          returnDate: string
-          notes?: string | undefined
-          warehouseId?: string | undefined
-          returnedLines: Array<{
-            originalLineId: string
-            variantId?: string | undefined
-            quantity: number
-            restockChoice?: 'restock' | 'scrap' | undefined
-            conditionCode?: ReturnCondition | undefined
-          }>
-          replacementItems?: unknown[] | undefined
-          paymentMethod?: 'cash' | 'bank' | 'credit' | undefined
-          paidAmount?: number | undefined
+        // 12 Nov 2026 (V60 audit): the body was a TypeScript cast — nothing checked it.
+        const parsed = invoiceExchangeSchema.safeParse(request.body)
+        if (!parsed.success) {
+          const issue = parsed.error.errors[0]
+          throw new ValidationError(
+            issue?.message === 'EXCHANGE_PAYMENT_UNSTATED'
+              ? 'EXCHANGE_PAYMENT_UNSTATED'
+              : parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          )
         }
-
-        if (!Array.isArray(body?.returnedLines) || body.returnedLines.length === 0) {
-          throw new ValidationError('RETURN_LINES_REQUIRED')
+        const body = parsed.data
+        // A replacement sale without a retry key would be sold twice by a retried request.
+        if (body.replacementItems.length > 0 && !clientRequestId) {
+          throw new ValidationError('IDEMPOTENCY_KEY_REQUIRED')
         }
 
         const { data: originalInv, error: invErr } = await supabase
@@ -288,7 +283,7 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
           returnType: 'sale_return',
           returnNumber: body.returnNumber,
           returnDate: body.returnDate,
-          reasonCode: 'wrong_item',
+          reasonCode: body.reasonCode,
           notes:
             body.notes ??
             lineDecisions
@@ -299,14 +294,14 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
             originalLineId: line.originalLineId,
             returnQuantity: line.quantity,
             restockChoice: decision.restockChoice,
-            reasonCode: 'wrong_item',
+            reasonCode: body.reasonCode,
             conditionCode: line.conditionCode,
           })),
         })
 
         let replacementInvoice: unknown = null
-        if (Array.isArray(body.replacementItems) && body.replacementItems.length > 0) {
-          const parsedItems = body.replacementItems.map((raw) => invoiceItemSchema.parse(raw))
+        if (body.replacementItems.length > 0) {
+          const parsedItems = body.replacementItems
           const invoiceService = new InvoiceService()
           replacementInvoice = await invoiceService.create(request.tenancy, {
             type: 'sale',
@@ -314,9 +309,9 @@ export async function invoiceReturnRoutes(fastify: FastifyInstance) {
             warehouseId: body.warehouseId ?? (originalInv.warehouse_id as string | undefined),
             customerId: (originalInv.customer_id as string | undefined) ?? undefined,
             currency: (originalInv.currency as string | undefined) ?? undefined,
-            paymentMethod: body.paymentMethod ?? 'cash',
-            paidAmount: body.paidAmount ?? 0,
-            idempotencyKey: clientRequestId ? `${clientRequestId}:exchange-sale` : undefined,
+            paymentMethod: body.paymentMethod,
+            paidAmount: body.paidAmount,
+            idempotencyKey: `${clientRequestId}:exchange-sale`,
             items: parsedItems,
           } as Parameters<InvoiceService['create']>[1])
         }

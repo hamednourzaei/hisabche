@@ -133,10 +133,14 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
           path: req.path,
         })
         const match = router.find(req.method, req.path)
+        // The matrix says WHICH feature and whether the device can ever run it.
+        const verdict = endpointAvailability(req.method, req.path)
 
-        if (!match) {
-          // The matrix says WHICH feature and whether the device can ever run it.
-          const verdict = endpointAvailability(req.method, req.path)
+        // A literal online-only path must not fall into a parameter route that happens to match:
+        // `GET /invoices/sales-by-seller` and `GET /employees/org-chart` reached `/invoices/:id` /
+        // `/employees/:id` and answered 404 «not found» instead of «needs the internet»
+        // (12 Nov 2026). The matrix row is the more specific answer, so it wins.
+        if (!match || (verdict !== null && verdict.status !== 'available')) {
           throw new OfflineNotAvailableError(
             verdict?.feature ?? req.path,
             verdict?.status === 'not_supported' ? 'not_supported' : 'online_required',

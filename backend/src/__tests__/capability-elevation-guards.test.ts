@@ -10,7 +10,7 @@
 // 4. Notification mark-read is strictly scoped to the requesting user.
 // ============================================
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { requireCapability } from '../middleware/authorize.middleware'
 
 describe('N-19: Capability Elevation Guards', () => {

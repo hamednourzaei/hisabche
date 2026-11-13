@@ -56,6 +56,7 @@ export async function createDisposableDatabase(): Promise<DisposableDatabase> {
       error instanceof Error && error.message.startsWith('REFUSED')
         ? error.message
         : 'could not create the disposable test database',
+      { cause: error },
     )
   }
   await admin.end({ timeout: 1 }).catch(() => undefined)

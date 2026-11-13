@@ -1511,3 +1511,10 @@ export * from './schemas/tax-templates-and-gateway'
 export * from './schemas/plugin-manifest'
 export * from './schemas/feature-packs'
 export * from './schemas/sync-backfill'
+
+// 12 Nov 2026 (V60 audit): the checked body of POST /api/invoices/:id/exchange.
+export {
+  invoiceExchangeSchema,
+  type InvoiceExchangeInput,
+  type InvoiceExchangeRequest,
+} from './schemas/invoice-exchange.schema'

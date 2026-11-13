@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { apiErrorMessage } from '@hisabche/api'
 import { APP_HEALTH_LEVELS, APP_REPORT_REASONS, APP_RISK_FLAGS } from '@hisabche/validation'
 
-import { Button, Card, EmptyState, Input, Skeleton } from '@/components/ui'
+import { Button, EmptyState, Input, Skeleton } from '@/components/ui'
 import { ErrorState } from '@/components/admin-shell/admin-ui'
 import {
   OAUTH_APP_STATUSES,

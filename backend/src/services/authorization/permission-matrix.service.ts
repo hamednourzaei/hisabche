@@ -45,7 +45,6 @@ import {
   effectiveCapabilities,
   PERMISSION_MODULES,
   capabilitiesForLevel,
-  capabilitiesOf,
   levelOfCapabilities,
   type AccessLevel,
   type Capability,

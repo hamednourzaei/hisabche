@@ -2,15 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 import { NotFoundError } from '../../errors/database.error'
 
-import {
-  BackgroundConfig,
-  ResponsiveLayout,
-  ResponsiveSpacing,
-  ResponsiveVisibility,
-  SectionConfig,
-  SectionDesign,
-  TypographyConfig,
-} from './cms.domain'
+import { SectionConfig } from './cms.domain'
 
 export interface CmsPageRow {
   id: string

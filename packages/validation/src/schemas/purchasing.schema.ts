@@ -5,7 +5,6 @@
 import { z } from 'zod'
 import {
   uuidSchema,
-  nonEmptyStringSchema,
   optionalStringSchema,
   positiveNumberSchema,
   isoDateSchema,

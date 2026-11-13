@@ -6,12 +6,7 @@ import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import {
-  createRoleSchema,
-  updateRoleSchema,
-  assignRoleSchema,
-  removeRoleSchema,
-} from '@hisabche/validation'
+import { createRoleSchema, updateRoleSchema, assignRoleSchema } from '@hisabche/validation'
 import { PermissionService } from '../services/permission.service'
 import { permissionMatrix } from '../services/authorization/permission-matrix.service'
 import { authenticate } from '../middleware/auth.middleware'

@@ -1,26 +1,3 @@
-// ============================================
-// Capabilities #108, #109, #13 — NPS and customer health.
-// Engine N21 (customer side, continued).
-//
-// ⚠️ NPS IS NOT A PERCENTAGE AND NOT A RATIO OF "SATISFIED".
-//
-// The classic NPS divides respondents into promoters (9–10), passives (7–8) and
-// detractors (0–6), then reports `% promoters − % detractors`. Every shortcut
-// around that produces a number that looks like NPS and is not:
-//
-//   * averaging the SCORES and calling it NPS — an average of 8.2 is not a net
-//     score, and reporting it as one tells a shop its customers are 8% happy
-//   * dividing promoters by all respondents — that is a satisfaction rate, and a
-//     shop with 60% promoters reports «60%» where the real figure is 20
-//   * including the people who were never asked — which lowers every number
-//     without saying anything
-//
-// So the score is computed ONLY from people who answered, and the respondent
-// count travels with it. `null` when nobody answered — not 0, because 0 NPS
-// means "every respondent is neutral" and "nobody answered" are not the same
-// statement.
-import type { OpenInvoice } from './payments.domain'
-
 export type NpsCategory = 'promoter' | 'passive' | 'detractor'
 
 export interface SurveyResponse {

@@ -883,7 +883,15 @@ export class AccountingRepository {
     }
   }
 
-  /** V60 Slice 8: maps sale invoice ids to their primary cost object (project or branch). */
+  /**
+   * V60 Slice 8: maps sale invoice ids to their primary cost object (project, else branch),
+   * labelled with the project's / branch's own name.
+   *
+   * 12 Nov 2026 audit: the first version answered a failed read with «no tags» (pattern 3 — a
+   * broken query reported as «nothing is tagged»), sent every id in one `.in()` (a long period
+   * overflows the URL), and labelled rows «Project 1a2b3c4d» in English. Ids now go in chunks of
+   * 200 and a failed read throws.
+   */
   async costObjectTagsForInvoices(
     workspaceId: string,
     invoiceIds: readonly string[],
@@ -899,29 +907,58 @@ export class AccountingRepository {
     >()
     if (invoiceIds.length === 0) return out
 
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('id, project_id, branch_id')
-      .eq('workspace_id', workspaceId)
-      .in('id', [...invoiceIds])
+    const rows: Array<{ id: string; project_id?: string | null; branch_id?: string | null }> = []
+    for (let i = 0; i < invoiceIds.length; i += 200) {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, project_id, branch_id')
+        .eq('workspace_id', workspaceId)
+        .in('id', invoiceIds.slice(i, i + 200))
+      if (error) throw new DatabaseError('Failed to read the cost objects of invoices', error)
+      rows.push(...((data ?? []) as typeof rows))
+    }
 
-    if (error || !data) return out
-    for (const row of data as Array<{
-      id: string
-      project_id?: string | null
-      branch_id?: string | null
-    }>) {
+    const names = async (table: 'projects' | 'branches', ids: string[]) => {
+      const found = new Map<string, string>()
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data, error } = await supabase
+          .from(table)
+          .select('id, name')
+          .eq('workspace_id', workspaceId)
+          .in('id', ids.slice(i, i + 200))
+        if (error) throw new DatabaseError(`Failed to read ${table} names`, error)
+        for (const row of (data ?? []) as Array<{ id: string; name: string | null }>) {
+          if (row.name) found.set(String(row.id), row.name)
+        }
+      }
+      return found
+    }
+    const projectIds = [
+      ...new Set(rows.flatMap((r) => (r.project_id ? [String(r.project_id)] : []))),
+    ]
+    const branchIds = [
+      ...new Set(rows.flatMap((r) => (!r.project_id && r.branch_id ? [String(r.branch_id)] : []))),
+    ]
+    const [projectNames, branchNames] = await Promise.all([
+      names('projects', projectIds),
+      names('branches', branchIds),
+    ])
+
+    for (const row of rows) {
       if (row.project_id) {
+        const id = String(row.project_id)
         out.set(String(row.id), {
-          costObjectId: String(row.project_id),
+          costObjectId: id,
           costObjectType: 'project',
-          costObjectLabel: `Project ${String(row.project_id).slice(0, 8)}`,
+          // A project that was deleted keeps its id as the label — never a made-up name.
+          costObjectLabel: projectNames.get(id) ?? id,
         })
       } else if (row.branch_id) {
+        const id = String(row.branch_id)
         out.set(String(row.id), {
-          costObjectId: String(row.branch_id),
+          costObjectId: id,
           costObjectType: 'branch',
-          costObjectLabel: `Branch ${String(row.branch_id).slice(0, 8)}`,
+          costObjectLabel: branchNames.get(id) ?? id,
         })
       }
     }

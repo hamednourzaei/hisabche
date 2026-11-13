@@ -11,7 +11,8 @@
     "tableService": "Table service",
     "serializedItems": "Serialized items",
     "goldPurity": "Gold purity",
-    "makingCharges": "Making charges"
+    "makingCharges": "Making charges",
+    "autoFitments": "Vehicle fitments"
   },
   "industry": {
     "supportNote": {
@@ -3592,6 +3593,36 @@
     "variantReport": {
       "title": "Inventory & Margin by Size / Colour / Brand",
       "empty": "No variant stock recorded."
+    },
+    "costObjects": {
+      "title": "Profit by project and branch",
+      "intro": "Each sale counts toward its project, or its branch when it has no project. This currency only.",
+      "unknown": "Unknown",
+      "loading": "Loading…",
+      "loadFailed": "The report could not be loaded.",
+      "retry": "Retry",
+      "emptyTitle": "No sale in this period names a project or branch",
+      "emptyDescription": "Invoices tied to a project or branch are counted here separately.",
+      "overheadNotAllocated": "Overhead (rent, office salaries…) is not allocated to projects, so each one’s net profit is unknown — only gross profit is shown.",
+      "untagged": "Sales with no project or branch (not in the table)",
+      "invoicesUnit": "invoices",
+      "columns": {
+        "name": "Project / branch",
+        "invoices": "Invoices",
+        "revenue": "Sales",
+        "cost": "Cost",
+        "grossProfit": "Gross profit",
+        "grossMargin": "Gross margin"
+      },
+      "types": {
+        "project": "project",
+        "branch": "branch",
+        "work_order": "work order",
+        "repair_ticket": "repair",
+        "service_session": "service session",
+        "trip": "trip",
+        "dimension": "dimension"
+      }
     }
   },
   "hr": {
@@ -4410,7 +4441,10 @@
         "recurrenceUnresolved": "Billing recurrence has not been chosen yet.",
         "approvalDepthUnresolved": "Approval requirement has not been chosen yet.",
         "regulatedDomainUnresolved": "Regulated domain status has not been chosen yet.",
-        "regulatedDomainCompliance": "Clinical records, prescriptions, and regulatory KYC are outside Hisabche scope."
+        "regulatedDomainCompliance": "Clinical records, prescriptions, and regulatory KYC are outside Hisabche scope.",
+        "offeringUnresolved": "What you sell (goods, services or both) is not settled yet.",
+        "inventoryUnresolved": "Whether you hold stock is not settled yet.",
+        "workforceUnresolved": "Whether you work with staff is not settled yet."
       }
     },
     "brandInitial": "H",
@@ -4435,7 +4469,8 @@
         "P8_true_profit": "P8 — True profit by cost object",
         "P9_quality_warranty_obligations": "P9 — Quality, warranty & SLA obligations",
         "P10_owner_control": "P10 — Owner control & command alerts"
-      }
+      },
+      "none": "None"
     }
   },
   "status": {
@@ -13942,6 +13977,65 @@
     },
     "tiered_pricing": {
       "label": "Tiered & wholesale pricing"
+    },
+    "limitations": {
+      "LINEAR_CUT_LOSS_NOT_TRACKED": "Waste from cutting by length is not tracked.",
+      "TANK_DIP_CALIBRATION_NOT_TRACKED": "Tank dip calibration is not tracked.",
+      "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "The rule exists but cannot be picked on an invoice line yet.",
+      "NO_SERVER_ROUTE_OR_UI_PICKER": "The rule exists but there is no screen to pick it yet.",
+      "QUANTITY_BREAK_UI_BASIC": "Quantity price breaks have a basic editor only.",
+      "BATCH_RETURN_RESTORE_MISSING": "A return does not go back to its own batch.",
+      "SERVER_ONLY_NO_OFFLINE_ENGINE": "Works online only.",
+      "COST_LAYERS_ARE_PRODUCT_KEYED": "Cost is kept per product, not per variant.",
+      "OFFLINE_SERIAL_IDENTITY_MISSING": "Serial numbers cannot be recorded offline.",
+      "CORE_CHARGE_NOT_APPLIED": "Core charges are not applied on the invoice.",
+      "LINE_PRICING_FROM_PURITY_NOT_WIRED": "Line price is not computed from purity automatically.",
+      "MAKING_CHARGE_NOT_COMPUTED_ON_LINE": "Making charge is not computed on the line.",
+      "CONCURRENT_SLOT_LOCK_SERVER_ONLY": "Double-booking protection works online only.",
+      "SLA_BREACH_ALERT_ONLY": "A missed deadline only raises an alert; no penalty is posted.",
+      "PACK_ROUNDING_SERVER_SIDE": "Rounding to purchase packs works online only.",
+      "SERVER_ONLY_THREE_WAY_MATCH": "Three-way match works online only.",
+      "NO_OVERHEAD_ALLOCATION": "Overhead is not allocated to projects.",
+      "MILESTONE_INVOICE_WIRING_PARTIAL": "Milestone invoicing is only partly connected.",
+      "DEPOSIT_AUTO_FORFEIT_NOT_WIRED": "Deposits are never forfeited automatically — that is your decision.",
+      "AUTO_DUNNING_REMINDERS_SERVER_ONLY": "Automatic instalment reminders work online only.",
+      "GRANT_ONLINE_ONLY": "Granting a package to a customer works online only.",
+      "SERVER_ONLY_QUALITY_LOG": "Quality inspections are recorded online only.",
+      "CLAIMS_ONLINE_ONLY": "Warranty claims are recorded online only.",
+      "OVERHEAD_ALLOCATION_NOT_CONFIGURED": "No overhead rule is set; net profit stays «unknown».",
+      "PROCUREMENT_MATCH_APPROVAL_GATE_PARTIAL": "A purchase mismatch warns but does not stop payment by itself.",
+      "FORECAST_HORIZON_FIXED": "The forecast horizon is fixed.",
+      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "No forecast figure until there is enough payment history."
+    },
+    "area_pricing": {
+      "label": "Price by area"
+    },
+    "roll_cutting": {
+      "label": "Cutting from rolls"
+    },
+    "work_queue_sla": {
+      "label": "Work queue and deadlines"
+    },
+    "sales_orders": {
+      "label": "Sales orders"
+    },
+    "timesheet_billing": {
+      "label": "Billing from timesheets"
+    },
+    "deposits_liability": {
+      "label": "Deposits"
+    },
+    "installments": {
+      "label": "Instalments"
+    },
+    "package_credits": {
+      "label": "Session packages"
+    },
+    "fleet_dispatch": {
+      "label": "Freight dispatch"
+    },
+    "crop_cycle": {
+      "label": "Crop cycle"
     }
   },
   "paymentMethod": {

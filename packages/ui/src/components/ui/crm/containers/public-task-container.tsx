@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { Loader2, ClipboardList, User, Phone, Check, PlayCircle } from 'lucide-react'
+import { Loader2, ClipboardList, User, Check, PlayCircle } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { TaskCustomerOutcomes } from '../task-customer-outcomes'
 

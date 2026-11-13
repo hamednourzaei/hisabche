@@ -5,7 +5,7 @@
 // Uses shared @hisabche/validation pure tax domain.
 // ============================================
 
-import { computeDocument, roundMoney, type TaxComponent, type TaxRule } from '@hisabche/validation'
+import { computeDocument, roundMoney, type TaxComponent } from '@hisabche/validation'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
 

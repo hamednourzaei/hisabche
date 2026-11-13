@@ -11,7 +11,8 @@
     "tableService": "میز و سفارش",
     "serializedItems": "قطعه‌ی یکتا",
     "goldPurity": "عیار",
-    "makingCharges": "اجرت"
+    "makingCharges": "اجرت",
+    "autoFitments": "قطعات سازگار خودرو"
   },
   "industry": {
     "supportNote": {
@@ -3603,6 +3604,36 @@
     "variantReport": {
       "title": "گزارش موجودی و حاشیه بر اساس سایز / رنگ / برند",
       "empty": "تنوع کالایی یافت نشد."
+    },
+    "costObjects": {
+      "title": "سود به تفکیک پروژه و شعبه",
+      "intro": "فروش هر فاکتور به پروژه‌اش، و اگر پروژه ندارد به شعبه‌اش می‌رود. فقط همین ارز.",
+      "unknown": "نامعلوم",
+      "loading": "در حال بارگذاری…",
+      "loadFailed": "گزارش خوانده نشد.",
+      "retry": "دوباره",
+      "emptyTitle": "هیچ فروشی در این بازه پروژه یا شعبه ندارد",
+      "emptyDescription": "فاکتوری که به پروژه یا شعبه وصل است این‌جا جدا شمرده می‌شود.",
+      "overheadNotAllocated": "هزینه‌های سربار (اجاره، حقوق دفتر…) بین پروژه‌ها تقسیم نشده؛ پس سود خالص هر پروژه نامعلوم است و فقط سود ناخالص نشان داده می‌شود.",
+      "untagged": "فروش بدون پروژه یا شعبه (در جدول نیست)",
+      "invoicesUnit": "فاکتور",
+      "columns": {
+        "name": "پروژه / شعبه",
+        "invoices": "فاکتورها",
+        "revenue": "فروش",
+        "cost": "بهای تمام‌شده",
+        "grossProfit": "سود ناخالص",
+        "grossMargin": "حاشیه ناخالص"
+      },
+      "types": {
+        "project": "پروژه",
+        "branch": "شعبه",
+        "work_order": "سفارش ساخت",
+        "repair_ticket": "تعمیر",
+        "service_session": "جلسه خدمت",
+        "trip": "سفر بار",
+        "dimension": "بُعد"
+      }
     }
   },
   "hr": {
@@ -4421,7 +4452,10 @@
         "recurrenceUnresolved": "تکرار دوره‌ای خدمات یا قراردادها هنوز مشخص نشده است.",
         "approvalDepthUnresolved": "ساختار تأیید و کنترل خرید هنوز مشخص نشده است.",
         "regulatedDomainUnresolved": "وضعیت فعالیت در حوزه تخصصی دارای مقررات هنوز مشخص نشده است.",
-        "regulatedDomainCompliance": "حوزه‌های درمانی، نسخه یا احراز هویت نیازمند رعایت مقررات تخصصی هستند و در حسابچه ثبت نمی‌شوند."
+        "regulatedDomainCompliance": "حوزه‌های درمانی، نسخه یا احراز هویت نیازمند رعایت مقررات تخصصی هستند و در حسابچه ثبت نمی‌شوند.",
+        "offeringUnresolved": "هنوز مشخص نیست چه می‌فروشید (کالا، خدمت یا هر دو).",
+        "inventoryUnresolved": "هنوز مشخص نیست موجودی نگه می‌دارید یا نه.",
+        "workforceUnresolved": "هنوز مشخص نیست با کارمند کار می‌کنید یا تنها."
       }
     },
     "brandInitial": "ح",
@@ -4446,7 +4480,8 @@
         "P8_true_profit": "P8 — سود واقعی به تفکیک پروژه/مرکز هزینه",
         "P9_quality_warranty_obligations": "P9 — کیفیت، ضمانت و تعهدات SLA",
         "P10_owner_control": "P10 — کنترل مالک و هشدارهای مدیریتی"
-      }
+      },
+      "none": "هیچ"
     }
   },
   "months": {
@@ -13942,6 +13977,65 @@
     },
     "tiered_pricing": {
       "label": "قیمت‌گذاری پلکانی و عمده"
+    },
+    "limitations": {
+      "LINEAR_CUT_LOSS_NOT_TRACKED": "ضایعات برش طولی ثبت نمی‌شود.",
+      "TANK_DIP_CALIBRATION_NOT_TRACKED": "کالیبراسیون اندازه‌گیری مخزن ثبت نمی‌شود.",
+      "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "قاعده‌اش هست، ولی هنوز روی خط فاکتور انتخاب نمی‌شود.",
+      "NO_SERVER_ROUTE_OR_UI_PICKER": "قاعده‌اش هست، ولی هنوز صفحه‌ای برای انتخابش نیست.",
+      "QUANTITY_BREAK_UI_BASIC": "تعریف پله‌های قیمت ساده است.",
+      "BATCH_RETURN_RESTORE_MISSING": "مرجوعی به همان سری/بچ برنمی‌گردد.",
+      "SERVER_ONLY_NO_OFFLINE_ENGINE": "فقط با اینترنت کار می‌کند.",
+      "COST_LAYERS_ARE_PRODUCT_KEYED": "بهای تمام‌شده برای کل کالا حساب می‌شود، نه برای هر مدل.",
+      "OFFLINE_SERIAL_IDENTITY_MISSING": "شماره سریال بدون اینترنت ثبت نمی‌شود.",
+      "CORE_CHARGE_NOT_APPLIED": "هزینه‌ی قطعه‌ی کهنه (core charge) روی فاکتور اعمال نمی‌شود.",
+      "LINE_PRICING_FROM_PURITY_NOT_WIRED": "قیمت خط از عیار به‌طور خودکار حساب نمی‌شود.",
+      "MAKING_CHARGE_NOT_COMPUTED_ON_LINE": "اجرت ساخت روی خط فاکتور حساب نمی‌شود.",
+      "CONCURRENT_SLOT_LOCK_SERVER_ONLY": "جلوگیری از رزرو هم‌زمان فقط با اینترنت است.",
+      "SLA_BREACH_ALERT_ONLY": "دیرکرد فقط هشدار می‌دهد؛ جریمه‌ای ثبت نمی‌شود.",
+      "PACK_ROUNDING_SERVER_SIDE": "گرد کردن به بسته‌ی خرید فقط با اینترنت است.",
+      "SERVER_ONLY_THREE_WAY_MATCH": "تطبیق سه‌جانبه فقط با اینترنت است.",
+      "NO_OVERHEAD_ALLOCATION": "هزینه‌های سربار بین پروژه‌ها تقسیم نمی‌شود.",
+      "MILESTONE_INVOICE_WIRING_PARTIAL": "فاکتور مرحله‌ای پروژه کامل وصل نیست.",
+      "DEPOSIT_AUTO_FORFEIT_NOT_WIRED": "ضبط خودکار ودیعه وجود ندارد؛ تصمیمش با شماست.",
+      "AUTO_DUNNING_REMINDERS_SERVER_ONLY": "یادآوری خودکار قسط فقط با اینترنت است.",
+      "GRANT_ONLINE_ONLY": "دادن بسته به مشتری فقط با اینترنت است.",
+      "SERVER_ONLY_QUALITY_LOG": "ثبت بازرسی کیفیت فقط با اینترنت است.",
+      "CLAIMS_ONLINE_ONLY": "ثبت ادعای گارانتی فقط با اینترنت است.",
+      "OVERHEAD_ALLOCATION_NOT_CONFIGURED": "قاعده‌ی تقسیم سربار تعریف نشده؛ سود خالص «نامعلوم» می‌ماند.",
+      "PROCUREMENT_MATCH_APPROVAL_GATE_PARTIAL": "تطبیق خرید پرداخت را خودکار متوقف نمی‌کند؛ فقط هشدار می‌دهد.",
+      "FORECAST_HORIZON_FIXED": "بازه‌ی پیش‌بینی ثابت است.",
+      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "تا سابقه‌ی پرداخت کافی نباشد، پیش‌بینی عددی نمی‌دهد."
+    },
+    "area_pricing": {
+      "label": "قیمت بر اساس مساحت"
+    },
+    "roll_cutting": {
+      "label": "برش از رول"
+    },
+    "work_queue_sla": {
+      "label": "صف کار و مهلت انجام"
+    },
+    "sales_orders": {
+      "label": "سفارش فروش"
+    },
+    "timesheet_billing": {
+      "label": "فاکتور از ساعات کار"
+    },
+    "deposits_liability": {
+      "label": "بیعانه و ودیعه"
+    },
+    "installments": {
+      "label": "اقساط"
+    },
+    "package_credits": {
+      "label": "بسته‌های جلسه‌ای"
+    },
+    "fleet_dispatch": {
+      "label": "اعزام و سفر بار"
+    },
+    "crop_cycle": {
+      "label": "چرخه‌ی کشت"
     }
   },
   "paymentMethod": {

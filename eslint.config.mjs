@@ -22,6 +22,10 @@ export default tseslint.config(
       'test-intelligence-results/**',
       'llm-council-results/**',
       'release-readiness-results/**',
+      // Native projects and the web shell copied into them are BUILD OUTPUT (git-ignored);
+      // linting the bundled JS there reported 7,109 «errors» that are not source (12 Nov 2026).
+      '**/android/**',
+      '**/ios/**',
     ],
   },
   js.configs.recommended,

@@ -13,7 +13,6 @@ import { Drawer } from './datagrid/drawer'
 import { getInvoiceColumns, type InvoiceRow } from './datagrid/columns/invoice-columns'
 import { getInteractionColumns, type InteractionRow } from './datagrid/columns/interaction-columns'
 import { getOpportunityColumns, type OpportunityRow } from './datagrid/columns/opportunity-columns'
-import { getTimelineColumns, type TimelineRow } from './datagrid/columns/timeline-columns'
 import { PaymentModal } from './PaymentModal'
 import { GHOST_ICON_BUTTON } from '../button-classes'
 

@@ -33,12 +33,7 @@ import { AlertCircle, BookOpen, Receipt } from 'lucide-react'
 
 import * as React from 'react'
 
-import {
-  AddPaymentButton,
-  CancelPaymentButton,
-  RecordPaymentForm,
-  type PaymentMethod,
-} from './record-payment-form'
+import { AddPaymentButton, CancelPaymentButton, RecordPaymentForm } from './record-payment-form'
 import { cn } from '../../../lib/utils'
 
 const REFUND_STATUS_KEY = {

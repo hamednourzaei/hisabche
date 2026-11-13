@@ -25,7 +25,6 @@ import {
   canDeleteColumn,
   isForeignMoneyColumn,
   isRowFilled,
-  parseCellNumber,
   type InvoiceColumn,
   type ProduceInput,
   type SaveProductionDefinition,

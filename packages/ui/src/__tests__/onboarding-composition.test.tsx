@@ -23,7 +23,9 @@ describe('V60.1 §3 — Onboarding composition engine UI', () => {
     expect(html).toContain('data-composition-plan=""')
     expect(html).toContain('data-composition-menu=""')
     expect(html).toContain('data-composition-questions=""')
-    expect(html).toContain('data-composition-menu-item="overview"')
+    // 12 Nov 2026: the menu is the real primary menu (minus what the DNA hides), not a fixed
+    // list of five group names — the overview is the «today» item.
+    expect(html).toContain('data-composition-menu-item="today"')
     expect(html).not.toContain('data-composition-menu-item="pos"')
     expect(html).not.toContain('data-composition-menu-item="retail"')
   })

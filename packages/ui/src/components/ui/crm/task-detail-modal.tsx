@@ -5,7 +5,7 @@ import { formatDate as formatIntlDate } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
 import { useDateFormat } from '../../../hooks/use-date-format'
-import { X, User, Phone, Clock, CheckCircle2, Loader2, Share2, Check } from 'lucide-react'
+import { X, User, Clock, CheckCircle2, Loader2, Share2, Check } from 'lucide-react'
 import type { Interaction, TaskStatus } from '@hisabche/api'
 import { TaskCustomerOutcomes } from './task-customer-outcomes'
 import { SelectField } from '../select-field'

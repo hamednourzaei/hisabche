@@ -119,13 +119,16 @@ describe('routes: who may touch the money', () => {
         expect(guard, path).toBe('manage')
       }
     }
-    expect(src).toContain(
+    // 12 Nov 2026: prettier split `adminWrite` over five lines and this single-line toContain
+    // went red with the guard itself intact. Compare the source flattened (CLAUDE.md §8).
+    const flat = src.split(/\s+/).join(' ').replace(/\[ /g, '[').replace(/,? \]/g, ']')
+    expect(flat).toContain(
       "const manage = [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')]",
     )
-    expect(src).toContain(
+    expect(flat).toContain(
       "const adminRead = [authenticate, platformAdminGuard, requireAdminPermission('billing.wallet.read')]",
     )
-    expect(src).toContain(
+    expect(flat).toContain(
       "const adminWrite = [authenticate, platformAdminGuard, requireAdminPermission('billing.wallet.adjust')]",
     )
   })

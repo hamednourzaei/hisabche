@@ -7,7 +7,6 @@ import {
   uuidSchema,
   nonEmptyStringSchema,
   optionalStringSchema,
-  positiveNumberSchema,
   isoDateSchema,
   nonNegativeNumberSchema,
 } from './common.schema'

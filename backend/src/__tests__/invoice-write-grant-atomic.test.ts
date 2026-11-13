@@ -10,7 +10,7 @@
 // 4. Idempotency on retry: same clientRequestId returns existing invoice without duplicate grants.
 // ============================================
 
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { InvoiceService } from '../services/invoice.service'
 import type { TenancyContext } from '../services/tenancy.service'
 

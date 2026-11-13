@@ -29,7 +29,7 @@ import { toBaseQuantity, type ProductUnitOption } from './inventory/unit-convers
 import { conflicts } from './conflict'
 import { detectBreaches } from './pos/negative-stock.domain'
 import { netReversal, type MovementRow } from './invoices/stock-reversal.domain'
-import { fetchAllPages, selectAllPages } from '../utils/fetch-all-pages'
+import { selectAllPages } from '../utils/fetch-all-pages'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {

@@ -16,7 +16,6 @@ import {
   type AccountRole,
   type CostObjectInvoiceInput,
   type CostObjectProfitReport,
-  type CostObjectType,
   type CreateAccount,
   type CreateJournalEntry,
   type OverheadAllocationPolicy,

@@ -14,7 +14,7 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { CreateJournalEntry } from '@hisabche/validation'
+import type { CostObjectProfitReport, CreateJournalEntry } from '@hisabche/validation'
 import apiClient, { localRequest } from '../lib/client'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
@@ -509,10 +509,14 @@ export function useCostObjectProfitReport(from: string, to: string, currency: st
   return useQuery({
     queryKey: ['accounting', 'profit-report', 'cost-objects', from, to, currency],
     queryFn: async ({ signal }) => {
-      const { data } = await apiClient.get('/accounting/profit-report/cost-objects', {
-        params: { from, to, currency },
-        signal,
-      })
+      // The route sends the report itself (`buildCostObjectProfitReport`), not `{ data }`.
+      const { data } = await apiClient.get<CostObjectProfitReport>(
+        '/accounting/profit-report/cost-objects',
+        {
+          params: { from, to, currency },
+          signal,
+        },
+      )
       return data
     },
     enabled: authReady && Boolean(from && to && currency),

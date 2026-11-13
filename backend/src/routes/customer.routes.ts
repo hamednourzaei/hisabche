@@ -5,9 +5,8 @@
 
 import { invalidateMoneyCaches } from '../utils/money-cache'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createCustomerSchema, flagFilter, updateCustomerSchema } from '@hisabche/validation'
+import { flagFilter } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { BaseError } from '../errors/base.error'
 import {

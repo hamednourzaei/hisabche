@@ -31,7 +31,6 @@ import {
   ShieldCheck,
   Sparkles,
   type LucideIcon,
-  DatabaseZap,
   Store,
   LineChart,
 } from 'lucide-react'

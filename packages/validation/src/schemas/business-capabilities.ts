@@ -791,7 +791,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['backend/src/__tests__/storefront-orders.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['LIFECYCLE_ACTIONS_UNWIRED', 'SERVER_ONLY_NO_OFFLINE_ENGINE'],
+    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE'],
   },
   procurement_planning: {
     key: 'procurement_planning',
@@ -929,7 +929,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['packages/validation/src/__tests__/universal-core.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['GRANT_ENDPOINT_UNWIRED'],
+    limitations: ['GRANT_ONLINE_ONLY'],
   },
   delivery_pod: {
     key: 'delivery_pod',
@@ -944,7 +944,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['backend/src/__tests__/storefront-orders.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['DELIVERY_NOTES_UI_UNWIRED', 'SERVER_ONLY_NO_OFFLINE_ENGINE'],
+    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE'],
   },
   fleet_dispatch: {
     key: 'fleet_dispatch',
@@ -959,7 +959,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['backend/src/__tests__/storefront-orders.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['FLEET_DISPATCH_UI_UNWIRED', 'SERVER_ONLY_NO_OFFLINE_ENGINE'],
+    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE'],
   },
   asset_rental: {
     key: 'asset_rental',

@@ -6,7 +6,7 @@
 // Built dynamically from localTableSchema + sync_queue.
 // ============================================
 
-import { localTableSchema, type LocalTable } from '@hisabche/app-bridge'
+import { localTableSchema } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'

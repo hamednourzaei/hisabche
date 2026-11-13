@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useTranslations } from 'next-intl'
-import { UploadCloud, Image as ImageIcon, FileText } from 'lucide-react'
+import { UploadCloud, Image as ImageIcon } from 'lucide-react'
 
 export function CmsMediaClient() {
   const t = useTranslations()

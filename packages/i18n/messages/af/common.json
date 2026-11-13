@@ -11,7 +11,8 @@
     "tableService": "میز و سفارش",
     "serializedItems": "قطعه‌ی یکتا",
     "goldPurity": "عیار",
-    "makingCharges": "اجرت"
+    "makingCharges": "اجرت",
+    "autoFitments": "پرزه‌های سازگار موتر"
   },
   "industry": {
     "supportNote": {
@@ -3592,6 +3593,36 @@
     "variantReport": {
       "title": "گزارش موجودی بر اساس اندازه / رنگ / برند",
       "empty": "تنوع کالایی یافت نشد."
+    },
+    "costObjects": {
+      "title": "فایده به تفکیک پروژه و نماینده‌گی",
+      "intro": "فروش هر بل به پروژه‌اش، و اگر پروژه ندارد به نماینده‌گی‌اش می‌رود. فقط همین اسعار.",
+      "unknown": "نامعلوم",
+      "loading": "در حال بارگذاری…",
+      "loadFailed": "گزارش خوانده نشد.",
+      "retry": "دوباره کوشش کنید",
+      "emptyTitle": "هیچ فروشی در این بازه پروژه یا نماینده‌گی ندارد",
+      "emptyDescription": "بلی که به پروژه یا نماینده‌گی وصل است این‌جا جدا شمرده می‌شود.",
+      "overheadNotAllocated": "مصارف سربار (کرایه، معاش دفتر…) بین پروژه‌ها تقسیم نشده؛ پس فایده‌ی خالص هر پروژه نامعلوم است و فقط فایده‌ی ناخالص نشان داده می‌شود.",
+      "untagged": "فروش بدون پروژه یا نماینده‌گی (در جدول نیست)",
+      "invoicesUnit": "بل",
+      "columns": {
+        "name": "پروژه / نماینده‌گی",
+        "invoices": "بل‌ها",
+        "revenue": "فروش",
+        "cost": "قیمت تمام‌شد",
+        "grossProfit": "فایده‌ی ناخالص",
+        "grossMargin": "حاشیه‌ی ناخالص"
+      },
+      "types": {
+        "project": "پروژه",
+        "branch": "نماینده‌گی",
+        "work_order": "فرمایش ساخت",
+        "repair_ticket": "ترمیم",
+        "service_session": "جلسه خدمت",
+        "trip": "سفر بار",
+        "dimension": "بُعد"
+      }
     }
   },
   "hr": {
@@ -4410,7 +4441,10 @@
         "recurrenceUnresolved": "تکرار دوره‌ای خدمات یا قراردادها هنوز مشخص نشده است.",
         "approvalDepthUnresolved": "ساختار تائید و کنترول خرید هنوز مشخص نشده است.",
         "regulatedDomainUnresolved": "حالت فعالیت در بخش دارای مقررات خاص هنوز مشخص نشده است.",
-        "regulatedDomainCompliance": "بخش‌های طبی، نسخه یا شناخت مشتری نیازمند مقررات جداگانه است و در حسابچه ذخیره نمی‌شود."
+        "regulatedDomainCompliance": "بخش‌های طبی، نسخه یا شناخت مشتری نیازمند مقررات جداگانه است و در حسابچه ذخیره نمی‌شود.",
+        "offeringUnresolved": "هنوز مشخص نیست چه می‌فروشید (جنس، خدمت یا هر دو).",
+        "inventoryUnresolved": "هنوز مشخص نیست موجودی گدام نگه می‌دارید یا نه.",
+        "workforceUnresolved": "هنوز مشخص نیست با کارمند کار می‌کنید یا تنها."
       }
     },
     "brandInitial": "ح",
@@ -4435,7 +4469,8 @@
         "P8_true_profit": "P8 — فایده واقعی به تفکیک پروژه/مرکز هزینه",
         "P9_quality_warranty_obligations": "P9 — کیفیت، گارانتی و تعهدات SLA",
         "P10_owner_control": "P10 — کنترل مالک و هشدارهای مدیریتی"
-      }
+      },
+      "none": "هیچ"
     }
   },
   "months": {
@@ -13942,6 +13977,65 @@
     },
     "tiered_pricing": {
       "label": "نرخ‌گذاری عمده و درجه‌دار"
+    },
+    "limitations": {
+      "LINEAR_CUT_LOSS_NOT_TRACKED": "ضایعات برش طولی ثبت نمی‌شود.",
+      "TANK_DIP_CALIBRATION_NOT_TRACKED": "کالیبراسیون اندازه‌گیری تانک ثبت نمی‌شود.",
+      "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "قاعده‌اش هست، ولی هنوز روی خط بل انتخاب نمی‌شود.",
+      "NO_SERVER_ROUTE_OR_UI_PICKER": "قاعده‌اش هست، ولی هنوز صفحه‌ای برای انتخابش نیست.",
+      "QUANTITY_BREAK_UI_BASIC": "تعریف پله‌های قیمت ساده است.",
+      "BATCH_RETURN_RESTORE_MISSING": "مرجوعی به همان سری/بچ برنمی‌گردد.",
+      "SERVER_ONLY_NO_OFFLINE_ENGINE": "فقط با انترنت کار می‌کند.",
+      "COST_LAYERS_ARE_PRODUCT_KEYED": "قیمت تمام‌شد برای کل جنس حساب می‌شود، نه برای هر مدل.",
+      "OFFLINE_SERIAL_IDENTITY_MISSING": "شماره سریال بدون انترنت ثبت نمی‌شود.",
+      "CORE_CHARGE_NOT_APPLIED": "هزینه‌ی پرزه‌ی کهنه (core charge) روی بل اعمال نمی‌شود.",
+      "LINE_PRICING_FROM_PURITY_NOT_WIRED": "قیمت خط از عیار به‌طور خودکار حساب نمی‌شود.",
+      "MAKING_CHARGE_NOT_COMPUTED_ON_LINE": "مزد ساخت روی خط بل حساب نمی‌شود.",
+      "CONCURRENT_SLOT_LOCK_SERVER_ONLY": "جلوگیری از ریزرف هم‌زمان فقط با انترنت است.",
+      "SLA_BREACH_ALERT_ONLY": "ناوقتی فقط هشدار می‌دهد؛ جریمه‌ای ثبت نمی‌شود.",
+      "PACK_ROUNDING_SERVER_SIDE": "گرد کردن به بسته‌ی خرید فقط با انترنت است.",
+      "SERVER_ONLY_THREE_WAY_MATCH": "تطبیق سه‌جانبه فقط با انترنت است.",
+      "NO_OVERHEAD_ALLOCATION": "مصارف سربار بین پروژه‌ها تقسیم نمی‌شود.",
+      "MILESTONE_INVOICE_WIRING_PARTIAL": "بل مرحله‌ای پروژه کامل وصل نیست.",
+      "DEPOSIT_AUTO_FORFEIT_NOT_WIRED": "ضبط خودکار امانت وجود ندارد؛ تصمیمش با شماست.",
+      "AUTO_DUNNING_REMINDERS_SERVER_ONLY": "یادآوری خودکار قسط فقط با انترنت است.",
+      "GRANT_ONLINE_ONLY": "دادن بسته به مشتری فقط با انترنت است.",
+      "SERVER_ONLY_QUALITY_LOG": "ثبت بازرسی کیفیت فقط با انترنت است.",
+      "CLAIMS_ONLINE_ONLY": "ثبت ادعای گارانتی فقط با انترنت است.",
+      "OVERHEAD_ALLOCATION_NOT_CONFIGURED": "قاعده‌ی تقسیم سربار تعریف نشده؛ فایده‌ی خالص «نامعلوم» می‌ماند.",
+      "PROCUREMENT_MATCH_APPROVAL_GATE_PARTIAL": "تطبیق خرید پرداخت را خودکار متوقف نمی‌کند؛ فقط هشدار می‌دهد.",
+      "FORECAST_HORIZON_FIXED": "بازه‌ی پیش‌بینی ثابت است.",
+      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "تا سابقه‌ی پرداخت کافی نباشد، پیش‌بینی عددی نمی‌دهد."
+    },
+    "area_pricing": {
+      "label": "قیمت بر اساس مساحت"
+    },
+    "roll_cutting": {
+      "label": "برش از رول"
+    },
+    "work_queue_sla": {
+      "label": "صف کار و مهلت انجام"
+    },
+    "sales_orders": {
+      "label": "فرمایش فروش"
+    },
+    "timesheet_billing": {
+      "label": "بل از ساعات کار"
+    },
+    "deposits_liability": {
+      "label": "بیعانه و امانت"
+    },
+    "installments": {
+      "label": "اقساط"
+    },
+    "package_credits": {
+      "label": "بسته‌های جلسه‌ای"
+    },
+    "fleet_dispatch": {
+      "label": "اعزام و سفر بار"
+    },
+    "crop_cycle": {
+      "label": "دوره‌ی کشت"
     }
   },
   "paymentMethod": {

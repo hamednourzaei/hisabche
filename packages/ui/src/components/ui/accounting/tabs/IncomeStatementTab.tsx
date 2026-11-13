@@ -21,6 +21,7 @@ import {
 } from '@hisabche/api'
 import { SegmentedControl } from '../../segmented-control'
 import { ProductProfitTable } from '../components/ProductProfitTable'
+import { CostObjectProfitSection } from '../components/CostObjectProfitSection'
 import { UnvaluedStockNotice } from '../components/UnvaluedStockNotice'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { DateRangePicker } from '../components/DateRangePicker'
@@ -311,6 +312,13 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
               ) : null}
               <UnvaluedStockNotice currency={selectedReport.currency} />
               <ProductProfitTable t={safeT} report={selectedReport} money={money} num={num} />
+              <CostObjectProfitSection
+                from={from}
+                to={to}
+                currency={currency}
+                money={money}
+                t={safeT}
+              />
               {(variantReport.data?.length ?? 0) > 0 ? (
                 <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">

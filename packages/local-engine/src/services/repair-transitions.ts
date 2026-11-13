@@ -7,7 +7,8 @@
 // so illegal transitions refuse identically on both server and device.
 // ============================================
 
-import { randomUUID } from 'node:crypto'
+// Not node:crypto: Metro (Android/iOS) has no Node built-ins (12 Nov 2026 release build).
+import { newId } from '../routes/people-common'
 import {
   canConsumePartsOnRepair,
   repairMoveRefusal,
@@ -74,7 +75,7 @@ export function applyLocalRepairTransition(
       `INSERT INTO repair_ticket_events (id, workspace_id, ticket_id, from_status, to_status, note, actor_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        randomUUID(),
+        newId(),
         workspaceId,
         ticketId,
         row.status,

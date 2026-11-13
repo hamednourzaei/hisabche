@@ -19,12 +19,7 @@
 // build one.
 // ============================================
 
-import {
-  formatMessage,
-  getMessages,
-  resolveMessage,
-  toMessageLocale,
-} from '@hisabche/i18n/messages'
+import { getMessages, resolveMessage, toMessageLocale } from '@hisabche/i18n/messages'
 import type { Session } from '@hisabche/auth-core'
 
 import { i18n } from '@/shared/i18n'

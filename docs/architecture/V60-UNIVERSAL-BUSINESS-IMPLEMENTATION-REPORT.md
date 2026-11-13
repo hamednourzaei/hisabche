@@ -1,6 +1,6 @@
 # Hisabche V60 — Universal Business Discovery & Composition Implementation Report
 
-**Status:** Pending §12 single final verification pass.
+**Status:** §12 run on 12 Nov 2026 — and an audit against the code found gaps this report did not list (onboarding raw keys, no screen for cost-object profit or exchange, lease return that never changed the serial). See `V60-IMPLEMENTATION-PROGRESS.md` §13 before trusting any line below.
 
 ## 1. Architecture Summary (Slices 1–12)
 

@@ -22,7 +22,7 @@
 
 import { supabase } from '../../db'
 import { ValidationError } from '../../errors/validation.error'
-import { BlogError, isMissingSchema, readingMinutes } from './blog.domain'
+import { BlogError, isMissingSchema } from './blog.domain'
 import { claimsNotInProduct, htmlToText } from '@hisabche/validation'
 
 /** The checks, named so a report says WHICH one failed rather than just "failed". */

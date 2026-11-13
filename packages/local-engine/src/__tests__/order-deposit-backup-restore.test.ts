@@ -22,7 +22,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { LocalDb } from '../db'
-import { createTestDb, createTestEngine, TEST_USER_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, createTestEngine, TEST_WORKSPACE_ID } from './test-db'
 
 const CUSTOMER = '00000000-0000-4000-8000-000000000001'
 const ORDER = '00000000-0000-4000-8000-0000000000a1'

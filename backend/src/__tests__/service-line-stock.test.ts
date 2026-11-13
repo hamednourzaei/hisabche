@@ -5,10 +5,7 @@
 // on the server, and a return of a service line moves no stock.
 // ============================================
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { InvoiceService } from '../services/invoice.service'
-import { costing } from '../services/inventory-costing'
-import type { TenancyContext } from '../services/tenancy.service'
+import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../utils/money-cache', () => ({ invalidateMoneyCaches: vi.fn() }))
 vi.mock('../services/base-currency', () => ({ baseCurrencyOf: async () => 'AFN' }))

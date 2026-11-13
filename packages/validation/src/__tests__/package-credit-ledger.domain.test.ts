@@ -11,7 +11,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   type PackageCreditEntry,
-  type PackageCreditEntryType,
   derivePackageBalance,
   canConsumeCredit,
   planPackageConsumption,

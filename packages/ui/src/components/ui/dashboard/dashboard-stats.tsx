@@ -8,7 +8,6 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  CheckCircle2,
   type LucideIcon,
 } from 'lucide-react'
 import { formatCompactCount } from '@hisabche/formatting'

@@ -12,7 +12,7 @@ import { evaluatePeriodLock } from '@hisabche/validation'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { LocalDb } from '../db'
 import { periodLockDecision } from '../routes/local-ledger'
-import { createTestDb, createTestEngine, TEST_WAREHOUSE_ID, TEST_WORKSPACE_ID } from './test-db'
+import { createTestDb, createTestEngine, TEST_WAREHOUSE_ID } from './test-db'
 
 type Engine = ReturnType<typeof createTestEngine>
 

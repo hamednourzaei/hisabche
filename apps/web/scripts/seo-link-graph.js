@@ -10,11 +10,10 @@
 // Usage: node scripts/seo-link-graph.js
 "use strict";
 
-/* eslint-disable @typescript-eslint/no-require-imports -- CJS script, require() is required here */
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 const webDir = __dirname.replace(/[\\/]scripts$/, "");
 const repoRoot = path.join(webDir, "..", "..");

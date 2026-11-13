@@ -38,7 +38,6 @@ import {
   type CustomerAssessment,
   type OutstandingRow,
   type SupplierAnalysis,
-  type SupplierOrderItemRow,
   type WorkingCapitalAnalysis,
 } from '@hisabche/validation'
 

@@ -83,7 +83,10 @@ describe('V60 Slice 8: profit-by-cost-object across currencies & unknown cost', 
     expect(projAfn.cost).toBe(650)
     expect(projAfn.grossProfit).toBe(350)
     expect(projAfn.overheadStatus).toBe('not_allocated')
-    expect(projAfn.netProfit).toBe(350)
+    // 12 Nov 2026: was 350 (= gross) — unallocated overhead read as zero. Net is unknown.
+    expect(projAfn.netProfit).toBeNull()
+    expect(projAfn.marginPercent).toBeNull()
+    expect(projAfn.grossMarginPercent).toBe(35)
 
     const woAfn = afn.rows.find((r) => r.costObjectId === 'wo-1')!
     expect(woAfn.revenue).toBe(800)
@@ -112,5 +115,28 @@ describe('V60 Slice 8: profit-by-cost-object across currencies & unknown cost', 
     expect(usd.rows[0]!.grossProfit).toBe(150)
     expect(usd.rows[0]!.overhead).toBe(50)
     expect(usd.rows[0]!.netProfit).toBe(100)
+  })
+
+  it('counts sales that name no project or branch instead of dropping them', () => {
+    const report = buildCostObjectProfitReport({
+      from: '2026-11-01',
+      to: '2026-11-30',
+      currency: 'AFN',
+      invoices: [
+        { id: 'tagged', currency: 'AFN', subtotal: 300, discountTotal: 0, costObjectId: 'p-1' },
+        { id: 'plain-1', currency: 'AFN', subtotal: 200, discountTotal: 0 },
+        { id: 'plain-2', currency: 'AFN', subtotal: 100, discountTotal: 0 },
+        { id: 'usd', currency: 'USD', subtotal: 999, discountTotal: 0 },
+      ],
+      lines: [
+        { invoiceId: 'tagged', productId: 'a', productName: 'A', quantity: 1, totalPrice: 300 },
+        { invoiceId: 'plain-1', productId: 'a', productName: 'A', quantity: 1, totalPrice: 200 },
+        { invoiceId: 'plain-2', productId: 'a', productName: 'A', quantity: 1, totalPrice: 100 },
+        { invoiceId: 'usd', productId: 'a', productName: 'A', quantity: 1, totalPrice: 999 },
+      ],
+      consumptions: [],
+    })
+    expect(report.rows).toHaveLength(1)
+    expect(report.untagged).toEqual({ invoiceCount: 2, revenue: 300 })
   })
 })
