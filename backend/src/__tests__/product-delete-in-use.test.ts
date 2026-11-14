@@ -11,7 +11,7 @@ const deletes: string[] = []
 vi.mock('../db', () => {
   const builder = (table: string) => {
     let op = 'select'
-    const q: any = {
+    const q: Record<string, unknown> = {
       select: () => q,
       delete: () => ((op = 'delete'), q),
       eq: () => q,

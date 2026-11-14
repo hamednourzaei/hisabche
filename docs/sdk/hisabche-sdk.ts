@@ -36,19 +36,19 @@ export class HisabcheClient {
   // Customers API
   readonly customers = {
     list: (params?: { limit?: number; offset?: number }) =>
-      this.request<{ data: any[] }>(`/api/customers`),
-    get: (id: string) => this.request<any>(`/api/customers/${id}`),
+      this.request<{ data: unknown[] }>(`/api/customers`),
+    get: (id: string) => this.request<unknown>(`/api/customers/${id}`),
   }
 
   // Invoices API
   readonly invoices = {
-    list: (params?: { limit?: number }) => this.request<{ data: any[] }>(`/api/invoices`),
-    get: (id: string) => this.request<any>(`/api/invoices/${id}`),
+    list: (params?: { limit?: number }) => this.request<{ data: unknown[] }>(`/api/invoices`),
+    get: (id: string) => this.request<unknown>(`/api/invoices/${id}`),
   }
 
   // Catalog API
   readonly products = {
-    list: () => this.request<{ data: any[] }>(`/api/products`),
-    get: (id: string) => this.request<any>(`/api/products/${id}`),
+    list: () => this.request<{ data: unknown[] }>(`/api/products`),
+    get: (id: string) => this.request<unknown>(`/api/products/${id}`),
   }
 }

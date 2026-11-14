@@ -22,7 +22,7 @@ vi.mock('../db', () => {
   const builder = (table: string) => {
     let op = 'select'
     let columns = ''
-    const q: any = {
+    const q: Record<string, unknown> = {
       select: (cols?: string) => ((columns = cols ?? ''), q),
       insert: () => ((op = 'insert'), writes.push(`${table}:insert`), q),
       update: () => ((op = 'update'), writes.push(`${table}:update`), q),

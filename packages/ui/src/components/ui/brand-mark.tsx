@@ -32,6 +32,7 @@
 // ============================================
 
 import { memo, useState } from 'react'
+import Image from 'next/image'
 
 import { cn } from '../../lib/utils'
 
@@ -82,8 +83,13 @@ export const BrandMark = memo(function BrandMark({
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    // `unoptimized`: the path is used as is, so the file:// rule above still holds;
+    // on Windows and Android the next/image shim renders this same <img>.
+    <Image
+      unoptimized
+      loading="eager"
+      width={64}
+      height={64}
       src={LOGO_SRC}
       alt={alt}
       onError={() => setFailed(true)}

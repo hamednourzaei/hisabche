@@ -45,7 +45,7 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
 
   it('accepts two legitimate identical walk-in payments within 3 seconds without false-positive rejection', async () => {
     const recorded: string[] = []
-    const fakeRepo: any = {
+    const fakeRepo: Record<string, unknown> = {
       paymentIdByClientRequestId: vi.fn().mockResolvedValue(null),
       lastPaymentSequence: vi.fn().mockResolvedValue(100),
       openInvoicesFor: vi.fn().mockResolvedValue([]),
@@ -71,7 +71,9 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
       attachJournalEntry: vi.fn().mockResolvedValue(undefined),
     }
 
-    const service = new PaymentsService(fakeRepo)
+    const service = new PaymentsService(
+      fakeRepo as unknown as ConstructorParameters<typeof PaymentsService>[0],
+    )
 
     const paymentInput = {
       direction: 'in' as const,
@@ -96,7 +98,7 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
   })
 
   it('replays existing payment when identical clientRequestId is passed', async () => {
-    const fakeRepo: any = {
+    const fakeRepo: Record<string, unknown> = {
       paymentIdByClientRequestId: vi.fn().mockImplementation(async (_ws, key) => {
         if (key === 'req-pay-123') return 'pmt-existing'
         return null
@@ -119,7 +121,9 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
       recordPayment: vi.fn(),
     }
 
-    const service = new PaymentsService(fakeRepo)
+    const service = new PaymentsService(
+      fakeRepo as unknown as ConstructorParameters<typeof PaymentsService>[0],
+    )
 
     const res = await service.recordPayment(
       ctx,
@@ -134,13 +138,13 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
 
     // Replayed from database lookup, repo.recordPayment never called
     expect(res.id).toBe('pmt-existing')
-    expect((res as any).idempotentReplay).toBe(true)
+    expect((res as { idempotentReplay?: boolean }).idempotentReplay).toBe(true)
     expect(fakeRepo.recordPayment).not.toHaveBeenCalled()
   })
 
   it('recovers and replays winner when concurrent twin loses race with 23505', async () => {
     let callCount = 0
-    const fakeRepo: any = {
+    const fakeRepo: Record<string, unknown> = {
       paymentIdByClientRequestId: vi.fn().mockImplementation(async () => {
         callCount++
         // On initial pre-check, not found; on 23505 catch, winner is found
@@ -166,7 +170,9 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
       feeOf: vi.fn().mockResolvedValue(0),
     }
 
-    const service = new PaymentsService(fakeRepo)
+    const service = new PaymentsService(
+      fakeRepo as unknown as ConstructorParameters<typeof PaymentsService>[0],
+    )
 
     const res = await service.recordPayment(
       ctx,
@@ -180,11 +186,11 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
     )
 
     expect(res.id).toBe('pmt-winner')
-    expect((res as any).idempotentReplay).toBe(true)
+    expect((res as { idempotentReplay?: boolean }).idempotentReplay).toBe(true)
   })
 
   it('rejects re-use of an Idempotency-Key with a different payload (Conflict 409)', async () => {
-    const fakeRepo: any = {
+    const fakeRepo: Record<string, unknown> = {
       paymentIdByClientRequestId: vi.fn().mockResolvedValue('pmt-existing'),
       getPayment: vi.fn().mockResolvedValue({
         id: 'pmt-existing',
@@ -203,7 +209,9 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
       feeOf: vi.fn().mockResolvedValue(0),
     }
 
-    const service = new PaymentsService(fakeRepo)
+    const service = new PaymentsService(
+      fakeRepo as unknown as ConstructorParameters<typeof PaymentsService>[0],
+    )
 
     // Attempt to reuse same key with amount: 999 instead of 500
     await expect(
@@ -221,7 +229,7 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
   })
 
   it('does not replay when 23505 is caused by an unrelated constraint collision', async () => {
-    const fakeRepo: any = {
+    const fakeRepo: Record<string, unknown> = {
       paymentIdByClientRequestId: vi.fn().mockResolvedValue(null),
       lastPaymentSequence: vi.fn().mockResolvedValue(100),
       openInvoicesFor: vi.fn().mockResolvedValue([]),
@@ -233,7 +241,9 @@ describe('Gate 3: Standard Database-Backed Payment Idempotency', () => {
       feeOf: vi.fn().mockResolvedValue(0),
     }
 
-    const service = new PaymentsService(fakeRepo)
+    const service = new PaymentsService(
+      fakeRepo as unknown as ConstructorParameters<typeof PaymentsService>[0],
+    )
 
     await expect(
       service.recordPayment(

@@ -23,6 +23,32 @@ export interface Scenario {
   run: (run: Run) => Promise<void>
 }
 
+interface GrantVectorItem {
+  id: string
+  startsOn?: string
+  quantity?: number
+  deferredAmount?: number
+  termMonths?: number
+  adjustments?: number
+  consumedQuantity?: number
+  releasedAmount?: number
+  activatedOn?: string
+  suspensions?: Array<{ startsOn: string; endsOn?: string }>
+}
+
+interface GoldenVector {
+  id: string
+  quantity: number
+  onDate: string
+  unattributed?: number
+  grants: GrantVectorItem[]
+  expected: {
+    shortfall?: number
+    allocations?: Array<{ grantId: string | null; quantity: number; releasedAmount: number }>
+    totalReleasedAmount?: number
+  }
+}
+
 const DOCS = process.env.RETURN05_DOCS ?? join(__dirname, '..', '..', '..', '..', 'docs')
 const doc = (name: string) => readFileSync(join(DOCS, name), 'utf8')
 const vectors = JSON.parse(
@@ -30,7 +56,7 @@ const vectors = JSON.parse(
     join(DOCS, '..', 'packages', 'validation', 'src', '__golden__', 'package-grant-vectors.json'),
     'utf8',
   ),
-) as { vectors: Array<Record<string, any>> }
+) as { vectors: GoldenVector[] }
 
 const WS = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const SERVICE = '20000000-0000-4000-8000-000000000001'
@@ -224,10 +250,10 @@ export const scenarios: Scenario[] = [
             id,
             customer,
             invoice,
-            startsOn: g.startsOn,
-            quantity: g.quantity,
-            deferred: g.deferredAmount,
-            term: g.termMonths,
+            startsOn: g.startsOn ?? '2026-10-01',
+            quantity: g.quantity ?? 1,
+            deferred: g.deferredAmount ?? null,
+            term: g.termMonths ?? null,
           })
           if (g.adjustments) {
             await run(
@@ -236,7 +262,7 @@ export const scenarios: Scenario[] = [
               [WS, customer, PACKAGE, g.adjustments, id],
             )
           }
-          if (g.consumedQuantity > 0) {
+          if ((g.consumedQuantity ?? 0) > 0) {
             const consume = uid('c1000000')
             await run(
               `INSERT INTO public.package_credit_ledger (id, workspace_id, customer_id, package_product_id, entry_type, quantity, effective_date)
@@ -271,7 +297,7 @@ export const scenarios: Scenario[] = [
             }
           }
         }
-        if (vector.unattributed > 0) {
+        if ((vector.unattributed ?? 0) > 0) {
           await run(
             `INSERT INTO public.package_credit_ledger (workspace_id, customer_id, package_product_id, entry_type, quantity, effective_date)
              VALUES ($1, $2, $3, 'ADJUSTMENT', $4, '2026-10-02')`,
@@ -291,7 +317,7 @@ export const scenarios: Scenario[] = [
         [entryId, WS, customer, PACKAGE, vector.quantity, vector.onDate],
       )
 
-      if (vector.expected.shortfall > 0) {
+      if ((vector.expected.shortfall ?? 0) > 0) {
         await refuses(consume, 'INSUFFICIENT_ELIGIBLE_PACKAGE_CREDIT')
         const left = await run(
           `SELECT 1 FROM public.package_credit_allocations WHERE entry_id = $1`,

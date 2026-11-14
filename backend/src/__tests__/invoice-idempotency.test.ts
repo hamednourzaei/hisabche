@@ -17,7 +17,7 @@ let lookups = 0
 vi.mock('../db', () => {
   const builder = (table: string) => {
     let op = 'select'
-    const q: any = {
+    const q: Record<string, unknown> = {
       select: () => q,
       insert: () => ((op = 'insert'), calls.push({ table, op }), q),
       update: () => ((op = 'update'), calls.push({ table, op }), q),

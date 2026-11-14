@@ -26,7 +26,11 @@ import { InvoiceService } from '../services/invoice.service'
 
 const WS = 'ws-1'
 const assertBindings = (lines: Array<Record<string, unknown>>) =>
-  (new InvoiceService() as any).assertVariantBindings(WS, lines) as Promise<void>
+  (
+    new InvoiceService() as unknown as {
+      assertVariantBindings: (...args: unknown[]) => Promise<void>
+    }
+  ).assertVariantBindings(WS, lines) as Promise<void>
 const variant = (over: Record<string, unknown> = {}) => ({
   id: 'v-1',
   workspace_id: WS,

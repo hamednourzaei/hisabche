@@ -26,7 +26,7 @@ let alreadyPosted = false
 
 vi.mock('../db', () => {
   const builder = (table: string) => {
-    const q: any = {
+    const q: Record<string, unknown> = {
       select: () => q,
       eq: () => q,
       in: () => q,
@@ -295,7 +295,7 @@ describe('the fee of a payment', () => {
 
 describe('PaymentsService.recordPayment — with a fee', () => {
   function fakeRepo() {
-    const recorded: Array<{ payment: any; till: any; fee: number | null }> = []
+    const recorded: Array<{ payment: unknown; till: unknown; fee: number | null }> = []
     return {
       recorded,
       paymentIdByClientRequestId: async () => null,
@@ -319,13 +319,17 @@ describe('PaymentsService.recordPayment — with a fee', () => {
       lastPaymentSequence: async () => 0,
       recordPayment: async (
         _c: unknown,
-        payment: any,
+        payment: unknown,
         _a: unknown,
         _k: unknown,
-        till: any,
+        till: unknown,
         fee: number | null,
       ) => {
-        recorded.push({ payment, till, fee })
+        recorded.push({
+          payment: payment as { amount: number },
+          till: till as { sessionId: string; amountMinor: number },
+          fee,
+        })
         return { id: 'payment-1', replayed: false }
       },
       attachJournalEntry: async () => {},
@@ -342,13 +346,15 @@ describe('PaymentsService.recordPayment — with a fee', () => {
       allocations: [{ invoiceId: INVOICE, amount: 100 }],
       ...over,
     }) as never
-  const service = async (repo: ReturnType<typeof fakeRepo>) =>
-    new (await import('../services/payments/payments.service')).PaymentsService(repo as any)
+  const service = async (repo: ReturnType<typeof fakeRepo>) => {
+    const { PaymentsService } = await import('../services/payments/payments.service')
+    return new PaymentsService(repo as unknown as ConstructorParameters<typeof PaymentsService>[0])
+  }
 
   it('⚠️ received 100 less a fee of 2 into a till: the invoice is settled by 100, the drawer gets 98', async () => {
     const repo = fakeRepo()
     await (await service(repo)).recordPayment(ctx, pay({ feeAmount: 2, tillSessionId: 'till-1' }))
-    expect(repo.recorded[0]!.payment.amount).toBe(100)
+    expect((repo.recorded[0]!.payment as { amount: number }).amount).toBe(100)
     expect(repo.recorded[0]!.fee).toBe(2)
     expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 98 })
     expect(posted[0]!.lines).toEqual([

@@ -30,10 +30,10 @@ const pg = new EmbeddedPostgres({
 let sql: postgres.Sql | undefined
 let started = false
 
-const run: Run = async (text, params) => {
+const run: Run = async <T = Record<string, unknown>>(text: string, params?: readonly unknown[]) => {
   if (!sql) throw new Error('database not started')
   const rows = await sql.unsafe(text, (params ? [...params] : []) as never[])
-  return rows as unknown as Array<Record<string, unknown>>
+  return rows as unknown as Array<T>
 }
 
 describe('Postgres: the returns core (invoice-return-05)', () => {

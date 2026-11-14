@@ -8,7 +8,7 @@ let result: { data: unknown; error: { code: string; message: string } | null } =
 }
 
 vi.mock('../db', () => {
-  const q: any = {}
+  const q: Record<string, unknown> = {}
   for (const k of ['select', 'eq', 'order', 'limit', 'in', 'is']) q[k] = () => q
   q.single = async () => result
   q.maybeSingle = async () => result

@@ -126,10 +126,18 @@ describe('the link dialog', () => {
   })
 
   it('the device gives the origin and the share sheet, after mount — and NOT the zone', () => {
-    const effect = dialog.slice(dialog.indexOf('useEffect(() => { setDevice({'))
-    expect(effect.startsWith('useEffect(() => { setDevice({')).toBe(true)
-    expect(dialog.split('window.location').length - 1).toBe(2)
-    expect(dialog.indexOf('window.location')).toBeGreaterThan(dialog.indexOf('useEffect(() => {'))
+    // Read through useSyncExternalStore: the server (and hydration) snapshot is
+    // empty / false, the device's value arrives after mount.
+    expect(dialog).toContain("origin: useSyncExternalStore(noSubscription, linkOrigin, () => '')")
+    expect(dialog).toContain(
+      'canShare: useSyncExternalStore(noSubscription, canShareNow, () => false)',
+    )
+    expect(dialog).not.toContain('window.location')
+    const facts = code('packages/ui/src/lib/browser-facts.ts')
+    expect(facts.split('window.location').length - 1).toBe(2)
+    expect(facts.indexOf('window.location')).toBeGreaterThan(
+      facts.indexOf('export function linkOrigin(): string {'),
+    )
     // The zone is the workplace's, from the server. Nothing here reads a clock.
     expect(dialog).not.toContain('resolvedOptions')
     expect(dialog).not.toContain('getTimezoneOffset')

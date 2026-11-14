@@ -5,7 +5,7 @@ export function initSentry() {
 }
 
 export function setUser(id: string, email?: string) {
-  const user: any = { id }
+  const user: { id: string; email?: string } = { id }
   if (email) user.email = email
   Sentry.setUser(user)
 }
@@ -14,8 +14,8 @@ export function clearUser() {
   Sentry.setUser(null)
 }
 
-export function captureError(error: Error, context?: Record<string, any>) {
-  Sentry.withScope((scope: any) => {
+export function captureError(error: Error, context?: Record<string, unknown>) {
+  Sentry.withScope((scope) => {
     if (context) scope.setExtras(context)
     Sentry.captureException(error)
   })

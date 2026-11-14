@@ -149,23 +149,27 @@ function resetWorld() {
   db.seed('journal_lines', [])
   db.seed('accounting_period_locks', [])
 
-  db.rpc('accounting_post_journal_entry', (args: any) => {
+  db.rpc('accounting_post_journal_entry', (args: Record<string, unknown>) => {
     const entryId = fakeId('journal')
+    const pWorkspaceId = args.p_workspace_id as string
+    const pUserId = args.p_user_id as string
+    const pEntry = (args.p_entry ?? {}) as Record<string, unknown>
+    const pLines = (args.p_lines ?? []) as Array<Record<string, unknown>>
     db.seed('journal_entries', [
       {
         id: entryId,
-        workspace_id: args.p_workspace_id,
-        created_by: args.p_user_id,
-        ...args.p_entry,
+        workspace_id: pWorkspaceId,
+        created_by: pUserId,
+        ...pEntry,
         created_at: new Date().toISOString(),
       },
     ])
-    if (Array.isArray(args.p_lines)) {
+    if (Array.isArray(pLines)) {
       db.seed(
         'journal_lines',
-        args.p_lines.map((l: any) => ({
+        pLines.map((l) => ({
           id: fakeId('line'),
-          workspace_id: args.p_workspace_id,
+          workspace_id: pWorkspaceId,
           journal_entry_id: entryId,
           ...l,
         })),

@@ -33,7 +33,10 @@ describe('industrySupportNoteKey', () => {
   it('uses the generic note for a trade with no capability', () => {
     expect(industrySupportNoteKey(['courier'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
     expect(industrySupportNoteKey(['other'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
-    expect(industrySupportNoteKey(['freightTransport'])).toBe(INDUSTRY_NOTE_GENERIC_KEY)
+  })
+
+  it('freight transport is no longer generic (it gained a profile, 13 Nov 2026)', () => {
+    expect(industrySupportNoteKey(['freightTransport'])).not.toBe(INDUSTRY_NOTE_GENERIC_KEY)
   })
 
   it('uses the partial note for a trade that rides on a partial capability', () => {

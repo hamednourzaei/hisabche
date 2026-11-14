@@ -34,7 +34,7 @@ function makeQuery(table: string) {
 
   const getRows = () => tables.get(table) ?? (tables.set(table, []), tables.get(table)!)
 
-  const builder: any = {
+  const builder: Record<string, unknown> = {
     select: () => builder,
     eq: (column: string, value: unknown) => {
       eqs.push([column, value])
@@ -86,10 +86,10 @@ describe('N-37: Tax Calculation Consistency & Return Generation', () => {
     workspaceId: WORKSPACE_ID,
     userId: 'user-1',
     role: 'owner',
-    capabilities: ['*'],
-  }
+    capabilities: new Set(['*']),
+  } as never
 
-  let taxService: any
+  let taxService: InstanceType<typeof import('../services/tax/tax.service').TaxService>
 
   beforeEach(async () => {
     reset()
@@ -117,11 +117,11 @@ describe('N-37: Tax Calculation Consistency & Return Generation', () => {
 
     expect(taxReturn.lines).toHaveLength(1)
     const vatLine = taxReturn.lines[0]
-    expect(vatLine.componentId).toBe('comp-vat-10')
-    expect(vatLine.outputBaseMinor).toBe(10000)
-    expect(vatLine.outputTaxMinor).toBe(1000)
-    expect(vatLine.inputBaseMinor).toBe(0)
-    expect(vatLine.inputTaxMinor).toBe(0)
+    expect(vatLine!.componentId).toBe('comp-vat-10')
+    expect(vatLine!.outputBaseMinor).toBe(10000)
+    expect(vatLine!.outputTaxMinor).toBe(1000)
+    expect(vatLine!.inputBaseMinor).toBe(0)
+    expect(vatLine!.inputTaxMinor).toBe(0)
     expect(taxReturn.netPayableMinor).toBe(1000)
   })
 
@@ -160,10 +160,10 @@ describe('N-37: Tax Calculation Consistency & Return Generation', () => {
 
     expect(taxReturn.lines).toHaveLength(1)
     const vatLine = taxReturn.lines[0]
-    expect(vatLine.outputBaseMinor).toBe(20000)
-    expect(vatLine.outputTaxMinor).toBe(3000)
-    expect(vatLine.inputBaseMinor).toBe(8000)
-    expect(vatLine.inputTaxMinor).toBe(1200)
+    expect(vatLine!.outputBaseMinor).toBe(20000)
+    expect(vatLine!.outputTaxMinor).toBe(3000)
+    expect(vatLine!.inputBaseMinor).toBe(8000)
+    expect(vatLine!.inputTaxMinor).toBe(1200)
     // Net tax payable = 3,000 - 1,200 = 1,800
     expect(taxReturn.netPayableMinor).toBe(1800)
   })

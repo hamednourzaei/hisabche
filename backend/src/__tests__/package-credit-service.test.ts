@@ -92,7 +92,7 @@ function createMockSupabase(initialRows: Row[] = []) {
                       error: { code: '23505', message: 'duplicate key' },
                     }),
                   }),
-                  then: (resolve: any) =>
+                  then: (resolve: (v: unknown) => void) =>
                     resolve({ data: null, error: { code: '23505', message: 'duplicate key' } }),
                 }
               }
@@ -103,7 +103,7 @@ function createMockSupabase(initialRows: Row[] = []) {
             select: () => ({
               single: async () => ({ data: rows[0], error: null }),
             }),
-            then: (resolve: any) => resolve({ data: rows, error: null }),
+            then: (resolve: (v: unknown) => void) => resolve({ data: rows, error: null }),
           }
         },
         then: (resolve: (val: unknown) => unknown) => {

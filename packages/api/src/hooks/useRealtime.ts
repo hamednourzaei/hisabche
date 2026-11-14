@@ -45,6 +45,10 @@ export function useRealtime({ table, queryKey, enabled = true }: RealtimeOptions
   // lib/active-workspace.ts.
   const workspaceId = useActiveWorkspaceId()
   const channelRef = useRef<{ unsubscribe: () => void } | null>(null)
+  // Callers pass `queryKey` as an inline array, a new identity every render.
+  // Its TEXT is the dependency, so the channel is reopened only when the key
+  // really changes.
+  const keyText = JSON.stringify(queryKey)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -63,7 +67,10 @@ export function useRealtime({ table, queryKey, enabled = true }: RealtimeOptions
     import('../supabase/realtime')
       .then(({ subscribeToChannel }) => {
         subscribeToChannel(table, workspaceId, () => {
-          queryClient.invalidateQueries({ queryKey })
+          const parsed: unknown = JSON.parse(keyText)
+          queryClient.invalidateQueries({
+            queryKey: Array.isArray(parsed) ? parsed.map(String) : [],
+          })
         })
           .then((ch: { unsubscribe: () => void }) => {
             if (cancelled) {
@@ -90,6 +97,5 @@ export function useRealtime({ table, queryKey, enabled = true }: RealtimeOptions
     // tab — the user keeps receiving wake-ups for a book they no longer have
     // open, and after leaving that workspace, for one they are no longer a
     // member of.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, authReady, workspaceId, enabled]) // ← queryClient و queryKey عمداً حذف شده‌اند (به دلیل رفرنس ناپایدار)
+  }, [table, authReady, workspaceId, enabled, queryClient, keyText])
 }

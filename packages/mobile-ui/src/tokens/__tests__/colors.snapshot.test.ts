@@ -49,12 +49,13 @@ const DARK_BASELINE = {
 
   fgPrimary: 'hsl(165, 35%, 97%)',
   fgSecondary: 'hsl(168, 15%, 65%)',
-  fgTertiary: 'hsl(168, 10%, 50%)',
+  // 14 Nov 2026: ALIGNED to the web (globals.css --fg-tertiary 168 10% 56%).
+  fgTertiary: 'hsl(168, 10%, 56%)',
 
   borderDefault: 'hsl(206, 26%, 19%)',
   borderStrong: 'hsl(206, 26%, 26%)',
 
-  glassBg: 'rgba(16, 24, 32, 0.80)',
+  glassBg: 'rgba(16, 24, 32, 0.8)',
   glassBorder: 'rgba(36, 224, 176, 0.14)',
   scrim: 'rgba(6, 10, 14, 0.72)',
 }
@@ -74,7 +75,8 @@ const LIGHT_BASELINE = {
   surfaceOverlay: 'hsl(40, 14%, 96%)',
   fgPrimary: 'hsl(220, 18%, 13%)',
   fgSecondary: 'hsl(220, 9%, 40%)',
-  fgTertiary: 'hsl(220, 7%, 55%)',
+  // 14 Nov 2026: ALIGNED to the web (globals.css --fg-tertiary 220 7% 40%).
+  fgTertiary: 'hsl(220, 7%, 40%)',
   borderDefault: 'hsl(40, 10%, 88%)',
   borderStrong: 'hsl(40, 10%, 79%)',
   glassBg: 'rgba(255, 255, 255, 0.78)',
@@ -82,7 +84,7 @@ const LIGHT_BASELINE = {
   // ── Always agreed with canonical ──
   surfaceElevated: 'hsl(0, 0%, 100%)',
 
-  glassBorder: 'rgba(15, 127, 116, 0.10)',
+  glassBorder: 'rgba(15, 127, 116, 0.1)',
   scrim: 'rgba(16, 24, 32, 0.45)',
 }
 

@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 
 import { useTheme } from '../theme/theme-provider'

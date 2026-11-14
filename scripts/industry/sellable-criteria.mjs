@@ -122,7 +122,11 @@ export const FILE_TAGS = {
   'backend/src/__tests__/http-e2e-business-day.test.ts': ['operations', 'returns'],
   'backend/src/__tests__/financial-flows-e2e.test.ts': ['operations', 'reporting'],
   'backend/src/__tests__/v59-1-gold-routes-http.test.ts': ['operations'],
-  'backend/src/__tests__/v59-1-clothing-routes-http.test.ts': ['operations', 'reporting'],
+  'backend/src/__tests__/v59-1-clothing-routes-http.test.ts': [
+    'operations',
+    'reporting',
+    'returns',
+  ],
   'backend/src/__tests__/v59-1-mobile-serials-http.test.ts': ['operations', 'returns'],
   'backend/src/__tests__/v59-1-repair-routes-http.test.ts': ['operations'],
   'backend/src/__tests__/service-delivery-http.test.ts': ['operations', 'returns'],

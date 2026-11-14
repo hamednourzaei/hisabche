@@ -59,7 +59,9 @@ vi.mock('../db', () => ({
 }))
 
 describe('InvoiceReturnService (thin RPC caller)', () => {
-  let service: any
+  let service: InstanceType<
+    typeof import('../services/sales/invoice-return.service').InvoiceReturnService
+  >
 
   beforeEach(async () => {
     invalidatedWorkspaces = []
@@ -83,7 +85,14 @@ describe('InvoiceReturnService (thin RPC caller)', () => {
         returnType: 'sale_return',
         returnNumber: 'RET-001',
         returnDate: '2026-10-26',
-        lines: [{ originalLineId: LINE_A_ID, returnQuantity: 1 }],
+        lines: [
+          {
+            originalLineId: LINE_A_ID,
+            returnQuantity: 1,
+            restockChoice: 'restock',
+            reasonCode: 'defective',
+          },
+        ],
       }),
     ).rejects.toThrow(NotFoundError)
   })
@@ -103,7 +112,14 @@ describe('InvoiceReturnService (thin RPC caller)', () => {
         returnType: 'sale_return',
         returnNumber: 'RET-001',
         returnDate: '2026-10-26',
-        lines: [{ originalLineId: LINE_A_ID, returnQuantity: 1 }],
+        lines: [
+          {
+            originalLineId: LINE_A_ID,
+            returnQuantity: 1,
+            restockChoice: 'restock',
+            reasonCode: 'defective',
+          },
+        ],
       }),
     ).rejects.toThrow('RETURN_FUNCTION_MISSING')
   })
@@ -120,15 +136,26 @@ describe('InvoiceReturnService (thin RPC caller)', () => {
         returnType: 'sale_return',
         returnNumber: 'RET-001',
         returnDate: '2026-10-26',
-        lines: [{ originalLineId: LINE_A_ID, returnQuantity: 100 }],
+        lines: [
+          {
+            originalLineId: LINE_A_ID,
+            returnQuantity: 100,
+            restockChoice: 'restock',
+            reasonCode: 'defective',
+          },
+        ],
       }),
     ).rejects.toThrow(ConflictError)
   })
 
   it('dispatches RPC, returns created document, and calls invalidateMoneyCaches', async () => {
-    let capturedArgs: any = null
+    let capturedArgs: {
+      p_workspace_id?: string
+      p_return?: { originalInvoiceId?: string }
+      p_lines?: Array<{ quantity?: number; restockChoice?: string }>
+    } | null = null
     rpcHandler = async (_fn, args) => {
-      capturedArgs = args
+      capturedArgs = args as typeof capturedArgs
       return {
         data: {
           id: 'return-uuid-1',
@@ -158,10 +185,10 @@ describe('InvoiceReturnService (thin RPC caller)', () => {
 
     expect(res.id).toBe('return-uuid-1')
     expect(res.grandTotalMinor).toBe(20000)
-    expect(capturedArgs.p_workspace_id).toBe(WORKSPACE_A)
-    expect(capturedArgs.p_return.originalInvoiceId).toBe(INVOICE_A_ID)
-    expect(capturedArgs.p_lines[0].quantity).toBe(2)
-    expect(capturedArgs.p_lines[0].restockChoice).toBe('restock')
+    expect(capturedArgs!.p_workspace_id).toBe(WORKSPACE_A)
+    expect(capturedArgs!.p_return?.originalInvoiceId).toBe(INVOICE_A_ID)
+    expect(capturedArgs!.p_lines?.[0]?.quantity).toBe(2)
+    expect(capturedArgs!.p_lines?.[0]?.restockChoice).toBe('restock')
     expect(invalidatedWorkspaces).toContain(WORKSPACE_A)
   })
 })

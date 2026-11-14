@@ -49,7 +49,7 @@ describe('the document takes a language', () => {
 
 describe('the route knows who is reading', () => {
   it('passes the language it derived', () => {
-    expect(route).toMatch(/InvoicePDFDocument\(\{ invoice: invoice as any, qrDataUrl, lang \}\)/)
+    expect(route).toMatch(/InvoicePDFDocument\(\{ invoice: invoice, qrDataUrl, lang \}\)/)
   })
 
   it('⚠️ checks fa-AF before fa', () => {

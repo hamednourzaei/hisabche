@@ -3,6 +3,7 @@
 import { APP_LANGUAGES } from '../../lib/language-switch'
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
+import { useNow } from '../../hooks/use-now'
 import { roleTone } from '../../lib/role-tone'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { BrandMark } from './brand-mark'
@@ -84,6 +85,8 @@ const SyncPill = memo(function SyncPill({
     () => true,
     () => false,
   )
+  // The pill's age, from a ticking client clock (null on the server).
+  const now = useNow(30_000)
 
   if (!isOnline) {
     return (
@@ -129,9 +132,8 @@ const SyncPill = memo(function SyncPill({
   // agree (both empty), and the pill appears on the second render with a value
   // computed entirely on the client. A shifting timestamp is client state; it
   // was never server-renderable.
-  if (lastSyncedAt && mounted) {
-    // eslint-disable-next-line react-hooks/purity
-    const s = Math.floor((Date.now() - lastSyncedAt) / 1000)
+  if (lastSyncedAt && mounted && now !== null) {
+    const s = Math.floor((now - lastSyncedAt) / 1000)
     const label =
       s < 60 ? t('sync.justNow') : t('sync.minutesAgo').replace('{m}', String(Math.floor(s / 60)))
     return (

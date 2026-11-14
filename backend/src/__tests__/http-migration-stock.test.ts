@@ -140,11 +140,15 @@ function stockByPlace(): Record<string, number> {
   return held
 }
 
-const lineOf = (job: any, measure: string) =>
-  job.reconciliation?.lines.find((line: { measure: string }) => line.measure === measure)
+const lineOf = (job: Record<string, unknown>, measure: string) => {
+  const rec = job.reconciliation as { lines?: Array<{ measure: string }> } | undefined
+  return rec?.lines?.find((line) => line.measure === measure)
+}
 
-const codesOf = (dry: any): string[] =>
-  dry.findings.map((finding: { code: string }) => finding.code)
+const codesOf = (dry: Record<string, unknown>): string[] => {
+  const findings = (dry.findings ?? []) as Array<{ code: string }>
+  return findings.map((finding) => finding.code)
+}
 
 describe('opening stock in several warehouses', () => {
   it('⚠️ shape A — a row per product and warehouse: ONE product, each warehouse its own figure', async () => {

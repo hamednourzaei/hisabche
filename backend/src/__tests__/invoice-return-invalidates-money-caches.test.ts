@@ -40,7 +40,7 @@ describe('a customer balance counts sale returns', () => {
   it('the statement read gets them from the same reader', () => {
     const repository = code('../services/payments/payments.repository.ts')
     expect(repository).toContain(
-      'this.returnsOfInvoices(workspaceId, invoices as PartyInvoiceRow[])',
+      "partyType === 'customer' ? await this.returnsOfInvoices(workspaceId, invoices) : []",
     )
   })
 })

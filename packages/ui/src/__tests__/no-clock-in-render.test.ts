@@ -68,11 +68,23 @@ describe('no clock read during render (React #418)', () => {
     expect(src).toContain('useNow(')
   })
 
-  it('useNow reads the clock only inside its effect', () => {
+  it('useNow reads the clock only when React subscribes, never in render', () => {
     const src = code(join(__dirname, '..', 'hooks', 'use-now.ts'))
-    expect(src).toContain('Date.now()')
-    expect(renderClockReads(src)).toEqual([])
-    expect(src).toContain('useState<number | null>(null)')
+    // The store: `read` hands back the last value and never asks the clock;
+    // only `subscribe` (which React calls after commit) and its interval do.
+    expect(src).toContain('read: (): number | null => now')
+    const subscribe = src.slice(src.indexOf('subscribe(onChange: () => void) {'))
+    expect(subscribe.startsWith('subscribe(onChange: () => void) {')).toBe(true)
+    expect(src.split('Date.now()').length - 1).toBe(2)
+    expect(src.indexOf('Date.now()')).toBeGreaterThan(
+      src.indexOf('subscribe(onChange: () => void) {'),
+    )
+    expect(src.lastIndexOf('Date.now()')).toBeLessThan(
+      src.indexOf('read: (): number | null => now'),
+    )
+    // Server and hydration render: null, so both agree (React #418).
+    expect(src).toContain('const serverNow = (): number | null => null')
+    expect(src).toContain('useSyncExternalStore(clock.subscribe, clock.read, serverNow)')
   })
 
   it('the helper itself catches a clock read in render', () => {

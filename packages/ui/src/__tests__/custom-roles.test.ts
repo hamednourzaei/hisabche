@@ -63,9 +63,7 @@ describe('whose role it is', () => {
       matrix.indexOf('async setCell('),
       matrix.indexOf('async assignProfile('),
     )
-    expect(setCell).toContain(
-      'if ((role as Record<string, any>).workspace_id !== ctx.workspaceId) {',
-    )
+    expect(setCell).toContain('if (rowOf(role)?.workspace_id !== ctx.workspaceId) {')
     expect(setCell).toContain("'PERMISSION_TEMPLATE_READONLY")
     // The refusal comes BEFORE the write to role_permissions.
     expect(setCell.indexOf('PERMISSION_TEMPLATE_READONLY')).toBeLessThan(

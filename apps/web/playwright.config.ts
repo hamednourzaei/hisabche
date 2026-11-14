@@ -6,11 +6,11 @@ export default defineConfig({
   timeout: 30000,
   retries: 1,
   use: {
-    baseURL: 'https://hisabche.com',
+    baseURL: process.env.E2E_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
     channel: 'chrome',
     headless: true, // ✅ بدون باز کردن پنجره
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: 'off',
   },
   projects: [{ name: 'chromium', use: { channel: 'chrome' } }],
 })

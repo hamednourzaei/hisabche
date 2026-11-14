@@ -88,8 +88,7 @@ export function useTransactions(
     // leaves the previous workspace's channel subscribed for the life of the
     // tab — still receiving wake-ups for a book the user no longer has open,
     // and after leaving that workspace, for one they are no longer a member of.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, workspaceId])
+  }, [authReady, workspaceId, queryClient])
 
   return useQuery({
     queryKey: transactionKeys.list(filters),

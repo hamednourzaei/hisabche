@@ -20,12 +20,12 @@ export function initPostHog() {
   initialized = true
 }
 
-export function trackEvent(name: string, properties?: Record<string, any>) {
+export function trackEvent(name: string, properties?: Record<string, unknown>) {
   if (typeof window === 'undefined') return
   posthog.capture(name, properties)
 }
 
-export function identifyUser(id: string, traits?: Record<string, any>) {
+export function identifyUser(id: string, traits?: Record<string, unknown>) {
   if (typeof window === 'undefined') return
   posthog.identify(id, traits)
 }

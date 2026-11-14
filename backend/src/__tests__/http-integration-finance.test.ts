@@ -609,7 +609,12 @@ describe('budgets, over real HTTP', () => {
     expect(response.statusCode, response.body).toBe(200)
     expect(calls).toBe(1)
     const body = response.json()
-    const byId = new Map<string, any>(body.rows.map((r: any) => [r.budget.id, r.performance]))
+    const byId = new Map<string, unknown>(
+      body.rows.map((r: { budget: { id: string }; performance: unknown }) => [
+        r.budget.id,
+        r.performance,
+      ]),
+    )
     expect(byId.get(expense)).toMatchObject({
       actualMinor: 30_000,
       openCommitmentMinor: 20_000,

@@ -39,7 +39,7 @@ function makeQuery(table: string) {
 
   const getRows = () => tables.get(table) ?? (tables.set(table, []), tables.get(table)!)
 
-  const builder: any = {
+  const builder: Record<string, unknown> = {
     select: () => {
       pendingKind = 'select'
       return builder
@@ -136,21 +136,21 @@ describe('N-31: Project Members and Tasks Tenancy Isolation', () => {
   const PROJECT_B_ID = '33333333-3333-3333-3333-333333333333'
   const MEMBER_B_ID = '44444444-4444-4444-4444-444444444444'
 
-  let projectService: any
+  let projectService: InstanceType<typeof import('../services/project.service').ProjectService>
 
   const ctxA = {
     workspaceId: WORKSPACE_A,
     userId: USER_A,
     role: 'owner',
-    capabilities: ['*'],
-  }
+    capabilities: new Set(['*']),
+  } as never
 
   const ctxB = {
     workspaceId: WORKSPACE_B,
     userId: USER_B,
     role: 'owner',
-    capabilities: ['*'],
-  }
+    capabilities: new Set(['*']),
+  } as never
 
   beforeEach(async () => {
     reset()
@@ -177,9 +177,9 @@ describe('N-31: Project Members and Tasks Tenancy Isolation', () => {
   })
 
   it('allows Workspace B to list members of its own project', async () => {
-    const members = await projectService.listMembers(ctxB, PROJECT_B_ID)
+    const members = (await projectService.listMembers(ctxB, PROJECT_B_ID)) as Array<{ id: string }>
     expect(members).toHaveLength(1)
-    expect(members[0].id).toBe(MEMBER_B_ID)
+    expect(members[0]?.id).toBe(MEMBER_B_ID)
   })
 
   it('blocks Workspace A from adding a member to Workspace B project', async () => {
@@ -217,7 +217,7 @@ describe('N-31: Project Members and Tasks Tenancy Isolation', () => {
         title: 'Unauthorized Task',
         status: 'todo',
         priority: 'medium',
-      }),
+      } as never),
     ).rejects.toThrow(NotFoundError)
   })
 

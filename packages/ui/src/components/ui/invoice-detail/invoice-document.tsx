@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, forwardRef, useEffect, useState } from 'react'
+import Image from 'next/image'
 import { Barcode, Calendar, Mail, MapPin, Phone, User } from 'lucide-react'
 import { buildInvoiceShareUrl as contractShareUrl } from '@hisabche/ui-contract'
 import { useLocale } from 'next-intl'
@@ -30,8 +31,18 @@ export function InvoiceQRCode({ value, size = 64 }: { value: string; size?: numb
   }, [value, size])
 
   if (!dataUrl) return null
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={dataUrl} alt="QR" className="rounded" style={{ width: size, height: size }} />
+  return (
+    <Image
+      unoptimized
+      loading="eager"
+      src={dataUrl}
+      alt="QR"
+      width={size}
+      height={size}
+      className="rounded"
+      style={{ width: size, height: size }}
+    />
+  )
 }
 
 // ✅ کلیک روی QR = کپی لینک (بدون نیاز به رفتن به پنل اشتراک‌گذاری)
@@ -271,8 +282,12 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
           <div className="mb-4 flex flex-col gap-3 border-b border-[hsl(var(--border-default))] pb-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:pb-6">
             <div className="flex items-center gap-3">
               {business.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                // Eager: a printed invoice must not wait for a lazy image to scroll in.
+                <Image
+                  unoptimized
+                  loading="eager"
+                  width={48}
+                  height={48}
                   src={business.logoUrl}
                   alt={business.name}
                   className="size-12 shrink-0 rounded-xl object-cover border border-[hsl(var(--border-default))]"
@@ -609,8 +624,16 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                   <div className="flex items-end justify-center gap-6" data-seller-marks="">
                     {[business.stampUrl, business.signatureUrl].map((src) =>
                       src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img key={src} src={src} alt="" className="h-16 object-contain" />
+                        <Image
+                          key={src}
+                          unoptimized
+                          loading="eager"
+                          width={160}
+                          height={64}
+                          src={src}
+                          alt=""
+                          className="h-16 w-auto object-contain"
+                        />
                       ) : null,
                     )}
                   </div>

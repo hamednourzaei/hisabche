@@ -626,8 +626,29 @@ describe('history and reporting read the snapshot, not today', () => {
       ],
     })
 
+  type ReportMaterial = {
+    product_id?: string
+    key?: string
+    name?: string
+    previous_cost?: number
+    current_cost?: number
+    change?: number
+    change_percent?: number
+    quantity?: number
+    value?: number
+  }
+  type ReportProduct = {
+    first_unit_cost?: number
+    last_unit_cost?: number
+  }
+  type ReportOutput = {
+    totals: { runs: number; total_cost: number }
+    materials: ReportMaterial[]
+    products: ReportProduct[]
+  }
+
   async function report(from: string, to: string, workspace = WS) {
-    const [row] = await sql<{ r: any }[]>`
+    const [row] = await sql<{ r: ReportOutput }[]>`
       SELECT public.manufacturing_report(${workspace}::uuid, ${from}::date, ${to}::date) AS r`
     return row!.r
   }
@@ -650,33 +671,33 @@ describe('history and reporting read the snapshot, not today', () => {
     expect(Number(r.totals.runs)).toBe(2)
     expect(Number(r.totals.total_cost)).toBe(12 * 2 + 6 + 16 * 2 + 8)
 
-    const a = r.materials.find((m: any) => m.product_id === PART_A)
-    expect(Number(a.previous_cost)).toBe(10) // the last run BEFORE the range
-    expect(Number(a.current_cost)).toBe(16)
-    expect(Number(a.change)).toBe(6)
-    expect(Number(a.change_percent)).toBe(60)
-    expect(Number(a.quantity)).toBe(4)
-    expect(Number(a.value)).toBe(56)
-    expect(a.name).toBe('part a')
+    const a = r.materials.find((m) => m.product_id === PART_A)
+    expect(Number(a!.previous_cost)).toBe(10) // the last run BEFORE the range
+    expect(Number(a!.current_cost)).toBe(16)
+    expect(Number(a!.change)).toBe(6)
+    expect(Number(a!.change_percent)).toBe(60)
+    expect(Number(a!.quantity)).toBe(4)
+    expect(Number(a!.value)).toBe(56)
+    expect(a!.name).toBe('part a')
 
     // A hand-typed material is matched by its label, whatever its case.
-    const typed = r.materials.find((m: any) => m.key === 'label:hand typed')
-    expect(Number(typed.previous_cost)).toBe(5)
-    expect(Number(typed.current_cost)).toBe(8)
+    const typed = r.materials.find((m) => m.key === 'label:hand typed')
+    expect(Number(typed!.previous_cost)).toBe(5)
+    expect(Number(typed!.current_cost)).toBe(8)
 
     expect(r.products).toHaveLength(1)
-    expect(Number(r.products[0].first_unit_cost)).toBe(30)
-    expect(Number(r.products[0].last_unit_cost)).toBe(40)
+    expect(Number(r.products[0]!.first_unit_cost)).toBe(30)
+    expect(Number(r.products[0]!.last_unit_cost)).toBe(40)
   })
 
   it('with nothing before the range, «previous» is the first cost inside it', async () => {
     await complete(material(12, '2026-09-05', 'only-1'))
     await complete(material(9, '2026-09-25', 'only-2'))
     const r = await report('2026-09-01', '2026-09-30')
-    const a = r.materials.find((m: any) => m.product_id === PART_A)
-    expect(Number(a.previous_cost)).toBe(12)
-    expect(Number(a.current_cost)).toBe(9)
-    expect(Number(a.change_percent)).toBe(-25)
+    const a = r.materials.find((m) => m.product_id === PART_A)
+    expect(Number(a!.previous_cost)).toBe(12)
+    expect(Number(a!.current_cost)).toBe(9)
+    expect(Number(a!.change_percent)).toBe(-25)
   })
 
   it('another workspace sees none of it, and an empty range is zeros, not an error', async () => {

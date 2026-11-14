@@ -15,14 +15,19 @@ import { SubscriptionOrderService } from '../services/subscription-order.service
 
 describe('SubscriptionOrderService — Unit Tests', () => {
   let service: SubscriptionOrderService
-  let mockDb: any
+  let mockDb: {
+    from: ReturnType<typeof vi.fn>
+    rpc: ReturnType<typeof vi.fn>
+  }
 
   beforeEach(() => {
     mockDb = {
       from: vi.fn(),
       rpc: vi.fn(),
     }
-    service = new SubscriptionOrderService(mockDb)
+    service = new SubscriptionOrderService(
+      mockDb as unknown as ConstructorParameters<typeof SubscriptionOrderService>[0],
+    )
   })
 
   it('hashes claim tokens deterministically using SHA-256', () => {

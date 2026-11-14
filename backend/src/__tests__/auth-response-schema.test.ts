@@ -72,8 +72,29 @@ describe('the generator recurses', () => {
 // one changes shape, the source assertions above fail first.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean } {
-  let inner = schema
+type ZodNode = {
+  _def?: {
+    typeName?: string
+    schema?: ZodNode
+    innerType?: ZodNode
+    type?: ZodNode
+  }
+  shape?: Record<string, ZodNode>
+}
+
+interface JsonSchemaNode {
+  type?: string | string[]
+  properties?: Record<string, JsonSchemaNode>
+  required?: string[]
+  items?: JsonSchemaNode
+}
+
+function unwrap(schema: unknown): {
+  inner: ZodNode | undefined
+  optional: boolean
+  nullable: boolean
+} {
+  let inner = schema as ZodNode | undefined
   let optional = false
   let nullable = false
   while (
@@ -82,13 +103,13 @@ function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean
     inner?._def?.typeName === 'ZodDefault' ||
     inner?._def?.typeName === 'ZodEffects'
   ) {
-    if (inner._def.typeName === 'ZodEffects') {
+    if (inner._def?.typeName === 'ZodEffects') {
       inner = inner._def.schema
       continue
     }
-    if (inner._def.typeName === 'ZodNullable') nullable = true
-    else if (inner._def.typeName !== 'ZodDefault') optional = true
-    inner = inner._def.innerType
+    if (inner._def?.typeName === 'ZodNullable') nullable = true
+    else if (inner._def?.typeName !== 'ZodDefault') optional = true
+    inner = inner._def?.innerType
   }
   return { inner, optional, nullable }
 }
@@ -103,14 +124,14 @@ function jsonTypeOf(t: string | undefined): string | undefined {
   }[t ?? '']
 }
 
-function describeNode(schema: unknown): any {
+function describeNode(schema: unknown): JsonSchemaNode {
   const { inner, nullable } = unwrap(schema)
-  const typeName = inner?._def?.typeName as string | undefined
+  const typeName = inner?._def?.typeName
 
   if (typeName === 'ZodObject') {
-    const shape = (inner.shape || {}) as Record<string, unknown>
+    const shape = (inner?.shape || {}) as Record<string, ZodNode>
     const required: string[] = []
-    const properties = Object.fromEntries(
+    const properties: Record<string, JsonSchemaNode> = Object.fromEntries(
       Object.entries(shape).map(([key, value]) => {
         const { optional } = unwrap(value)
         if (!optional) required.push(key)
@@ -121,7 +142,7 @@ function describeNode(schema: unknown): any {
   }
 
   if (typeName === 'ZodArray') {
-    return { type: 'array', items: describeNode(inner._def?.type) }
+    return { type: 'array', items: describeNode(inner?._def?.type) }
   }
 
   const type = jsonTypeOf(typeName)
@@ -142,11 +163,15 @@ describe('the generated schema, for the shape that actually broke', () => {
   })
 
   const generated = describeNode(authResponse)
+  const userProps = (generated.properties?.['user']?.properties ?? {}) as Record<
+    string,
+    JsonSchemaNode
+  >
 
   it('⚠️ the nested user carries every field', () => {
     // With the old generator this object was `{ type: 'object' }` and
     // fast-json-stringify emitted `{}`.
-    expect(Object.keys(generated.properties.user.properties).sort()).toEqual([
+    expect(Object.keys(userProps).sort()).toEqual([
       'businessName',
       'createdAt',
       'email',
@@ -160,24 +185,24 @@ describe('the generated schema, for the shape that actually broke', () => {
     // it SUBSTITUTES `""`. So «this account never named its business» arrived
     // as «its name is the empty string», and the prompt asking the owner to set
     // one could not tell that it needed to appear.
-    expect(generated.properties.user.properties.businessName).toEqual({
+    expect(userProps['businessName']).toEqual({
       type: ['string', 'null'],
     })
   })
 
   it('a non-nullable field is left alone', () => {
-    expect(generated.properties.user.properties.fullName).toEqual({ type: 'string' })
+    expect(userProps['fullName']).toEqual({ type: 'string' })
   })
 
   it('the sibling token survives, as it always did', () => {
     // This is why the bug was invisible: auth kept working.
-    expect(generated.properties.token).toEqual({ type: 'string' })
+    expect(generated.properties?.['token']).toEqual({ type: 'string' })
   })
 
   it('⚠️ an array of objects gets its items described', () => {
     const withList = z.object({ rows: z.array(z.object({ id: z.string(), n: z.number() })) })
     const out = describeNode(withList)
-    expect(out.properties.rows.items.properties).toEqual({
+    expect(out.properties?.['rows']?.items?.properties).toEqual({
       id: { type: 'string' },
       n: { type: 'number' },
     })
@@ -239,9 +264,7 @@ describe('role reaches the client', () => {
   it('⚠️ is null when the membership is ambiguous, not the first row', () => {
     // Picking one of several is the fail-open guess auth.middleware.ts was
     // fixed for. Display or not, it must not invent a role.
-    expect(source).toMatch(
-      /data\?\.length === 1 \? \(\(data\[0\] as any\)\.role \?\? null\) : null/,
-    )
+    expect(source).toMatch(/data\?\.length === 1 \? rowText\(rowOf\(data\[0\]\)\?\.role\) : null/)
   })
 
   it('excludes revoked and suspended memberships', () => {

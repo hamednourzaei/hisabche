@@ -42,7 +42,7 @@ function makeQuery(table: string) {
 
   const getRows = () => tables.get(table) ?? (tables.set(table, []), tables.get(table)!)
 
-  const builder: any = {
+  const builder: Record<string, unknown> = {
     select: () => builder,
     eq: (column: string, value: unknown) => {
       eqs.push([column, value])
@@ -103,7 +103,7 @@ vi.mock('../db', () => ({
 
 describe('N-36: Sync Pull Contract & Horizon Invariants', () => {
   const WORKSPACE_ID = '11111111-1111-1111-1111-111111111111'
-  let syncService: any
+  let syncService: typeof import('../services/sync.service').syncService
 
   beforeEach(async () => {
     reset()

@@ -98,7 +98,7 @@ beforeAll(async () => {
   const { InvoiceService } = await import('../services/invoice.service')
   vi.spyOn(InvoiceService.prototype, 'create').mockImplementation((async (
     _ctx: unknown,
-    body: Record<string, any>,
+    body: { total?: number; paidAmount?: number; items?: unknown[] } & Record<string, unknown>,
     branch: string | null,
     options: { clientRequestId?: string | null } = {},
   ) => {
@@ -110,7 +110,12 @@ beforeAll(async () => {
     created.push({ body, branchId: branch, requestId: options.clientRequestId ?? null })
     const id = `invoice-${created.length}`
     db.seed('invoices', [
-      { id, workspace_id: SHOP, total: body.total, paid_amount: body.paidAmount * paidShare },
+      {
+        id,
+        workspace_id: SHOP,
+        total: body.total,
+        paid_amount: (body.paidAmount ?? 0) * paidShare,
+      },
     ])
     db.seed(
       'invoice_items',

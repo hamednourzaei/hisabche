@@ -14,6 +14,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { InvoiceService } from '../services/invoice.service'
 import type { TenancyContext } from '../services/tenancy.service'
 
+interface InvoiceServicePrivate {
+  findPackageProductIds: (ctx: unknown, productIds: string[]) => Promise<Set<string>>
+  buildPackageGrantRows: (...args: unknown[]) => Promise<Array<Record<string, unknown>>>
+  writeInvoiceDocument: (...args: unknown[]) => Promise<{ code?: string } | null | void>
+  replaceInvoiceItems: (...args: unknown[]) => Promise<unknown>
+}
+
 describe('M5 SLICE D: atomic package credit grant inside invoice transaction', () => {
   const ctx: TenancyContext = {
     workspaceId: '11111111-1111-4111-8111-111111111111',
@@ -23,14 +30,14 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
   }
 
   it('buildPackageGrantRows produces atomic grant rows with idempotency key invoice:<invoiceId>:<lineId>', async () => {
-    const service = new InvoiceService() as any
+    const service = new InvoiceService() as unknown as InvoiceServicePrivate
     const invoiceId = '33333333-3333-4333-8333-333333333333'
     const customerId = '44444444-4444-4444-8444-444444444444'
     const packageProductId = '55555555-5555-4555-8555-555555555555'
     const lineId = '66666666-6666-4666-8666-666666666666'
 
     // Mock products lookup
-    vi.spyOn(service, 'findPackageProductIds').mockResolvedValue(new Set([packageProductId]))
+    service.findPackageProductIds = vi.fn().mockResolvedValue(new Set([packageProductId]))
 
     const lines = [
       {
@@ -76,16 +83,16 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
   })
 
   it('passes grantRows into writeInvoiceDocument RPC parameters', async () => {
-    const service = new InvoiceService() as any
-    let rpcArgs: any = null
+    const service = new InvoiceService() as unknown as InvoiceServicePrivate
+    let rpcArgs: { p_invoice_id?: string; p_grants?: unknown } | null = null
 
     // Spy on supabase.rpc to capture invoice_write_document arguments
     const { supabase } = await import('../db')
     const originalRpc = supabase.rpc
-    supabase.rpc = ((fnName: string, args: any) => {
+    supabase.rpc = ((fnName: string, args: unknown) => {
       if (fnName === 'invoice_write_document') {
-        rpcArgs = args
-        return Promise.resolve({ data: args.p_invoice_id, error: null })
+        rpcArgs = args as typeof rpcArgs
+        return Promise.resolve({ data: rpcArgs?.p_invoice_id, error: null })
       }
       return Promise.resolve({ data: null, error: null })
     }) as never
@@ -116,14 +123,15 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
       await service.writeInvoiceDocument(ctx, doc)
 
       expect(rpcArgs).not.toBeNull()
-      expect(rpcArgs.p_grants).toEqual(doc.grantRows)
+      const captured = rpcArgs as { p_grants?: unknown } | null
+      expect(captured?.p_grants).toEqual(doc.grantRows)
     } finally {
       supabase.rpc = originalRpc
     }
   })
 
   it('fails closed when writeInvoiceDocument RPC fails', async () => {
-    const service = new InvoiceService() as any
+    const service = new InvoiceService() as unknown as InvoiceServicePrivate
     const { supabase } = await import('../db')
     const originalRpc = supabase.rpc
     supabase.rpc = (() => {
@@ -148,7 +156,7 @@ describe('M5 SLICE D: atomic package credit grant inside invoice transaction', (
   })
 
   it('refuses editing lines on an invoice that has package grants (fail-closed A8)', async () => {
-    const service = new InvoiceService() as any
+    const service = new InvoiceService() as unknown as InvoiceServicePrivate
     const invoiceId = '33333333-3333-4333-8333-333333333333'
 
     const { supabase } = await import('../db')
@@ -194,7 +202,7 @@ describe('M5 deployment order: a package sale on a database without invoice-writ
     role: 'owner',
   }
   async function writeWith(grantRows: Array<Record<string, unknown>>) {
-    const service = new InvoiceService() as any
+    const service = new InvoiceService() as unknown as InvoiceServicePrivate
     const { supabase } = await import('../db')
     const original = supabase.rpc
     supabase.rpc = (() =>

@@ -2,7 +2,7 @@
 // write to products.quantity (Phase C projection).
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const writes: Array<{ table: string; op: string; row?: any }> = []
+const writes: Array<{ table: string; op: string; row?: unknown }> = []
 let currentQuantity = -98
 /** The workspace's live warehouses, as `warehouses … .is('deleted_at', null)` answers. */
 let warehouses: Array<{ id: string; name: string; location: null; is_active: boolean }> = []
@@ -10,16 +10,21 @@ let warehouses: Array<{ id: string; name: string; location: null; is_active: boo
 vi.mock('../db', () => {
   const builder = (table: string) => {
     let op = 'select'
-    let row: any
-    const q: any = {
+    let row: Record<string, unknown> = {}
+    const q: Record<string, unknown> = {
       select: () => q,
-      insert: (r: any) => (
+      insert: (r: unknown) => (
         (op = 'insert'),
-        (row = r),
+        (row = (r ?? {}) as Record<string, unknown>),
         writes.push({ table, op, row: r }),
         Promise.resolve({ error: null })
       ),
-      update: (r: any) => ((op = 'update'), (row = r), writes.push({ table, op, row: r }), q),
+      update: (r: unknown) => (
+        (op = 'update'),
+        (row = (r ?? {}) as Record<string, unknown>),
+        writes.push({ table, op, row: r }),
+        q
+      ),
       eq: () => q,
       in: () => q,
       is: () => Promise.resolve({ data: table === 'warehouses' ? warehouses : [], error: null }),

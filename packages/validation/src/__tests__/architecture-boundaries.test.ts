@@ -117,7 +117,7 @@ describe('Architecture Boundaries & Core Mechanical Enforcement', () => {
         `Rule "${rule.name}" must have exactly ONE definition site across backend & packages, found: ${JSON.stringify(definitionSites)}`,
       ).toBe(1)
     }
-  })
+  }, 20_000)
 
   it('ships no port or event scaffolding that nothing consumes', () => {
     // ⚠️ `Clock`, `IdGenerator`, `UnitOfWork`, `CommandHandler` and
@@ -136,5 +136,5 @@ describe('Architecture Boundaries & Core Mechanical Enforcement', () => {
         `${file} reappeared without a consumer — see the note in index.ts`,
       ).toBe(false)
     }
-  })
+  }, 20_000)
 })

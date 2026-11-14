@@ -44,14 +44,11 @@ export function useInvoicesPage() {
   // on every render would fight the user's own selection. Arriving at
   // `?type=sale&outstanding=true` and then pressing «همه» must show everything.
   const searchParams = useSearchParams()
-  const initialFilters = useMemo(
-    () => ({ ...DEFAULT_FILTERS, ...parseInvoiceFilters(searchParams) }),
-    // Deliberately once. See above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
-
-  const [filters, setFilters] = useState<InvoicesQueryParams>(initialFilters)
+  // A lazy initialiser runs once, on the first render — the «deliberately once» above.
+  const [filters, setFilters] = useState<InvoicesQueryParams>(() => ({
+    ...DEFAULT_FILTERS,
+    ...parseInvoiceFilters(searchParams),
+  }))
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
   // ⚠️ `isLoading` is `isPending && isFetching`, and it is FALSE in two states

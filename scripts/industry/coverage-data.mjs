@@ -212,13 +212,7 @@ export const SOURCES = {
 export const NO_SOURCE = 'No source found'
 
 /** Keys added to the registry in THIS round (their onboarding row says so). */
-export const NEW_ONBOARDING_KEYS = [
-  'freightTransport',
-  'passengerTransport',
-  'courier',
-  'fabricRoll',
-  'computerComponents',
-]
+export const NEW_ONBOARDING_KEYS = []
 
 /** A named anchor in the repository. The line is resolved from the needle. */
 const E = (file, needle) => ({ file, needle })

@@ -302,7 +302,9 @@ describe('the commit', () => {
     const job = response.json()
 
     expect(job.reconciliation.matched).toBe(true)
-    expect(job.reconciliation.lines.find((line: any) => line.measure === 'created')).toMatchObject({
+    expect(
+      job.reconciliation.lines.find((line: Record<string, unknown>) => line.measure === 'created'),
+    ).toMatchObject({
       sourceValue: 2,
       hisabcheValue: 2,
       differenceValue: 0,

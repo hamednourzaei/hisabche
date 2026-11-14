@@ -34,7 +34,7 @@ export default tseslint.config(
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-require-imports': 'off',
       // Legacy code style — warnings until cleaned up.
       'no-useless-assignment': 'warn',
@@ -44,7 +44,7 @@ export default tseslint.config(
   {
     files: ['**/*.{js,mjs,cjs}'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 )

@@ -51,11 +51,11 @@ function readVar(blockStart: string, name: string): string {
   // `--name: value;` — tolerate arbitrary whitespace, capture up to the `;`.
   const match = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(block)
   if (!match) throw new Error(`Var ${name} not found in block ${blockStart}`)
-  return match[1]!.trim()
+  return match[1]!.trim().replace(/\s+/g, ' ').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')')
 }
 
 const inRoot = (name: string) => readVar(':root {', name)
-const inLight = (name: string) => readVar(':root[data-theme="light"], .light', name)
+const inLight = (name: string) => readVar(":root[data-theme='light']", name)
 
 describe('PARITY: brand colours', () => {
   it.each([

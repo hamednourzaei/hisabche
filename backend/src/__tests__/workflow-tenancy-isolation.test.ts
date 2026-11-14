@@ -37,7 +37,7 @@ function makeQuery(table: string) {
 
   const getRows = () => tables.get(table) ?? (tables.set(table, []), tables.get(table)!)
 
-  const builder: any = {
+  const builder: Record<string, unknown> = {
     select: () => {
       pendingKind = 'select'
       return builder
@@ -148,7 +148,7 @@ describe('N-18: Workflow Tenancy Isolation', () => {
   const WORKFLOW_B_ID = '33333333-3333-3333-3333-333333333333'
   const INSTANCE_B_ID = '44444444-4444-4444-4444-444444444444'
 
-  let workflowService: any
+  let workflowService: InstanceType<typeof import('../services/workflow.service').WorkflowService>
 
   beforeEach(async () => {
     reset()
@@ -203,8 +203,8 @@ describe('N-18: Workflow Tenancy Isolation', () => {
     await expect(
       workflowService.startWorkflow(WORKSPACE_A, {
         workflow_id: WORKFLOW_B_ID,
-        trigger_type: 'manual',
-        context: {},
+        entity_type: 'invoice',
+        entity_id: 'inv-1',
       }),
     ).rejects.toThrow()
   })

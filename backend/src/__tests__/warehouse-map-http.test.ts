@@ -381,9 +381,12 @@ describe('GET /api/warehouses/:id/map', () => {
       branchName: 'کابل',
     })
 
-    const zone = payload.locations.find((row: any) => row.code === 'Z01')
-    const rack = payload.locations.find((row: any) => row.code === 'R01')
-    expect(payload.locations.map((row: any) => row.code)).toEqual(['Z01', 'R01'])
+    const zone = payload.locations.find((row: Record<string, unknown>) => row.code === 'Z01')
+    const rack = payload.locations.find((row: Record<string, unknown>) => row.code === 'R01')
+    expect(payload.locations.map((row: Record<string, unknown>) => row.code)).toEqual([
+      'Z01',
+      'R01',
+    ])
     expect(rack.path).toBe('Z01 › R01')
     expect(rack.depth).toBe(1)
     expect(zone.band).toBe('empty')
@@ -419,7 +422,7 @@ describe('GET /api/warehouses/:id/map', () => {
 
   it('⚠️ another warehouse’s sales do not colour this floor', async () => {
     const payload = body(await map())
-    const rack = payload.locations.find((row: any) => row.code === 'R01')
+    const rack = payload.locations.find((row: Record<string, unknown>) => row.code === 'R01')
     // W2 sold 50 units of برنج yesterday; this warehouse has not sold it in 94
     // days, and the map is about THIS warehouse.
     expect(rack.daysSinceSale).toBe(94)
@@ -431,7 +434,9 @@ describe('GET /api/warehouses/:id/map', () => {
     expect(wide.days).toBe(30)
     // 94 days of no sales is inside a 30-day threshold too — still dead, and
     // this is the parameter the dead-stock list already takes.
-    expect(wide.locations.find((row: any) => row.code === 'R01').band).toBe('stagnant')
+    expect(wide.locations.find((row: Record<string, unknown>) => row.code === 'R01').band).toBe(
+      'stagnant',
+    )
 
     expect((await map(W1, OWNER, '?days=1')).statusCode).toBe(400)
     expect((await map(W1, OWNER, '?days=99999')).statusCode).toBe(400)
@@ -443,7 +448,7 @@ describe('GET /api/warehouses/:id/map', () => {
     const payload = body(res)
 
     expect(payload.costVisible).toBe(false)
-    const rack = payload.locations.find((row: any) => row.code === 'R01')
+    const rack = payload.locations.find((row: Record<string, unknown>) => row.code === 'R01')
     expect(rack.quantity).toBe(6)
     expect(rack.products[0].unitCost).toBeNull()
     expect(rack.products[0].value).toBeNull()
@@ -528,7 +533,11 @@ describe('the plan: adding, renaming and retiring a location', () => {
     })
 
     const payload = body(await map())
-    expect(payload.locations.map((row: any) => row.code)).toEqual(['Z01', 'R01', 'R02'])
+    expect(payload.locations.map((row: Record<string, unknown>) => row.code)).toEqual([
+      'Z01',
+      'R01',
+      'R02',
+    ])
   })
 
   it('⚠️ two shelves cannot share a label in one warehouse', async () => {
@@ -583,15 +592,15 @@ describe('recording what is on a shelf', () => {
     expect(body(res)).toMatchObject({ quantity: 4 })
 
     const payload = body(await map())
-    const rack = payload.locations.find((row: any) => row.code === 'R01')
-    expect(rack.products.map((row: any) => row.name)).toEqual(['برنج', 'چای'])
+    const rack = payload.locations.find((row: Record<string, unknown>) => row.code === 'R01')
+    expect(rack.products.map((row: Record<string, unknown>) => row.name)).toEqual(['برنج', 'چای'])
     expect(rack.quantity).toBe(10)
 
     // ⚠️ چای has no purchase price entered (the column stores that as 0). Its
     // units count, its money does not — and it is NOT valued at zero, which
     // would report the shelf as worth exactly its other product and make the
     // dead-capital figure smaller than the truth.
-    const tea = rack.products.find((row: any) => row.name === 'چای')
+    const tea = rack.products.find((row: Record<string, unknown>) => row.name === 'چای')
     expect(tea).toMatchObject({ quantity: 4, unitCost: null, value: null })
     expect(rack.productsWithoutCost).toBe(1)
     expect(rack.value).toBe(600)
@@ -650,10 +659,10 @@ describe('GET /api/products/:id/storage-locations (the product page)', () => {
     expect(res.statusCode, res.body).toBe(200)
     const payload = body(res)
     expect(payload.configured).toBe(true)
-    const w1 = payload.warehouses.find((row: any) => row.id === W1)
+    const w1 = payload.warehouses.find((row: Record<string, unknown>) => row.id === W1)
     expect(w1.placed).toEqual([expect.objectContaining({ locationId: L2, quantity: 6 })])
     // The choices a change can go to are this warehouse's active locations.
-    expect(w1.choices.map((row: any) => row.id)).toContain(L2)
+    expect(w1.choices.map((row: Record<string, unknown>) => row.id)).toContain(L2)
   })
 
   it('⚠️ another workspace’s product shows no shelf of ours or theirs', async () => {

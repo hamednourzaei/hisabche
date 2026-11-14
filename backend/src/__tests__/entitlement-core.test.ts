@@ -12,6 +12,7 @@
 // ============================================
 
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import type { FastifyRequest, FastifyReply } from 'fastify'
 import { countsTowardsInvoiceQuota, mayCreateInvoice } from '@hisabche/validation'
 import {
   PLAN_PRICING,
@@ -292,7 +293,7 @@ describe('Entitlement core: requireEntitlement middleware', () => {
       tenancy: { workspaceId: WS_IRR, userId: 'u1', role: 'owner' },
       log: { error: vi.fn() },
     } as never
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as any
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as unknown as FastifyReply
 
     await guard(req, reply)
     expect(reply.status).not.toHaveBeenCalled()
@@ -306,8 +307,8 @@ describe('Entitlement core: requireEntitlement middleware', () => {
     const req = {
       tenancy: { workspaceId: WS_IRR, userId: 'u1', role: 'owner' },
       log: { error: vi.fn() },
-    } as any
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as any
+    } as unknown as FastifyRequest
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as unknown as FastifyReply
 
     await guard(req, reply)
     expect(reply.status).toHaveBeenCalledWith(402)
@@ -326,8 +327,8 @@ describe('Entitlement core: requireEntitlement middleware', () => {
     const req = {
       tenancy: { workspaceId: WS_IRR, userId: 'u1', role: 'owner' },
       log: { error: vi.fn() },
-    } as any
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as any
+    } as unknown as FastifyRequest
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn() } as unknown as FastifyReply
 
     await guard(req, reply)
     expect(reply.status).toHaveBeenCalledWith(403)

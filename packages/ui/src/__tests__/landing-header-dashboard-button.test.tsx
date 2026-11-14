@@ -130,11 +130,18 @@ describe('public header — signed in shows «Dashboard»', () => {
     const { useSignedInAfterMount } = await import('../hooks/use-signed-in-after-mount')
     signIn(tokenExpiringIn(3600), 'refresh')
     const seen: boolean[] = []
-    renderHook(() => {
-      const value = useSignedInAfterMount()
-      seen.push(value)
-      return value
-    })
+    // HYDRATION is the render that must match the signed-out HTML (React #418).
+    // A plain client render (navigation) may show the session at once.
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    renderHook(
+      () => {
+        const value = useSignedInAfterMount()
+        seen.push(value)
+        return value
+      },
+      { container, hydrate: true },
+    )
 
     expect(seen[0]).toBe(false)
     expect(seen.at(-1)).toBe(true)

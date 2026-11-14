@@ -47,6 +47,9 @@ import {
 afterEach(cleanup)
 
 /** `defaultOpen` so the portal mounts during render -- where the crash was. */
+// A conditional child that is never shown: renders the value `false`.
+const neverShown: boolean = false
+
 function Menu({ tone, children }: { tone?: 'filter' | 'finance'; children?: React.ReactNode }) {
   return (
     <DropdownMenu defaultOpen>
@@ -98,10 +101,9 @@ describe('a realistic menu, as the header builds one', () => {
               `{false && <X/>}` renders the value `false` as a child, and a
               Slot with two children throws. Writing it any other way — a
               variable, a prop — would test a different thing than the JSX that
-              actually broke, so the rule is silenced here rather than the code
-              being bent around it. */}
-          {/* eslint-disable-next-line no-constant-binary-expression */}
-          {false && <DropdownMenuItem>never</DropdownMenuItem>}
+              actually broke. `neverShown` evaluates to the same `false` child
+              at runtime, so the Slot receives exactly what it received then. */}
+          {neverShown && <DropdownMenuItem>never</DropdownMenuItem>}
         </Menu>,
       ),
     ).not.toThrow()

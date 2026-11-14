@@ -121,7 +121,7 @@ export const density = {
   /** Verbatim from apps/desktop/src/styles.css — do not change without a visual review. */
   desktop: {
     rowHeight: 40,
-    sidebarWidth: 248,
+    sidebarWidth: 224,
     sidebarWidthCollapsed: 64,
     toolbarHeight: 52,
     minTouchTarget: 32,

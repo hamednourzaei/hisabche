@@ -71,14 +71,14 @@ export const darkTheme: ThemeColors = {
 
   fgPrimary: '165 35% 97%',
   fgSecondary: '168 15% 65%',
-  fgTertiary: '168 10% 50%',
+  fgTertiary: '168 10% 56%',
 
   borderDefault: '206 26% 19%',
   borderStrong: '206 26% 26%',
 
-  glassBg: 'rgba(16, 24, 32, 0.80)',
+  glassBg: 'rgba(16, 24, 32, 0.8)',
   glassBorder: 'rgba(36, 224, 176, 0.14)',
-  shadowPremium: '0 10px 30px rgba(11, 15, 20, 0.20), 0 0 30px rgba(36, 224, 176, 0.10)',
+  shadowPremium: '0 10px 30px rgba(11, 15, 20, 0.2), 0 0 30px rgba(36, 224, 176, 0.1)',
 
   cyan: '168 78% 56%',
   emerald: '165 74% 63%',
@@ -97,13 +97,13 @@ export const lightTheme: ThemeColors = {
 
   fgPrimary: '220 18% 13%',
   fgSecondary: '220 9% 40%',
-  fgTertiary: '220 7% 55%',
+  fgTertiary: '220 7% 40%',
 
   borderDefault: '40 10% 88%',
   borderStrong: '40 10% 79%',
 
   glassBg: 'rgba(255, 255, 255, 0.78)',
-  glassBorder: 'rgba(15, 127, 116, 0.10)',
+  glassBorder: 'rgba(15, 127, 116, 0.1)',
   shadowPremium: '0 1px 2px rgba(16, 20, 24, 0.04), 0 12px 32px -12px rgba(16, 20, 24, 0.12)',
 
   cyan: '168 70% 46%',
@@ -111,16 +111,16 @@ export const lightTheme: ThemeColors = {
 }
 
 export const gradients = {
-  brand: 'linear-gradient(135deg, #37E6C3 0%, #24E0B0 20%, #1FD3A3 45%, #0F7F74 70%, #0A6664 100%)',
+  brand: 'linear-gradient(135deg, #37e6c3 0%, #24e0b0 20%, #1fd3a3 45%, #0f7f74 70%, #0a6664 100%)',
   brandHover:
-    'linear-gradient(135deg, #55E9C6 0%, #37E6C3 20%, #24E0B0 45%, #12897C 70%, #0C5957 100%)',
-  success: 'linear-gradient(135deg, #37E6C3 0%, #1FD3A3 55%, #0F7F74 100%)',
+    'linear-gradient(135deg, #55e9c6 0%, #37e6c3 20%, #24e0b0 45%, #12897c 70%, #0c5957 100%)',
+  success: 'linear-gradient(135deg, #37e6c3 0%, #1fd3a3 55%, #0f7f74 100%)',
 } as const
 
 /** Ordered stops of --gradient-brand, for platforms that cannot parse CSS gradients. */
 export const brandGradientStops = ['#37E6C3', '#24E0B0', '#1FD3A3', '#0F7F74', '#0A6664'] as const
 
-export const focusRing = '0 0 0 4px rgba(36, 224, 176, 0.20)'
+export const focusRing = '0 0 0 4px hsl(var(--color-primary) / 0.2)'
 
 export const themes = { dark: darkTheme, light: lightTheme } as const
 export type ThemeName = keyof typeof themes

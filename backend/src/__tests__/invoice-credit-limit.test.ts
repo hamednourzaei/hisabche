@@ -39,7 +39,7 @@ const manager = { workspaceId: 'w-1', userId: 'u-1', role: 'manager' } as never
 const seller = { workspaceId: 'w-1', userId: 'u-2', role: 'seller' } as never
 
 const check = (
-  ctx: any,
+  ctx: unknown,
   over: Partial<{
     customerId: string | null
     type: string
@@ -48,7 +48,10 @@ const check = (
     overrideReason: string | null
   }> = {},
 ) => {
-  const service = new InvoiceService() as any
+  const service = new InvoiceService() as unknown as {
+    payments: { getPartySummary: () => Promise<{ receivable: number }> }
+    assertWithinCreditLimit: (c: unknown, b: unknown) => Promise<unknown>
+  }
   service.payments = { getPartySummary: async () => ({ receivable }) }
   return service.assertWithinCreditLimit(ctx, {
     customerId: 'c-1',

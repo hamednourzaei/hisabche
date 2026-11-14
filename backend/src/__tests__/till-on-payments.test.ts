@@ -58,7 +58,7 @@ const ctx = { workspaceId: 'ws-1', userId: 'user-1', role: 'owner' } as never
 const INVOICE = '11111111-1111-4111-8111-111111111111'
 
 function fakeRepo(invoice: { currency: string | null; rate: number | null; total?: number }) {
-  const recorded: Array<{ payment: any; till: any; key: string | null }> = []
+  const recorded: Array<{ payment: unknown; till: unknown; key: string | null }> = []
   const repo = {
     recorded,
     paymentIdByClientRequestId: async () => null,
@@ -83,12 +83,12 @@ function fakeRepo(invoice: { currency: string | null; rate: number | null; total
     lastPaymentSequence: async () => 0,
     recordPayment: async (
       _ctx: unknown,
-      payment: any,
-      _allocations: any,
+      payment: unknown,
+      _allocations: unknown,
       key: string | null,
-      t: any,
+      t: unknown,
     ) => {
-      recorded.push({ payment, till: t, key })
+      recorded.push({ payment: payment as { direction?: string }, till: t, key })
       return { id: 'payment-1', replayed: false }
     },
     attachJournalEntry: async () => {},
@@ -118,7 +118,7 @@ const pay = (over: Record<string, unknown> = {}) =>
 
 async function service(repo: ReturnType<typeof fakeRepo>) {
   const { PaymentsService } = await import('../services/payments/payments.service')
-  return new PaymentsService(repo as any)
+  return new PaymentsService(repo as unknown as ConstructorParameters<typeof PaymentsService>[0])
 }
 
 const sides = (entry: (typeof posted)[number]) => ({
@@ -268,7 +268,7 @@ describe('PaymentsService.recordPayment — the till', () => {
     const repo = fakeRepo({ currency: null, rate: null })
     const result = await (await service(repo)).recordPayment(ctx, pay({ tillSessionId: 'till-1' }))
     expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 500 })
-    expect(repo.recorded[0]!.payment.direction).toBe('out')
+    expect((repo.recorded[0]!.payment as { direction?: string }).direction).toBe('out')
     expect(result).toMatchObject({ tillSessionId: 'till-1' })
   })
 
@@ -278,7 +278,7 @@ describe('PaymentsService.recordPayment — the till', () => {
       await service(repo)
     ).recordPayment(ctx, pay({ direction: 'in', partyType: 'customer', tillSessionId: 'till-1' }))
     expect(repo.recorded[0]!.till).toEqual({ sessionId: 'till-1', amountMinor: 500 })
-    expect(repo.recorded[0]!.payment.direction).toBe('in')
+    expect((repo.recorded[0]!.payment as { direction?: string }).direction).toBe('in')
   })
 
   it('⚠️ a card or a transfer cannot name a till — refused, and NOTHING is written', async () => {

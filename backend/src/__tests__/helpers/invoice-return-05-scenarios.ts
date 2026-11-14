@@ -10,7 +10,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export type Run = (text: string, params?: readonly unknown[]) => Promise<Array<Record<string, any>>>
+export type Run = <T = Record<string, unknown>>(
+  text: string,
+  params?: readonly unknown[],
+) => Promise<Array<T>>
 
 export interface Scenario {
   name: string
@@ -245,7 +248,7 @@ async function createReturn(
       JSON.stringify(body.deductions ?? []),
     ],
   )
-  return rows[0]!.result as Record<string, any>
+  return rows[0]!.result as { id: string; grandTotalMinor?: number; [key: string]: unknown }
 }
 
 /** The lines of the journal entry a return posted, by role, in books units. */
@@ -366,7 +369,7 @@ export const scenarios: Scenario[] = [
     run: async (run) => {
       const inv = await seedInvoice(run, { total: 500, paid: 0, tax: 0, lines: [[5, 100]] })
       seq += 1
-      const rows = await run(
+      const rows = await run<{ result: { grandTotalMinor: number } }>(
         `SELECT public.invoice_return_create($1::uuid, $2::uuid, 2, $3::jsonb, $4::jsonb) AS result`,
         [
           WS,
@@ -518,8 +521,9 @@ export const scenarios: Scenario[] = [
       // net 400, tax 40, kept 100 -> credit 340.00 = 34000 minor
       assert.equal(Number(result.grandTotalMinor), 34000)
 
+      type RefundRes = { id: string; refundableMinor: number; replayed?: boolean }
       const reserve = (amountMinor: number, method = 'cash') =>
-        run(
+        run<{ r: RefundRes }>(
           `SELECT public.invoice_return_refund_reserve($1::uuid, $2::uuid, 2, $3::uuid, $4::bigint, $5) AS r`,
           [WS, USER, result.id, amountMinor, method],
         )
@@ -541,7 +545,7 @@ export const scenarios: Scenario[] = [
         second[0]!.r.id,
         payment,
       ])
-      const again = await run(
+      const again = await run<{ r: RefundRes }>(
         `SELECT public.invoice_return_refund_settle($1::uuid, $2::uuid, $3::uuid) AS r`,
         [WS, second[0]!.r.id, payment],
       )
@@ -578,8 +582,9 @@ export const scenarios: Scenario[] = [
         lines: [{ lineId: inv.lineIds[0]!, quantity: 8 }],
       })
       assert.equal(Number(result.grandTotalMinor), 88000)
+      type QuietReserve = { r: { id: string; refundableMinor?: number; amountMinor?: number } }
       const reserve = (amountMinor: number) =>
-        run(
+        run<QuietReserve>(
           `SELECT public.invoice_return_refund_reserve($1::uuid, $2::uuid, 2, $3::uuid, $4::bigint, 'bank') AS r`,
           [WS, USER, result.id, amountMinor],
         )
@@ -785,8 +790,11 @@ export const scenarios: Scenario[] = [
       const result = await createReturn(run, inv.id, {
         lines: [{ lineId: inv.lineIds[0]!, quantity: 5 }],
       })
+      type ReserveOutput = {
+        r: { id: string; replayed?: boolean; status?: string; paymentId?: string }
+      }
       const reserve = (amountMinor: number, key: string | null) =>
-        run(
+        run<ReserveOutput>(
           `SELECT public.invoice_return_refund_reserve($1::uuid, $2::uuid, 2, $3::uuid, $4::bigint, 'cash', $5) AS r`,
           [WS, USER, result.id, amountMinor, key],
         )
@@ -830,8 +838,9 @@ export const scenarios: Scenario[] = [
       const result = await createReturn(run, inv.id, {
         lines: [{ lineId: inv.lineIds[0]!, quantity: 10 }],
       })
+      type QuietReserve = { r: { id: string; refundableMinor?: number; amountMinor?: number } }
       const reserve = (amountMinor: number) =>
-        run(
+        run<QuietReserve>(
           `SELECT public.invoice_return_refund_reserve($1::uuid, $2::uuid, 2, $3::uuid, $4::bigint, 'bank') AS r`,
           [WS, USER, result.id, amountMinor],
         )
@@ -854,7 +863,7 @@ export const scenarios: Scenario[] = [
       // The next reserve reconciles first: the paid one is FINISHED (counted as paid), the unpaid one RELEASED.
       const next = await reserve(60000)
       assert.equal(Number(next[0]!.r.amountMinor), 60000)
-      const states = await run(
+      const states = await run<{ id: string; status: string; payment_id: string }>(
         `SELECT id, status, payment_id FROM public.invoice_return_refunds WHERE return_id = $1`,
         [result.id],
       )
@@ -877,7 +886,7 @@ export const scenarios: Scenario[] = [
       const result = await createReturn(run, inv.id, {
         lines: [{ lineId: inv.lineIds[0]!, quantity: 2 }],
       })
-      const reserved = await run(
+      const reserved = await run<{ r: { id: string } }>(
         `SELECT public.invoice_return_refund_reserve($1::uuid, $2::uuid, 2, $3::uuid, 100::bigint, 'cash') AS r`,
         [WS, USER, result.id],
       )

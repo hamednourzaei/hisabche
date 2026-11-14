@@ -27,7 +27,11 @@ import { PurchasingService } from '../services/purchasing.service'
 
 const WS = 'ws-1'
 const assertBindings = (lines: Array<Record<string, unknown>>) =>
-  (new PurchasingService() as any).assertPurchaseVariantBindings(WS, lines) as Promise<void>
+  (
+    new PurchasingService() as unknown as {
+      assertPurchaseVariantBindings: (...args: unknown[]) => Promise<void>
+    }
+  ).assertPurchaseVariantBindings(WS, lines) as Promise<void>
 const variant = (over: Record<string, unknown> = {}) => ({
   id: 'v-1',
   workspace_id: WS,

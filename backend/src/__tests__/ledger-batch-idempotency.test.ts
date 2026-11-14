@@ -29,7 +29,7 @@ const state = {
 
 function query(table: string) {
   const filters: { gt?: string; in?: string[]; limit?: number } = {}
-  const builder: any = {
+  const builder: Record<string, unknown> = {
     select: () => builder,
     eq: () => builder,
     order: () => builder,
@@ -172,7 +172,7 @@ describe('postDocument — Scenario C/D: two writers, one journal entry', () => 
     const { AccountingService } = await import('../services/accounting/accounting.service')
 
     let lookups = 0
-    const repo: any = {
+    const repo: Record<string, unknown> = {
       // First lookup (before writing): nothing yet. After the 23505: the winner.
       findEntryBySource: async () =>
         lookups++ === 0 ? null : { id: 'winner-entry', status: 'posted' },
@@ -212,7 +212,9 @@ describe('postDocument — Scenario C/D: two writers, one journal entry', () => 
       },
     }
 
-    const ledger = new AccountingService(repo)
+    const ledger = new AccountingService(
+      repo as unknown as ConstructorParameters<typeof AccountingService>[0],
+    )
     const outcome = await ledger.postDocument(
       { workspaceId: 'w-race', userId: 'u1', role: 'owner' } as never,
       {

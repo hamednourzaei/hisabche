@@ -16,7 +16,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 describe('N-19: Capability Elevation Guards', () => {
   it('rejects a caller lacking inventory.configure capability with 403', async () => {
     const middleware = requireCapability('inventory.configure')
-    const request: any = {
+    const request: Record<string, unknown> = {
       tenancy: {
         workspaceId: '11111111-1111-1111-1111-111111111111',
         role: 'member',
@@ -24,8 +24,8 @@ describe('N-19: Capability Elevation Guards', () => {
       },
     }
     let statusCode = 200
-    let payload: any = null
-    const reply: any = {
+    let payload: { code?: string } | null = null
+    const reply: Record<string, unknown> = {
       code: (c: number) => {
         statusCode = c
         return reply
@@ -34,20 +34,24 @@ describe('N-19: Capability Elevation Guards', () => {
         statusCode = c
         return reply
       },
-      send: (p: any) => {
-        payload = p
+      send: (p: unknown) => {
+        payload = p as { code?: string }
         return reply
       },
     }
 
-    await middleware(request, reply)
+    await middleware(
+      request as unknown as Parameters<typeof middleware>[0],
+      reply as unknown as Parameters<typeof middleware>[1],
+    )
     expect(statusCode).toBe(403)
-    expect(payload?.code).toBe('CAPABILITY_REQUIRED')
+    const resPayload = payload as { code?: string } | null
+    expect(resPayload?.code).toBe('CAPABILITY_REQUIRED')
   })
 
   it('allows a caller possessing inventory.configure capability', async () => {
     const middleware = requireCapability('inventory.configure')
-    const request: any = {
+    const request: Record<string, unknown> = {
       tenancy: {
         workspaceId: '11111111-1111-1111-1111-111111111111',
         role: 'manager',
@@ -55,7 +59,7 @@ describe('N-19: Capability Elevation Guards', () => {
       },
     }
     let statusCode = 200
-    const reply: any = {
+    const reply: Record<string, unknown> = {
       code: (c: number) => {
         statusCode = c
         return reply
@@ -63,13 +67,16 @@ describe('N-19: Capability Elevation Guards', () => {
       send: () => reply,
     }
 
-    await middleware(request, reply)
+    await middleware(
+      request as unknown as Parameters<typeof middleware>[0],
+      reply as unknown as Parameters<typeof middleware>[1],
+    )
     expect(statusCode).toBe(200)
   })
 
   it('rejects a caller lacking data.import for cloud migration with 403', async () => {
     const middleware = requireCapability('data.import')
-    const request: any = {
+    const request: Record<string, unknown> = {
       tenancy: {
         workspaceId: '11111111-1111-1111-1111-111111111111',
         role: 'member',
@@ -77,7 +84,7 @@ describe('N-19: Capability Elevation Guards', () => {
       },
     }
     let statusCode = 200
-    const reply: any = {
+    const reply: Record<string, unknown> = {
       code: (c: number) => {
         statusCode = c
         return reply
@@ -89,13 +96,16 @@ describe('N-19: Capability Elevation Guards', () => {
       send: () => reply,
     }
 
-    await middleware(request, reply)
+    await middleware(
+      request as unknown as Parameters<typeof middleware>[0],
+      reply as unknown as Parameters<typeof middleware>[1],
+    )
     expect(statusCode).toBe(403)
   })
 
   it('rejects a caller lacking workspace.manage for offline license with 403', async () => {
     const middleware = requireCapability('workspace.manage')
-    const request: any = {
+    const request: Record<string, unknown> = {
       tenancy: {
         workspaceId: '11111111-1111-1111-1111-111111111111',
         role: 'seller',
@@ -103,7 +113,7 @@ describe('N-19: Capability Elevation Guards', () => {
       },
     }
     let statusCode = 200
-    const reply: any = {
+    const reply: Record<string, unknown> = {
       code: (c: number) => {
         statusCode = c
         return reply
@@ -115,7 +125,10 @@ describe('N-19: Capability Elevation Guards', () => {
       send: () => reply,
     }
 
-    await middleware(request, reply)
+    await middleware(
+      request as unknown as Parameters<typeof middleware>[0],
+      reply as unknown as Parameters<typeof middleware>[1],
+    )
     expect(statusCode).toBe(403)
   })
 })

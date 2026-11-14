@@ -33,23 +33,27 @@ const interceptingFrom = (table: string) => {
   if (table === 'activity_reads') {
     if (schemaMissingActive) {
       const err = { code: '42P01', message: 'relation "activity_reads" does not exist' }
-      const chain: any = {
+      const chain: Record<string, unknown> = {
         select: () => chain,
         eq: () => chain,
         in: () => chain,
-        then: (onfulfilled: any, onrejected: any) =>
-          Promise.resolve({ data: null, error: err }).then(onfulfilled, onrejected),
+        then: (
+          onfulfilled?: ((val: unknown) => unknown) | null,
+          onrejected?: ((val: unknown) => unknown) | null,
+        ) => Promise.resolve({ data: null, error: err }).then(onfulfilled, onrejected),
       }
       return chain as unknown as ReturnType<typeof baseFrom>
     }
     if (activityReadsFailure) {
       const err = activityReadsFailure
-      const chain: any = {
+      const chain: Record<string, unknown> = {
         select: () => chain,
         eq: () => chain,
         in: () => chain,
-        then: (onfulfilled: any, onrejected: any) =>
-          Promise.resolve({ data: null, error: err }).then(onfulfilled, onrejected),
+        then: (
+          onfulfilled?: ((val: unknown) => unknown) | null,
+          onrejected?: ((val: unknown) => unknown) | null,
+        ) => Promise.resolve({ data: null, error: err }).then(onfulfilled, onrejected),
       }
       return chain as unknown as ReturnType<typeof baseFrom>
     }
@@ -60,7 +64,7 @@ const interceptingFrom = (table: string) => {
 const fakeDbModule = createFakeDb(db, users)
 fakeDbModule.supabase.from = interceptingFrom as unknown as typeof fakeDbModule.supabase.from
 const originalRpc = fakeDbModule.supabase.rpc.bind(fakeDbModule.supabase)
-fakeDbModule.supabase.rpc = (async (name: string, args: any) => {
+fakeDbModule.supabase.rpc = (async (name: string, args: unknown) => {
   if (schemaMissingActive) {
     return { data: null, error: { code: 'PGRST202', message: `function ${name} does not exist` } }
   }
@@ -70,7 +74,7 @@ fakeDbModule.supabase.rpc = (async (name: string, args: any) => {
   if (unreadIdsMissing && name === 'activity_get_unread_ids') {
     return { data: null, error: { code: 'PGRST202', message: `function ${name} does not exist` } }
   }
-  return originalRpc(name, args)
+  return originalRpc(name, args as Parameters<typeof originalRpc>[1])
 }) as unknown as typeof fakeDbModule.supabase.rpc
 
 vi.mock('../db', () => fakeDbModule)
@@ -90,62 +94,69 @@ function member(workspaceId: string, userId: string) {
 }
 
 function registerRpcs() {
-  db.rpc('activity_mark_read', (args: any) => {
-    const { p_workspace, p_user, p_ids } = args
-    const acts = db
-      .rows('activities')
-      .filter(
-        (a) => a.workspace_id === p_workspace && a.actor_id === p_user && p_ids.includes(a.id),
-      )
-    const reads = db.rows('activity_reads')
-    let inserted = 0
-    for (const a of acts) {
-      const exists = reads.some((r) => r.activity_id === a.id && r.user_id === p_user)
-      if (!exists) {
-        reads.push({
-          id: fakeId('act_read'),
-          activity_id: a.id,
-          user_id: p_user,
-          workspace_id: p_workspace,
-          read_at: new Date().toISOString(),
-        })
-        inserted++
+  db.rpc(
+    'activity_mark_read',
+    (args: { p_workspace?: string; p_user?: string; p_ids?: string[] }) => {
+      const { p_workspace, p_user, p_ids = [] } = args
+      const acts = db
+        .rows('activities')
+        .filter(
+          (a) =>
+            a.workspace_id === p_workspace && a.actor_id === p_user && p_ids.includes(String(a.id)),
+        )
+      const reads = db.rows('activity_reads')
+      let inserted = 0
+      for (const a of acts) {
+        const exists = reads.some((r) => r.activity_id === a.id && r.user_id === p_user)
+        if (!exists) {
+          reads.push({
+            id: fakeId('act_read'),
+            activity_id: a.id,
+            user_id: p_user,
+            workspace_id: p_workspace,
+            read_at: new Date().toISOString(),
+          })
+          inserted++
+        }
       }
-    }
-    return inserted
-  })
+      return inserted
+    },
+  )
 
-  db.rpc('activity_mark_all_read', (args: any) => {
-    const { p_workspace, p_user, p_filter } = args
-    let acts = db
-      .rows('activities')
-      .filter((a) => a.workspace_id === p_workspace && a.actor_id === p_user)
-    if (p_filter && p_filter !== 'all' && p_filter !== 'unread') {
-      const map: Record<string, string> = {
-        invoices: 'invoice',
-        payments: 'payment',
-        customers: 'customer',
+  db.rpc(
+    'activity_mark_all_read',
+    (args: { p_workspace?: string; p_user?: string; p_filter?: string }) => {
+      const { p_workspace, p_user, p_filter } = args
+      let acts = db
+        .rows('activities')
+        .filter((a) => a.workspace_id === p_workspace && a.actor_id === p_user)
+      if (p_filter && p_filter !== 'all' && p_filter !== 'unread') {
+        const map: Record<string, string> = {
+          invoices: 'invoice',
+          payments: 'payment',
+          customers: 'customer',
+        }
+        const entity = map[p_filter] || p_filter
+        acts = acts.filter((a) => a.entity_type === entity)
       }
-      const entity = map[p_filter] || p_filter
-      acts = acts.filter((a) => a.entity_type === entity)
-    }
-    const reads = db.rows('activity_reads')
-    let inserted = 0
-    for (const a of acts) {
-      const exists = reads.some((r) => r.activity_id === a.id && r.user_id === p_user)
-      if (!exists) {
-        reads.push({
-          id: fakeId('act_read'),
-          activity_id: a.id,
-          user_id: p_user,
-          workspace_id: p_workspace,
-          read_at: new Date().toISOString(),
-        })
-        inserted++
+      const reads = db.rows('activity_reads')
+      let inserted = 0
+      for (const a of acts) {
+        const exists = reads.some((r) => r.activity_id === a.id && r.user_id === p_user)
+        if (!exists) {
+          reads.push({
+            id: fakeId('act_read'),
+            activity_id: a.id,
+            user_id: p_user,
+            workspace_id: p_workspace,
+            read_at: new Date().toISOString(),
+          })
+          inserted++
+        }
       }
-    }
-    return inserted
-  })
+      return inserted
+    },
+  )
 
   db.rpc('activity_get_unread_count', (args) => {
     const { p_workspace, p_user } = args
@@ -178,24 +189,27 @@ function registerRpcs() {
     }
   })
 
-  db.rpc('activity_get_unread_ids', (args: any) => {
-    const { p_workspace, p_user, p_filter } = args
-    let acts = db
-      .rows('activities')
-      .filter((a) => a.workspace_id === p_workspace && a.actor_id === p_user)
-    if (p_filter && p_filter !== 'all' && p_filter !== 'unread') {
-      const map: Record<string, string> = {
-        invoices: 'invoice',
-        payments: 'payment',
-        customers: 'customer',
+  db.rpc(
+    'activity_get_unread_ids',
+    (args: { p_workspace?: string; p_user?: string; p_filter?: string }) => {
+      const { p_workspace, p_user, p_filter } = args
+      let acts = db
+        .rows('activities')
+        .filter((a) => a.workspace_id === p_workspace && a.actor_id === p_user)
+      if (p_filter && p_filter !== 'all' && p_filter !== 'unread') {
+        const map: Record<string, string> = {
+          invoices: 'invoice',
+          payments: 'payment',
+          customers: 'customer',
+        }
+        const entity = map[p_filter] || p_filter
+        acts = acts.filter((a) => a.entity_type === entity)
       }
-      const entity = map[p_filter] || p_filter
-      acts = acts.filter((a) => a.entity_type === entity)
-    }
-    const reads = db.rows('activity_reads').filter((r) => r.user_id === p_user)
-    const readIds = new Set(reads.map((r) => r.activity_id))
-    return acts.filter((a) => !readIds.has(a.id)).map((a) => a.id)
-  })
+      const reads = db.rows('activity_reads').filter((r) => r.user_id === p_user)
+      const readIds = new Set(reads.map((r) => r.activity_id))
+      return acts.filter((a) => !readIds.has(a.id)).map((a) => a.id)
+    },
+  )
 }
 
 function resetWorld() {
