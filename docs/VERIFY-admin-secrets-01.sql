@@ -7,9 +7,9 @@
 -- Post-migration verification query generated — PENDING HUMAN CONFIRMATION
 -- ==============================================================================
 
-WITH checks AS (
+WITH checks (check_name, pass) AS (
     -- 1. The table exists.
-    SELECT 'platform_secrets exists' AS check,
+    SELECT 'platform_secrets exists' AS check_name,
            to_regclass('public.platform_secrets') IS NOT NULL AS pass
 
     UNION ALL
@@ -84,7 +84,7 @@ WITH checks AS (
     SELECT 'Supabase Vault installed',
            to_regclass('vault.secrets') IS NOT NULL
 )
-SELECT check, pass FROM checks ORDER BY check;
+SELECT check_name, pass FROM checks ORDER BY check_name;
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- 11. Plaintext AI key — run this separately, only where the AI feature exists.

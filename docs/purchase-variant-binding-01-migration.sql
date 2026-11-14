@@ -46,8 +46,11 @@ BEGIN
   END IF;
 END $$;
 
+-- purchase_order_items has NO workspace_id (live FINDING, 8 Nov 2026); the workspace
+-- comes through purchase_orders. The first version of this file indexed a column that
+-- does not exist and failed on every database (found by journey-retail.pg.test.ts).
 CREATE INDEX IF NOT EXISTS purchase_order_items_variant_idx
-  ON public.purchase_order_items (workspace_id, product_id, variant_id)
+  ON public.purchase_order_items (product_id, variant_id)
   WHERE variant_id IS NOT NULL;
 
 -- The column is new, so every existing row holds NULL and this cannot fail;

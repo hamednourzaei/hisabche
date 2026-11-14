@@ -17,7 +17,7 @@ WITH tables(name) AS (
         ('metric_alert_rules'),
         ('admin_wall_tokens')
 ),
-checks AS (
+checks (check_name, pass) AS (
     -- 1. Every table exists.
     SELECT 'every monitoring table exists',
            (SELECT count(*) FROM tables t
@@ -100,7 +100,7 @@ checks AS (
            AND to_regprocedure('public.admin_monitor_series(timestamptz,text)') IS NOT NULL
            AND to_regprocedure('public.admin_db_vitals()') IS NOT NULL
 )
-SELECT check, pass FROM checks ORDER BY check;
+SELECT check_name, pass FROM checks ORDER BY check_name;
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- 8. Diagnostic — current rows. Informational only.

@@ -27,13 +27,14 @@ SELECT
     ),
     false
   ) AS repair_ticket_parts_rls_enabled,
-  EXISTS (
+  -- The V61 lockdown in the migration DROPS every client policy (RLS on, no policy):
+  -- the earlier check here expected the dropped 'repair_ticket_parts_tenant' policy.
+  NOT EXISTS (
     SELECT 1
       FROM pg_policies
      WHERE schemaname = 'public'
        AND tablename = 'repair_ticket_parts'
-       AND policyname = 'repair_ticket_parts_tenant'
-  ) AS has_repair_ticket_parts_policy;
+  ) AS has_no_client_policy;
 
 -- V61 audit (12 Nov 2026): clients are locked out — RLS on, no policy, and
 -- neither anon nor authenticated holds any privilege. Expect ok = true.

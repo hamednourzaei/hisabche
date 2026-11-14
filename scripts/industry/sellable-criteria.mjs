@@ -20,6 +20,12 @@
 //   ✓ a source needle can only add a missing-evidence code
 // ============================================
 
+import {
+  INDUSTRY_ACCEPTANCE_TESTS,
+  JOURNEY_SHARDS,
+  industryJourneyTestOf,
+} from './coverage-data.mjs'
+
 /**
  * The nine criteria of V64 §2, in the order a business meets them.
  * `null`/empty evidence lists are not placeholders — they are the measured
@@ -133,15 +139,26 @@ export const FILE_TAGS = {
   'backend/src/__tests__/v59-1-exchange-gl-http.test.ts': ['operations'],
   'backend/src/__tests__/v60-http-families.test.ts': ['operations', 'reporting'],
   'backend/src/__tests__/manufacturing-page-500s.test.ts': [],
+  // Per trade: sale → payment → stock → ledger; profit with its cost status, the party
+  // balance (= the ledger receivable) and the shelf; one unit returned restores stock and
+  // balances. Every figure is read back from the real database.
+  ...Object.fromEntries(
+    Array.from({ length: JOURNEY_SHARDS }, (_, i) => [
+      `backend/src/__tests__/journey-industries-${i + 1}.pg.test.ts`,
+      ['operations', 'reporting', 'returns'],
+    ]),
+  ),
 }
 
 /**
- * Per-industry chained PostgreSQL journeys (V64 §21.2). Empty because
- * `journey-<family>.pg.test.ts` does not exist yet: the 155 `*.pg.test.ts` files
- * are domain tests, not the signup→document→payment→report→return chain.
- * Add the file here and the runner records its real status.
+ * Per-industry chained PostgreSQL journeys (V64 §21.2): signup→DNA→document→payment→
+ * return→report, per trade, on the whole migrated schema. Each trade maps to the ONE
+ * shard file that runs it (`industryJourneyTestOf`). The runner records its real
+ * status only with `--postgres`; a machine with no PostgreSQL records it skipped → failed.
  */
-export const INDUSTRY_POSTGRES_TESTS = {}
+export const INDUSTRY_POSTGRES_TESTS = Object.fromEntries(
+  Object.keys(INDUSTRY_ACCEPTANCE_TESTS).map((key) => [key, [industryJourneyTestOf(key)]]),
+)
 
 /**
  * Per-industry Playwright scenarios. Empty: `apps/web/e2e` has three app-level

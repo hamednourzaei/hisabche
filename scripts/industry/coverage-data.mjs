@@ -1222,3 +1222,25 @@ export const INDUSTRY_ACCEPTANCE_TESTS = {
     'backend/src/__tests__/financial-flows-e2e.test.ts',
   ],
 }
+
+/**
+ * Every trade's own first day on a REAL PostgreSQL — signup, its DNA, its product in its
+ * own unit, sale, payment, return, profit/party/stock reports — run once PER TRADE by
+ * the shard file of `backend/src/__tests__/journey-industries-<n>.pg.test.ts` that holds it. The
+ * file is appended to each suite rather than written 67 times, so no trade can be left out.
+ */
+export const JOURNEY_SHARDS = 4
+
+/**
+ * The shard file that runs a trade — the SAME rule as `journeyShardOf` in
+ * backend/src/__tests__/helpers/industry-journey.ts (sum of char codes mod shards).
+ */
+export function industryJourneyTestOf(trade) {
+  let sum = 0
+  for (const character of trade) sum += character.charCodeAt(0)
+  return `backend/src/__tests__/journey-industries-${(sum % JOURNEY_SHARDS) + 1}.pg.test.ts`
+}
+
+for (const [trade, suite] of Object.entries(INDUSTRY_ACCEPTANCE_TESTS)) {
+  suite.push(industryJourneyTestOf(trade))
+}

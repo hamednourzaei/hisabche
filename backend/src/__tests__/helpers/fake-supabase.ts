@@ -64,6 +64,35 @@ interface OrderSpec {
   ascending: boolean
 }
 
+/**
+ * A write the services made, as the fake applied it: the rows carry the ids the fake
+ * handed out, so a later update or delete names the same rows on the real database.
+ */
+export interface MirrorWrite {
+  kind: 'insert' | 'upsert' | 'update' | 'delete'
+  table: string
+  rows: Row[]
+  /** Ids the FAKE generated (the service sent none): dropped where the real table has no `id`. */
+  generatedIds: string[]
+  /** For an update: only the columns the service set. */
+  values?: Row | undefined
+  conflict?: string[] | null | undefined
+  ignoreDuplicates?: boolean | undefined
+}
+
+/**
+ * WRITE-THROUGH to a real PostgreSQL (opt-in, see `journey-retail.pg.test.ts`).
+ *
+ * With a mirror, every write and every rpc the services make ALSO runs on a real
+ * database, in the same order, and the REAL answer is what the service gets back:
+ * an error the real schema raises fails the route right there. Reads still come
+ * from the fake, which the mirror refreshes from the real database after each change.
+ */
+export interface DatabaseMirror {
+  write: (write: MirrorWrite) => Promise<FakeResult['error']>
+  rpc: (name: string, args: Row) => Promise<FakeResult>
+}
+
 /** A uniqueness rule, so `onConflict` can behave like a real upsert. */
 export interface UniqueIndex {
   table: string
@@ -74,6 +103,9 @@ export class FakeDatabase {
   readonly tables = new Map<string, Row[]>()
   readonly uniques: UniqueIndex[] = []
   readonly rpcs = new Map<string, (args: Row) => unknown>()
+
+  /** Null for every suite except the write-through journey. */
+  mirror: DatabaseMirror | null = null
 
   constructor() {
     this.registerDefaultRpcs()
@@ -185,6 +217,15 @@ export class FakeDatabase {
     return new QueryBuilder(this, this.ensure(table), table)
   }
 
+  /**
+   * The real function answers. The fake's own handlers do not run: the mirror refreshes
+   * the fake's rows from the real database after each change, so later reads see what
+   * the function really wrote.
+   */
+  async callRpcMirrored(mirror: DatabaseMirror, name: string, args: Row): Promise<FakeResult> {
+    return mirror.rpc(name, args ?? {})
+  }
+
   callRpc(name: string, args: Row) {
     const handler = this.rpcs.get(name)
     if (!handler) {
@@ -249,6 +290,7 @@ class QueryBuilder implements PromiseLike<FakeResult> {
   private returning = false
   private singleMode: 'one' | 'maybe' | null = null
   private countMode: string | null = null
+  private generatedIds: string[] = []
 
   constructor(
     private readonly db: FakeDatabase,
@@ -510,6 +552,7 @@ class QueryBuilder implements PromiseLike<FakeResult> {
 
       for (const value of this.payload) {
         const row: Row = { id: value.id ?? fakeId(this.table), ...value }
+        if (value.id === undefined) this.generatedIds.push(String(row.id))
 
         const columns =
           this.conflictColumns ??
@@ -582,10 +625,32 @@ class QueryBuilder implements PromiseLike<FakeResult> {
     return { data, error: null, count: this.countMode ? data.length : undefined }
   }
 
+  /** Run on the fake; with a mirror, a write then runs on the real database and its error wins. */
+  private async settle(): Promise<FakeResult> {
+    const result = this.run()
+    const mirror = this.db.mirror
+    if (!mirror || this.mode === 'select' || result.error) return result
+    const rows = Array.isArray(result.data)
+      ? (result.data as Row[])
+      : result.data
+        ? [result.data as Row]
+        : []
+    const error = await mirror.write({
+      kind: this.mode,
+      table: this.table,
+      rows,
+      generatedIds: this.generatedIds,
+      values: this.mode === 'update' ? this.payload[0] : undefined,
+      conflict: this.conflictColumns,
+      ignoreDuplicates: this.ignoreDuplicates,
+    })
+    return error ? { data: null, error } : result
+  }
+
   /** Both a modifier and a terminator: it resolves immediately. */
   async single() {
     this.singleMode = 'one'
-    return this.run()
+    return this.db.mirror ? this.settle() : this.run()
   }
 
   then<TResult1 = FakeResult, TResult2 = never>(
@@ -593,7 +658,10 @@ class QueryBuilder implements PromiseLike<FakeResult> {
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     try {
-      return Promise.resolve(this.run()).then(onfulfilled, onrejected)
+      return (this.db.mirror ? this.settle() : Promise.resolve(this.run())).then(
+        onfulfilled,
+        onrejected,
+      )
     } catch (err) {
       return Promise.reject(err).then(onfulfilled, onrejected)
     }
@@ -612,7 +680,8 @@ export function createFakeDb(db: FakeDatabase, users: Map<string, { id: string; 
       },
     },
     from: (table: string) => db.from(table),
-    rpc: async (name: string, args: Row) => db.callRpc(name, args),
+    rpc: async (name: string, args: Row) =>
+      db.mirror ? db.callRpcMirrored(db.mirror, name, args) : db.callRpc(name, args),
   }
 
   return {

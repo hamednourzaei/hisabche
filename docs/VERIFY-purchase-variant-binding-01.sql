@@ -25,9 +25,11 @@ SELECT 'no line names a variant of another product (orphan identity)',
 UNION ALL
 SELECT 'no line names a variant of another workspace',
        NOT EXISTS (
+         -- purchase_order_items has no workspace_id: the line's workspace is its order's.
          SELECT 1 FROM public.purchase_order_items poi
+           JOIN public.purchase_orders po ON po.id = poi.purchase_order_id
            JOIN public.product_variants pv ON pv.id = poi.variant_id
-          WHERE pv.workspace_id IS DISTINCT FROM poi.workspace_id
+          WHERE pv.workspace_id IS DISTINCT FROM po.workspace_id
        );
 
 -- Post-migration verification query generated — PENDING HUMAN CONFIRMATION

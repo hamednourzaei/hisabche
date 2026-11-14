@@ -7,7 +7,7 @@
 -- Post-migration verification query generated — PENDING HUMAN CONFIRMATION
 -- ==============================================================================
 
-WITH checks AS (
+WITH checks (check_name, pass) AS (
     -- 1. The table exists.
     SELECT 'platform_payment_gateways exists',
            to_regclass('public.platform_payment_gateways') IS NOT NULL
@@ -55,7 +55,7 @@ WITH checks AS (
                 ]
            )
 )
-SELECT check, pass FROM checks ORDER BY check;
+SELECT check_name, pass FROM checks ORDER BY check_name;
 
 -- ──────────────────────────────────────────────────────────────────────────────
 -- 6. Diagnostic — the current switch state. Informational only.
