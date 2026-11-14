@@ -6,11 +6,10 @@ the evidence disagree.
 
 **67** registered · **67** profiled · **67** with a proven business-day journey · **0** sellable
 
-Evidence: commit `2c14df6ac32ef222ac9327ed469b4071ee472df7` · HEAD `2c14df6ac32ef222ac9327ed469b4071ee472df7` · worktree DIRTY
+Evidence: commit `e0deaeaae042dfadca142b31e4fcf53bc383dab9` · HEAD `e0deaeaae042dfadca142b31e4fcf53bc383dab9` · worktree clean
 
 Limitations measured on this tree:
 
-- `EVIDENCE_NOT_ON_COMMITTED_TREE`
 - `POSTGRES_EVIDENCE_MISSING`
 - `BROWSER_VERIFICATION_NOT_RUN`
 - `NO_INDUSTRY_PROVES:POSTGRES_JOURNEY`
@@ -26,82 +25,82 @@ Limitations measured on this tree:
 | `DAILY_OPERATIONS_JOURNEY` | 2.4 | 67                    | daily operations: the industry's own document → payment → stock/resource → ledger                      |
 | `REPORTING_PROOF`          | 2.5 | 65                    | reporting: profit with an explicit unknown, party balance by currency, stock or capacity               |
 | `OFFLINE_GATE_PROOF`       | 2.6 | 67                    | offline: every action either runs on the device or is an explicit online-only row in the matrix        |
-| `RETURNS_PROOF`            | 2.7 | 42                    | returns: cancelling/returning the same document restores the balances                                  |
+| `RETURNS_PROOF`            | 2.7 | 48                    | returns: cancelling/returning the same document restores the balances                                  |
 | `POSTGRES_JOURNEY`         | 2.8 | 0                     | a chained journey on real PostgreSQL, recorded with the shipped commit                                 |
 | `BROWSER_JOURNEY`          | 2.8 | 0                     | a Playwright scenario on the web app, recorded with the shipped commit                                 |
 | `CLAIMS_PROOF`             | 2.9 | 67                    | landing, help and onboarding copy claim only what 1–8 proved                                           |
 
 ## Every industry
 
-| Industry             | Status            | Criteria met | Missing evidence                                                                           |
-| -------------------- | ----------------- | ------------ | ------------------------------------------------------------------------------------------ |
-| `retail`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `wholesale`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `grocery`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `bakery`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `butcher`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `restaurant`         | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `cafe`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `fruitVegetable`     | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `dairy`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `nuts`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `spices`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `jewellery`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `watches`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `currencyExchange`   | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `clothing`           | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `fabric`             | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `fabricRoll`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `shoes`              | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `carpet`             | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `tailoring`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `mobilePhones`       | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `computers`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `computerComponents` | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `electronics`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `itServices`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `hardware`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `buildingMaterials`  | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `paint`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `timber`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `glass`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `construction`       | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `manufacturing`      | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `autoParts`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `carDealer`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `mechanic`           | WORKFLOW_VERIFIED | 7/10         | `REPORTING_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE` |
-| `fuel`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `furniture`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `kitchenware`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `homeAppliances`     | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `stationery`         | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `toys`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `giftShop`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `pharmacy`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `cosmetics`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `clinic`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `barber`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `beautySalon`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `optician`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `agriculture`        | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `livestock`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `seedsFertilizer`    | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `flowers`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `transport`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `freightTransport`   | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `passengerTransport` | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `courier`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `travelAgency`       | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `realEstate`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `printing`           | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `photography`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `education`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `laundry`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
-| `repairs`            | WORKFLOW_VERIFIED | 7/10         | `REPORTING_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE` |
-| `wedding`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `security`           | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `consulting`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`   |
-| `other`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`, `EVIDENCE_NOT_ON_COMMITTED_TREE`                    |
+| Industry             | Status            | Criteria met | Missing evidence                                         |
+| -------------------- | ----------------- | ------------ | -------------------------------------------------------- |
+| `retail`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `wholesale`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `grocery`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `bakery`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `butcher`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `restaurant`         | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `cafe`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `fruitVegetable`     | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `dairy`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `nuts`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `spices`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `jewellery`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `watches`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `currencyExchange`   | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `clothing`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `fabric`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `fabricRoll`         | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `shoes`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `carpet`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `tailoring`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `mobilePhones`       | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `computers`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `computerComponents` | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `electronics`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `itServices`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `hardware`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `buildingMaterials`  | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `paint`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `timber`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `glass`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `construction`       | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `manufacturing`      | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `autoParts`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `carDealer`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `mechanic`           | WORKFLOW_VERIFIED | 7/10         | `REPORTING_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY` |
+| `fuel`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `furniture`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `kitchenware`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `homeAppliances`     | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `stationery`         | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `toys`               | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `giftShop`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `pharmacy`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `cosmetics`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `clinic`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `barber`             | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `beautySalon`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `optician`           | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `agriculture`        | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `livestock`          | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `seedsFertilizer`    | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `flowers`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `transport`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `freightTransport`   | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `passengerTransport` | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `courier`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `travelAgency`       | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `realEstate`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `printing`           | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `photography`        | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `education`          | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `laundry`            | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
+| `repairs`            | WORKFLOW_VERIFIED | 7/10         | `REPORTING_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY` |
+| `wedding`            | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `security`           | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `consulting`         | WORKFLOW_VERIFIED | 7/10         | `RETURNS_PROOF`, `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`   |
+| `other`              | WORKFLOW_VERIFIED | 8/10         | `POSTGRES_JOURNEY`, `BROWSER_JOURNEY`                    |
 
 ## What this means
 

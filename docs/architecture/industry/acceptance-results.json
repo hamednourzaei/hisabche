@@ -1,174 +1,152 @@
 {
-  "generatedAt": "2026-11-13T22:47:23.671Z",
-  "commit": "2c14df6ac32ef222ac9327ed469b4071ee472df7",
-  "worktreeDirty": true,
-  "dirtyFiles": [
-    "M docs/architecture/capability-matrix.csv",
-    " M docs/architecture/industry/acceptance-results.json",
-    " M docs/architecture/industry/industry-diff.generated.md",
-    " M docs/architecture/industry/sellable-industries.json",
-    " M docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.csv",
-    " M docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.md",
-    " M docs/architecture/universal-core/INDUSTRY-SUPPORT-LEVELS.csv",
-    " M docs/architecture/universal-core/UNUSED-HOOKS.csv",
-    " M docs/sales/SELLABLE-INDUSTRIES.md",
-    " M packages/i18n/messages/af/common.json",
-    " M packages/i18n/messages/en/common.json",
-    " M packages/i18n/messages/fa/common.json",
-    " M packages/store/src/slices/onboarding.slice.ts",
-    " M packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx",
-    " M packages/ui/src/components/ui/onboarding/onboarding-page.tsx",
-    " M packages/validation/src/__tests__/first-value.test.ts",
-    " M packages/validation/src/schemas/industry-profiles.ts",
-    " M packages/validation/src/schemas/operational-dna.ts",
-    " M scripts/industry/coverage-data.mjs",
-    " M scripts/industry/sellable-criteria.mjs",
-    "?? backend/src/__tests__/workspace-journey-http.test.ts"
-  ],
+  "generatedAt": "2026-11-14T07:50:13.630Z",
+  "commit": "e0deaeaae042dfadca142b31e4fcf53bc383dab9",
+  "worktreeDirty": false,
+  "dirtyFiles": [],
   "results": {
     "backend/src/__tests__/financial-flows-e2e.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 18,
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 15.168212890625
+      "durationMs": 25.34033203125
     },
     "backend/src/__tests__/http-e2e-business-day.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 186.66943359375
+      "durationMs": 222.455810546875
     },
     "backend/src/__tests__/manufacturing-page-500s.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 5.318603515625
+      "durationMs": 5.196533203125
     },
     "backend/src/__tests__/service-delivery-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 10,
       "passed": 10,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 159.0400390625
+      "durationMs": 168.19970703125
     },
     "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 146.840087890625
+      "durationMs": 196.662353515625
     },
     "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 2,
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 134.06787109375
+      "durationMs": 151.078369140625
     },
     "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 118.75244140625
+      "durationMs": 131.906982421875
     },
     "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 97.970703125
+      "durationMs": 102.183349609375
     },
     "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 127.628662109375
+      "durationMs": 128.478515625
     },
     "backend/src/__tests__/v60-http-families.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 171.2431640625
+      "durationMs": 254.480712890625
     },
     "backend/src/__tests__/workspace-journey-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 508.60791015625
+      "durationMs": 866.091796875
     },
     "packages/api/src/__tests__/offline-matrix-guard.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 5,
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 14.96923828125
+      "durationMs": 14.75146484375
     },
     "packages/ui/src/__tests__/landing-claims.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 48,
       "passed": 48,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 9.143310546875
+      "durationMs": 10.139892578125
     },
     "packages/ui/src/__tests__/operating-profile-wiring.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 34.35107421875
+      "durationMs": 50.322509765625
     },
     "packages/validation/src/__tests__/dna-multi-industry.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 14,
       "passed": 14,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 28.252197265625
+      "durationMs": 28.241943359375
     },
     "packages/validation/src/__tests__/first-value.test.ts": {
       "status": "passed",
-      "date": "2026-11-13",
+      "date": "2026-11-14",
       "tests": 8,
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 33.752197265625
+      "durationMs": 35.1982421875
     }
   },
   "postgres": {
