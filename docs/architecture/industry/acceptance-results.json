@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-11-14T07:50:13.630Z",
-  "commit": "e0deaeaae042dfadca142b31e4fcf53bc383dab9",
+  "generatedAt": "2026-11-14T09:10:04.305Z",
+  "commit": "7affcccbbd5d1368fa7ad08eafdc7884f662f77f",
   "worktreeDirty": false,
   "dirtyFiles": [],
   "results": {
@@ -11,7 +11,7 @@
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 25.34033203125
+      "durationMs": 17.262451171875
     },
     "backend/src/__tests__/http-e2e-business-day.test.ts": {
       "status": "passed",
@@ -20,7 +20,43 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 222.455810546875
+      "durationMs": 123.96923828125
+    },
+    "backend/src/__tests__/journey-industries-1.pg.test.ts": {
+      "status": "passed",
+      "date": "2026-11-14",
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 61236.189697265625
+    },
+    "backend/src/__tests__/journey-industries-2.pg.test.ts": {
+      "status": "passed",
+      "date": "2026-11-14",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 75685.76440429688
+    },
+    "backend/src/__tests__/journey-industries-3.pg.test.ts": {
+      "status": "passed",
+      "date": "2026-11-14",
+      "tests": 19,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 82057.94091796875
+    },
+    "backend/src/__tests__/journey-industries-4.pg.test.ts": {
+      "status": "passed",
+      "date": "2026-11-14",
+      "tests": 19,
+      "passed": 19,
+      "failed": 0,
+      "skipped": 0,
+      "durationMs": 82579.63598632812
     },
     "backend/src/__tests__/manufacturing-page-500s.test.ts": {
       "status": "passed",
@@ -29,7 +65,7 @@
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 5.196533203125
+      "durationMs": 5.21337890625
     },
     "backend/src/__tests__/service-delivery-http.test.ts": {
       "status": "passed",
@@ -38,7 +74,7 @@
       "passed": 10,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 168.19970703125
+      "durationMs": 109.277099609375
     },
     "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
       "status": "passed",
@@ -47,7 +83,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 196.662353515625
+      "durationMs": 116.11572265625
     },
     "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
       "status": "passed",
@@ -56,7 +92,7 @@
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 151.078369140625
+      "durationMs": 92.124267578125
     },
     "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
       "status": "passed",
@@ -65,7 +101,7 @@
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 131.906982421875
+      "durationMs": 88.8603515625
     },
     "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
       "status": "passed",
@@ -74,7 +110,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 102.183349609375
+      "durationMs": 59.564697265625
     },
     "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
       "status": "passed",
@@ -83,7 +119,7 @@
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 128.478515625
+      "durationMs": 118.38037109375
     },
     "backend/src/__tests__/v60-http-families.test.ts": {
       "status": "passed",
@@ -92,7 +128,7 @@
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 254.480712890625
+      "durationMs": 125.01953125
     },
     "backend/src/__tests__/workspace-journey-http.test.ts": {
       "status": "passed",
@@ -101,7 +137,7 @@
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 866.091796875
+      "durationMs": 508.178466796875
     },
     "packages/api/src/__tests__/offline-matrix-guard.test.ts": {
       "status": "passed",
@@ -110,7 +146,7 @@
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 14.75146484375
+      "durationMs": 15.742919921875
     },
     "packages/ui/src/__tests__/landing-claims.test.ts": {
       "status": "passed",
@@ -119,7 +155,7 @@
       "passed": 48,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 10.139892578125
+      "durationMs": 9.13134765625
     },
     "packages/ui/src/__tests__/operating-profile-wiring.test.ts": {
       "status": "passed",
@@ -128,7 +164,7 @@
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 50.322509765625
+      "durationMs": 41.464111328125
     },
     "packages/validation/src/__tests__/dna-multi-industry.test.ts": {
       "status": "passed",
@@ -137,7 +173,7 @@
       "passed": 14,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 28.241943359375
+      "durationMs": 31.283935546875
     },
     "packages/validation/src/__tests__/first-value.test.ts": {
       "status": "passed",
@@ -146,13 +182,50 @@
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 35.1982421875
+      "durationMs": 37.431396484375
     }
   },
   "postgres": {
-    "ran": false,
-    "reason": "NOT_REQUESTED",
-    "results": {}
+    "ran": true,
+    "reason": null,
+    "results": {
+      "backend/src/__tests__/journey-industries-1.pg.test.ts": {
+        "status": "passed",
+        "date": "2026-11-14",
+        "tests": 15,
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0,
+        "durationMs": 60504.85400390625
+      },
+      "backend/src/__tests__/journey-industries-2.pg.test.ts": {
+        "status": "passed",
+        "date": "2026-11-14",
+        "tests": 18,
+        "passed": 18,
+        "failed": 0,
+        "skipped": 0,
+        "durationMs": 75205.99584960938
+      },
+      "backend/src/__tests__/journey-industries-3.pg.test.ts": {
+        "status": "passed",
+        "date": "2026-11-14",
+        "tests": 19,
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0,
+        "durationMs": 81678.93115234375
+      },
+      "backend/src/__tests__/journey-industries-4.pg.test.ts": {
+        "status": "passed",
+        "date": "2026-11-14",
+        "tests": 19,
+        "passed": 19,
+        "failed": 0,
+        "skipped": 0,
+        "durationMs": 81388.24633789062
+      }
+    }
   },
   "browser": {
     "ran": false,
@@ -166,13 +239,13 @@
     "node": "v22.22.0",
     "platform": "win32-x64"
   },
-  "limitations": ["POSTGRES_EVIDENCE_NOT_INCLUDED", "BROWSER_VERIFICATION_NOT_RUN"],
+  "limitations": ["BROWSER_VERIFICATION_NOT_RUN"],
   "totals": {
-    "files": 16,
-    "filesPassed": 16,
+    "files": 20,
+    "filesPassed": 20,
     "filesFailed": 0,
     "filesNotRun": 0,
-    "tests": 136,
-    "testsPassed": 136
+    "tests": 207,
+    "testsPassed": 207
   }
 }
