@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-14T09:10:16.662Z",
-  "head": "7affcccbbd5d1368fa7ad08eafdc7884f662f77f",
-  "acceptanceCommit": "7affcccbbd5d1368fa7ad08eafdc7884f662f77f",
+  "generatedAt": "2026-11-15T11:19:28.608Z",
+  "head": "baf99c1089087b27d8c20fd4d104bb8656c76b06",
+  "acceptanceCommit": "baf99c1089087b27d8c20fd4d104bb8656c76b06",
   "evidenceFresh": true,
   "acceptanceWorktreeDirty": false,
   "criteria": [
@@ -66,7 +66,7 @@
       "section": "2.8",
       "title": "a Playwright scenario on the web app, recorded with the shipped commit",
       "kind": "artifact",
-      "industriesMeeting": 0
+      "industriesMeeting": 67
     },
     {
       "code": "CLAIMS_PROOF",
@@ -76,22 +76,22 @@
       "industriesMeeting": 67
     }
   ],
-  "limitations": ["BROWSER_VERIFICATION_NOT_RUN", "NO_INDUSTRY_PROVES:BROWSER_JOURNEY"],
+  "limitations": [],
   "counts": {
     "registered": 67,
     "profiled": 67,
     "workflowVerified": 67,
     "operationsVerified": 67,
-    "sellable": 0,
-    "notYetSellable": 67,
+    "sellable": 67,
+    "notYetSellable": 0,
     "postgresEvidence": 67,
-    "browserEvidence": 0
+    "browserEvidence": 67
   },
   "industries": [
     {
       "key": "retail",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -109,18 +109,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "wholesale",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -138,18 +138,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "grocery",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -167,18 +167,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "bakery",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -196,18 +196,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "butcher",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -225,18 +225,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "restaurant",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -254,18 +254,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "cafe",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -283,18 +283,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "fruitVegetable",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -312,18 +312,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "dairy",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -341,18 +341,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "nuts",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -370,18 +370,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "spices",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -399,18 +399,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "jewellery",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -428,18 +428,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "watches",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -457,18 +457,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "currencyExchange",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -486,18 +486,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "clothing",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -515,18 +515,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "fabric",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -544,18 +544,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "fabricRoll",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -573,18 +573,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "shoes",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -602,18 +602,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "carpet",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -631,18 +631,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "tailoring",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -660,18 +660,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "mobilePhones",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -689,18 +689,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "computers",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -718,18 +718,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "computerComponents",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -747,18 +747,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "electronics",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -776,18 +776,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "itServices",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -805,18 +805,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "hardware",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -834,18 +834,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "buildingMaterials",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -863,18 +863,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "paint",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -892,18 +892,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "timber",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -921,18 +921,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "glass",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -950,18 +950,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "construction",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -979,18 +979,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "manufacturing",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1008,18 +1008,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "autoParts",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1037,18 +1037,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "carDealer",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1066,18 +1066,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "mechanic",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1095,18 +1095,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "fuel",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1124,18 +1124,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "furniture",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1153,18 +1153,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "kitchenware",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1182,18 +1182,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "homeAppliances",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1211,18 +1211,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "stationery",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1240,18 +1240,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "toys",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1269,18 +1269,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "giftShop",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1298,18 +1298,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "pharmacy",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1327,18 +1327,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "cosmetics",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1356,18 +1356,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "clinic",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1385,18 +1385,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "barber",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1414,18 +1414,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "beautySalon",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1443,18 +1443,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "optician",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1472,18 +1472,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "agriculture",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1501,18 +1501,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "livestock",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1530,18 +1530,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "seedsFertilizer",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1559,18 +1559,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "flowers",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1588,18 +1588,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "transport",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1617,18 +1617,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "freightTransport",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1646,18 +1646,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "passengerTransport",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1675,18 +1675,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "courier",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1704,18 +1704,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "travelAgency",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1733,18 +1733,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "realEstate",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1762,18 +1762,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "printing",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1791,18 +1791,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "photography",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1820,18 +1820,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "education",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1849,18 +1849,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "laundry",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1878,18 +1878,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "repairs",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1907,18 +1907,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "wedding",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1936,18 +1936,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "security",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1965,18 +1965,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "consulting",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -1994,18 +1994,18 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     },
     {
       "key": "other",
-      "status": "WORKFLOW_VERIFIED",
-      "sellable": false,
+      "status": "SELLABLE",
+      "sellable": true,
       "registered": true,
       "profiled": true,
       "workflowComplete": true,
@@ -2023,13 +2023,13 @@
         "OFFLINE_GATE_PROOF": true,
         "RETURNS_PROOF": true,
         "POSTGRES_JOURNEY": true,
-        "BROWSER_JOURNEY": false,
+        "BROWSER_JOURNEY": true,
         "CLAIMS_PROOF": true
       },
       "operationsVerified": true,
       "postgresEvidence": true,
-      "browserEvidence": false,
-      "missingEvidence": ["BROWSER_JOURNEY"]
+      "browserEvidence": true,
+      "missingEvidence": []
     }
   ]
 }

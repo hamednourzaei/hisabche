@@ -1,188 +1,188 @@
 {
-  "generatedAt": "2026-11-14T09:10:04.305Z",
-  "commit": "7affcccbbd5d1368fa7ad08eafdc7884f662f77f",
+  "generatedAt": "2026-11-15T11:17:55.412Z",
+  "commit": "baf99c1089087b27d8c20fd4d104bb8656c76b06",
   "worktreeDirty": false,
   "dirtyFiles": [],
   "results": {
     "backend/src/__tests__/financial-flows-e2e.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 18,
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 17.262451171875
+      "durationMs": 24.278564453125
     },
     "backend/src/__tests__/http-e2e-business-day.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 123.96923828125
+      "durationMs": 234.859619140625
     },
     "backend/src/__tests__/journey-industries-1.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 15,
       "passed": 15,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 61236.189697265625
+      "durationMs": 83249.90454101562
     },
     "backend/src/__tests__/journey-industries-2.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 18,
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 75685.76440429688
+      "durationMs": 100323.21948242188
     },
     "backend/src/__tests__/journey-industries-3.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 19,
       "passed": 19,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 82057.94091796875
+      "durationMs": 105082.82080078125
     },
     "backend/src/__tests__/journey-industries-4.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 19,
       "passed": 19,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 82579.63598632812
+      "durationMs": 105734.72729492188
     },
     "backend/src/__tests__/manufacturing-page-500s.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 5.21337890625
+      "durationMs": 5.242919921875
     },
     "backend/src/__tests__/service-delivery-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 10,
       "passed": 10,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 109.277099609375
+      "durationMs": 224.2626953125
     },
     "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 116.11572265625
+      "durationMs": 265.7509765625
     },
     "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 2,
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 92.124267578125
+      "durationMs": 224.915771484375
     },
     "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 88.8603515625
+      "durationMs": 188.82421875
     },
     "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 59.564697265625
+      "durationMs": 100.822021484375
     },
     "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 118.38037109375
+      "durationMs": 127.239013671875
     },
     "backend/src/__tests__/v60-http-families.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 125.01953125
+      "durationMs": 255.3359375
     },
     "backend/src/__tests__/workspace-journey-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 508.178466796875
+      "durationMs": 746.3984375
     },
     "packages/api/src/__tests__/offline-matrix-guard.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 5,
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 15.742919921875
+      "durationMs": 14.37451171875
     },
     "packages/ui/src/__tests__/landing-claims.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 48,
       "passed": 48,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 9.13134765625
+      "durationMs": 9.2138671875
     },
     "packages/ui/src/__tests__/operating-profile-wiring.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 41.464111328125
+      "durationMs": 36.408203125
     },
     "packages/validation/src/__tests__/dna-multi-industry.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 14,
       "passed": 14,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 31.283935546875
+      "durationMs": 26.247802734375
     },
     "packages/validation/src/__tests__/first-value.test.ts": {
       "status": "passed",
-      "date": "2026-11-14",
+      "date": "2026-11-15",
       "tests": 8,
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 37.431396484375
+      "durationMs": 33.432861328125
     }
   },
   "postgres": {
@@ -191,46 +191,50 @@
     "results": {
       "backend/src/__tests__/journey-industries-1.pg.test.ts": {
         "status": "passed",
-        "date": "2026-11-14",
+        "date": "2026-11-15",
         "tests": 15,
         "passed": 15,
         "failed": 0,
         "skipped": 0,
-        "durationMs": 60504.85400390625
+        "durationMs": 81912.38012695312
       },
       "backend/src/__tests__/journey-industries-2.pg.test.ts": {
         "status": "passed",
-        "date": "2026-11-14",
+        "date": "2026-11-15",
         "tests": 18,
         "passed": 18,
         "failed": 0,
         "skipped": 0,
-        "durationMs": 75205.99584960938
+        "durationMs": 98757.08081054688
       },
       "backend/src/__tests__/journey-industries-3.pg.test.ts": {
         "status": "passed",
-        "date": "2026-11-14",
+        "date": "2026-11-15",
         "tests": 19,
         "passed": 19,
         "failed": 0,
         "skipped": 0,
-        "durationMs": 81678.93115234375
+        "durationMs": 106390.98559570312
       },
       "backend/src/__tests__/journey-industries-4.pg.test.ts": {
         "status": "passed",
-        "date": "2026-11-14",
+        "date": "2026-11-15",
         "tests": 19,
         "passed": 19,
         "failed": 0,
         "skipped": 0,
-        "durationMs": 81388.24633789062
+        "durationMs": 106760.4482421875
       }
     }
   },
   "browser": {
-    "ran": false,
-    "reason": "NOT_REQUESTED",
-    "results": {}
+    "ran": true,
+    "reason": null,
+    "results": {
+      "apps/web/e2e/journey-industries.spec.ts": {
+        "status": "passed"
+      }
+    }
   },
   "environment": {
     "runner": "scripts/industry/run-acceptance.mjs",
@@ -239,7 +243,7 @@
     "node": "v22.22.0",
     "platform": "win32-x64"
   },
-  "limitations": ["BROWSER_VERIFICATION_NOT_RUN"],
+  "limitations": [],
   "totals": {
     "files": 20,
     "filesPassed": 20,
