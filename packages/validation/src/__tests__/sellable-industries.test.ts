@@ -238,6 +238,11 @@ describe('sellable-industries.json — all nine criteria, generated and honest',
   })
 
   it('names the commit its evidence came from', () => {
+    // `head` = the newest commit that changed anything except the evidence files, so
+    // committing the evidence does not make it stale — but any other change does.
+    const generator = readFileSync(GENERATOR, 'utf8')
+    expect(generator).toContain('EVIDENCE_ONLY')
+    expect(generator).toContain(':(exclude)')
     expect(report.head).toMatch(/^[0-9a-f]{40}$/)
     if (report.acceptanceCommit !== null) {
       expect(report.acceptanceCommit).toMatch(/^[0-9a-f]{40}$/)

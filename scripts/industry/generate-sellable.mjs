@@ -53,9 +53,23 @@ const MAPS = {
 const read = (relative) => readFileSync(path.join(ROOT, relative), 'utf8')
 const exists = (relative) => existsSync(path.join(ROOT, relative))
 
+// The evidence files themselves. Committing them changes HEAD but not one byte that was
+// tested, so they are the ONLY paths a later commit may touch and still leave the
+// recorded acceptance run describing the tree. Anything else — code, tests, migrations,
+// the support levels — makes the evidence stale. (Before 15 Nov 2026 the rule was
+// «acceptance commit === HEAD», which the very commit recording the evidence broke: the
+// published file always said STALE, or the evidence could never be committed.)
+const EVIDENCE_ONLY = [RESULTS, OUT, DOC, 'docs/architecture/industry/industry-diff.generated.md']
+
+/** The newest commit that changed anything except the evidence files. */
 function headCommit() {
   try {
-    return execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim()
+    const excluded = EVIDENCE_ONLY.map((file) => `":(exclude)${file}"`).join(' ')
+    const code = execSync(`git log -1 --format=%H -- . ${excluded}`, {
+      cwd: ROOT,
+      encoding: 'utf8',
+    }).trim()
+    return code || null
   } catch {
     return null
   }
