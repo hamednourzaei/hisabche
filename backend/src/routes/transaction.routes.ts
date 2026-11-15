@@ -17,7 +17,8 @@ import {
 // The payments core: the one place money moving between the business and a
 // party is recorded. `payments` is the shared instance the rest of the backend
 // books through — see services/payments/index.ts.
-import { partyBalancesByCurrency, payments as paymentsService } from '../services/payments'
+import { payments as paymentsService } from '../services/payments'
+import CustomerService from '../services/customer.service'
 import { BaseError } from '../errors/base.error'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { failRoute } from '../utils/route-failure'
@@ -41,6 +42,8 @@ interface CreateTransactionBody {
 }
 
 // ─── Routes ───────────────────────────────────────────────
+const customerBalances = new CustomerService()
+
 export async function transactionRoutes(fastify: FastifyInstance) {
   // ─── GET /api/transactions/ledger ────────────────────────
   //
@@ -378,48 +381,13 @@ export async function transactionRoutes(fastify: FastifyInstance) {
 
       if (error) return reply.code(500).send({ error: error.message })
 
-      // ⚠️ SIGN — this route had 'receipt' on the PLUS side and 'payment' on
-      // the minus side, which is both of them backwards. Money ARRIVING from a
-      // customer was recorded as increasing their debt, and money we paid OUT
-      // as reducing it. It is lesson 10 exactly, in a second place: the fix
-      // landed in `customer.service.getBalance()` and this copy was missed.
-      //
-      // The arithmetic is no longer written here at all. `partyBalance` is the
-      // one definition of what each movement means, it is unit-tested, and a
-      // third copy of these four lines is how a third disagreement starts.
-      // ⚠️ PER CURRENCY. The rows were read WITH their currency and then
-      // added without it: 100 dollars and 10,000 afghani made 10,100.
-      const bookCurrency = await baseCurrencyOf(workspaceId)
-      const balances = partyBalancesByCurrency(
-        (data ?? []).map((tx) => ({
-          date: '',
-          reference: '',
-          amount: Number(tx.amount) || 0,
-          ...(tx.currency ? { currency: String(tx.currency) } : {}),
-          kind:
-            tx.type === 'sale'
-              ? ('sale' as const)
-              : tx.type === 'receipt'
-                ? ('payment_in' as const)
-                : tx.type === 'payment'
-                  ? ('payment_out' as const)
-                  : tx.type === 'purchase'
-                    ? ('purchase' as const)
-                    : ('return' as const),
-        })),
-        bookCurrency,
-      )
-      // In the books currency only; the other currencies are beside it.
-      const balance = balances[0]?.balance ?? 0
-
-      return {
-        customerId,
-        currency: bookCurrency,
-        balance,
-        balances,
-        isDebtor: balances.some((entry) => entry.balance > 0),
-        transactions: data ?? [],
-      }
+      // ⚠️ ONE DEFINITION OF A CUSTOMER'S BALANCE: CustomerService.getBalance. This route
+      // kept its own copy of the arithmetic (lesson 10, a third copy) and its copy read only
+      // `transactions_view` — sale returns are their own document and were left out, so a
+      // customer who paid in full and returned goods showed 0 instead of what the shop owes
+      // them (found by the PostgreSQL journey, 14 Nov 2026). Guard: balance-counts-returns.test.ts
+      const balance = await customerBalances.getBalance(customerId, request.tenancy)
+      return { ...balance, transactions: data ?? [] }
     },
   )
 

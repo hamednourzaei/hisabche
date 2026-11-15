@@ -14,6 +14,7 @@
 'use client'
 
 import { memo, useMemo, useState, type ReactNode } from 'react'
+import { useAfterHydration } from '../../../../hooks/use-after-hydration'
 import { NEW_DOCUMENT_KINDS, type NewDocumentKind } from '../../invoices/new-invoice-chooser'
 import {
   ChevronDown,
@@ -51,7 +52,11 @@ import { NumberStepper } from '../../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../select'
 import { cn } from '../../../../lib/utils'
 import { InvoiceItemCard } from './invoice-item-card'
-import { toIsoDay } from '@hisabche/formatting'
+import {
+  dayToDocumentDate,
+  documentDateToDay,
+  todayDocumentDate,
+} from '../../../../lib/invoice-day'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
 export interface InvoiceBuilderMobileProps {
@@ -112,17 +117,9 @@ const fieldShell = cn(
   'transition-colors duration-150 motion-reduce:transition-none',
 )
 
-function toDateValue(iso: string | null): string {
-  if (!iso) return ''
-  const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime()) ? '' : toIsoDay(parsed)
-}
-
-function fromDateValue(value: string): string | null {
-  if (!value) return null
-  const parsed = new Date(`${value}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
-}
+/** The picker speaks YYYY-MM-DD; a document stores that day at UTC midnight (lib/invoice-day.ts). */
+const toDateValue = (iso: string | null): string => documentDateToDay(iso)
+const fromDateValue = (value: string): string | null => dayToDocumentDate(value)
 
 export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
   t,
@@ -166,6 +163,12 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
   onContinue,
   savingDraft,
 }: InvoiceBuilderMobileProps) {
+  // The draft's default date is stamped by `new Date()` in the store: on the server at the
+  // moment its module loaded and in the server's zone, in the browser at page load in the
+  // owner's zone — two different days near midnight (or a day-old server), so hydration
+  // failed (React #418), the tree was rebuilt and the first click was lost (browser
+  // journeys, 14 Nov 2026). The field shows the date only after hydration.
+  const hydrated = useAfterHydration()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [dueDateShown, setDueDateShown] = useState(dueDate !== null)
 
@@ -469,8 +472,8 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
                 {t('invoiceBuilder.customer.date', 'تاریخ فاکتور')}
               </span>
               <JalaliDatePicker
-                value={toDateValue(date)}
-                onChange={(v) => onDateChange(fromDateValue(v) ?? new Date().toISOString())}
+                value={hydrated ? toDateValue(date) : ''}
+                onChange={(v) => onDateChange(fromDateValue(v) ?? todayDocumentDate())}
               />
             </div>
 

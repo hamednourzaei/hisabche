@@ -105,7 +105,11 @@ export const updateProfileSchema = z.object({
   // finished it. See docs/onboarding-server-state-migration.sql.
   onboardingCompleted: z.boolean().optional(),
   businessTypes: z.array(z.string().max(64)).max(20).optional(),
-  storeSize: z.enum(['small', 'medium', 'large']).optional(),
+  // `solo` («کار انفرادی، ۱ نفر») is the first card the onboarding screen offers; refusing it
+  // left an owner who works alone stuck on «ورود به حسابچه» (400 on every press). Accepted on
+  // the owner's instruction (15 Nov 2026); the headcount mapping of the other three stays
+  // open in docs/architecture/OPEN-DECISIONS.md D-01. Guard: onboarding-store-size.test.ts
+  storeSize: z.enum(['solo', 'small', 'medium', 'large']).optional(),
   businessNote: z.string().max(2000).optional(),
 })
 

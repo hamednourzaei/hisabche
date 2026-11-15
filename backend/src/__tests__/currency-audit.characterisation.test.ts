@@ -147,7 +147,10 @@ describe('a party’s balance is per currency', () => {
     const read = service.slice(service.indexOf('async getBalance('))
     expect(read).toContain(".select('type, amount, currency')")
     expect(read).toContain('partyBalancesByCurrency(')
-    expect(source('routes/transaction.routes.ts')).toContain('partyBalancesByCurrency(')
+    // The route no longer keeps its own copy (it left sale returns out): it answers from getBalance.
+    expect(source('routes/transaction.routes.ts')).toContain(
+      'customerBalances.getBalance(customerId, request.tenancy)',
+    )
   })
 })
 

@@ -14,6 +14,7 @@
 // `WORKSPACE_PROFILE_NOT_CONFIGURED`; `saveWorkspaceProfile` reports that as `null`, never as success.
 // ============================================
 
+import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -69,6 +70,12 @@ export function useWorkspaceProfile() {
   })
 }
 
+// ⚠️ These three return a STABLE function (useCallback). A plain `return async (…) =>` is a new
+// function on every render; the onboarding screen lists the progress saver in an effect's
+// dependencies, so it sent PUT /workspace/onboarding-progress on EVERY render — a storm that
+// hit the 100-a-minute limit and left «ورود به حسابچه» refused with 429: the new owner could
+// not leave onboarding (found by the browser journeys, 14 Nov 2026). Guard: stable-hook-functions.test.ts
+
 /**
  * Declare or change the workspace profile.
  *
@@ -77,19 +84,22 @@ export function useWorkspaceProfile() {
  */
 export function useSaveWorkspaceProfile() {
   const queryClient = useQueryClient()
-  return async (businessTypes: readonly string[]): Promise<WorkspaceProfileView | null> => {
-    try {
-      const { data } = await apiClient.put('/workspace/profile', { businessTypes })
-      await queryClient.invalidateQueries({ queryKey: workspaceProfileKeys.all })
-      return parseView(data)
-    } catch (cause) {
-      const code = (cause as { response?: { data?: { code?: string; error?: string } } }).response
-        ?.data
-      if (code?.code === 'WORKSPACE_PROFILE_NOT_CONFIGURED') return null
-      if (JSON.stringify(code ?? '').includes('WORKSPACE_PROFILE_NOT_CONFIGURED')) return null
-      throw cause
-    }
-  }
+  return useCallback(
+    async (businessTypes: readonly string[]): Promise<WorkspaceProfileView | null> => {
+      try {
+        const { data } = await apiClient.put('/workspace/profile', { businessTypes })
+        await queryClient.invalidateQueries({ queryKey: workspaceProfileKeys.all })
+        return parseView(data)
+      } catch (cause) {
+        const code = (cause as { response?: { data?: { code?: string; error?: string } } }).response
+          ?.data
+        if (code?.code === 'WORKSPACE_PROFILE_NOT_CONFIGURED') return null
+        if (JSON.stringify(code ?? '').includes('WORKSPACE_PROFILE_NOT_CONFIGURED')) return null
+        throw cause
+      }
+    },
+    [queryClient],
+  )
 }
 
 // ─── V54 5.2 / 5.3 — Operational DNA and onboarding progress ──────────────
@@ -158,27 +168,30 @@ function refusedAsNotConfigured(cause: unknown): boolean {
  */
 export function useSaveOperationalDna() {
   const queryClient = useQueryClient()
-  return async (
-    dna: OperationalDna,
-    expectedVersion: number,
-  ): Promise<{ version: number; replayed: boolean } | null> => {
-    try {
-      const { data } = await apiClient.put<{ version: number; replayed: boolean }>(
-        '/workspace/operational-profile',
-        { dna, expectedVersion },
-      )
-      await queryClient.invalidateQueries({ queryKey: operationalProfileKeys.all })
-      return data
-    } catch (cause) {
-      if (refusedAsNotConfigured(cause)) return null
-      throw cause
-    }
-  }
+  return useCallback(
+    async (
+      dna: OperationalDna,
+      expectedVersion: number,
+    ): Promise<{ version: number; replayed: boolean } | null> => {
+      try {
+        const { data } = await apiClient.put<{ version: number; replayed: boolean }>(
+          '/workspace/operational-profile',
+          { dna, expectedVersion },
+        )
+        await queryClient.invalidateQueries({ queryKey: operationalProfileKeys.all })
+        return data
+      } catch (cause) {
+        if (refusedAsNotConfigured(cause)) return null
+        throw cause
+      }
+    },
+    [queryClient],
+  )
 }
 
 /** Save where the wizard stands. `null` = not configured on this database yet. */
 export function useSaveOnboardingProgress() {
-  return async (progress: OnboardingProgress): Promise<OnboardingProgress | null> => {
+  return useCallback(async (progress: OnboardingProgress): Promise<OnboardingProgress | null> => {
     try {
       const { data } = await apiClient.put<OnboardingProgress>(
         '/workspace/onboarding-progress',
@@ -189,5 +202,5 @@ export function useSaveOnboardingProgress() {
       if (refusedAsNotConfigured(cause)) return null
       throw cause
     }
-  }
+  }, [])
 }

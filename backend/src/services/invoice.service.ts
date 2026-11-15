@@ -13,7 +13,7 @@
 // ============================================
 
 import { baseCurrencyOf } from './base-currency'
-import { businessDayOf } from '../utils/local-day'
+import { documentDayOf } from '../utils/local-day'
 import { createHash, randomUUID } from 'node:crypto'
 import { PaymentsService } from './payments/payments.service'
 import { assertMayUseWarehouse } from './inventory/warehouse-access'
@@ -1870,7 +1870,7 @@ export class InvoiceService {
         // matches nothing, which is why there was no working path before.
         partyId,
         amount: tranche.amount,
-        entryDate: (data.date ?? new Date().toISOString()).slice(0, 10),
+        entryDate: documentDayOf(data.date, ctx.timeZone),
         // None named = the books currency; the payments service decides it.
         ...(data.currency ? { currency: data.currency } : {}),
         // The money is booked at the rate its invoice was.
@@ -3752,7 +3752,7 @@ export class InvoiceService {
     const items = (data.items ?? []).filter((item) => Number(item?.quantity) > 0)
     if (items.length === 0) return
 
-    const entryDate = (data.date ? String(data.date) : new Date().toISOString()).slice(0, 10)
+    const entryDate = documentDayOf(data.date ? String(data.date) : null, ctx.timeZone)
 
     const { computed, snapshot } = await tax.computeAndFreeze(ctx, {
       date: entryDate,
@@ -3851,7 +3851,7 @@ export class InvoiceService {
      */
     exchangeRate = 1,
   ): Promise<number> {
-    const entryDate = date ? String(date).slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone)
+    const entryDate = documentDayOf(date ? String(date) : null, ctx?.timeZone)
     // Lines without a product are services; they hold no stock and cost
     // nothing to deliver from inventory.
     const stocked = (items ?? []).filter(
@@ -4027,7 +4027,7 @@ export class InvoiceService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'invoice',
       sourceId: invoiceId,
-      date: data.date ? data.date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone),
+      date: documentDayOf(data.date, ctx?.timeZone),
       description: `${isPurchase ? 'فاکتور خرید' : 'فاکتور فروش'} ${
         data.invoiceNumber || invoiceId.slice(0, 8)
       }`,
@@ -4232,7 +4232,7 @@ export class InvoiceService {
     }))
     const date = String(invoice?.date ?? '')
 
-    const entryDate = date ? date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone)
+    const entryDate = documentDayOf(date, ctx?.timeZone)
     const drawn = new Set(
       (await costing.explainDocumentCost(ctx, 'invoice', id)).lines.map((row) =>
         String(row.consumerLine ?? ''),
@@ -4303,7 +4303,7 @@ export class InvoiceService {
     const outcome = await ledger.postDocument(ctx, {
       sourceType: 'cost_repost',
       sourceId: key,
-      date: date ? date.slice(0, 10) : businessDayOf(new Date(), ctx?.timeZone),
+      date: documentDayOf(date, ctx?.timeZone),
       description: `بهای تمام‌شده‌ی فاکتور فروش ${
         invoice?.invoiceNumber ?? invoice?.invoice_number ?? id.slice(0, 8)
       }`,

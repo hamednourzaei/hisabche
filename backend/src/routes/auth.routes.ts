@@ -952,7 +952,9 @@ export async function authRoutes(fastify: FastifyInstance) {
   // Every route acts as the signed-in person with their OWN token; nothing
   // here can enrol, verify or recover for someone else.
   const bearer = (request: FastifyRequest): string =>
-    String(request.headers.authorization ?? '').replace(/^Bearers+/i, '')
+    // `\s+`: the backslash had been lost («Bearers+»), so «Bearer » was never removed and
+    // every two-step route forwarded «Bearer <token>» as the token. Guard: bearer-strip.test.ts
+    String(request.headers.authorization ?? '').replace(/^Bearer\s+/i, '')
   const mfaRateLimit = {
     rateLimit: {
       max: 10,

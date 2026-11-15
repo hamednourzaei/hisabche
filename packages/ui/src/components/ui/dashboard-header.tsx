@@ -75,7 +75,7 @@ const SyncPill = memo(function SyncPill({
   isOnline: boolean
   isSyncing: boolean
   pendingCount: number
-  t: (key: string) => string
+  t: (key: string, values?: Record<string, string | number>) => string
 }) {
   // True only after the first client render. `useSyncExternalStore` is the
   // sanctioned way to ask this: it returns the server snapshot during SSR and
@@ -135,7 +135,9 @@ const SyncPill = memo(function SyncPill({
   if (lastSyncedAt && mounted && now !== null) {
     const s = Math.floor((now - lastSyncedAt) / 1000)
     const label =
-      s < 60 ? t('sync.justNow') : t('sync.minutesAgo').replace('{m}', String(Math.floor(s / 60)))
+      // The value goes TO the translator: without it next-intl answers the key, and the
+      // header read «sync.minutesAgo» (found by the browser journey, 14 Nov 2026).
+      s < 60 ? t('sync.justNow') : t('sync.minutesAgo', { m: Math.floor(s / 60) })
     return (
       <span
         className={cn(

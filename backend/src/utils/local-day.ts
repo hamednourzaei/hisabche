@@ -92,3 +92,25 @@ export function businessDayOf(date?: Date | string | null, timeZone?: string | n
   const p = partsIn(tz, d)
   return `${String(p.year).padStart(4, '0')}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
 }
+
+/** A calendar day as written: `YYYY-MM-DD`, or that day at UTC midnight (how the app sends it). */
+const CALENDAR_DAY = /^(\d{4}-\d{2}-\d{2})(?:T00:00(?::00(?:\.0+)?)?(?:Z|\+00:00))?$/
+
+/**
+ * The calendar day a document is dated, in the business's own zone.
+ *
+ * ⚠️ `date.slice(0, 10)` is the UTC day. The invoice builder used to send the chosen day as
+ * LOCAL midnight (`new Date('YYYY-MM-DDT00:00:00').toISOString()`), which in Kabul is 19:30Z
+ * the day BEFORE — so every invoice dated from the picker was posted to the previous day in the
+ * ledger, and a sale between midnight and 04:30 landed on yesterday (browser journeys,
+ * 14 Nov 2026). A calendar day is kept as written; any other instant is read in `timeZone`.
+ * Guard: document-day.test.ts
+ */
+export function documentDayOf(value: string | null | undefined, timeZone?: string | null): string {
+  const text = String(value ?? '').trim()
+  if (!text) return businessDayOf(new Date(), timeZone)
+  const day = CALENDAR_DAY.exec(text)
+  if (day?.[1]) return day[1]
+  const instant = new Date(text)
+  return Number.isNaN(instant.getTime()) ? text.slice(0, 10) : businessDayOf(instant, timeZone)
+}

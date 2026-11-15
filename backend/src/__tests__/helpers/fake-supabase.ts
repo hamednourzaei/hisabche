@@ -401,8 +401,8 @@ class QueryBuilder implements PromiseLike<FakeResult> {
   /**
    * PostgREST's `or`: top-level commas are OR branches, `and(...)` is one
    * branch that must satisfy all of its conditions, and a condition is
-   * `col.op.value` — `gte` (the operational window), `neq` (a status that is
-   * still open) or `is.null`. Anything else throws, so a new filter cannot
+   * `col.op.value` — `eq`, `gt`/`gte`/`lt`/`lte` (compared as text, like the
+   * window it was written for), `neq` (a status that is still open) or `is.null`. Anything else throws, so a new filter cannot
    * pass here by being silently ignored.
    */
   or(filter: string) {
@@ -410,6 +410,15 @@ class QueryBuilder implements PromiseLike<FakeResult> {
       const [column, operator, ...rest] = text.trim().split('.')
       const value = rest.join('.')
       if (operator === 'gte') return (row) => String(valueAt(row, column!) ?? '') >= value
+      if (operator === 'gt') return (row) => String(valueAt(row, column!) ?? '') > value
+      if (operator === 'lte') return (row) => String(valueAt(row, column!) ?? '') <= value
+      if (operator === 'lt') return (row) => String(valueAt(row, column!) ?? '') < value
+      if (operator === 'eq') {
+        return (row) => {
+          const cell = valueAt(row, column!)
+          return cell != null && String(cell) === value
+        }
+      }
       if (operator === 'neq') {
         return (row) => {
           const cell = valueAt(row, column!)

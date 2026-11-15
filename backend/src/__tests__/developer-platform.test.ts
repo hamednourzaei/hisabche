@@ -675,7 +675,9 @@ describe('the rate-limit bucket', () => {
   it('index.ts uses it, with the key budget', () => {
     const index = read('index.ts')
     expect(index).toContain('rateLimitBucket(request.headers.authorization,')
-    expect(index).toContain('isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100')
+    // An API key keeps its own budget; anonymous traffic keeps 100 (sessions get more: rate-limit-budgets.test.ts).
+    expect(index).toMatch(/isApiKeyBucket\(key\)\s*\?\s*API_KEY_RATE_LIMIT_PER_MINUTE/)
+    expect(index).toContain('const ANONYMOUS_RATE_LIMIT_PER_MINUTE = 100')
     expect(API_KEY_RATE_LIMIT_PER_MINUTE).toBeGreaterThan(0)
   })
 })

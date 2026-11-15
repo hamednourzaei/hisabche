@@ -257,7 +257,13 @@ function playwrightResults(report) {
       const raw = spec.file ?? suite.file
       if (!raw) continue
       const key = raw.startsWith('apps/') ? raw : `apps/web/e2e/${raw.replace(/^\.\//, '')}`
-      const status = spec.ok === true ? 'passed' : 'failed'
+      // `spec.ok` is true for a SKIPPED test too: a run with no servers would read as green.
+      // Passed means every attempt of every test in the spec really passed.
+      const ran = (spec.tests ?? []).flatMap((one) => one.results ?? [])
+      const status =
+        spec.ok === true && ran.length > 0 && ran.every((result) => result.status === 'passed')
+          ? 'passed'
+          : 'failed'
       out[key] = out[key] === 'failed' ? false : status
     }
     for (const child of suite.suites ?? []) walk(child)
@@ -284,6 +290,10 @@ if (RUN_BROWSER) {
       [
         path.join(cwd, 'node_modules', '@playwright', 'test', 'cli.js'),
         'test',
+        // The per-trade journeys bring their own localhost servers (playwright.journey.config.ts).
+        ...(browserFiles.every((file) => file.endsWith('journey-industries.spec.ts'))
+          ? ['-c', 'playwright.journey.config.ts']
+          : []),
         ...browserFiles.map((file) =>
           path.relative(cwd, path.join(ROOT, file)).split(path.sep).join('/'),
         ),

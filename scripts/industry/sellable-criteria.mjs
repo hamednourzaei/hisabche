@@ -161,12 +161,16 @@ export const INDUSTRY_POSTGRES_TESTS = Object.fromEntries(
 )
 
 /**
- * Per-industry Playwright scenarios. Empty: `apps/web/e2e` has three app-level
- * specs and none of them completes an onboarding→first document→report journey
- * for a family. `playwright.config.ts` points at https://hisabche.com with
- * `channel: 'chrome'`, so a scenario here also needs a reachable target.
+ * Per-industry Playwright scenarios (V64 §2.8): signup → onboarding with THIS trade →
+ * first product → a paid sale through the invoice builder → the income statement, in a
+ * real browser against the web app, the backend and a real PostgreSQL — one test per trade
+ * in `apps/web/e2e/journey-industries.spec.ts` (playwright.journey.config.ts, localhost
+ * only). The runner records it only with `--browser`; a skipped test is a failure.
  */
-export const INDUSTRY_BROWSER_TESTS = {}
+export const INDUSTRY_BROWSER_JOURNEY_TEST = 'apps/web/e2e/journey-industries.spec.ts'
+export const INDUSTRY_BROWSER_TESTS = Object.fromEntries(
+  Object.keys(INDUSTRY_ACCEPTANCE_TESTS).map((key) => [key, [INDUSTRY_BROWSER_JOURNEY_TEST]]),
+)
 
 /**
  * Vetoes: a source fact that can only block a criterion.

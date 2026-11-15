@@ -222,12 +222,23 @@ function withTrailingBlank(rows: InvoiceGridRow[], columns: InvoiceColumn[]): In
 // server by BookCurrencySync) — not a currency named in this file.
 const INITIAL_CURRENCY: CurrencyCode = useCurrencyStore.getState().primaryCurrency
 
+/**
+ * Today on this device as a document date: the CALENDAR day at UTC midnight. A full
+ * `new Date().toISOString()` is the UTC instant; after midnight in Kabul it is still
+ * yesterday in UTC, and the ledger posted the sale there (browser journeys, 14 Nov 2026).
+ */
+function todayAsDocumentDate(): string {
+  const now = new Date()
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return `${day}T00:00:00.000Z`
+}
+
 function blankDraft(columns: InvoiceColumn[]) {
   return {
     rows: [emptyRow(nextRowId(), columns)],
     customers: [],
     transactionType: 'sale' as const,
-    date: new Date().toISOString(),
+    date: todayAsDocumentDate(),
     dueDate: null,
     notes: '',
     paymentMethod: 'cash' as const,
@@ -540,7 +551,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         return {
           ...current,
           ...saved,
-          ...(pristine ? { date: new Date().toISOString() } : {}),
+          ...(pristine ? { date: todayAsDocumentDate() } : {}),
           columns:
             Array.isArray(saved.columns) && saved.columns.length ? saved.columns : current.columns,
           rows: Array.isArray(saved.rows) && saved.rows.length ? saved.rows : current.rows,

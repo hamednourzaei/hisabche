@@ -31,7 +31,8 @@ import { JalaliDatePicker } from '../jalali-datepicker'
 import { NumberStepper } from '../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
-import { toIsoDay } from '@hisabche/formatting'
+import { useAfterHydration } from '../../../hooks/use-after-hydration'
+import { dayToDocumentDate, documentDateToDay, todayDocumentDate } from '../../../lib/invoice-day'
 import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface CustomerPanelProps {
@@ -61,17 +62,10 @@ export interface CustomerPanelProps {
 const fieldLabel = 'mb-1.5 block text-xs font-medium text-[hsl(var(--fg-secondary))]'
 
 /** The date picker speaks Gregorian `YYYY-MM-DD`; the draft keeps full ISO. */
-function toDateValue(iso: string | null): string {
-  if (!iso) return ''
-  const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime()) ? '' : toIsoDay(parsed)
-}
 
-function fromDateValue(value: string): string | null {
-  if (!value) return null
-  const parsed = new Date(`${value}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
-}
+/** The picker speaks YYYY-MM-DD; a document stores that day at UTC midnight (lib/invoice-day.ts). */
+const toDateValue = (iso: string | null): string => documentDateToDay(iso)
+const fromDateValue = (value: string): string | null => dayToDocumentDate(value)
 
 export const CustomerPanel = memo(function CustomerPanel({
   t,
@@ -93,6 +87,12 @@ export const CustomerPanel = memo(function CustomerPanel({
   notes,
   onNotesChange,
 }: CustomerPanelProps) {
+  // The draft's default date is stamped by `new Date()` in the store: on the server at the
+  // moment its module loaded and in the server's zone, in the browser at page load in the
+  // owner's zone — two different days near midnight (or a day-old server), so hydration
+  // failed (React #418), the tree was rebuilt and the first click was lost (browser
+  // journeys, 14 Nov 2026). The field shows the date only after hydration.
+  const hydrated = useAfterHydration()
   const isPurchase = transactionType === 'purchase' || transactionType === 'pre_purchase'
 
   // A persisted draft written by an older build has no `customers` key at all,
@@ -258,8 +258,8 @@ export const CustomerPanel = memo(function CustomerPanel({
           <div>
             <span className={fieldLabel}>{t('invoiceBuilder.customer.date', 'تاریخ فاکتور')}</span>
             <JalaliDatePicker
-              value={toDateValue(date)}
-              onChange={(v) => onDateChange(fromDateValue(v) ?? new Date().toISOString())}
+              value={hydrated ? toDateValue(date) : ''}
+              onChange={(v) => onDateChange(fromDateValue(v) ?? todayDocumentDate())}
             />
           </div>
           <div>

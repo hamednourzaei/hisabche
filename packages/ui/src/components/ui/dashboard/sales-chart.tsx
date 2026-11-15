@@ -139,16 +139,16 @@ export const SalesChart = memo(function SalesChart({
 
   // ✅ اصلاح: استفاده از کلیدهای ترجمه‌ی صحیح
   const ariaLabel = t('dashboard.salesChart.ariaLabel')
-  // ✅ FIX: این wrapper فقط رشته برمی‌گرداند و مقادیر ICU را جای‌گذاری نمی‌کند،
-  // برای همین «{total}» و «{change}» عیناً نمایش داده می‌شدند.
-  const description = t('dashboard.salesChart.description')
-    .replace('{total}', fmt(currentPeriodTotal))
-    .replace(
-      '{change}',
+  // The message has {total} and {change}: asked WITHOUT values, next-intl answers the KEY
+  // itself, and «dashboard.salesChart.description» was printed on the dashboard (found by
+  // the browser journey, 14 Nov 2026). The values go to the translator, not into .replace().
+  const description = tCount('dashboard.salesChart.description', {
+    total: fmt(currentPeriodTotal),
+    change:
       previousPeriodTotal > 0
         ? `${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}٪`
         : '—',
-    )
+  })
 
   return (
     <section

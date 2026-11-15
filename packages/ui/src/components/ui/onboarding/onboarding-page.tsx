@@ -179,6 +179,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
                 type="button"
                 role="checkbox"
                 aria-checked={selectedIds.has(item.id)}
+                data-option-key={item.id}
                 onClick={() => handleToggle(item.id)}
                 className={cn(
                   'rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6',
@@ -344,6 +345,7 @@ const StoreSizeStep = memo(function StoreSizeStep({
             <button
               key={item.id}
               type="button"
+              data-option-key={item.id}
               onClick={() => onSetStoreSize(item.id)}
               className={cn(
                 'flex w-full items-center gap-3 rounded-2xl border-2 p-3.5 transition-all duration-200 text-start sm:gap-4 sm:p-5',

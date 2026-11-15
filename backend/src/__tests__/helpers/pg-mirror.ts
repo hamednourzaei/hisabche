@@ -137,37 +137,55 @@ function errorOf(error: unknown): NonNullable<FakeResult['error']> {
   return { message: String(error) }
 }
 
+/** What each table looked like at the last sync: row count and highest xmin (a write marker). */
+const lastSeen = new WeakMap<FakeDatabase, Map<string, string>>()
+
 /**
- * Copy every non-empty public table and view of the real database into the fake, as
- * PostgREST would serialise it (to_jsonb: ISO timestamps, numbers as numbers). After this
- * the services read exactly what the real triggers and functions wrote.
+ * Copy the public tables and views of the real database into the fake, as PostgREST would
+ * serialise them (to_jsonb: ISO timestamps, numbers as numbers). After this the services
+ * read exactly what the real triggers and functions wrote.
+ *
+ * Incremental: a TABLE is re-read only when its row count or its highest `xmin` changed
+ * (any insert or update moves one of them; a delete moves the count). Views have no xmin
+ * and are always re-read. Many owners in one database made a full copy after every write
+ * the slowest part of the run.
  */
 export async function syncInto(runner: PgRunner, db: FakeDatabase): Promise<void> {
   const relations = await runner.query(
-    `SELECT c.relname AS name FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    `SELECT c.relname AS name, c.relkind AS kind FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'p')`,
   )
-  const names = relations.map((row) => String(row.name))
-  if (names.length === 0) return
-  const counts = await runner.query(
-    names
-      .map(
-        (name) =>
-          `SELECT ${literal(name)} AS name, (SELECT count(*) FROM public.${quote(name)}) AS n`,
-      )
+  if (relations.length === 0) return
+  const seen = lastSeen.get(db) ?? new Map<string, string>()
+  lastSeen.set(db, seen)
+  const states = await runner.query(
+    relations
+      .map((row) => {
+        const name = String(row.name)
+        const marker =
+          row.kind === 'v'
+            ? `'view'`
+            : `(SELECT COALESCE(max(xmin::text::bigint), 0)::text FROM public.${quote(name)})`
+        return `SELECT ${literal(name)} AS name, (SELECT count(*) FROM public.${quote(name)})::text AS n, ${marker} AS x`
+      })
       .join(' UNION ALL '),
   )
-  for (const row of counts) {
+  for (const row of states) {
     const name = String(row.name)
+    const state = `${String(row.n)}:${String(row.x)}`
     if (Number(row.n) === 0) {
       if (db.tables.has(name)) db.tables.set(name, [])
+      seen.set(name, state)
       continue
     }
+    if (row.x !== 'view' && seen.get(name) === state && db.tables.has(name)) continue
     const rows = await runner.query(`SELECT to_jsonb(t) AS v FROM public.${quote(name)} AS t`)
     db.tables.set(
       name,
       rows.map((r) => r.v as Row),
     )
+    seen.set(name, state)
   }
 }
 
@@ -175,18 +193,19 @@ export function createPgMirror(
   runner: PgRunner,
   afterChange?: () => Promise<void>,
 ): DatabaseMirror {
-  const columnsOf = new Map<string, Set<string>>()
+  /** column name → its data type */
+  const columnsOf = new Map<string, Map<string, string>>()
   const primaryKeyOf = new Map<string, string[]>()
 
-  async function columns(table: string): Promise<Set<string>> {
+  async function columns(table: string): Promise<Map<string, string>> {
     const known = columnsOf.get(table)
     if (known) return known
     const rows = await runner.query(
-      `SELECT column_name FROM information_schema.columns
+      `SELECT column_name, data_type FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = $1`,
       [table],
     )
-    const found = new Set(rows.map((row) => String(row.column_name)))
+    const found = new Map(rows.map((row) => [String(row.column_name), String(row.data_type)]))
     columnsOf.set(table, found)
     return found
   }
@@ -205,13 +224,19 @@ export function createPgMirror(
     return key
   }
 
-  /** The row as the service meant it: a fake-generated id goes only where the table has one. */
+  /**
+   * The row as the service meant it. An id the FAKE generated (the service sent none) goes
+   * only where the table has a uuid/text id; otherwise the database makes its own (a
+   * bigint identity, or no id column at all).
+   */
   async function shaped(table: string, row: Row, generated: Set<string>): Promise<Row> {
     const has = await columns(table)
+    const idType = has.get('id')
     const out: Row = {}
     for (const [key, value] of Object.entries(row)) {
       if (value === undefined) continue
-      if (key === 'id' && generated.has(String(value)) && !has.has('id')) continue
+      if (key === 'id' && generated.has(String(value)) && idType !== 'uuid' && idType !== 'text')
+        continue
       out[key] = value
     }
     return out

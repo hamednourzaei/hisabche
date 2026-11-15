@@ -38,6 +38,7 @@ import { formatNumber } from '@hisabche/formatting'
 import { cn } from '../../../lib/utils'
 import { useActionAvailability } from '../../../lib/capability/use-action-availability'
 import { useLocalePush } from '../../../hooks/use-locale-push'
+import { useModalOpen } from '../../../hooks/use-modal-open'
 import { Button } from '../button'
 import { placeGuideCard, spotlightHole, type GuideRect } from './guide-placement'
 
@@ -176,7 +177,10 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     : 0
   const nextStop = useMemo(() => nextGuideRoute(cleanRoute, isSeen), [cleanRoute, isSeen])
   const showFinished = finishedRoute === cleanRoute && !currentStep
-  const active = Boolean(currentStep) || showFinished
+  // A dialog is open: the guide steps aside — not drawn AND not locking scroll or keys — and
+  // resumes at the same step when it closes (use-modal-open.ts).
+  const modalOpen = useModalOpen()
+  const active = (Boolean(currentStep) || showFinished) && !modalOpen
 
   // ─── Where the section is ──────────────────────────────────────────────
   const cardRef = useRef<HTMLDivElement | null>(null)
@@ -402,6 +406,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
   }
 
   if (typeof document === 'undefined') return null
+  if (modalOpen) return null
 
   const hole = currentStep && targetRect && viewport ? spotlightHole(targetRect, viewport) : null
   const NextPageArrow = direction === 'rtl' ? ArrowLeft : ArrowRight

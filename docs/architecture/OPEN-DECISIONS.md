@@ -18,10 +18,10 @@ Companion documents, so this is not a third list of the same thing:
 
 ## 1. The register
 
-| ID   | Decision                                                                                                                                             | Status                 | Measured today | Blocks | Reversible default in force                       | Revisit when                                                                          |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------- | ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| D-01 | Business size: the code stores three bands (`small` / `medium` / `large`); V64 §5.1 asks for four headcount bands (`solo` / `2-5` / `6-20` / `more`) | `NEEDS_OWNER_DECISION` | 3 bands        | none   | three bands, unchanged; no migration, no backfill | the owner maps today's rows onto V64's four headcount bands                           |
-| D-02 | The 52 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                                              | `NEEDS_OWNER_DECISION` | 52 hooks       | none   | kept, unwired, undeleted                          | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
+| ID   | Decision                                                                                                                                                     | Status                 | Measured today | Blocks | Reversible default in force                                                                | Revisit when                                                                          |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | -------------- | ------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| D-01 | Business size: the code stores four bands (`solo` / `small` / `medium` / `large`); V64 §5.1 asks for four headcount bands (`solo` / `2-5` / `6-20` / `more`) | `NEEDS_OWNER_DECISION` | 4 bands        | none   | `solo` accepted (owner, 15 Nov 2026); the other three unchanged; no migration, no backfill | the owner maps today's rows onto V64's four headcount bands                           |
+| D-02 | The 52 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                                                      | `NEEDS_OWNER_DECISION` | 52 hooks       | none   | kept, unwired, undeleted                                                                   | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
 
 No agent adds a row here for a decision nobody asked for: an invented decision is worse than a
 visible open one.
@@ -32,9 +32,11 @@ visible open one.
 
 ### What the code does today (read from the files, not remembered)
 
-- `packages/store/src/slices/onboarding.slice.ts:14` — `export type StoreSize = 'small' | 'medium' | 'large'`;
+- `packages/store/src/slices/onboarding.slice.ts:14` — `export type StoreSize = 'solo' | 'small' | 'medium' | 'large'`;
   `setStoreSize` stores the value and advances the wizard to step 3.
-- `packages/validation/src/schemas/auth.schema.ts:108` — `storeSize: z.enum(['small', 'medium', 'large']).optional()`.
+- `packages/validation/src/schemas/auth.schema.ts` — `storeSize: z.enum(['solo', 'small', 'medium', 'large']).optional()`.
+  `solo` was added on the owner's instruction (15 Nov 2026): the screen offered it and the route refused it,
+  so an owner who works alone could not finish onboarding. What is still open is the headcount mapping below.
   A fifth band is refused here, at the route, before anything is written.
 - `packages/ui/src/components/ui/onboarding/onboarding-page.tsx:266` — the three cards, labelled by
   `onboarding.smallStore` / `mediumStore` / `largeStore` and their `…Desc` keys.

@@ -91,6 +91,7 @@ export const SearchableOptionList = memo(function SearchableOptionList({
           type="button"
           role="checkbox"
           aria-checked={checked}
+          data-option-key={option.id}
           onClick={() => onToggle(option.id)}
           className={cn(
             rowBase,

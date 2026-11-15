@@ -20,7 +20,7 @@
 // any other module is evaluated.
 import 'dotenv/config'
 
-import Fastify from 'fastify'
+import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import cors, { type FastifyCorsOptions } from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import { SharedRateLimitStore } from './utils/shared-rate-limit-store'
@@ -211,7 +211,8 @@ import { trustedProxies } from './utils/trusted-proxies'
 // nothing when no .env file exists, which is the case on Render.
 
 const PORT = Number(process.env.PORT || 10000)
-const HOST = '0.0.0.0'
+// Render needs every interface; a local process (the journey server) may ask for one.
+const HOST = process.env.HOST || '0.0.0.0'
 const isProduction = process.env.NODE_ENV === 'production'
 
 // ──────────────────────────────────────────────
@@ -291,6 +292,26 @@ function elapsedSince(request: object): number {
   return Date.now() - (requestStartedAt.get(request) ?? Date.now())
 }
 
+/**
+ * This hook runs BEFORE the CORS plugin is registered (inside buildServer), so a 503 it sends
+ * had no Access-Control-Allow-Origin: the browser reported a «CORS error», the web app could
+ * not read the 503 or its Retry-After, and the person saw a network failure instead of «busy,
+ * try again». Found by the browser journeys (14 Nov 2026). The SAME allow-list as APP_CORS.
+ * Guard: overload-503-cors.test.ts
+ */
+function exposeToBrowser(request: FastifyRequest, reply: FastifyReply): void {
+  const origin = request.headers.origin
+  if (!origin || !browserOrigins(isProduction).includes(origin)) return
+  reply.header('Access-Control-Allow-Origin', origin)
+  reply.header('Access-Control-Allow-Credentials', 'true')
+  reply.header('Vary', 'Origin')
+}
+
+/** Requests a minute, per client address, for a request that carries a session (see 6.4). */
+const SIGNED_IN_RATE_LIMIT_PER_MINUTE = 300
+/** Requests a minute, per client address, without one. */
+const ANONYMOUS_RATE_LIMIT_PER_MINUTE = 100
+
 server.addHook('onRequest', async (request, reply) => {
   requestStartedAt.set(request, Date.now())
   // context شمارنده‌ی کوئری را برای این درخواست فعال می‌کند.
@@ -308,6 +329,7 @@ server.addHook('onRequest', async (request, reply) => {
   ) {
     const pressure = pressureMonitor.snapshot()
     if (pressure.overloaded) {
+      exposeToBrowser(request, reply)
       reply.header('Retry-After', String(pressure.retryAfterSeconds))
       return reply.status(503).send({
         error: 'SERVICE_OVERLOADED',
@@ -321,6 +343,7 @@ server.addHook('onRequest', async (request, reply) => {
     noteRequestForMaintenance()
     const writeBlocked = writeBlockReason(request.method, pathOnly ?? '')
     if (writeBlocked) {
+      exposeToBrowser(request, reply)
       return reply.status(503).send({
         error: 'SERVICE_READ_ONLY',
         reason: writeBlocked,
@@ -812,7 +835,18 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
     // One budget across all instances (Redis), not one per process.
     store: SharedRateLimitStore,
     // An API key has its own bucket and budget (developer.domain.ts).
-    max: (_request, key) => (isApiKeyBucket(key) ? API_KEY_RATE_LIMIT_PER_MINUTE : 100),
+    // ⚠️ THE BUCKET IS THE ADDRESS, not the person: this hook runs on `onRequest`, before
+    // `authenticate`, so `request.userId` is still empty and `keyGenerator` falls back to the
+    // IP. Everyone in one shop behind one connection shares it — and one dashboard load is ~33
+    // calls, so three page views in a minute answered 429 (browser journeys, 14 Nov 2026).
+    // A request that carries a session gets a larger budget; the key stays the IP, so made-up
+    // tokens cannot mint fresh buckets. Anonymous traffic keeps 100. Guard: rate-limit-budgets.test.ts
+    max: (request, key) =>
+      isApiKeyBucket(key)
+        ? API_KEY_RATE_LIMIT_PER_MINUTE
+        : /^Bearer\s+\S/i.test(String(request.headers.authorization ?? ''))
+          ? SIGNED_IN_RATE_LIMIT_PER_MINUTE
+          : ANONYMOUS_RATE_LIMIT_PER_MINUTE,
     timeWindow: '1 minute',
     // ⚠️ A CORS preflight is not a request the user made. The plugin hooks
     // `onRequest`, so without this line every `OPTIONS` that `@fastify/cors`

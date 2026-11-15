@@ -101,6 +101,20 @@ export async function customerRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      // The name is the one field createCustomerSchema keeps REQUIRED. Without this check a body
+      // with no fullName went straight to the insert and the database refused it (23502) —
+      // answered as a 500 «Failed to create customer» instead of «the name is missing»
+      // (found by the PostgreSQL journey, 14 Nov 2026). `details` is shaped like a zod issue so
+      // the form puts the message under the name field. Guard: customer-name-required.test.ts
+      const fullName = (request.body as { fullName?: unknown } | null)?.fullName
+      if (typeof fullName !== 'string' || fullName.trim() === '') {
+        return reply.code(400).send({
+          error: 'Validation failed',
+          code: 'CUSTOMER_NAME_REQUIRED',
+          message: 'CUSTOMER_NAME_REQUIRED',
+          details: [{ path: ['fullName'], message: 'validation.required' }],
+        })
+      }
       try {
         const body = request.body as CreateCustomer
         const customer = await customerService.create(request.tenancy, body, {

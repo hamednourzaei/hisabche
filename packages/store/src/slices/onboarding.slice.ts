@@ -11,7 +11,7 @@ import {
 } from '@hisabche/validation'
 
 export type BusinessType = 'retail' | 'wholesale' | 'service' | 'restaurant' | 'other'
-export type StoreSize = 'small' | 'medium' | 'large'
+export type StoreSize = 'solo' | 'small' | 'medium' | 'large'
 /**
  * ⚠️ Derived, not restated. Same reasoning as `CurrencyCode` in
  * currency.slice.ts — a second copy of a list is a list that will disagree.

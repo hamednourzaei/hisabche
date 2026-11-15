@@ -398,6 +398,11 @@ class CacheService {
 
   // ─── Check if key exists ──────────────────────────────────
   async exists(key: string): Promise<boolean> {
+    // Like get/set/del: while Redis is down, the in-process store answers. Without this every
+    // exists() waited out the client's retries during an outage — seconds per call (the admin
+    // alert check runs on many requests); found when the browser journeys ran four owners at
+    // once without a Redis (14 Nov 2026). Guard: cache-exists-offline.test.ts
+    if (!this.isConnected) return fallbackGet(key) !== null
     try {
       const result = await this.client.exists(key)
       return result === 1
