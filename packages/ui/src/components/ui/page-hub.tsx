@@ -122,7 +122,10 @@ export function PageHub({ label, sectionsLabel, loadingLabel, tabs, lookId }: Pa
         onSelect={select}
       />
 
-      {/* A tab with one screen needs no switch. */}
+      {/* A tab with one screen needs no switch — only the guide's hidden marker. */}
+      {sections.length === 1 && section ? (
+        <span hidden data-guide-view={section.id} data-guide-active="" />
+      ) : null}
       {sections.length > 1 && section ? (
         <SegmentedControl
           branch

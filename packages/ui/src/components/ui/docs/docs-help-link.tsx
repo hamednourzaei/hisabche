@@ -37,6 +37,7 @@ import { usePathname } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 
 import { DOCS_ARTICLES } from '../../../lib/docs/docs-content'
+import { linkOrigin, noSubscription } from '../../../lib/browser-facts'
 import { cn } from '../../../lib/utils'
 
 /**
@@ -134,8 +135,14 @@ export interface DocsHelpLinkProps {
  * `usePathname` and `useTranslations` are both shimmed on desktop
  * (`apps/desktop/src/shims/`), so this works in the Electron renderer too.
  */
+/** The server renders a same-site link; the browser answers after hydration. */
+const sameSite = () => ''
+
 export function DocsHelpLink({ pathname, className }: DocsHelpLinkProps) {
   const routerPath = usePathname()
+  // ⚠️ A packaged desktop app runs from file://: `/fa/docs/x` there is the root
+  // of the drive, and the «?» opened nothing. The article lives on the website.
+  const origin = React.useSyncExternalStore(noSubscription, linkOrigin, sameSite)
   const locale = useLocale()
   const translate = useTranslations()
 
@@ -151,7 +158,7 @@ export function DocsHelpLink({ pathname, className }: DocsHelpLinkProps) {
   const slug = docsSlugForPath(pathname ?? routerPath ?? '')
   if (!slug) return null
 
-  const hrefFor = (articleSlug: string) => `/${locale}/docs/${articleSlug}`
+  const hrefFor = (articleSlug: string) => `${origin}/${locale}/docs/${articleSlug}`
   const articleTitle = t(`docs.${slug}.title`, slug)
   // Descriptive, not «help». This is the anchor text a screen reader announces
   // and the signal a crawler reads.

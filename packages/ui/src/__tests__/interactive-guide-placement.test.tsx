@@ -9,12 +9,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useAuthStore, useGuideStore } from '@hisabche/store'
 import { GUIDE_CATALOG } from '@hisabche/ui-contract'
+import { formatNumber } from '@hisabche/formatting'
 import { placeGuideCard, spotlightHole } from '../components/ui/guide/guide-placement'
 
 const remote = vi.hoisted(() => ({
   state: { isSuccess: true, isError: false, data: { configured: true, steps: [] as unknown[] } },
   saved: [] as unknown[],
   pushed: [] as string[],
+  replaced: [] as string[],
+  // What this person has: their menu and their business's DNA modules (use-guide-scope).
+  scope: {
+    isReachable: (_path: string): boolean => true,
+    activeModules: null as ReadonlySet<string> | null,
+  },
   mutation: { mutate: (steps: unknown) => void remote.saved.push(steps) },
 }))
 
@@ -30,6 +37,16 @@ vi.mock('../hooks/use-locale-push', () => ({
 }))
 vi.mock('../lib/capability/use-action-availability', () => ({
   useActionAvailability: () => ({ available: true }),
+}))
+vi.mock('../components/ui/guide/use-guide-scope', () => ({
+  useGuideScope: () => remote.scope,
+}))
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/fa/dashboard',
+  useRouter: () => ({
+    push: (href: string) => void remote.pushed.push(href),
+    replace: (href: string) => void remote.replaced.push(href),
+  }),
 }))
 
 const { InteractiveGuide } = await import('../components/ui/guide/interactive-guide')
@@ -113,10 +130,13 @@ describe('InteractiveGuide', () => {
     remote.state = { isSuccess: true, isError: false, data: { configured: true, steps: [] } }
     remote.saved = []
     remote.pushed = []
+    remote.replaced = []
+    remote.scope = { isReachable: () => true, activeModules: null }
     useAuthStore.setState({ user: { id: 'person-1' } } as never)
     useGuideStore.setState({
       ownerId: 'person-1',
       completedSteps: {},
+      skippedSteps: {},
       replayRoute: null,
       replaySeen: [],
     })
@@ -212,5 +232,112 @@ describe('InteractiveGuide', () => {
     expect(go.closest('button')?.getAttribute('data-guide-next-page')).toBe('invoices')
     fireEvent.click(go)
     expect(remote.pushed).toEqual(['/invoices'])
+  })
+
+  /** Walks the dashboard to its end and returns the «where next» button, if any. */
+  async function finishDashboard() {
+    const steps = GUIDE_CATALOG.dashboard ?? []
+    render(<InteractiveGuide currentRoute="/fa/dashboard" t={translate} />)
+    for (let index = 0; index < steps.length - 1; index++) {
+      await act(async () => {
+        fireEvent.click(screen.getByText('guide.next'))
+      })
+    }
+    await act(async () => {
+      fireEvent.click(screen.getByText('guide.finish'))
+    })
+  }
+
+  it("⚠️ never leads to a page that is not in this person's menu (owner, 15 Nov 2026)", async () => {
+    // A salon: no sales list in this person's menu (e.g. hidden by the role), no warehouse.
+    remote.scope = {
+      isReachable: (path) => path !== '/invoices' && path !== '/warehouse',
+      activeModules: null,
+    }
+    await finishDashboard()
+    const go = await screen.findByText(/guide\.goTo/)
+    const next = go.closest('button')?.getAttribute('data-guide-next-page')
+    expect(next).not.toBe('invoices')
+    expect(next).not.toBe('warehouse')
+    expect(next).not.toBe('stock-count')
+  })
+
+  it('⚠️ says «all done» instead of sending the reader nowhere when no page of theirs is left', async () => {
+    remote.scope = { isReachable: (path) => path === '/dashboard', activeModules: null }
+    await finishDashboard()
+    expect(await screen.findByText('guide.allDoneTitle')).toBeTruthy()
+    expect(screen.queryByText(/guide\.goTo/)).toBeNull()
+  })
+
+  it("opens a step's tab through the address — never by clicking the tab bar", async () => {
+    vi.useFakeTimers()
+    try {
+      // Customers: the first step is in the «customers» tab, which this screen offers.
+      const tab = document.createElement('button')
+      tab.setAttribute('data-guide-tab', 'customers')
+      document.body.appendChild(tab)
+      render(<InteractiveGuide currentRoute="/fa/customers" t={translate} />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200)
+      })
+      // Not yet the open tab: the guide asks the address for it — never clicks.
+      expect(remote.replaced[0]).toContain('tab=customers')
+      tab.setAttribute('data-guide-active', '')
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(400)
+      })
+      expect(screen.getByText('guide.customers.overview.title')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("⚠️ a step whose tab is not on this person's screen is skipped — not taught, not «seen»", async () => {
+    vi.useFakeTimers()
+    try {
+      // No «customers» tab marker anywhere: this screen does not offer it.
+      render(<InteractiveGuide currentRoute="/fa/customers" t={translate} />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000)
+      })
+      const state = useGuideStore.getState()
+      expect(state.skippedSteps['customers-overview']).toBe('customers')
+      expect(state.isStepSeen('customers-overview')).toBe(false)
+      expect(screen.queryByText('guide.customers.overview.title')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('⚠️ a step of a module the business does not run is not taught (DNA scope)', async () => {
+    vi.useFakeTimers()
+    try {
+      // A shop (products, no services, no repairs): the sessions tab is offered
+      // by the screen, but its steps are not for this business.
+      remote.scope = { isReachable: () => true, activeModules: new Set(['products', 'invoices']) }
+      for (const id of ['customers', 'sessions']) {
+        const tab = document.createElement('button')
+        tab.setAttribute('data-guide-tab', id)
+        tab.setAttribute('data-guide-active', '')
+        document.body.appendChild(tab)
+      }
+      const view = document.createElement('button')
+      view.setAttribute('data-guide-view', 'sessions')
+      view.setAttribute('data-guide-active', '')
+      document.body.appendChild(view)
+      render(<InteractiveGuide currentRoute="/fa/customers" t={translate} />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      // «n» in «1 / n» counts only this business's steps.
+      const inScope = (GUIDE_CATALOG.customers ?? []).filter(
+        (step) => !step.modules || step.modules.some((m) => m === 'products' || m === 'invoices'),
+      )
+      const counter = `${formatNumber(1, 'fa')} / ${formatNumber(inScope.length, 'fa')}`
+      expect(screen.getAllByText(counter, { exact: false }).length).toBeGreaterThan(0)
+      expect(inScope.some((step) => step.id === 'customers-repairs')).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

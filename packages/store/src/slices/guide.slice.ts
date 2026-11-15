@@ -34,6 +34,14 @@ export interface GuideStoreState {
   ownerId: string | null
   /** Set of completed step IDs (stored as record for JSON serialization) */
   completedSteps: Record<string, GuideStepState>
+  /**
+   * Steps this device found NOT on the person's screen (a hub tab or switch the
+   * role, the trade or the person's own look does not offer): stepId → routeId.
+   * Never «seen» and never sent to the server — the tour only stops offering
+   * a page whose remaining steps are all skipped, and the page re-checks them
+   * on every visit (`forgetSkipped` when one appears after all).
+   */
+  skippedSteps: Record<string, string>
   /** Current active step ID on the current page if visible */
   activeStepId: string | null
   /** The page whose guide is being read again in this visit (not persisted). */
@@ -45,6 +53,8 @@ export interface GuideStoreState {
   bindOwner: (ownerId: string) => void
   markStepSeen: (stepId: string, routeId: string) => void
   markStepsSeen: (steps: readonly { stepId: string; routeId: string }[]) => void
+  markStepsSkipped: (steps: readonly { stepId: string; routeId: string }[]) => void
+  forgetSkipped: (stepIds: readonly string[]) => void
   isStepSeen: (stepId: string) => boolean
   setActiveStep: (stepId: string | null) => void
   mergeRemoteProgress: (remoteSteps: Record<string, GuideStepState>) => void
@@ -68,6 +78,7 @@ export const useGuideStore = create<GuideStoreState>()(
       version: GUIDE_VERSION,
       ownerId: null,
       completedSteps: {},
+      skippedSteps: {},
       activeStepId: null,
       replayRoute: null,
       replaySeen: [],
@@ -77,7 +88,14 @@ export const useGuideStore = create<GuideStoreState>()(
         if (current === ownerId) return
         // A copy without an owner (written before 2.0.0) cannot be attributed
         // to anyone, so it is not inherited either.
-        set({ ownerId, completedSteps: {}, activeStepId: null, replayRoute: null, replaySeen: [] })
+        set({
+          ownerId,
+          completedSteps: {},
+          skippedSteps: {},
+          activeStepId: null,
+          replayRoute: null,
+          replaySeen: [],
+        })
       },
 
       markStepSeen: (stepId: string, routeId: string) => {
@@ -92,6 +110,24 @@ export const useGuideStore = create<GuideStoreState>()(
         const next = { ...current }
         for (const step of fresh) next[step.stepId] = seenEntry(step.stepId, step.routeId, now)
         set({ completedSteps: next })
+      },
+
+      markStepsSkipped: (steps) => {
+        const current = get().skippedSteps
+        const fresh = steps.filter((step) => current[step.stepId] !== step.routeId)
+        if (fresh.length === 0) return
+        const next = { ...current }
+        for (const step of fresh) next[step.stepId] = step.routeId
+        set({ skippedSteps: next })
+      },
+
+      forgetSkipped: (stepIds) => {
+        const current = get().skippedSteps
+        const present = stepIds.filter((id) => id in current)
+        if (present.length === 0) return
+        const next = { ...current }
+        for (const id of present) delete next[id]
+        set({ skippedSteps: next })
       },
 
       isStepSeen: (stepId: string) => {
@@ -133,7 +169,13 @@ export const useGuideStore = create<GuideStoreState>()(
       },
 
       resetProgress: () => {
-        set({ completedSteps: {}, activeStepId: null, replayRoute: null, replaySeen: [] })
+        set({
+          completedSteps: {},
+          skippedSteps: {},
+          activeStepId: null,
+          replayRoute: null,
+          replaySeen: [],
+        })
       },
     }),
     {
@@ -154,6 +196,7 @@ export const useGuideStore = create<GuideStoreState>()(
         version: state.version,
         ownerId: state.ownerId,
         completedSteps: state.completedSteps,
+        skippedSteps: state.skippedSteps,
       }),
       // Read the same fields back and ignore anything else an older stored
       // copy may carry (such as a forgotten `dismissedForSession: true`).
@@ -162,12 +205,14 @@ export const useGuideStore = create<GuideStoreState>()(
           version?: string
           ownerId?: string | null
           completedSteps?: Record<string, GuideStepState>
+          skippedSteps?: Record<string, string>
         }
         return {
           ...current,
           version: GUIDE_VERSION,
           ownerId: saved.ownerId ?? null,
           completedSteps: saved.completedSteps ?? {},
+          skippedSteps: saved.skippedSteps ?? {},
         }
       },
     },

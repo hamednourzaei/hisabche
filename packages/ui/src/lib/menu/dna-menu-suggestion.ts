@@ -24,6 +24,36 @@ import {
   type TerminologyProfile,
 } from '@hisabche/validation'
 
+type DnaAxis = 'offering' | 'inventory' | 'workforce' | 'intake' | 'topology' | 'settlement'
+
+/**
+ * The axis that decides each module. ⚠️ PER AXIS, NOT ALL-OR-NOTHING (owner,
+ * 15 Nov 2026): onboarding never resolves `workforce` (D-01 is open), and the
+ * old rule «any of offering / inventory / workforce UNRESOLVED → hide nothing»
+ * therefore hid nothing for EVERY new business — a beauty salon was shown the
+ * till and manufacturing, and its guide led there. A module whose own axis is
+ * unresolved still counts as present: nothing is hidden on a guess.
+ */
+const AXES_OF_MODULE: Readonly<Record<string, readonly DnaAxis[]>> = {
+  products: ['offering'],
+  services: ['offering'],
+  pos: ['intake'],
+  appointments: ['intake'],
+  attendance: ['intake'],
+  job_tickets: ['intake'],
+  inventory: ['inventory'],
+  warehouse: ['inventory'],
+  consumables: ['inventory'],
+  team: ['workforce'],
+  payroll: ['workforce'],
+  branches: ['topology'],
+  order_deposits: ['settlement'],
+  package_credits: ['settlement'],
+}
+
+const unresolvedAxis = (dna: OperationalDna, axis: DnaAxis): boolean =>
+  (dna[axis] as readonly string[] | undefined)?.includes('UNRESOLVED') ?? true
+
 /** Menu paths the suggestion may hide, each with the reason it is kept. */
 const SUGGESTIBLE: ReadonlyArray<{
   path: string
@@ -37,7 +67,9 @@ const SUGGESTIBLE: ReadonlyArray<{
   {
     path: '/manufacturing',
     keep: (_m, dna) =>
-      dna.inventory.includes('RAW_MATERIALS') || dna.inventory.includes('FINISHED_GOODS'),
+      unresolvedAxis(dna, 'inventory') ||
+      dna.inventory.includes('RAW_MATERIALS') ||
+      dna.inventory.includes('FINISHED_GOODS'),
   },
   { path: '/team-and-payroll', keep: (m) => m.has('team') },
   { path: '/market-seller', keep: (m) => m.has('products') },
@@ -47,21 +79,34 @@ const SUGGESTIBLE: ReadonlyArray<{
  * The menu paths this business's DNA suggests hiding, in menu order.
  *
  * ⚠️ V55: an UNRESOLVED axis (the business did not say, and no trade carries
- * the evidence) hides NOTHING. A suggestion built on a guess is exactly the
+ * the evidence) hides nothing THAT DEPENDS ON IT (per axis — AXES_OF_MODULE).
+ * A suggestion built on a guess is exactly the
  * fabrication the DNA exists to prevent.
  */
 export function suggestedHiddenMenuPaths(dna: OperationalDna): string[] {
-  if (
-    dna.offering.includes('UNRESOLVED') ||
-    dna.inventory.includes('UNRESOLVED') ||
-    dna.workforce.includes('UNRESOLVED')
-  ) {
-    return []
-  }
-  const modules = new Set(resolveDnaCapabilities(dna).activeModules)
+  const modules = dnaActiveModules(dna)
   const suggested = SUGGESTIBLE.filter((item) => !item.keep(modules, dna)).map((item) => item.path)
-  const explicitHidden = dna.presentation?.navigation?.hiddenPaths ?? []
+  // A presentation profile's own list is a whole-business statement: only once
+  // the business is known on the core axes.
+  const known = !(['offering', 'inventory', 'workforce'] as const).some((axis) =>
+    unresolvedAxis(dna, axis),
+  )
+  const explicitHidden = known ? (dna.presentation?.navigation?.hiddenPaths ?? []) : []
   return [...new Set([...suggested, ...explicitHidden])]
+}
+
+/**
+ * The modules this business runs: what the DNA resolves, PLUS every module
+ * whose deciding axis is still UNRESOLVED (it may run it — nothing is hidden on
+ * a guess). One rule for the menu suggestion and the in-app guide
+ * (`useGuideScope`).
+ */
+export function dnaActiveModules(dna: OperationalDna): ReadonlySet<string> {
+  const active = new Set(resolveDnaCapabilities(dna).activeModules)
+  for (const [module, axes] of Object.entries(AXES_OF_MODULE)) {
+    if (axes.some((axis) => unresolvedAxis(dna, axis))) active.add(module)
+  }
+  return active
 }
 
 /** Combines suggested hidden paths with the DNA-resolved terminology profile (never retail on UNRESOLVED). */

@@ -12,8 +12,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore, useWorkspaceStore } from '@hisabche/store'
-import { ARCHETYPE_PRESETS, type OperationalDna } from '@hisabche/validation'
-import { suggestedHiddenMenuPaths } from '../lib/menu/dna-menu-suggestion'
+import { ARCHETYPE_PRESETS, inferOperationalDna, type OperationalDna } from '@hisabche/validation'
+import { dnaActiveModules, suggestedHiddenMenuPaths } from '../lib/menu/dna-menu-suggestion'
 import { __resetPageLooks, usePageLook } from '../lib/page-look'
 
 const preset = (key: string): OperationalDna => {
@@ -43,14 +43,48 @@ describe('suggestedHiddenMenuPaths', () => {
     }
   })
 
-  it('V55: an UNRESOLVED axis hides nothing — a suggestion is never built on a guess', () => {
+  it('V55, per axis: an UNRESOLVED axis hides nothing that depends on it — never a guess', () => {
     const unresolved: OperationalDna = {
       ...preset('RETAIL_STORE'),
       offering: ['UNRESOLVED'],
       inventory: ['UNRESOLVED'],
       archetypeHint: 'GENERIC_BUSINESS',
     }
-    expect(suggestedHiddenMenuPaths(unresolved)).toEqual([])
+    const hidden = suggestedHiddenMenuPaths(unresolved)
+    // offering and inventory are unknown: nothing they decide is hidden.
+    for (const path of ['/warehouse', '/manufacturing', '/market-seller']) {
+      expect(hidden).not.toContain(path)
+    }
+    // The till is decided by intake (COUNTER_POS here): kept.
+    expect(hidden).not.toContain('/till')
+    // Only what a RESOLVED axis decides may go: this preset's owner is explicitly solo.
+    expect(unresolved.workforce).toEqual(['SOLO_OWNER'])
+    expect(hidden).toEqual(['/team-and-payroll'])
+    // Unknown workforce instead: the team page stays too.
+    expect(suggestedHiddenMenuPaths({ ...unresolved, workforce: ['UNRESOLVED'] })).toEqual([])
+  })
+
+  it('⚠️ per axis (owner, 15 Nov 2026): onboarding leaves workforce UNRESOLVED, and a salon is still not shown the till or manufacturing', () => {
+    const salon = inferOperationalDna({ tradeKey: 'beautySalon' })
+    expect(salon.workforce).toContain('UNRESOLVED')
+    const hidden = suggestedHiddenMenuPaths(salon)
+    expect(hidden).toEqual(expect.arrayContaining(['/till', '/manufacturing']))
+    // Workforce is unknown: the team page is NOT hidden on a guess; consumables keep the warehouse.
+    expect(hidden).not.toContain('/team-and-payroll')
+    expect(hidden).not.toContain('/warehouse')
+    const modules = dnaActiveModules(salon)
+    expect(modules.has('job_tickets')).toBe(false)
+    expect(modules.has('appointments')).toBe(true)
+    expect(modules.has('team')).toBe(true)
+  })
+
+  it('a shop is not taught service sessions; a repair shop keeps its repair slips', () => {
+    expect(dnaActiveModules(inferOperationalDna({ tradeKey: 'retail' })).has('services')).toBe(
+      false,
+    )
+    expect(dnaActiveModules(inferOperationalDna({ tradeKey: 'repairs' })).has('job_tickets')).toBe(
+      true,
+    )
   })
 
   it('a growing business gets its pages back when the DNA says so', () => {

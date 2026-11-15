@@ -36,7 +36,20 @@ export interface HubTabsProps<T extends string> {
   onSelect: (id: T) => void
 }
 
-export function HubTabs<T extends string>({ label, items, active, onSelect }: HubTabsProps<T>) {
+export function HubTabs<T extends string>(props: HubTabsProps<T>) {
+  const only = props.items.length === 1 ? props.items[0] : undefined
+  return (
+    <>
+      {/* One tab draws no bar; the in-app guide still learns that this one tab IS
+          this person's screen (guide-catalog.ts — it skips a step whose tab is
+          not offered). Hidden: nothing is drawn. */}
+      {only ? <span hidden data-guide-tab={only.id} data-guide-active="" /> : null}
+      <HubTabBar {...props} />
+    </>
+  )
+}
+
+function HubTabBar<T extends string>({ label, items, active, onSelect }: HubTabsProps<T>) {
   const bar = useRef<HTMLDivElement>(null)
   // Never a sideways scroll, in any language: the bar shrinks itself to fit.
   useFitRow(bar, items.map((item) => item.label).join('|'))
@@ -63,6 +76,10 @@ export function HubTabs<T extends string>({ label, items, active, onSelect }: Hu
                 type="button"
                 role="tab"
                 aria-selected={selected}
+                // The in-app guide opens a tab through the address and skips a
+                // step whose tab this person is not offered (guide-catalog.ts).
+                data-guide-tab={item.id}
+                data-guide-active={selected ? '' : undefined}
                 onClick={() => onSelect(item.id)}
                 className={cn(
                   'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-sm)] px-[var(--fit-px,clamp(0.625rem,3vw,1rem))] text-[length:var(--fit-font,clamp(0.75rem,3.2vw,0.875rem))]',

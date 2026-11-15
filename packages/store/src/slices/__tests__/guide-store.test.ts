@@ -83,4 +83,23 @@ describe('useGuideStore', () => {
     expect(state.replayRoute).toBeNull()
     expect(state.isStepSeen('dashboard-1')).toBe(true)
   })
+  it('⚠️ a skipped step (its tab is not on this screen) is never «seen», and can come back', () => {
+    const store = useGuideStore.getState()
+    store.bindOwner('person-skip')
+    useGuideStore
+      .getState()
+      .markStepsSkipped([{ stepId: 'customers-repairs', routeId: 'customers' }])
+    let state = useGuideStore.getState()
+    expect(state.skippedSteps['customers-repairs']).toBe('customers')
+    expect(state.isStepSeen('customers-repairs')).toBe(false)
+
+    state.forgetSkipped(['customers-repairs'])
+    state = useGuideStore.getState()
+    expect(state.skippedSteps['customers-repairs']).toBeUndefined()
+
+    // Another person starts with nothing skipped.
+    state.markStepsSkipped([{ stepId: 'customers-repairs', routeId: 'customers' }])
+    useGuideStore.getState().bindOwner('person-other')
+    expect(useGuideStore.getState().skippedSteps).toEqual({})
+  })
 })

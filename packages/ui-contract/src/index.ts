@@ -50,8 +50,14 @@ export {
 
 export {
   GUIDE_CATALOG,
+  GUIDE_CATALOG_VERSION,
   GUIDE_SECTION_ATTRIBUTE,
+  GUIDE_TAB_ATTRIBUTE,
+  GUIDE_VIEW_ATTRIBUTE,
+  GUIDE_ACTIVE_ATTRIBUTE,
   guidePageAnchor,
+  guideRouteOf,
+  guideStepInScope,
   GUIDE_TOUR,
   nextGuideRoute,
   type GuideStepDefinition,

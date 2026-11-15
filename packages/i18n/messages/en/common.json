@@ -13010,6 +13010,10 @@
       "pricing": {
         "title": "Prices and discounts",
         "desc": "The «Prices and discounts» tab keeps price lists and active discounts; the invoice builder applies them on its own."
+      },
+      "orders": {
+        "title": "Orders",
+        "desc": "Sales orders and where each one stands. Open an order to see its details and move it to its next status."
       }
     },
     "customers": {
@@ -13028,6 +13032,30 @@
       "campaigns": {
         "title": "Campaigns and follow-up",
         "desc": "In «Outreach», send a message or a debt reminder to a group of customers and see who received it."
+      },
+      "repairs": {
+        "title": "Repairs",
+        "desc": "Open a repair slip for each device that comes in and follow its status, its parts and its hand-back."
+      },
+      "salonSetup": {
+        "title": "Chairs and services",
+        "desc": "Set up your chairs or rooms and your list of services here, so sessions are recorded against them."
+      },
+      "commission": {
+        "title": "Commission",
+        "desc": "Each provider’s share of the services they delivered, based on the recorded sessions."
+      },
+      "followUp": {
+        "title": "Follow-up",
+        "desc": "Record a task or reminder for a customer so no sale or amount owed is forgotten."
+      },
+      "stale": {
+        "title": "Stale opportunities",
+        "desc": "Sales opportunities that have not moved for a while, so you can pick them up again."
+      },
+      "rfm": {
+        "title": "Customer segments",
+        "desc": "Customers by how recently, how often and how much they buy. Each currency is counted separately; amounts in two currencies are never added."
       }
     },
     "warehouse": {
@@ -13052,8 +13080,8 @@
         "desc": "«Transfer» takes goods out of one warehouse and into another; the business total does not change, and it shows in the product's history."
       },
       "reorder": {
-        "title": "Reorder and dead stock",
-        "desc": "«Reorder suggestions» lists products running out, based on your real sales; «Dead stock» lists those that have not sold for a while."
+        "title": "Reorder suggestions",
+        "desc": "Shows the products running low, based on your actual sales."
       },
       "expiry": {
         "title": "Expiry",
@@ -13070,6 +13098,22 @@
       "serials": {
         "title": "Serials and IMEIs",
         "desc": "For serialized goods, register each device's number with its cost and see which is in stock and which invoice sold it."
+      },
+      "deadStock": {
+        "title": "Dead stock",
+        "desc": "Products that have not sold for a while and are holding your money on the shelf."
+      },
+      "holds": {
+        "title": "Holds",
+        "desc": "A reservation is a promise: the held quantity leaves «available», but the warehouse itself moves only when the real sale does — never on the reservation."
+      },
+      "rfqs": {
+        "title": "Quotation requests",
+        "desc": "Ask several suppliers for a price and choose one. Choosing records no purchase; record the purchase invoice afterwards."
+      },
+      "consignments": {
+        "title": "Consignment",
+        "desc": "Record goods you hold for a supplier, or goods you left with someone else. This record does not change stock or the books; it is a register."
       }
     },
     "accounting": {
@@ -13090,8 +13134,28 @@
         "desc": "«Month end» closes a period so no entry is added or changed in it; closing can be scheduled."
       },
       "treasury": {
-        "title": "Bank and assets",
-        "desc": "The «Assets and bank» tab holds bank accounts, statement matching and fixed assets. A match happens only when you confirm it."
+        "title": "Bank",
+        "desc": "Bank accounts and bank statement reconciliation. A match is made only when you confirm it."
+      },
+      "accounts": {
+        "title": "Chart of accounts",
+        "desc": "The ledger’s accounts with each balance. Sales, purchases and payments post to these accounts automatically."
+      },
+      "cheques": {
+        "title": "Cheques",
+        "desc": "A cheque is a promise, not cash. Its status moves the money: a bounced cheque reverses the payment and the customer owes again."
+      },
+      "assets": {
+        "title": "Fixed assets",
+        "desc": "The business’s long-lived assets, such as equipment and vehicles, with the value of each."
+      },
+      "financing": {
+        "title": "Loans and investments",
+        "desc": "Loans the business has taken and its investments are recorded here."
+      },
+      "budgets": {
+        "title": "Budgets",
+        "desc": "Spending limits by account and period. A budget is saved as a draft and controls spending once approved."
       }
     },
     "billing": {
@@ -13102,6 +13166,10 @@
       "wallet": {
         "title": "Wallet",
         "desc": "The wallet pays the subscription bill and is topped up by inviting friends."
+      },
+      "referrals": {
+        "title": "Referrals",
+        "desc": "Share your own referral link; a new business that signs up with it gets a discount on its first payment."
       }
     },
     "close": "Close this page’s guide",
@@ -13127,6 +13195,10 @@
       "stale": {
         "title": "A till left open",
         "desc": "A till open more than a day is marked «Open since an earlier day»: count and close it so shifts do not mix."
+      },
+      "exchange": {
+        "title": "Exchange",
+        "desc": "Record each currency purchase and sale at that trade’s own rate."
       }
     },
     "stockCount": {
@@ -13150,15 +13222,31 @@
       },
       "payroll": {
         "title": "Payroll",
-        "desc": "Each month's pay is recorded and marked «paid» or «not paid»; paid books an entry and is final."
+        "desc": "Open a team member: each month’s pay is recorded on their page and marked «paid» or «not paid»; paid posts to the books and can no longer change."
       },
       "leave": {
-        "title": "Leave and attendance",
-        "desc": "Approve or refuse leave and read the month's attendance sheet. «Not recorded» is not «absent»."
+        "title": "Attendance and leave",
+        "desc": "See the month’s attendance sheet here; «not recorded» is not «absent». Each person’s leave is approved or refused on their own page."
       },
       "branches": {
         "title": "Branches",
         "desc": "Create branches and each branch's warehouse here; a colleague limited to a branch sees only its data."
+      },
+      "orgChart": {
+        "title": "Org chart",
+        "desc": "Who reports to whom. Pick each person’s manager in the «Reports to» column."
+      },
+      "sellers": {
+        "title": "Sales per person",
+        "desc": "Sales by each member of the business. An invoice’s seller is whoever issued it, unless another member was chosen on it. Each currency is counted separately."
+      },
+      "timesheets": {
+        "title": "Timesheets",
+        "desc": "Log time against each project and preview its bill; the preview bills nothing."
+      },
+      "expenses": {
+        "title": "Expense claims",
+        "desc": "A team member records what they paid out of their own pocket; a manager approves it, and the reimbursement is a real payment."
       }
     },
     "analysis": {
@@ -13183,6 +13271,10 @@
       "import": {
         "title": "Import from a file",
         "desc": "Give an Excel or CSV file of customers, products or invoices; a preview and a reconciliation show before anything is recorded."
+      },
+      "snapshots": {
+        "title": "Record snapshots",
+        "desc": "A snapshot keeps how many records the business had at one moment, to compare with today. It is not a backup and nothing is restored from it."
       }
     },
     "settings": {
@@ -13197,6 +13289,10 @@
       "integrations": {
         "title": "Keys and webhooks",
         "desc": "Create an API key or add a webhook address to connect another program. A key is shown only once."
+      },
+      "marketplace": {
+        "title": "App marketplace",
+        "desc": "Apps the Hisabche team has reviewed and published. See exactly what each one asks for before you install it."
       }
     },
     "manufacturing": {
@@ -13218,7 +13314,10 @@
         "title": "Translate, read and act",
         "desc": "Translate a document or read a photo of an invoice. «Do» proposes, and runs only once a person approves."
       }
-    }
+    },
+    "readMore": "Read more",
+    "nothingHereTitle": "Nothing to show here",
+    "nothingHereBody": "The parts this page’s guide covers are not on your screen: your role or type of business does not include them, or you hid them yourself."
   },
   "advances": {
     "label": "Pre-sales and pre-purchases",

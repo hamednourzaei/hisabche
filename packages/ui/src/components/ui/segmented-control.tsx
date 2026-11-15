@@ -75,6 +75,9 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="radio"
             aria-checked={active}
+            // The guide's marker for a section switch (guide-catalog.ts).
+            data-guide-view={option.value}
+            data-guide-active={active ? '' : undefined}
             onClick={() => onChange(option.value)}
             className={cn(
               'whitespace-nowrap rounded-lg px-[var(--fit-px,clamp(0.5rem,2.6vw,1rem))] py-1.5 text-[length:var(--fit-font,clamp(0.6875rem,3vw,0.875rem))] font-medium transition-colors motion-reduce:transition-none',

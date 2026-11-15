@@ -184,6 +184,7 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **۱۰۰ ویدیوی تازه: لایه‌بندی، قالب، ۴۹ صنف (۲۳ اکتبر)**               | `hisabche-promo-reel/docs/100-VIDEO-PLAN.md` · `.claude/SESSION-CACHE-2026-10-23-100-VIDEOS.md` — **PLANNED** |
 | **پاس واقع‌گرایی لندینگ ۳D: ۶ بخش از ۱۲ (۲۳ اکتبر)**                    | `docs/SCENE-REALISM-AUDIT.md` · `docs/DECISIONS.md` — **`?debug=`, LOD و اسکرین‌شات en باقی است** |
 | **سفر کامل کاربر از لندینگ تا دفتر، با شاهد کد؛ ۳۱ شکاف (۷ نوامبر)**   | `docs/product/HISABCHE_MASTER_USER_JOURNEY.md` · `HISABCHE_WORKFLOW_GAPS_AND_BLOCKERS.md` — **workspace-create-01 منتظر اجرا و VERIFY** |
+| **راهنمای درون‌برنامه: فقط آنچه این آدم دارد؛ تب‌ها از نشانی؛ ۷۹ قدم (۱۵ نوامبر)**   | `docs/architecture/V67-GUIDES-DOCS.md` · درس ۲۶۳ — **مقاله‌های docs برای ۱۵ بخش تازه NOT_IMPLEMENTED** |
 | **مطابقت ۱۶۰ باگ گزارش Antigravity با کد؛ ۹ تصمیم مالک (۷ نوامبر)**   | `docs/audit/AUDIT-80-VERIFICATION.md`                                       |
 | **V54 ممیزی Phase 5.0 با کد (DNA فقط روی دستگاه؛ نوبت/بیعانه/اشتراک بی‌UI) (۷ نوامبر)** | `docs/architecture/UNIVERSAL-BUSINESS-ARCHITECTURE.md` § ممیزی · `V54-IMPLEMENTATION-PROGRESS.md` — **5.1+ منتظر تأیید** |
 | **V54 اجرا: «حاضر شد/نیامد» جلسه، DNA نسخه‌دار، ادامه‌ی onboarding، منوی پیشنهادی (۷ نوامبر)** | `docs/architecture/V54-IMPLEMENTATION-PROGRESS.md` § دور دوم — **operational-profile-01 منتظر اجرا و VERIFY** |

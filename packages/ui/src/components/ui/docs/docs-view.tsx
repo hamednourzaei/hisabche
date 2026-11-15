@@ -287,7 +287,9 @@ function DocsArticle({
           the find-in-page the browser already has, and legible to a crawler. */}
       <div className="mt-7 space-y-7">
         {article.sections.map((section) => (
-          <section key={section.id}>
+          // `id`: the in-app guide links straight to the part it taught
+          // (`/docs/<slug>#<section>`); scroll-margin keeps the heading clear of the header.
+          <section key={section.id} id={section.id} className="scroll-mt-24">
             <h2 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
               {t(`docs.${article.slug}.${section.id}.heading`)}
             </h2>
