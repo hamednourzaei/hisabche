@@ -96,6 +96,19 @@ const MARKER_POLL_MS = 150
 const NO_IDS: readonly string[] = []
 const serverOrigin = () => ''
 
+/**
+ * The tab / view in the address the page was OPENED with — on the web in the
+ * query, in the desktop / mobile hash router after the `#/path?`. Read only on the
+ * client: the guide draws nothing before the person's record has answered.
+ */
+function openedAddress(): { tab: string | null; view: string | null } {
+  if (typeof window === 'undefined') return { tab: null, view: null }
+  const hash = window.location.hash
+  const query = hash.includes('?') ? hash.slice(hash.indexOf('?')) : window.location.search
+  const params = new URLSearchParams(query)
+  return { tab: params.get('tab'), view: params.get('view') }
+}
+
 const OVERLAY =
   'fixed bg-[hsl(var(--surface-base)/0.55)] backdrop-blur-[3px] motion-reduce:backdrop-blur-none'
 
@@ -181,7 +194,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     ids: NO_IDS,
   })
   const missingIds = missing.route === cleanRoute ? missing.ids : NO_IDS
-  const routeSteps = useMemo(
+  const pageSteps = useMemo(
     () => scopedSteps.filter((step) => !missingIds.includes(step.id)),
     [scopedSteps, missingIds],
   )
@@ -201,15 +214,33 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     route: '',
     ids: [],
   })
-  const pageDone = routeSteps.length > 0 && routeSteps.every((step) => isSeen(step.id))
+  const pageDone = pageSteps.length > 0 && pageSteps.every((step) => isSeen(step.id))
   const walkedIds = walked.route === cleanRoute ? walked.ids : NO_IDS
 
+  // ⚠️ THE GUIDE NEVER TAKES AWAY THE TAB THE PERSON OPENED (15 Nov 2026). A
+  // reader who came to `/accounting?tab=reports&view=incomeStatement` was moved
+  // to «books» by step one, and the report they asked for vanished (the browser
+  // journey caught it on 19 trades). The walk starts at the first step of the
+  // tab/view they opened and wraps round; with no tab in the address it starts
+  // at step one, as before. Captured once per page, on arrival.
+  const [entry, setEntry] = useState<{ route: string; tab: string | null; view: string | null }>(
+    () => ({ route: cleanRoute, ...openedAddress() }),
+  )
+  if (entry.route !== cleanRoute) setEntry({ route: cleanRoute, ...openedAddress() })
+  const routeSteps = useMemo(() => {
+    if (!entry.tab && !entry.view) return pageSteps
+    const start = pageSteps.findIndex(
+      (step) => (!entry.tab || step.tab === entry.tab) && (!entry.view || step.view === entry.view),
+    )
+    return start <= 0 ? pageSteps : [...pageSteps.slice(start), ...pageSteps.slice(0, start)]
+  }, [pageSteps, entry])
+
   const currentStep = useMemo<GuideStepDefinition | null>(() => {
-    if (!recordReady || routeSteps.length === 0) return null
-    if (replaying) return routeSteps.find((step) => !replaySeen.includes(step.id)) ?? null
+    if (!recordReady || pageSteps.length === 0) return null
+    if (replaying) return pageSteps.find((step) => !replaySeen.includes(step.id)) ?? null
     if (pageDone) return null
     return routeSteps.find((step) => !walkedIds.includes(step.id)) ?? null
-  }, [recordReady, routeSteps, replaying, replaySeen, pageDone, walkedIds])
+  }, [recordReady, pageSteps, routeSteps, replaying, replaySeen, pageDone, walkedIds])
 
   // A replay that ran out ends itself.
   useEffect(() => {
@@ -224,7 +255,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
   const [arrivedFor, setArrivedFor] = useState<string | null>(null)
   const [dismissedRoute, setDismissedRoute] = useState<string | null>(null)
 
-  const totalSteps = routeSteps.length
+  const totalSteps = pageSteps.length
   const currentStepIndex = currentStep
     ? routeSteps.findIndex((s) => s.id === currentStep.id) + 1
     : 0
@@ -247,7 +278,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     !replaying &&
     !currentStep &&
     missingIds.length > 0 &&
-    (walkedIds.length > 0 || (arrivedFor === cleanRoute && routeSteps.length === 0))
+    (walkedIds.length > 0 || (arrivedFor === cleanRoute && pageSteps.length === 0))
   const showFinished =
     (finishedRoute === cleanRoute || (ranOut && dismissedRoute !== cleanRoute)) && !currentStep
   // A dialog is open: the guide steps aside — not drawn AND not locking scroll or keys — and
@@ -453,12 +484,12 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
     if (isLast) {
       // The page is done: every step is recorded, including ones seen on an
       // earlier visit and walked again now.
-      record(routeSteps.map((step) => ({ stepId: step.id, routeId: cleanRoute })))
+      record(pageSteps.map((step) => ({ stepId: step.id, routeId: cleanRoute })))
       setFinishedRoute(cleanRoute)
     } else if (!isSeen(currentStep.id)) {
       record([{ stepId: currentStep.id, routeId: cleanRoute }])
     }
-  }, [currentStep, routeSteps, replaying, advanceReplay, record, cleanRoute, isSeen])
+  }, [currentStep, pageSteps, routeSteps, replaying, advanceReplay, record, cleanRoute, isSeen])
 
   const handleClose = useCallback(() => {
     setFinishedRoute(null)
@@ -468,11 +499,11 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
       return
     }
     record(
-      routeSteps
+      pageSteps
         .filter((step) => !isSeen(step.id))
         .map((step) => ({ stepId: step.id, routeId: cleanRoute })),
     )
-  }, [replaying, endReplay, record, routeSteps, isSeen, cleanRoute])
+  }, [replaying, endReplay, record, pageSteps, isSeen, cleanRoute])
 
   const handleGoNext = useCallback(() => {
     setFinishedRoute(null)
@@ -768,7 +799,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
         <>
           <div className="mt-2 space-y-1">
             <h4 className="text-sm font-bold text-[hsl(var(--fg-primary))]">
-              {routeSteps.length === 0
+              {pageSteps.length === 0
                 ? t('guide.nothingHereTitle')
                 : nextStop
                   ? t('guide.pageDoneTitle')
@@ -778,7 +809,7 @@ export function InteractiveGuide({ currentRoute, t }: InteractiveGuideProps) {
               aria-live="polite"
               className="text-xs leading-relaxed text-[hsl(var(--fg-secondary))]"
             >
-              {routeSteps.length === 0
+              {pageSteps.length === 0
                 ? t('guide.nothingHereBody')
                 : nextStop
                   ? t('guide.pageDoneBody')

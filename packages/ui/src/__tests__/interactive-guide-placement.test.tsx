@@ -340,4 +340,32 @@ describe('InteractiveGuide', () => {
       vi.useRealTimers()
     }
   })
+
+  it('⚠️ never takes away the tab the person opened: the walk starts at that tab', async () => {
+    vi.useFakeTimers()
+    const before = window.location.href
+    window.history.replaceState(null, '', '/fa/accounting?tab=reports&view=incomeStatement')
+    try {
+      for (const [attribute, value] of [
+        ['data-guide-tab', 'reports'],
+        ['data-guide-view', 'incomeStatement'],
+      ] as const) {
+        const marker = document.createElement('button')
+        marker.setAttribute(attribute, value)
+        marker.setAttribute('data-guide-active', '')
+        document.body.appendChild(marker)
+      }
+      render(<InteractiveGuide currentRoute="/fa/accounting" t={translate} />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300)
+      })
+      // Its own tab is already open: the address is not touched…
+      expect(remote.replaced).toEqual([])
+      // …and the step on screen is the one about what the person opened.
+      expect(screen.getByText('guide.accounting.reports.title')).toBeTruthy()
+    } finally {
+      window.history.replaceState(null, '', before)
+      vi.useRealTimers()
+    }
+  })
 })

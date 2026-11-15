@@ -54,10 +54,18 @@ const GUIDE_STEPS: Array<{ stepId: string; routeId: string }> = (() => {
     join(REPO, 'packages', 'ui-contract', 'src', 'guide-catalog.ts'),
     'utf8',
   )
-  return [...source.matchAll(/id: '([^']+)',\s*routeId: '([^']+)'/g)].map((match) => ({
-    stepId: match[1] ?? '',
-    routeId: match[2] ?? '',
-  }))
+  // Each route is `steps('<route>', [ … ])` (guide-catalog.ts): the step ids inside a block
+  // belong to that route.
+  const steps: Array<{ stepId: string; routeId: string }> = []
+  for (const block of source.matchAll(/steps\('([a-z-]+)', \[([\s\S]*?)\n {2}\]\)/g)) {
+    for (const id of (block[2] ?? '').matchAll(/^ {6}id: '([^']+)'/gm)) {
+      steps.push({ stepId: id[1] ?? '', routeId: block[1] ?? '' })
+    }
+  }
+  // An empty list marks nothing as seen and the tour covers every screen (15 Nov 2026:
+  // the catalog changed shape, this read returned nothing, and 19 trades failed).
+  if (steps.length < 50) throw new Error(`guide-catalog.ts: read ${steps.length} steps`)
+  return steps
 })()
 
 /** Top-level message namespaces: a visible «namespace.word.word» is a raw key on screen. */
@@ -146,8 +154,11 @@ async function firstDay(page: Page, trade: string, index: number) {
   } catch (error) {
     // Every failure says what the browser and the API reported on the way.
     const reason = error instanceof Error ? error.message : String(error)
-    throw new Error(`${reason}
-  — seen on the way: ${problems.slice(-10).join(' || ') || 'nothing'}`)
+    throw new Error(
+      `${reason}
+  — seen on the way: ${problems.slice(-10).join(' || ') || 'nothing'}`,
+      { cause: error },
+    )
   }
 
   async function steps() {
