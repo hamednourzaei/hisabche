@@ -30,6 +30,7 @@ import type {
   RemittanceStatus,
   RepairStatus,
   RepairTicketCreateInput,
+  RepairQualityCheckInput,
   RepairTicketMoveInput,
   ServiceCatalogInput,
   ServiceResourceInput,
@@ -280,6 +281,8 @@ export interface RepairTicketDetail extends RepairTicket {
     createdAt: string
   }>
   parts?: RepairTicketPart[]
+  /** The latest pass/fail from the quality log; null = no check recorded (not a pass). */
+  latestQuality?: 'pass' | 'fail' | null
 }
 
 export function useRepairTickets(filter: RepairStatus | 'open' | undefined = 'open') {
@@ -343,6 +346,28 @@ export function useMoveRepairTicket() {
     onSuccess: (_d, v) => {
       void queryClient.invalidateQueries({ queryKey: ['business-packs', 'repairs'] })
       void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.id) })
+    },
+  })
+}
+
+/**
+ * V71 — the check before handover. A fail sends a ready unit back to the bench
+ * in the same request; the server refuses a handover without a pass.
+ */
+export function useRepairQualityCheck() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...body }: RepairQualityCheckInput & { id: string }) => {
+      const { data } = await apiClient.post<{ data: RepairTicketDetail }>(
+        `/repair-tickets/${encodeURIComponent(id)}/quality-check`,
+        body,
+      )
+      return data.data
+    },
+    onSuccess: (_d, v) => {
+      void queryClient.invalidateQueries({ queryKey: ['business-packs', 'repairs'] })
+      void queryClient.invalidateQueries({ queryKey: businessPackKeys.repair(v.id) })
+      void queryClient.invalidateQueries({ queryKey: ['quality'] })
     },
   })
 }

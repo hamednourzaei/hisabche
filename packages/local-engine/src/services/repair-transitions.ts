@@ -48,7 +48,9 @@ export function applyLocalRepairTransition(
   )
   if (!row) throw new NotFoundError('Repair ticket', ticketId)
 
-  const refusal = repairMoveRefusal(row.status, input)
+  // The quality log (`quality_events`) lives on the server only: the device holds no check, so it
+  // never hands a unit over on its own. `null` = no check recorded, which is not a pass.
+  const refusal = repairMoveRefusal(row.status, input, null)
   if (refusal) {
     throw new ValidationError(refusal)
   }

@@ -13,6 +13,7 @@ import {
   repairBillCreateSchema,
   repairPartReserveSchema,
   repairTicketCreateSchema,
+  repairQualityCheckSchema,
   repairTicketMoveSchema,
   type RepairStatus,
 } from '@hisabche/validation'
@@ -75,6 +76,23 @@ export async function repairRoutes(fastify: FastifyInstance) {
         return reply.code(201).send({ data: await service.create(request.tenancy, body) })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to open the repair ticket')
+      }
+    },
+  )
+
+  // V71 — the check before handover; recorded in the one quality log.
+  fastify.post(
+    '/api/repair-tickets/:id/quality-check',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        if (!isUuid(idOf(request))) return reply.code(400).send({ error: 'Invalid id' })
+        const body = repairQualityCheckSchema.parse(request.body)
+        return reply.send({
+          data: await service.qualityCheck(request.tenancy, idOf(request), body),
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to record the quality check')
       }
     },
   )

@@ -24,6 +24,8 @@ import {
   type RepairStatus,
   type RepairTicketCreateInput,
   type RepairTicketMoveInput,
+  type RepairQualityCheckInput,
+  type RepairQualityResult,
 } from '@hisabche/validation'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -32,6 +34,7 @@ import { businessDayOf } from '../../utils/local-day'
 import { baseCurrencyOf } from '../base-currency'
 import { costing } from '../inventory-costing'
 import { InventoryReservationService } from '../inventory/reservation.service'
+import { qualityService } from '../quality/quality.service'
 import type { TenancyContext } from '../tenancy.service'
 
 const LEGACY_TICKET_COLUMNS =
@@ -184,9 +187,55 @@ export class RepairTicketService {
     return { ready: true, tickets: (data ?? []).map(mapTicket) }
   }
 
+  /**
+   * The latest quality verdict on a ticket — from the ONE quality log
+   * (`quality_events`, source `repair`), never a column of the ticket.
+   * `null` = no check recorded. A read error is an error, not «no check».
+   */
+  private async latestQuality(
+    ctx: TenancyContext,
+    id: string,
+  ): Promise<RepairQualityResult | null> {
+    const { data, error } = await supabase
+      .from('quality_events')
+      .select('event_kind')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('source_type', 'repair')
+      .eq('source_id', id)
+      // 'rework' is what the panel recorded before V71: a unit sent back, i.e. not a pass.
+      .in('event_kind', ['pass', 'fail', 'rework'])
+      .order('occurred_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to read the quality check', error)
+    if (!data) return null
+    return data.event_kind === 'pass' ? 'pass' : 'fail'
+  }
+
+  /**
+   * Record the check before handover. A FAIL on a ready unit sends it back to
+   * the bench in the same request, so «ready» never shows a unit that failed.
+   */
+  async qualityCheck(ctx: TenancyContext, id: string, input: RepairQualityCheckInput) {
+    const ticket = await this.readTicketRow(ctx, id)
+    if (ticket.status !== 'ready') throw new ValidationError('REPAIR_QA_ONLY_WHEN_READY')
+    await qualityService.recordQualityEvent(ctx, {
+      sourceType: 'repair',
+      sourceId: id,
+      eventKind: input.result,
+      quantity: 1,
+      ...(input.notes ? { notes: input.notes } : {}),
+    })
+    if (input.result === 'fail') {
+      return this.move(ctx, id, { status: 'repairing', note: input.notes })
+    }
+    return this.get(ctx, id)
+  }
+
   async get(ctx: TenancyContext, id: string) {
     const ticket = await this.readTicketRow(ctx, id)
-    const [events, partsRes] = await Promise.all([
+    const [events, partsRes, quality] = await Promise.all([
       supabase
         .from('repair_ticket_events')
         .select('id, from_status, to_status, note, actor_id, created_at')
@@ -201,6 +250,7 @@ export class RepairTicketService {
         .eq('workspace_id', ctx.workspaceId)
         .eq('ticket_id', id)
         .order('created_at', { ascending: true }),
+      this.latestQuality(ctx, id),
     ])
     if (events.error) throw new DatabaseError('Failed to read the repair history', events.error)
     if (partsRes.error && !isNotReady(partsRes.error)) {
@@ -217,6 +267,7 @@ export class RepairTicketService {
         createdAt: e.created_at as string,
       })),
       parts: (partsRes.data ?? []).map((p) => mapPart(p as PartRow)),
+      latestQuality: quality,
     }
   }
 
@@ -285,7 +336,8 @@ export class RepairTicketService {
   async move(ctx: TenancyContext, id: string, input: RepairTicketMoveInput) {
     const current = await this.readTicketRow(ctx, id)
 
-    const refusal = repairMoveRefusal(current.status as RepairStatus, input)
+    const quality = input.status === 'delivered' ? await this.latestQuality(ctx, id) : null
+    const refusal = repairMoveRefusal(current.status as RepairStatus, input, quality)
     if (refusal) throw new ValidationError(refusal)
 
     if (input.invoiceId) {
@@ -544,6 +596,14 @@ export class RepairTicketService {
     const ticket = await this.readTicketRow(ctx, ticketId)
     if (ticket.status === 'cancelled') throw new ValidationError('REPAIR_TICKET_CLOSED')
     if (ticket.invoice_id) throw new ConflictError('REPAIR_ALREADY_BILLED')
+    // ⚠️ BEFORE the invoice: billing a ready unit also hands it over, and a handover needs a passing
+    // check. Asked after the invoice, a missing check left an issued invoice on a ticket that stayed
+    // «ready» — the sale booked, the customer told «no».
+    if (input.markDelivered !== false && ticket.status === 'ready') {
+      if ((await this.latestQuality(ctx, ticketId)) !== 'pass') {
+        throw new ValidationError('REPAIR_QA_REQUIRED')
+      }
+    }
 
     const { data: consumedRaw, error: partsErr } = await supabase
       .from('repair_ticket_parts')

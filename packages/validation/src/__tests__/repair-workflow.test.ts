@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  repairQualityCheckSchema,
   canConsumePartsOnRepair,
   repairDisplayStage,
   repairMoveRefusal,
@@ -10,21 +11,36 @@ import {
 
 describe('8.4 Repair Shop Workflow: Lifecycle, Approval, ATP Parts, Revenue Split & Metrics', () => {
   it('enforces legal status transitions, cancel note, and delivery invoice rule', () => {
-    expect(repairMoveRefusal('received', { status: 'delivered', invoiceId: 'inv-1' })).toBe(
+    expect(repairMoveRefusal('received', { status: 'delivered', invoiceId: 'inv-1' }, 'pass')).toBe(
       'REPAIR_MOVE_NOT_ALLOWED',
     )
-    expect(repairMoveRefusal('diagnosing', { status: 'cancelled' })).toBe(
+    expect(repairMoveRefusal('diagnosing', { status: 'cancelled' }, null)).toBe(
       'REPAIR_CANCEL_NOTE_REQUIRED',
     )
-    expect(repairMoveRefusal('diagnosing', { status: 'waiting_parts', invoiceId: 'inv-1' })).toBe(
-      'REPAIR_INVOICE_ONLY_ON_DELIVERY',
-    )
     expect(
-      repairMoveRefusal('ready', {
-        status: 'delivered',
-        invoiceId: '11111111-1111-4111-8111-111111111111',
-      }),
+      repairMoveRefusal('diagnosing', { status: 'waiting_parts', invoiceId: 'inv-1' }, null),
+    ).toBe('REPAIR_INVOICE_ONLY_ON_DELIVERY')
+    expect(
+      repairMoveRefusal(
+        'ready',
+        { status: 'delivered', invoiceId: '11111111-1111-4111-8111-111111111111' },
+        'pass',
+      ),
     ).toBeNull()
+  })
+
+  it('hands over only after a passing quality check (the latest one decides)', () => {
+    const deliver = { status: 'delivered' as const }
+    expect(repairMoveRefusal('ready', deliver, null)).toBe('REPAIR_QA_REQUIRED')
+    expect(repairMoveRefusal('ready', deliver, 'fail')).toBe('REPAIR_QA_REQUIRED')
+    expect(repairMoveRefusal('ready', deliver, 'pass')).toBeNull()
+    // Back to the bench needs no check.
+    expect(repairMoveRefusal('ready', { status: 'repairing' }, 'fail')).toBeNull()
+    expect(repairQualityCheckSchema.safeParse({ result: 'fail' }).success).toBe(false)
+    expect(
+      repairQualityCheckSchema.safeParse({ result: 'fail', notes: 'صفحه خط دارد' }).success,
+    ).toBe(true)
+    expect(repairQualityCheckSchema.safeParse({ result: 'pass' }).success).toBe(true)
   })
 
   it('requires diagnosis + customer approval before reserving/consuming spare parts', () => {

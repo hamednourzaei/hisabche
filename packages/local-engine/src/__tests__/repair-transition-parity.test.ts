@@ -39,7 +39,7 @@ describe('repair-ticket transition parity on local engine', () => {
       applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
         status: 'delivered',
       }),
-    ).toThrow(new RegExp(String(repairMoveRefusal('received', { status: 'delivered' }))))
+    ).toThrow(new RegExp(String(repairMoveRefusal('received', { status: 'delivered' }, null))))
 
     // Passing invoiceId on diagnosing must refuse with REPAIR_INVOICE_ONLY_ON_DELIVERY.
     expect(() =>
@@ -56,11 +56,26 @@ describe('repair-ticket transition parity on local engine', () => {
     expect(d.status).toBe('diagnosing')
 
     applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, { status: 'ready' })
-    const fin = applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
-      status: 'delivered',
-      invoiceId: invId,
+    // V71: the device holds no quality log, so it never hands a unit over on its own — the same
+    // refusal the server gives with no passing check, and the ticket stays ready.
+    expect(() =>
+      applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
+        status: 'delivered',
+        invoiceId: invId,
+      }),
+    ).toThrow(new RegExp(String(repairMoveRefusal('ready', { status: 'delivered' }, null))))
+    expect(
+      db.get<{ status: string }>('SELECT status FROM repair_tickets WHERE id = ?', [ticketId])!
+        .status,
+    ).toBe('ready')
+    // Closing still closes: a cancelled slip consumes no part.
+    applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
+      status: 'repairing',
     })
-    expect(fin.status).toBe('delivered')
+    applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
+      status: 'cancelled',
+      note: 'مشتری منصرف شد',
+    })
     expect(() => assertLocalRepairCanConsumeParts(db, TEST_WORKSPACE_ID, ticketId)).toThrow(
       /REPAIR_TICKET_CLOSED/,
     )
@@ -69,7 +84,7 @@ describe('repair-ticket transition parity on local engine', () => {
       'SELECT from_status, to_status FROM repair_ticket_events WHERE ticket_id = ? ORDER BY created_at',
       [ticketId],
     )
-    expect(events).toHaveLength(3)
+    expect(events).toHaveLength(4)
 
     // HTTP local-engine endpoint keeps server-only matrix contract (501 OFFLINE_NOT_AVAILABLE).
     const engine = createTestEngine(db)

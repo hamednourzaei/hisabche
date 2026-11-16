@@ -452,6 +452,7 @@ function differences(
     ([, spec]) => spec.alsoCovers.includes(facts.id),
   )
   const link = (file: string) => `سند کامل: [${file}](./${file})`
+  const withLink = (text: string, file: string) => `${text} سند: [${file}](./${file})`
   const ownParts = facts.dashboard.filter((part) => !GENERIC_PARTS.has(part))
 
   const identity = [
@@ -489,29 +490,40 @@ function differences(
 
   return {
     'هویت و مدل کسب‌وکار': identity,
-    'گردش کار روزانه': representative ? link('DAILY-WORKFLOW.md') : same,
+    'گردش کار روزانه': representative
+      ? link('DAILY-WORKFLOW.md')
+      : withLink(same, 'DAILY-WORKFLOW.md'),
     صفحه‌به‌صفحه: representative
       ? link('PAGE-BY-PAGE-UX.md')
-      : pages.length
-        ? pages.join(' ')
-        : same,
-    'عملیات و تراکنش': representative ? link('OPERATIONS-AND-TRANSACTIONS.md') : same,
+      : withLink(pages.length ? pages.join(' ') : same, 'PAGE-BY-PAGE-UX.md'),
+    'عملیات و تراکنش': representative
+      ? link('OPERATIONS-AND-TRANSACTIONS.md')
+      : withLink(same, 'OPERATIONS-AND-TRANSACTIONS.md'),
     'KPI و گزارش': representative
       ? link('KPI-AND-REPORTS.md')
-      : ownParts.length
-        ? `قطعه‌ی اختصاصی داشبورد: ${list(ownParts)}.`
-        : same,
-    'نقش‌ها و دسترسی': representative ? link('ROLES-AND-PERMISSIONS.md') : same,
+      : withLink(
+          ownParts.length ? `قطعه‌ی اختصاصی داشبورد: ${list(ownParts)}.` : same,
+          'KPI-AND-REPORTS.md',
+        ),
+    'نقش‌ها و دسترسی': representative
+      ? link('ROLES-AND-PERMISSIONS.md')
+      : withLink(same, 'ROLES-AND-PERMISSIONS.md'),
     'آفلاین و دستگاه': representative
       ? link('OFFLINE-AND-DEVICE.md')
-      : offline.length
-        ? `موتورهای این صنف که فقط آنلاین کار می‌کنند: ${[...new Set(offline)].join('، ')}.`
-        : same,
+      : withLink(
+          offline.length
+            ? `موتورهای این صنف که فقط آنلاین کار می‌کنند: ${[...new Set(offline)].join('، ')}.`
+            : same,
+          'OFFLINE-AND-DEVICE.md',
+        ),
     'شکاف‌ها و نیازمندی‌ها': representative
       ? link('GAPS-AND-REQUIREMENTS.md')
-      : gaps.length
-        ? gaps.join(' ')
-        : 'شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است.',
+      : withLink(
+          gaps.length
+            ? gaps.join(' ')
+            : 'شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است.',
+          'GAPS-AND-REQUIREMENTS.md',
+        ),
   }
 }
 
@@ -652,7 +664,7 @@ function representativeFiles(sources: Sources, facts: Facts, spec: Representativ
     '',
     '- فروش روی دستگاهِ آماده اول در SQLite خود دستگاه ثبت می‌شود، حتی آنلاین؛ ارسال به سرور در پس‌زمینه است و سرور همان فاکتور را دوباره اعتبارسنجی و شماره‌گذاری می‌کند.',
     '- آنچه دستگاه نپذیرد، وقتی آنلاین است از سرور پرسیده می‌شود: سریال، سری تاریخ‌دار، اعتبار بسته و لایه‌ی بها روی دستگاه کامل نیست.',
-    '- دریافت پول و مرجوعی امروز از قرارداد مکان اجرا پرسیده نمی‌شود (تنها `invoice.create` پرسیده می‌شود)، پس مسیرشان سرور است؛ `payment.record` و `invoice.return` در قرارداد هستند ولی هیچ hookی آن‌ها را صدا نمی‌زند.',
+    `- عمل‌هایی که hook امروز از قرارداد مکان اجرا می‌پرسد: ${list([...sources.deviceOperationsInUse].sort())}؛ بقیه‌ی عمل‌های قرارداد مسیر سرور می‌روند.`,
     '- دو دستگاه آفلاین که یک زمان/منبع را بگیرند تعارض صریح می‌سازند، نه آخرین‌نویسنده.',
     '',
   )
@@ -675,6 +687,247 @@ function representativeFiles(sources: Sources, facts: Facts, spec: Representativ
     path: `${dir}/${name}`,
     content: lines.join('\n'),
   })
+  return [
+    file('DAILY-WORKFLOW.md', daily),
+    file('PAGE-BY-PAGE-UX.md', pages),
+    file('OPERATIONS-AND-TRANSACTIONS.md', operations),
+    file('KPI-AND-REPORTS.md', kpis),
+    file('ROLES-AND-PERMISSIONS.md', roles),
+    file('OFFLINE-AND-DEVICE.md', offline),
+    file('GAPS-AND-REQUIREMENTS.md', gaps),
+  ]
+}
+
+// ─── Every other trade: the same seven files, from its family and its code ──
+//
+// A trade without a hand-written representative still gets all eight files,
+// but nothing in them is invented: each file is the trade's own facts read
+// from code (profile, DNA, capabilities, engines, evidence) laid over its
+// family's specification, which a person wrote once in content.ts. Where the
+// trade adds nothing to its family, the file says so instead of repeating it.
+
+const EVIDENCE_FA: Readonly<Record<string, string>> = {
+  POSTGRES_JOURNEY: 'سفر کامل روی Postgres واقعی اجرا نشده',
+  BROWSER_JOURNEY: 'سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده',
+  EVIDENCE_NOT_ON_COMMITTED_TREE:
+    'شاهد روی درخت commit‌نشده گرفته شده؛ بعد از commit باید دوباره تولید شود',
+}
+
+const ENGINE_MODE_FA: Readonly<Record<string, string>> = {
+  local: 'روی دستگاه هم اجرا می‌شود',
+  online_required: 'فقط آنلاین',
+}
+
+function vocabularyRows(sources: Sources, facts: Facts): string[] {
+  const rows: string[] = []
+  for (const [slot, key] of Object.entries(facts.vocabulary)) {
+    if (!key) continue
+    const fa = messageAt(sources.messages.fa, key)
+    if (fa === null) throw new Error(`industry docs: vocabulary «${key}» is missing in fa`)
+    rows.push(`| \`${slot}\` | ${fa} | \`${key}\` |`)
+  }
+  return rows
+}
+
+function engineRows(facts: Facts): string[] {
+  const seen = new Set<string>()
+  const rows: string[] = []
+  for (const key of facts.on) {
+    const engineKey = CAPABILITIES[key].engine
+    if (!engineKey || seen.has(engineKey)) continue
+    seen.add(engineKey)
+    const engine = ENGINES[engineKey]
+    rows.push(
+      `| \`${engine.key}\` | ${list(facts.on.filter((k) => CAPABILITIES[k].engine === engineKey))} | ${ENGINE_MODE_FA[engine.offline]} · \`${engine.offlineStatus}\` |`,
+    )
+  }
+  return rows
+}
+
+function memberFiles(sources: Sources, facts: Facts): DocFile[] {
+  const r = (text: string) => render(sources, text)
+  const family = FAMILIES[facts.family]
+  const familyLink = `[خانواده‌ی «${family.title}»](../families/${facts.family}.md)`
+  const covering = (Object.entries(REPRESENTATIVES) as [IndustryKey, RepresentativeSpec][]).find(
+    ([, spec]) => spec.alsoCovers.includes(facts.id),
+  )
+  const ownParts = facts.dashboard.filter((part) => !GENERIC_PARTS.has(part))
+  const head = (title: string, file: string) => [
+    `# ${facts.labels.fa} — ${title}`,
+    '',
+    GENERATED,
+    '',
+    `این صنف سند دستی جدا ندارد. این سند از ${familyLink} و از پروفایل همین صنف در کد ساخته شده و چیزی بیش از کد وعده نمی‌دهد.${
+      covering
+        ? ` نزدیک‌ترین سند دستی: [${covering[0]}/${file}](../${covering[0]}/${file}) — همان مشخصات را می‌خواند.`
+        : ''
+    }`,
+    '',
+  ]
+  const file = (name: string, lines: string[]): DocFile => ({
+    path: `${facts.id}/${name}`,
+    content: lines.join('\n'),
+  })
+
+  // ── DAILY-WORKFLOW ──
+  const daily = [...head('گردش کار روزانه', 'DAILY-WORKFLOW.md')]
+  daily.push('## چرخه‌ی تراکنش اصلی', '', ...family.cycle.map((s, i) => `${i + 1}. ${s}`), '')
+  for (const workflow of family.workflows) {
+    daily.push(`## ${workflow.title}`, '', ...workflow.steps.map((s, i) => `${i + 1}. ${r(s)}`), '')
+  }
+  const dayDelta: string[] = []
+  if (facts.unit !== 'piece') dayDelta.push(`- کالای تازه با واحد \`${facts.unit}\` ساخته می‌شود.`)
+  if (facts.emphasized.length)
+    dayDelta.push(`- هنگام ثبت کالا این فیلدها جلو هستند: ${list(facts.emphasized)}.`)
+  if (facts.invoiceColumns.length)
+    dayDelta.push(`- فاکتور این ستون‌ها را از اول نشان می‌دهد: ${list(facts.invoiceColumns)}.`)
+  if (facts.dna.unitTracking)
+    dayDelta.push(`- ردیابی واحد: \`${facts.dna.unitTracking}\` (از DNA).`)
+  daily.push(
+    '## آنچه این صنف در روز متفاوت دارد',
+    '',
+    ...(dayDelta.length ? dayDelta : [`- ${SAME_AS_FAMILY(family.title)}`]),
+    '',
+  )
+
+  // ── PAGE-BY-PAGE-UX ──
+  const pages = [...head('صفحه‌به‌صفحه', 'PAGE-BY-PAGE-UX.md')]
+  pages.push(
+    '## صفحه‌های این صنف',
+    '',
+    '| نشانی | این صنف آنجا چه می‌خواند | پنهان در منوی پیشنهادی؟ |',
+    '| --- | --- | --- |',
+  )
+  for (const page of family.pages) {
+    checkRoute(sources, page.route)
+    const base = String(page.route.split('?')[0])
+    pages.push(
+      `| \`${page.route}\` | ${r(page.use)} | ${facts.hiddenPaths.includes(base) ? 'بله — با آچار برمی‌گردد' : 'خیر'} |`,
+    )
+  }
+  pages.push('')
+  pages.push('## تفاوت صفحه‌ها برای این صنف (از پروفایل)', '')
+  const pageDelta: string[] = []
+  if (ownParts.length)
+    pageDelta.push(
+      `- **داشبورد**: قطعه‌ی اختصاصی ${list(ownParts)}؛ ترتیب کامل: ${list(facts.dashboard)}.`,
+    )
+  else pageDelta.push(`- **داشبورد**: فقط قطعه‌های مشترک — ${list(facts.dashboard)}.`)
+  if (facts.emphasized.length || facts.unit !== 'piece')
+    pageDelta.push(
+      `- **فرم کالا** (\`/warehouse\`): واحد پیش‌فرض \`${facts.unit}\`؛ فیلدهای جلو: ${list(facts.emphasized)}.`,
+    )
+  if (facts.invoiceColumns.length)
+    pageDelta.push(`- **فاکتورساز** (\`/invoices\`): ستون‌های اضافه ${list(facts.invoiceColumns)}.`)
+  if (facts.hiddenPaths.length)
+    pageDelta.push(
+      `- **منو**: منوی پیشنهادی از DNA این نشانی‌ها را پنهان می‌کند: ${list(facts.hiddenPaths)}. پنهان‌کردن، قاعده‌ی حسابداری یا ممیزی را برنمی‌دارد.`,
+    )
+  pages.push(...pageDelta, '')
+  const vocab = vocabularyRows(sources, facts)
+  if (vocab.length) {
+    pages.push(
+      '## واژگان این صنف',
+      '',
+      '| جا | برچسب | کلید |',
+      '| --- | --- | --- |',
+      ...vocab,
+      '',
+    )
+  } else {
+    pages.push('## واژگان این صنف', '', 'واژه‌ی اختصاصی ندارد؛ برچسب‌های مشترک.', '')
+  }
+  pages.push(
+    '## چیدمان، اقدام‌ها و حالت‌ها',
+    '',
+    'چیدمان از بالا به پایین، اقدام‌های هر صفحه و ده حالت (خالی، عادی، بارگذاری، آفلاین، بی‌اجازه، خطای اعتبارسنجی، داده‌ی ناقص، تعارض، تکمیل، بایگانی) برای همه‌ی صنف‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). زیر ۷۶۸px جدول‌ها کارت می‌شوند؛ ویندوز و اندروید همان صفحه را از `packages/app-shell` نشان می‌دهند.',
+    '',
+  )
+
+  // ── OPERATIONS-AND-TRANSACTIONS ──
+  const operations = [...head('عملیات و تراکنش', 'OPERATIONS-AND-TRANSACTIONS.md')]
+  operations.push(
+    '## قواعد حسابداری خانواده',
+    '',
+    ...family.accounting.map((rule) => `- ${r(rule)}`),
+    '',
+  )
+  const engines = engineRows(facts)
+  operations.push('## موتورهای اختصاصی که این صنف روشن می‌کند', '')
+  if (engines.length) {
+    operations.push('| موتور | قابلیت‌ها | آفلاین |', '| --- | --- | --- |', ...engines, '')
+  } else {
+    operations.push('هیچ — فاکتور، پرداخت، انبار و دفتر کل مشترک.', '')
+  }
+  operations.push(
+    '## DNA عملیاتی',
+    '',
+    `- عرضه: ${list(facts.dna.offering)} · دریافت سفارش: ${list(facts.dna.intake)} · انبار: ${list(facts.dna.inventory)}`,
+    `- تسویه: ${list(facts.dna.settlement)} · نیروی کار: ${list(facts.dna.workforce)} · مشتری: ${list(facts.dna.customer)}`,
+    '',
+  )
+
+  // ── KPI-AND-REPORTS ──
+  const kpis = [...head('KPI و گزارش', 'KPI-AND-REPORTS.md')]
+  kpis.push('## پنج اولویت خانواده', '', '| چه چیزی | از کجا می‌آید |', '| --- | --- |')
+  kpis.push(...family.dashboard.map((row) => `| ${row.what} | ${r(row.source)} |`), '')
+  kpis.push('## داشبورد این صنف در کد (به ترتیب)', '', list(facts.dashboard), '')
+  kpis.push(
+    'شاخصی که منبع ندارد عددی نمی‌گیرد؛ «نامعلوم» صفر نیست. گزارش‌ها همان `/reports` و `/accounting` مشترک‌اند.',
+    '',
+  )
+
+  // ── ROLES-AND-PERMISSIONS ──
+  const roles = [...head('نقش‌ها و دسترسی', 'ROLES-AND-PERMISSIONS.md')]
+  roles.push(r(ROLE_NOTE), '')
+  roles.push('## بر اساس اندازه', '', r(family.bySize), '')
+  roles.push('جدول کامل نقش × مجوز: [ROLE-PERMISSION-MATRIX.md](../ROLE-PERMISSION-MATRIX.md).', '')
+
+  // ── OFFLINE-AND-DEVICE ──
+  const offline = [...head('آفلاین و دستگاه', 'OFFLINE-AND-DEVICE.md')]
+  offline.push('## موتورهای این صنف', '')
+  offline.push(
+    ...(engines.length
+      ? ['| موتور | قابلیت‌ها | آفلاین |', '| --- | --- | --- |', ...engines]
+      : ['موتور اختصاصی ندارد؛ وضعیت آفلاین همان هسته‌ی مشترک است.']),
+    '',
+  )
+  offline.push('## مکان اجرای سه عمل قرارداد', '', '| عمل | امروز |', '| --- | --- |')
+  for (const operation of Object.values(DEVICE_OPERATION_BY_ENDPOINT)) {
+    offline.push(
+      `| \`${operation}\` | ${
+        sources.deviceOperationsInUse.has(operation)
+          ? '`device` اگر میزبان (ویندوز/اندروید) برای همین کسب‌وکار آماده باشد، وگرنه `server`؛ وب همیشه `server`'
+          : 'در قرارداد هست ولی هیچ hook آن را صدا نمی‌زند؛ امروز `server`'
+      } |`,
+    )
+  }
+  offline.push(
+    '',
+    'وضعیت هر endpoint در [OFFLINE-WORKFLOW-MATRIX.md](../OFFLINE-WORKFLOW-MATRIX.md) است (از `OFFLINE_ENDPOINT_MATRIX`، نه نوشته).',
+    '',
+  )
+
+  // ── GAPS-AND-REQUIREMENTS ──
+  const gaps = [...head('شکاف‌ها و نیازمندی‌ها', 'GAPS-AND-REQUIREMENTS.md')]
+  gaps.push('| نیاز | وضعیت |', '| --- | --- |')
+  if (facts.profileKind === 'generic')
+    gaps.push('| تجربه‌ی اختصاصی صنف (پروفایل عمومی است) | `CONFIGURATION_REQUIRED` |')
+  for (const key of facts.unsupported) gaps.push(`| \`${key}\` | \`NEW_CAPABILITY_REQUIRED\` |`)
+  for (const key of facts.on.filter((k) => CAPABILITIES[k].status === 'partial')) {
+    gaps.push(
+      `| \`${key}\`: ${list(CAPABILITIES[key].limitations)} | \`EXISTING_BUT_INCOMPLETE\` |`,
+    )
+  }
+  for (const missing of facts.evidence?.missingEvidence ?? []) {
+    gaps.push(`| ${EVIDENCE_FA[missing] ?? missing} | \`EXISTING_BUT_INCOMPLETE\` |`)
+  }
+  gaps.push(
+    '',
+    'فهرست یکجای کارهای ساخته‌نشده: `docs/architecture/V70-BACKLOG.md`. شکاف‌های مشترک خانواده در سند خانواده آمده است.',
+    '',
+  )
+
   return [
     file('DAILY-WORKFLOW.md', daily),
     file('PAGE-BY-PAGE-UX.md', pages),
@@ -1037,7 +1290,7 @@ export function buildIndustryDocs(root: string): DocFile[] {
   for (const facts of all) {
     files.push({ path: `${facts.id}/README.md`, content: readme(sources, facts) })
     const spec = REPRESENTATIVES[facts.id]
-    if (spec) files.push(...representativeFiles(sources, facts, spec))
+    files.push(...(spec ? representativeFiles(sources, facts, spec) : memberFiles(sources, facts)))
   }
   return files.map((file) => ({ path: file.path, content: `${file.content.trimEnd()}\n` }))
 }

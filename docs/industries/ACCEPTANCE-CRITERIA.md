@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-یک فهرست، نه دو تا: همان ده معیاری که `scripts/industry/sellable-criteria.mjs` می‌سنجد. شواهد روی commit `881ae1c`.
+یک فهرست، نه دو تا: همان ده معیاری که `scripts/industry/sellable-criteria.mjs` می‌سنجد. شواهد روی commit `98a2520`.
 
 | معیار                      | چه چیزی                                                                                                | صنف‌هایی که دارند |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------: |

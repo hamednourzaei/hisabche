@@ -385,6 +385,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /repair-tickets/:x': ['operations.repairs', 'online_required'],
   'POST /repair-tickets': ['operations.repairs', 'online_required'],
   'POST /repair-tickets/:x/status': ['operations.repairs', 'online_required'],
+  'POST /repair-tickets/:x/quality-check': ['operations.repairs', 'online_required'],
   'POST /repair-tickets/:x/approve': ['operations.repairs', 'online_required'],
   'POST /repair-tickets/:x/parts': ['operations.repairs', 'online_required'],
   'POST /repair-tickets/:x/parts/:x/consume': ['operations.repairs', 'online_required'],

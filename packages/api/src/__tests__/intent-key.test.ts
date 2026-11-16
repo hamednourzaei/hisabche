@@ -73,9 +73,21 @@ describe('the money writes send it', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '')
 
-  it.each(['payments.ts', 'transactions.ts'])('%s', (file) => {
-    const src = code(file)
+  it('transactions.ts', () => {
+    const src = code('transactions.ts')
     expect(src).toContain("'Idempotency-Key': intent.current()")
+    expect(src).toContain('onError: (error) => intent.settle(error)')
+    expect(src).toContain('intent.settle()')
+  })
+
+  // V70 §8: the payment hook hands its key to `submitPayment`, which takes one of two roads.
+  // The SAME key must reach both — the device row's id (which becomes the outbox clientId and so
+  // the push's Idempotency-Key) and the server header — or one payment could be recorded twice.
+  it('payments.ts', () => {
+    const src = code('payments.ts')
+    expect(src).toContain('submitPayment(input, intent.current())')
+    expect(src).toContain('id: idempotencyKey,')
+    expect(src).toContain("headers: { 'Idempotency-Key': idempotencyKey }")
     expect(src).toContain('onError: (error) => intent.settle(error)')
     expect(src).toContain('intent.settle()')
   })

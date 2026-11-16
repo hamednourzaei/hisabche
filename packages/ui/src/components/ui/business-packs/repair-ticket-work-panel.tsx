@@ -8,8 +8,8 @@ import {
   useCreateRepairBill,
   useMyCapabilities,
   useQualityEvents,
-  useRecordQualityEvent,
   useReleaseRepairPart,
+  useRepairQualityCheck,
   useRepairTicket,
 } from '@hisabche/api'
 import { splitRepairInvoiceRevenue } from '@hisabche/validation'
@@ -38,6 +38,9 @@ const PART_KNOWN = [
   'REPAIR_BILL_NO_CHARGEABLE_LINES',
   'REPAIR_PART_NOT_RESERVED',
   'INSUFFICIENT_AVAILABLE_STOCK',
+  'REPAIR_QA_ONLY_WHEN_READY',
+  'REPAIR_QA_FAIL_NOTE_REQUIRED',
+  'REPAIR_TICKET_CHANGED',
 ]
 
 export function RepairTicketWorkPanel({
@@ -58,9 +61,12 @@ export function RepairTicketWorkPanel({
   const releasePart = useReleaseRepairPart()
   const createBill = useCreateRepairBill()
   const capabilities = useMyCapabilities()
-  const canInspect = capabilities.can('inventory.configure') === true
+  // The check before handover is part of the repair, so it needs what moving the ticket needs
+  // on the server (`invoice.create`), not the warehouse permission the general quality log asks for.
+  const canInspect = capabilities.can('invoice.create') === true
   const qualityEvents = useQualityEvents({ sourceType: 'repair', sourceId: ticketId })
-  const recordQuality = useRecordQualityEvent()
+  const qualityCheck = useRepairQualityCheck()
+  const [qaNote, setQaNote] = useState('')
   const warehouses = useWarehouseOptions()
   const goods = useProductOptions('goods')
 
@@ -369,56 +375,68 @@ export function RepairTicketWorkPanel({
           <ul className="space-y-1 text-xs text-[hsl(var(--fg-secondary))]">
             {(qualityEvents.data ?? []).slice(0, 5).map((ev) => (
               <li key={ev.id}>
-                {ev.event_kind}
+                {t(`repairs.qualityVerdict.${ev.event_kind}`, ev.event_kind)}
                 {ev.notes ? ` — ${ev.notes}` : ''}
               </li>
             ))}
           </ul>
         )}
-        {!closed && canInspect ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={recordQuality.isPending}
-              onClick={() =>
-                recordQuality.mutate(
-                  {
-                    sourceType: 'repair',
-                    sourceId: ticket.id,
-                    eventKind: 'pass',
-                  },
-                  {
-                    onSuccess: () =>
-                      toast.success(t('repairs.qualityPassed', 'آزمایش کیفیت تایید شد')),
-                    onError: fail(t('repairs.moveFailed', 'انجام نشد')),
-                  },
-                )
-              }
-            >
-              {t('repairs.qualityPass', 'تایید آزمایش')}
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={recordQuality.isPending}
-              onClick={() =>
-                recordQuality.mutate(
-                  {
-                    sourceType: 'repair',
-                    sourceId: ticket.id,
-                    eventKind: 'rework',
-                  },
-                  {
-                    onSuccess: () =>
-                      toast.success(t('repairs.qualityRework', 'نیاز به بازکاری ثبت شد')),
-                    onError: fail(t('repairs.moveFailed', 'انجام نشد')),
-                  },
-                )
-              }
-            >
-              {t('repairs.qualityFailRework', 'رد و بازکاری')}
-            </Button>
+        {ticket.status === 'ready' ? (
+          <p className="text-xs text-[hsl(var(--fg-secondary))]">
+            {t('repairs.qualityRequiredHint', 'تحویل فقط بعد از «قبول» کنترل کیفیت ممکن است.')}
+          </p>
+        ) : null}
+        {ticket.status === 'ready' && canInspect ? (
+          <div className="space-y-2">
+            <Input
+              value={qaNote}
+              onChange={(event) => setQaNote(event.target.value)}
+              placeholder={t('repairs.qualityFailNote', 'ایراد دیده‌شده (برای رد لازم است)')}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={qualityCheck.isPending}
+                onClick={() =>
+                  qualityCheck.mutate(
+                    {
+                      id: ticket.id,
+                      result: 'pass',
+                      ...(qaNote.trim() ? { notes: qaNote.trim() } : {}),
+                    },
+                    {
+                      onSuccess: () => {
+                        setQaNote('')
+                        toast.success(t('repairs.qualityPassed', 'آزمایش کیفیت تایید شد'))
+                      },
+                      onError: fail(t('repairs.moveFailed', 'انجام نشد')),
+                    },
+                  )
+                }
+              >
+                {t('repairs.qualityPass', 'تایید آزمایش')}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={qualityCheck.isPending || !qaNote.trim()}
+                onClick={() =>
+                  qualityCheck.mutate(
+                    { id: ticket.id, result: 'fail', notes: qaNote.trim() },
+                    {
+                      onSuccess: () => {
+                        setQaNote('')
+                        toast.success(t('repairs.qualityRework', 'نیاز به بازکاری ثبت شد'))
+                      },
+                      onError: fail(t('repairs.moveFailed', 'انجام نشد')),
+                    },
+                  )
+                }
+              >
+                {t('repairs.qualityFail', 'رد — برگشت به تعمیر')}
+              </Button>
+            </div>
           </div>
         ) : null}
       </div>

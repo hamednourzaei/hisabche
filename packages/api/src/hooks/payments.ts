@@ -22,7 +22,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { apiClient } from '../lib/client'
+import { apiClient, localRequest, requestSyncSoon } from '../lib/client'
+import { executionSiteFor } from '../lib/execution-site'
+import { getOfflineQueue } from '../lib/offline-queue'
 import { asList } from '../lib/as-list'
 import { responseBody } from '../lib/response-body'
 import { useAuthReady } from './useAuthReady'
@@ -305,6 +307,47 @@ export function useOpenInvoices(partyType: PaymentPartyType, partyId?: string) {
  * invalidated here, because a payment that shows on one screen and not the next
  * is the shape of bug people stop trusting the app over.
  */
+/**
+ * Record one payment — on the device first when the device is ready (V70 §8),
+ * otherwise on the server. Exported for the device-first tests.
+ *
+ * The device writes the payment, its allocations, the invoices' paid amounts,
+ * its ledger entry AND the outbox row in one SQLite transaction; the push
+ * that follows sends the same body under the SAME key the server road would
+ * have used (`idempotencyKey` is the payment's id and the outbox clientId), so
+ * a payment is one payment whichever road it took first. After the server
+ * accepts, `confirm-server` puts the server's id and number on the device row.
+ *
+ * ⚠️ ONLINE, A REFUSAL BY THE DEVICE IS NOT THE LAST WORD — exactly as for an
+ * invoice: a fee is booked only by the server (`PAYMENT_FEE_ONLINE_ONLY`), and
+ * an invoice the device never pulled reads as «not found». The engine wrote
+ * nothing (one transaction), so the server is asked and ITS answer is shown.
+ */
+export async function submitPayment(
+  input: RecordPaymentInput,
+  idempotencyKey: string,
+): Promise<PaymentRecord & { pendingSync?: true }> {
+  if (executionSiteFor('payment.record') === 'device') {
+    try {
+      const local = await localRequest<PaymentRecord>('POST', '/payments', {
+        ...input,
+        id: idempotencyKey,
+      })
+      if (local) {
+        requestSyncSoon()
+        return { ...local, pendingSync: true }
+      }
+    } catch (refusal) {
+      if (getOfflineQueue()?.isOffline()) throw refusal
+    }
+  }
+  return unwrap<PaymentRecord>(
+    await apiClient.post('/payments', input, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    }),
+  )
+}
+
 export function useRecordPayment() {
   const queryClient = useQueryClient()
   // Same key while the same payment is retried after a lost response, so the
@@ -312,12 +355,7 @@ export function useRecordPayment() {
   const intent = useIntentKey('pay')
 
   return useMutation({
-    mutationFn: async (input: RecordPaymentInput) =>
-      unwrap<PaymentRecord>(
-        await apiClient.post('/payments', input, {
-          headers: { 'Idempotency-Key': intent.current() },
-        }),
-      ),
+    mutationFn: (input: RecordPaymentInput) => submitPayment(input, intent.current()),
 
     onError: (error) => intent.settle(error),
     onSuccess: () => {

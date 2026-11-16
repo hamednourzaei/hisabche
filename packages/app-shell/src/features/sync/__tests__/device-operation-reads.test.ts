@@ -150,10 +150,12 @@ describe('V68.1 — «the device is ready»', () => {
     expect(deviceReadyFor(ws, 'invoice.create')).toBe(true)
   })
 
-  test('payments and returns are not run by the device', () => {
+  test('payments run on a ready device (V70 §8); returns still do not', () => {
     const ws = 'ws-1'
-    for (const table of localTableSchema.options) markTableSynced(table, ws)
     expect(deviceReadyFor(ws, 'payment.record')).toBe(false)
+    for (const table of localTableSchema.options) markTableSynced(table, ws)
+    expect(deviceReadyFor(ws, 'payment.record')).toBe(true)
+    expect(deviceReadyFor('ws-2', 'payment.record')).toBe(false)
     expect(deviceReadyFor(ws, 'invoice.return')).toBe(false)
   })
 

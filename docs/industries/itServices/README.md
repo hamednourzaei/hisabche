@@ -50,28 +50,28 @@
 
 ### گردش کار روزانه
 
-مانند خانواده‌ی «تعمیرات» — تفاوتی نیست.
+مانند خانواده‌ی «تعمیرات» — تفاوتی نیست. سند: [DAILY-WORKFLOW.md](./DAILY-WORKFLOW.md)
 
 ### صفحه‌به‌صفحه
 
-منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/market-seller`، `/till`، `/warehouse`.
+منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/market-seller`، `/till`، `/warehouse`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
 
 ### عملیات و تراکنش
 
-مانند خانواده‌ی «تعمیرات» — تفاوتی نیست.
+مانند خانواده‌ی «تعمیرات» — تفاوتی نیست. سند: [OPERATIONS-AND-TRANSACTIONS.md](./OPERATIONS-AND-TRANSACTIONS.md)
 
 ### KPI و گزارش
 
-قطعه‌ی اختصاصی داشبورد: `openRepairTickets`.
+قطعه‌ی اختصاصی داشبورد: `openRepairTickets`. سند: [KPI-AND-REPORTS.md](./KPI-AND-REPORTS.md)
 
 ### نقش‌ها و دسترسی
 
-مانند خانواده‌ی «تعمیرات» — تفاوتی نیست.
+مانند خانواده‌ی «تعمیرات» — تفاوتی نیست. سند: [ROLES-AND-PERMISSIONS.md](./ROLES-AND-PERMISSIONS.md)
 
 ### آفلاین و دستگاه
 
-مانند خانواده‌ی «تعمیرات» — تفاوتی نیست.
+مانند خانواده‌ی «تعمیرات» — تفاوتی نیست. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است.
+شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

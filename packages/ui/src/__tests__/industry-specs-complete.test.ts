@@ -104,10 +104,10 @@ describe('docs/industries is complete', () => {
     }
   })
 
-  it('the four representatives have all eight files', () => {
+  it('the four representatives are hand-written; every trade has all eight files', () => {
     const representatives = Object.keys(REPRESENTATIVES)
     expect(representatives.sort()).toEqual(['beautySalon', 'clothing', 'education', 'repairs'])
-    for (const id of representatives) {
+    for (const id of INDUSTRY_KEYS) {
       for (const file of REPRESENTATIVE_FILES) {
         expect({ id, file, present: byPath.has(`${id}/${file}`) }).toEqual({
           id,

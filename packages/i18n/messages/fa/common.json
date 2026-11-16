@@ -13688,7 +13688,10 @@
       "REPAIR_TICKET_CHANGED": "کس دیگری همین حالا وضعیت را عوض کرد؛ دوباره ببینید.",
       "REPAIR_CUSTOMER_NOT_FOUND": "مشتری پیدا نشد.",
       "REPAIR_SERIAL_NOT_FOUND": "این شماره سریال پیدا نشد.",
-      "REPAIR_NOT_READY": "بخش تعمیرات هنوز راه‌اندازی نشده (retail-ops-01)."
+      "REPAIR_NOT_READY": "بخش تعمیرات هنوز راه‌اندازی نشده (retail-ops-01).",
+      "REPAIR_QA_REQUIRED": "پیش از تحویل، کنترل کیفیت باید «قبول» ثبت شود.",
+      "REPAIR_QA_ONLY_WHEN_READY": "کنترل کیفیت فقط برای دستگاهِ «آماده‌ی تحویل» ثبت می‌شود.",
+      "REPAIR_QA_FAIL_NOTE_REQUIRED": "برای «رد»، بنویسید چه ایرادی دیده شد."
     },
     "createFromWarranty": "ثبت پذیرش تعمیر",
     "partsAndBill": "قطعات و فاکتور",
@@ -13719,9 +13722,18 @@
     "qualityTestingTitle": "آزمایش و کنترل کیفیت تعمیر",
     "qualityEmpty": "هنوز آزمایشی ثبت نشده است.",
     "qualityPass": "تایید آزمایش",
-    "qualityFailRework": "رد و بازکاری",
     "qualityPassed": "آزمایش کیفیت تایید شد",
-    "qualityRework": "نیاز به بازکاری ثبت شد"
+    "qualityRework": "نیاز به بازکاری ثبت شد",
+    "qualityFail": "رد — برگشت به تعمیر",
+    "qualityFailNote": "ایراد دیده‌شده (برای رد لازم است)",
+    "qualityRequiredHint": "تحویل فقط بعد از «قبول» کنترل کیفیت ممکن است.",
+    "qualityVerdict": {
+      "pass": "قبول",
+      "fail": "رد",
+      "rework": "برگشت به تعمیر",
+      "check": "بررسی",
+      "defect": "نقص"
+    }
   },
   "salon": {
     "resourceAdded": "اضافه شد",

@@ -151,7 +151,7 @@ describe('V59.1 Golden-fixture server vs local-engine parity', () => {
        VALUES (?, ?, 7, 'c1', 'Redmi Note', 'Mic', 'received', ?)`,
       [ticketId, TEST_WORKSPACE_ID, TEST_USER_ID],
     )
-    const serverCode = repairMoveRefusal('received', { status: 'delivered' })
+    const serverCode = repairMoveRefusal('received', { status: 'delivered' }, null)
     expect(() =>
       applyLocalRepairTransition(db, TEST_WORKSPACE_ID, TEST_USER_ID, ticketId, {
         status: 'delivered',

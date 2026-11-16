@@ -90,17 +90,50 @@ export const repairTicketMoveSchema = z.object({
 })
 export type RepairTicketMoveInput = z.infer<typeof repairTicketMoveSchema>
 
+/**
+ * The result of the quality check before handover (V71 · repair QC).
+ *
+ * Recorded in the ONE quality log (`quality_events`, source_type `repair`,
+ * event_kind `pass` / `fail`) — there is no second QC table. The LATEST of
+ * the two kinds decides: a fail after a pass means the unit went back.
+ */
+export const REPAIR_QUALITY_RESULTS = ['pass', 'fail'] as const
+export type RepairQualityResult = (typeof REPAIR_QUALITY_RESULTS)[number]
+
+export const repairQualityCheckSchema = z
+  .object({
+    result: z.enum(REPAIR_QUALITY_RESULTS),
+    notes: z.string().trim().max(500).optional(),
+  })
+  // A failed check without a reason tells the technician nothing to fix.
+  .refine((body) => body.result === 'pass' || Boolean(body.notes), {
+    message: 'REPAIR_QA_FAIL_NOTE_REQUIRED',
+    path: ['notes'],
+  })
+export type RepairQualityCheckInput = z.infer<typeof repairQualityCheckSchema>
+
+/**
+ * Why a move is refused, or null.
+ *
+ * `latestQuality` is REQUIRED, never optional: an optional argument is how a
+ * caller that forgot to read the check would deliver an unchecked unit with a
+ * green suite. `null` = no check recorded, which is not a pass.
+ */
 export function repairMoveRefusal(
   from: RepairStatus,
   input: RepairTicketMoveInput,
+  latestQuality: RepairQualityResult | null,
 ):
   | 'REPAIR_MOVE_NOT_ALLOWED'
   | 'REPAIR_CANCEL_NOTE_REQUIRED'
   | 'REPAIR_INVOICE_ONLY_ON_DELIVERY'
+  | 'REPAIR_QA_REQUIRED'
   | null {
   if (!canMoveRepair(from, input.status)) return 'REPAIR_MOVE_NOT_ALLOWED'
   if (input.status === 'cancelled' && !input.note) return 'REPAIR_CANCEL_NOTE_REQUIRED'
   if (input.invoiceId && input.status !== 'delivered') return 'REPAIR_INVOICE_ONLY_ON_DELIVERY'
+  // Handover only after a passing check: the customer must never collect a unit nobody tested.
+  if (input.status === 'delivered' && latestQuality !== 'pass') return 'REPAIR_QA_REQUIRED'
   return null
 }
 

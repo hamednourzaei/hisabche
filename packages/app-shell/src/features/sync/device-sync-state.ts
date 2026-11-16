@@ -149,11 +149,18 @@ export const NOT_PULLED_YET: readonly LocalTable[] = [
 /**
  * Operations a ready device may run itself.
  *
- * `payment.record` and `invoice.return` are NOT here: nothing proves the local
- * route and the server agree for them yet (no golden parity, and a return
- * reverses cost layers the device never pulled). They take the server road.
+ * `payment.record` joined on 16 Nov 2026 (V70 §8): the local route books the
+ * server's entry line for line (`payment-posting-parity.test.ts`), allocates
+ * by the server's rules (`payment-allocation-parity.test.ts`) and hands the
+ * server's id back through `confirm-server`.
+ *
+ * `invoice.return` is NOT here: a return reverses cost layers the device never
+ * pulled. It takes the server road.
  */
-const DEVICE_FIRST_OPERATIONS: ReadonlySet<DeviceOperation> = new Set(['invoice.create'])
+const DEVICE_FIRST_OPERATIONS: ReadonlySet<DeviceOperation> = new Set([
+  'invoice.create',
+  'payment.record',
+])
 
 const keyOf = (workspaceId: string, table: string) => `${workspaceId}:${table}`
 

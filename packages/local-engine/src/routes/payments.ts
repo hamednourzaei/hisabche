@@ -24,7 +24,9 @@ import {
   type PartyLineRow,
   type PartyPaymentRow,
   type PartyType,
+  moneyAccountRole,
   paymentPosting,
+  type AccountRole,
   recordPaymentSchema,
   settlesInCurrency,
   tillAmountMinor,
@@ -32,11 +34,16 @@ import {
   type OpenInvoice,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, OfflineNotAvailableError, ValidationError } from '../errors'
-import { assertPeriodOpen, branchOfInvoices, reverseLedgerEntry } from './local-ledger'
+import {
+  assertPeriodOpen,
+  branchOfInvoices,
+  ensureAccountsForRoles,
+  postDocument,
+  reverseLedgerEntry,
+} from './local-ledger'
 import { requireCapability } from '../auth'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import type { Router } from '../router'
-import { ensureDefaultAccounts } from './invoices'
 import type { RouteHandlerContext } from '../types'
 
 export interface PaymentRow {
@@ -439,104 +446,76 @@ export function registerPaymentRoutes(router: Router): void {
         }
       }
 
-      // 5. Post General Ledger lines
-      const accounts = ensureDefaultAccounts(db, workspaceId)
-      const paymentRate = bookingRate
-
+      // 5. Post the ledger entry — line for line what the server's `bookPayment` writes
+      //    (payments.service.ts), through the same shared rules:
+      //    · the money side is cash for cash and the bank for any other method (`moneyAccountRole`);
+      //    · a foreign payment settles each invoice at THAT invoice's frozen rate and the gap goes to
+      //      `fx_gain_loss` (`paymentPosting` with `allocationRates` as the server reads them).
+      //    Until 16 Nov 2026 the device posted every allocation at the payment's own rate and always to
+      //    cash: a dollar receipt against a dollar invoice booked no exchange difference here while the
+      //    server did, and a bank transfer moved the drawer. The fee is refused above, so it is 0.
+      const allocationRates = (() => {
+        if (currency === baseCurrency || rawAllocations.length === 0) {
+          return rawAllocations.map((a) => ({ amount: a.amount, rate: null as number | null }))
+        }
+        const rows = db.all<{ id: string; exchange_rate: number | null }>(
+          `SELECT id, exchange_rate FROM invoice WHERE workspace_id = ? AND id IN (${rawAllocations
+            .map(() => '?')
+            .join(', ')})`,
+          [workspaceId, ...rawAllocations.map((a) => a.invoiceId)],
+        )
+        const rateOf = new Map(rows.map((row) => [row.id, row.exchange_rate]))
+        return rawAllocations.map((a) => ({
+          amount: a.amount,
+          rate: rateOf.get(a.invoiceId) ?? null,
+        }))
+      })()
       const posting = paymentPosting({
         direction,
         amount,
-        paymentRate,
-        allocations: rawAllocations.map((a) => ({ amount: a.amount, rate: paymentRate })),
+        paymentRate: bookingRate,
+        allocations: allocationRates,
       })
 
-      const journalId = generateUuid()
-      const journalNumber = `J-${entryDate.slice(0, 4)}-${paymentNumber}`
+      const isIncoming = direction === 'in'
+      // Money out to a CUSTOMER is a refund closing what the business owes on receivables (server rule).
+      const partyRole = isIncoming
+        ? partyType === 'supplier'
+          ? 'payable'
+          : 'receivable'
+        : partyType === 'customer'
+          ? 'receivable'
+          : 'payable'
+      const moneyRole = moneyAccountRole(method)
+      const roles: AccountRole[] = [moneyRole, partyRole]
+      if (posting.difference !== 0) roles.push('fx_gain_loss')
+      const { accounts } = ensureAccountsForRoles(db, workspaceId, roles)
+      const differenceLine =
+        posting.difference === 0
+          ? []
+          : posting.difference > 0
+            ? [{ accountId: accounts.fx_gain_loss!, debit: 0, credit: posting.difference }]
+            : [{ accountId: accounts.fx_gain_loss!, debit: -posting.difference, credit: 0 }]
 
-      db.run(
-        `INSERT INTO journal_entry (
-          id, workspace_id, entry_number, date, description, reference, status,
-          source_type, source_id, posted_at, created_at, updated_at, origin, sync_state
-        ) VALUES (?, ?, ?, ?, ?, ?, 'posted', 'payment', ?, ?, ?, ?, 'local', 'local_only')`,
-        [
-          journalId,
-          workspaceId,
-          journalNumber,
-          entryDate,
-          `پرداخت ${paymentNumber}`,
-          paymentNumber,
-          paymentId,
-          now,
-          now,
-          now,
-        ],
-      )
-
-      const partyAccount = partyType === 'supplier' ? accounts.payable! : accounts.receivable!
-      const cashAccount = accounts.cash!
-
-      if (direction === 'in') {
-        // Debit Cash, Credit Accounts Receivable
-        db.run(
-          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-          [
-            generateUuid(),
-            workspaceId,
-            journalId,
-            cashAccount,
-            posting.cash,
-            paymentNumber,
-            now,
-            now,
-          ],
-        )
-        db.run(
-          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-          [
-            generateUuid(),
-            workspaceId,
-            journalId,
-            partyAccount,
-            posting.party,
-            paymentNumber,
-            now,
-            now,
-          ],
-        )
-      } else {
-        // Debit Accounts Payable, Credit Cash
-        db.run(
-          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-          [
-            generateUuid(),
-            workspaceId,
-            journalId,
-            partyAccount,
-            posting.party,
-            paymentNumber,
-            now,
-            now,
-          ],
-        )
-        db.run(
-          `INSERT INTO journal_line (id, workspace_id, journal_id, account_id, debit, credit, description, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?)`,
-          [
-            generateUuid(),
-            workspaceId,
-            journalId,
-            cashAccount,
-            posting.cash,
-            paymentNumber,
-            now,
-            now,
-          ],
-        )
-      }
-
+      const outcome = postDocument(db, ctx, {
+        sourceType: 'payment',
+        sourceId: paymentId,
+        date: entryDate,
+        description: `${isIncoming ? 'دریافت' : 'پرداخت'} ${paymentNumber}`,
+        reference: paymentNumber,
+        lines: isIncoming
+          ? [
+              { accountId: accounts[moneyRole]!, debit: posting.cash, credit: 0 },
+              { accountId: accounts[partyRole]!, debit: 0, credit: posting.party },
+              ...differenceLine,
+            ]
+          : [
+              { accountId: accounts[partyRole]!, debit: posting.party, credit: 0 },
+              { accountId: accounts[moneyRole]!, debit: 0, credit: posting.cash },
+              ...differenceLine,
+            ],
+      })
+      const journalId = outcome.status === 'skipped' ? null : outcome.entryId
       db.run('UPDATE payment SET journal_entry_id = ? WHERE id = ?', [journalId, paymentId])
 
       if (c.headers?.['x-hisabche-queue'] === '1') {
@@ -558,6 +537,73 @@ export function registerPaymentRoutes(router: Router): void {
         // What no invoice was named for: visible, traceable, and nothing was settled on its behalf.
         unallocated: unallocatedOf(amount, rawAllocations),
       }
+    })
+  })
+
+  // ─── POST /payments/:id/confirm-server ──────────────────────
+  //
+  // V70 §8: the server accepted a payment this device recorded first — the
+  // mirror of `POST /invoices/:id/confirm-server`.
+  //
+  // The device wrote it under its own id and number. The server answered the
+  // push with ITS id and number. Both land on the device's row at once, and
+  // everything hung on the device id (allocations, the journal entry's source,
+  // deposit applications and refunds) moves to the server's id in ONE
+  // transaction — otherwise a later «cancel this payment» would queue the
+  // device id, the server would answer 404, and the push treats a 404 cancel
+  // as already done: the payment would stay on the server's books for good.
+  //
+  // It moves references and nothing else: no amount or balance is recomputed.
+  // `confirmed: false` is an answer, not an error.
+  router.post('/payments/:id/confirm-server', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    requireCapability(ctx, 'payment.record')
+    const { workspaceId } = ctx
+    const clientId = params.id
+    const body = (c.body ?? {}) as Record<string, unknown>
+    const serverId = typeof body.serverId === 'string' ? body.serverId.trim() : ''
+    const paymentNumber = typeof body.paymentNumber === 'string' ? body.paymentNumber.trim() : ''
+    if (!serverId) throw new ValidationError('CONFIRM_SERVER_PAYMENT_INCOMPLETE: serverId')
+
+    return db.transaction(() => {
+      const mine = db.get<{ id: string; payment_number: string | null }>(
+        'SELECT id, payment_number FROM payment WHERE id = ? AND workspace_id = ?',
+        [clientId, workspaceId],
+      )
+      if (!mine) return { confirmed: false, reason: 'NOT_ON_DEVICE' }
+
+      const now = new Date().toISOString()
+      const number = paymentNumber || mine.payment_number
+
+      if (serverId !== clientId) {
+        // The server's row is already here under its own id: two rows for one
+        // payment is the one thing this must never leave.
+        const there = db.get<{ id: string }>('SELECT id FROM payment WHERE id = ?', [serverId])
+        if (there) return { confirmed: false, reason: 'ALREADY_PRESENT' }
+
+        db.run('UPDATE payment_allocation SET payment_id = ? WHERE payment_id = ?', [
+          serverId,
+          clientId,
+        ])
+        db.run(
+          "UPDATE journal_entry SET source_id = ? WHERE source_type = 'payment' AND source_id = ?",
+          [serverId, clientId],
+        )
+        db.run('UPDATE order_deposit_applications SET payment_id = ? WHERE payment_id = ?', [
+          serverId,
+          clientId,
+        ])
+        db.run('UPDATE order_deposit_refunds SET payment_id = ? WHERE payment_id = ?', [
+          serverId,
+          clientId,
+        ])
+      }
+      db.run(
+        `UPDATE payment SET id = ?, payment_number = ?, sync_state = 'synced', updated_at = ?
+          WHERE id = ? AND workspace_id = ?`,
+        [serverId, number, now, clientId, workspaceId],
+      )
+      return { confirmed: true, id: serverId, paymentNumber: number }
     })
   })
 

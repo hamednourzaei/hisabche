@@ -54,28 +54,28 @@
 
 ### گردش کار روزانه
 
-مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست.
+مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست. سند: [DAILY-WORKFLOW.md](./DAILY-WORKFLOW.md)
 
 ### صفحه‌به‌صفحه
 
-فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/till`.
+فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/till`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
 
 ### عملیات و تراکنش
 
-مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست.
+مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست. سند: [OPERATIONS-AND-TRANSACTIONS.md](./OPERATIONS-AND-TRANSACTIONS.md)
 
 ### KPI و گزارش
 
-مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست.
+مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست. سند: [KPI-AND-REPORTS.md](./KPI-AND-REPORTS.md)
 
 ### نقش‌ها و دسترسی
 
-مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست.
+مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست. سند: [ROLES-AND-PERMISSIONS.md](./ROLES-AND-PERMISSIONS.md)
 
 ### آفلاین و دستگاه
 
-مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست.
+مانند خانواده‌ی «خرده‌فروشی» — تفاوتی نیست. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
 
 ### شکاف‌ها و نیازمندی‌ها
 
-نیمه‌کاره: `auto_fitments` (`CORE_CHARGE_NOT_APPLIED`).
+نیمه‌کاره: `auto_fitments` (`CORE_CHARGE_NOT_APPLIED`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

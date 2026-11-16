@@ -1,0 +1,21 @@
+# آرایشگاه و سلمانی — عملیات و تراکنش
+
+<!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
+
+این صنف سند دستی جدا ندارد. این سند از [خانواده‌ی «خدمات شخصی»](../families/personal_services.md) و از پروفایل همین صنف در کد ساخته شده و چیزی بیش از کد وعده نمی‌دهد. نزدیک‌ترین سند دستی: [beautySalon/OPERATIONS-AND-TRANSACTIONS.md](../beautySalon/OPERATIONS-AND-TRANSACTIONS.md) — همان مشخصات را می‌خواند.
+
+## قواعد حسابداری خانواده
+
+- بیعانه و پیش‌دریافت بدهی است تا کالا/خدمت تحویل شود؛ درآمد فقط با فاکتور شناخته می‌شود (یک موتور: `order_deposits`).
+- فروش ≠ درآمد تحقق‌یافته ≠ سود: سود فقط از گزارش سود می‌آید و با بهای نامعلوم، «نامعلوم» است.
+- کمیسیون از قاعده و نرخ می‌آید، نه از درصدی روی کل فروش.
+- جلسه‌ی «نیامد» درآمد نیست؛ بیعانه‌اش طبق تصمیم کسب‌وکار برگشت یا ضبط می‌شود.
+
+## موتورهای اختصاصی که این صنف روشن می‌کند
+
+هیچ — فاکتور، پرداخت، انبار و دفتر کل مشترک.
+
+## DNA عملیاتی
+
+- عرضه: `TIME_SERVICE` · دریافت سفارش: `APPOINTMENT_BOOKING` · انبار: `SERVICE_CONSUMABLES`
+- تسویه: `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` · نیروی کار: `UNRESOLVED` · مشتری: `CLIENT_CARE_PROFILE`

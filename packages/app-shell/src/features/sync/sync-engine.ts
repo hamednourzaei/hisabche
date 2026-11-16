@@ -579,6 +579,33 @@ async function confirmServerInvoice(
 }
 
 /**
+ * Confirm server acceptance of a payment (V70 §8), the mirror of
+ * `confirmServerInvoice`: the server's id and number land on the device's row
+ * and everything hung on the device id moves with it, in ONE transaction.
+ *
+ * Best-effort: the push already succeeded. A failure here leaves the device row
+ * under its own id; it is never turned into «will retry», which would resend a
+ * payment the server already has (the key would replay it, but the row must
+ * not look unsent).
+ */
+async function confirmServerPayment(
+  clientId: string,
+  serverId: string,
+  paymentNumber: string | null,
+): Promise<boolean> {
+  try {
+    const res = await localRequest<{ confirmed?: boolean }>(
+      'POST',
+      `/payments/${clientId}/confirm-server`,
+      { serverId, ...(paymentNumber ? { paymentNumber } : {}) },
+    )
+    return Boolean(res?.confirmed)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Write the SERVER's answer about credit onto the local invoice row (V53 OD-3).
  *
  * The device never decides this: `pending_validation` and `rejected` are set only from a refusal the server
@@ -1435,6 +1462,17 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
               ? await confirmServerInvoice(entry.clientId, serverId, invoiceNumber)
               : false
           if (!confirmed) await discardInvoiceProjection(entry.clientId)
+        }
+        // V70 §8: a payment the device recorded first now carries the server's id.
+        if (entry.entity === 'payment' && entry.operation === 'create') {
+          const serverId = typeof pushResult?.id === 'string' ? pushResult.id : null
+          const paymentNumber =
+            typeof pushResult?.paymentNumber === 'string'
+              ? pushResult.paymentNumber
+              : typeof pushResult?.payment_number === 'string'
+                ? pushResult.payment_number
+                : null
+          if (serverId) await confirmServerPayment(entry.clientId, serverId, paymentNumber)
         }
         gate.markSent(entry)
         committed = [

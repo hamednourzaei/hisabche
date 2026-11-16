@@ -58,6 +58,7 @@ const KNOWN = [
   'REPAIR_CUSTOMER_NOT_FOUND',
   'REPAIR_SERIAL_NOT_FOUND',
   'REPAIR_NOT_READY',
+  'REPAIR_QA_REQUIRED',
 ]
 
 /** The customer's sale invoices, to link the one that charged for the repair. */

@@ -638,7 +638,8 @@ function build(key: IndustryKey): ProfileDefinition {
 
   return deepFreeze({
     key,
-    kind: capabilities.length > 0 || Boolean(override.vocabulary) ? 'specialized' : 'generic',
+    // Vocabulary alone renames a screen; it does not make the trade's work run (audit, 16 Nov 2026).
+    kind: capabilities.length > 0 ? 'specialized' : 'generic',
     capabilities,
     requestedCapabilities,
     invoiceDefaults: {

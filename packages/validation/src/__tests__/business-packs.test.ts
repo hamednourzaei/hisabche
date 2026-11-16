@@ -148,14 +148,15 @@ describe('mobile: repair slip', () => {
   })
 
   it('a cancel needs a note; an invoice only on delivery; an estimate needs its currency', () => {
-    expect(repairMoveRefusal('received', { status: 'cancelled' })).toBe(
+    expect(repairMoveRefusal('received', { status: 'cancelled' }, null)).toBe(
       'REPAIR_CANCEL_NOTE_REQUIRED',
     )
     expect(
-      repairMoveRefusal('diagnosing', {
-        status: 'ready',
-        invoiceId: '9d1c5f3a-1b2c-4d5e-8f90-123456789abc',
-      }),
+      repairMoveRefusal(
+        'diagnosing',
+        { status: 'ready', invoiceId: '9d1c5f3a-1b2c-4d5e-8f90-123456789abc' },
+        null,
+      ),
     ).toBe('REPAIR_INVOICE_ONLY_ON_DELIVERY')
     expect(repairEstimateRefusal({ estimateMinor: 500, currency: null })).toBe(
       'REPAIR_ESTIMATE_CURRENCY_REQUIRED',

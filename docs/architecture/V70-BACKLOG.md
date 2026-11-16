@@ -245,3 +245,29 @@ product_stock, order_deposits, order_deposit_applications, order_deposit_refunds
 6. بند ۷ (دروازه‌ی پک) — کوچک و بی‌ریسک؛ فقط وقتی پرچم تحویل پک روشن شود اهمیت پیدا می‌کند.
 7. بند ۸ (پرداخت local-first) — بعد از بند ۶، چون روت `confirm-server` پرداخت به pull/نگاشت شناسه تکیه دارد.
 8. بند ۹ (parity دو ذخیره‌ساز) — هر وقت CI لینوکس با Postgres در دسترس بود؛ محلی `BLOCKED_EXTERNAL`.
+
+### بند ۸ — پیشرفت ۱۶ نوامبر
+
+- ✅ سند پرداخت محلی = سند سرور: نرخ منجمد هر فاکتور + `fx_gain_loss`، و بانک برای روش غیرنقدی (`payment-posting-parity.test.ts` ۲/۲، injection قرمز).
+- ✅ روت `POST /payments/:id/confirm-server` (شناسه و شماره‌ی سرور + تخصیص، سند دفتر، کاربرد/استرداد بیعانه در یک تراکنش) — `payment-confirm-server.test.ts` ۶/۶، injection ۲ قرمز.
+- ✅ `confirmServerPayment` در `sync-engine.ts` بعد از push پرداخت (best-effort، مثل فاکتور).
+- ✅ `submitPayment` در `packages/api/src/hooks/payments.ts`: دستگاه آماده ⇒ موتور محلی با کلید intent به‌عنوان شناسه؛ رد آنلاین ⇒ یک بار سرور با همان کلید؛ رد آفلاین ⇒ همان رد — `payment-device-first.test.ts` ۵/۵، injection ۱ قرمز.
+- ✅ `payment.record` در `DEVICE_FIRST_OPERATIONS`. ⚠️ تست app-shell (`device-operation-reads.test.ts`) بازنویسی شد ولی اجرا نشد (jest نصب نیست).
+- ⬜ اجرای واقعی روی ویندوز/اندروید و Postgres — `IMPLEMENTED_NOT_LIVE_VERIFIED`.
+- ⚠️ تصمیم مالک: دریافت از تأمین‌کننده در سرور به «دریافتنی» و در دستگاه به «پرداختنی» می‌رود.
+
+### بند ۳ — ساخته شد (۱۶ نوامبر، V71)
+
+- ⚠️ **طرح بالا غلط بود و اجرا نشد:** جدول `repair_quality_checks` موتور دوم می‌شد. دفتر کیفیت از پیش
+  هست — `quality_events` (`quality-events-01`) با `source_type = 'repair'` و `pass`/`fail`/`rework` — و پنل
+  تعمیر از قبل روی آن می‌نوشت (با مجوز اشتباه `inventory.configure` و برچسب خام `event_kind`).
+- ✅ قاعده‌ی یکتا: `repairMoveRefusal(from, input, latestQuality)` — پارامتر سوم **اجباری**؛ تحویل بدون
+  آخرین حکم «قبول» ⇒ `REPAIR_QA_REQUIRED`. `rework` قدیمی = رد.
+- ✅ سرور: `POST /api/repair-tickets/:id/quality-check` (همان مجوز حرکت تیکت، `invoice.create`) از
+  `QualityService.recordQualityEvent`؛ «رد» روی دستگاهِ آماده آن را به تعمیر برمی‌گرداند. صورت‌حساب نهایی
+  کنترل را **پیش از** ساختن فاکتور می‌سنجد (وگرنه فاکتور صادر می‌شد و تحویل رد).
+- ✅ دیتابیس: `docs/repair-quality-01-migration.sql` (تریگر روی `repair_tickets`، بدون جدول تازه) +
+  `VERIFY-repair-quality-01.sql` + `repair-quality-01.pg.test.ts` — **منتظر اجرا و VERIFY**؛ تست pg روی
+  این دستگاه اجرا نشد (Postgres نیست).
+- ✅ دستگاه: `quality_events` روی دستگاه نیست، پس دستگاه هرگز خودش تحویل نمی‌دهد (`null`).
+- ✅ UI: پنل تعمیر — یادداشت، «قبول» / «رد — برگشت به تعمیر» (رد بدون یادداشت غیرفعال)، حکم ترجمه‌شده.

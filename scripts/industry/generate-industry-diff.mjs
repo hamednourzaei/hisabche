@@ -111,7 +111,8 @@ const profiles = industryKeys.map((key) => {
   const vocabulary = [...vocabularyBlock.matchAll(/(productKey|customerKey):\s*'([^']+)'/g)].map(
     (match) => `${match[1]}=${match[2]}`,
   )
-  const kind = capabilities.length > 0 || vocabulary.length > 0 ? 'تخصصی' : 'پایه (عمومی)'
+  // Same rule as `build()` in industry-profiles.ts: vocabulary alone renames, it does not specialise (16 Nov 2026).
+  const kind = capabilities.length > 0 ? 'تخصصی' : 'پایه (عمومی)'
 
   return {
     key,

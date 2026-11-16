@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-678 endpoint: 209 آفلاین در دسترس · 449 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
+679 endpoint: 209 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
 
 | قابلیت                              | در دسترس | فقط آنلاین | نیست |
 | ----------------------------------- | -------: | ---------: | ---: |
@@ -116,7 +116,7 @@
 | `operations.package_grants`         |        0 |          1 |    0 |
 | `operations.pkg_suspension`         |        0 |          1 |    0 |
 | `operations.quality`                |        0 |          4 |    0 |
-| `operations.repairs`                |        0 |          9 |    0 |
+| `operations.repairs`                |        0 |         10 |    0 |
 | `operations.resource_bookings`      |        3 |          0 |    0 |
 | `operations.salon_setup`            |        0 |          7 |    0 |
 | `operations.service_delivery`       |       11 |          0 |    0 |

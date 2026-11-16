@@ -13688,7 +13688,10 @@
       "REPAIR_TICKET_CHANGED": "Someone else just changed it; look again.",
       "REPAIR_CUSTOMER_NOT_FOUND": "Customer not found.",
       "REPAIR_SERIAL_NOT_FOUND": "That serial was not found.",
-      "REPAIR_NOT_READY": "Repairs are not set up yet (retail-ops-01)."
+      "REPAIR_NOT_READY": "Repairs are not set up yet (retail-ops-01).",
+      "REPAIR_QA_REQUIRED": "Record a passing quality check before handing the unit over.",
+      "REPAIR_QA_ONLY_WHEN_READY": "A quality check is recorded only on a unit that is ready for pickup.",
+      "REPAIR_QA_FAIL_NOTE_REQUIRED": "For a fail, write what was wrong."
     },
     "createFromWarranty": "Open repair slip",
     "partsAndBill": "Parts & Bill",
@@ -13719,9 +13722,18 @@
     "qualityTestingTitle": "Repair quality testing",
     "qualityEmpty": "No quality checks recorded yet.",
     "qualityPass": "Pass testing",
-    "qualityFailRework": "Fail & rework",
     "qualityPassed": "Quality check passed",
-    "qualityRework": "Marked for rework"
+    "qualityRework": "Marked for rework",
+    "qualityFail": "Fail — back to repair",
+    "qualityFailNote": "What was wrong (required for a fail)",
+    "qualityRequiredHint": "Handover is possible only after a passing quality check.",
+    "qualityVerdict": {
+      "pass": "Pass",
+      "fail": "Fail",
+      "rework": "Sent back",
+      "check": "Checked",
+      "defect": "Defect"
+    }
   },
   "salon": {
     "resourceAdded": "Added",

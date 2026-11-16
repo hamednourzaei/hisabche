@@ -56,28 +56,28 @@
 
 ### گردش کار روزانه
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست.
+مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [DAILY-WORKFLOW.md](./DAILY-WORKFLOW.md)
 
 ### صفحه‌به‌صفحه
 
-فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/till`.
+فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/till`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
 
 ### عملیات و تراکنش
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست.
+مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [OPERATIONS-AND-TRANSACTIONS.md](./OPERATIONS-AND-TRANSACTIONS.md)
 
 ### KPI و گزارش
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست.
+مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [KPI-AND-REPORTS.md](./KPI-AND-REPORTS.md)
 
 ### نقش‌ها و دسترسی
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست.
+مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [ROLES-AND-PERMISSIONS.md](./ROLES-AND-PERMISSIONS.md)
 
 ### آفلاین و دستگاه
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست.
+مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
 
 ### شکاف‌ها و نیازمندی‌ها
 
-نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`)؛ `auto_fitments` (`CORE_CHARGE_NOT_APPLIED`).
+نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`)؛ `auto_fitments` (`CORE_CHARGE_NOT_APPLIED`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

@@ -57,28 +57,28 @@
 
 ### گردش کار روزانه
 
-مانند خانواده‌ی «سلامت» — تفاوتی نیست.
+مانند خانواده‌ی «سلامت» — تفاوتی نیست. سند: [DAILY-WORKFLOW.md](./DAILY-WORKFLOW.md)
 
 ### صفحه‌به‌صفحه
 
-فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/market-seller`، `/till`.
+فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/market-seller`، `/till`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
 
 ### عملیات و تراکنش
 
-مانند خانواده‌ی «سلامت» — تفاوتی نیست.
+مانند خانواده‌ی «سلامت» — تفاوتی نیست. سند: [OPERATIONS-AND-TRANSACTIONS.md](./OPERATIONS-AND-TRANSACTIONS.md)
 
 ### KPI و گزارش
 
-مانند خانواده‌ی «سلامت» — تفاوتی نیست.
+مانند خانواده‌ی «سلامت» — تفاوتی نیست. سند: [KPI-AND-REPORTS.md](./KPI-AND-REPORTS.md)
 
 ### نقش‌ها و دسترسی
 
-مانند خانواده‌ی «سلامت» — تفاوتی نیست.
+مانند خانواده‌ی «سلامت» — تفاوتی نیست. سند: [ROLES-AND-PERMISSIONS.md](./ROLES-AND-PERMISSIONS.md)
 
 ### آفلاین و دستگاه
 
-مانند خانواده‌ی «سلامت» — تفاوتی نیست.
+مانند خانواده‌ی «سلامت» — تفاوتی نیست. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
 
 ### شکاف‌ها و نیازمندی‌ها
 
-نیمه‌کاره: `batch_expiry` (`BATCH_RETURN_RESTORE_MISSING`)؛ `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`).
+نیمه‌کاره: `batch_expiry` (`BATCH_RETURN_RESTORE_MISSING`)؛ `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

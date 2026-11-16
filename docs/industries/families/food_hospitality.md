@@ -17,11 +17,11 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                               | پروفایل       | archetype          | قابلیت‌های روشن | ساخته‌نشده |
-| ------------------------------------------------- | ------------- | ------------------ | --------------- | ---------- |
-| [نانوایی و قنادی](../bakery/README.md) (`bakery`) | `generic`     | `GENERIC_BUSINESS` | —               | —          |
-| [رستوران](../restaurant/README.md) (`restaurant`) | `specialized` | `GENERIC_BUSINESS` | —               | —          |
-| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`)    | `specialized` | `GENERIC_BUSINESS` | —               | —          |
+| صنف                                               | پروفایل   | archetype          | قابلیت‌های روشن | ساخته‌نشده |
+| ------------------------------------------------- | --------- | ------------------ | --------------- | ---------- |
+| [نانوایی و قنادی](../bakery/README.md) (`bakery`) | `generic` | `GENERIC_BUSINESS` | —               | —          |
+| [رستوران](../restaurant/README.md) (`restaurant`) | `generic` | `GENERIC_BUSINESS` | —               | —          |
+| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`)    | `generic` | `GENERIC_BUSINESS` | —               | —          |
 
 ## پنج گردش کار
 

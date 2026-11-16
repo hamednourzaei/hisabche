@@ -46,6 +46,7 @@ const state = {
     closed_at: null as string | null,
   },
   parts: [] as Array<Record<string, unknown>>,
+  quality: [] as Array<Record<string, unknown>>,
 }
 
 const reserveMock = vi.fn(async () => ({
@@ -80,6 +81,16 @@ function createBuilder(table: string) {
       return { data: [{ ...state.ticket }], error: null }
     }
     if (table === 'repair_ticket_events') return { data: [], error: null }
+    if (table === 'quality_events') {
+      if (insertRow) {
+        const row = { id: `qe-${state.quality.length + 1}`, ...insertRow }
+        state.quality.push(row)
+        return { data: [row], error: null }
+      }
+      // Newest first, as the service orders it.
+      const matched = state.quality.filter((r) => eqs.every(([k, v]) => r[k] === v)).reverse()
+      return { data: matched.map((r) => ({ ...r })), error: null }
+    }
     if (table === 'repair_ticket_parts') {
       if (insertRow) {
         const row = {
@@ -212,6 +223,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   state.ticket.status = 'diagnosing'
+  state.quality = []
   state.ticket.customer_approved = false
   state.ticket.invoice_id = null
   state.parts = []
@@ -279,6 +291,38 @@ describe('V59.1 Repair spare parts ATP reservation, consumption gate, and final 
       method: 'POST',
       url: `/api/repair-tickets/${TICKET1}/status`,
       payload: { status: 'ready' },
+    })
+
+    // V71: billing a ready unit hands it over, so without a passing check it is
+    // refused — BEFORE any invoice is created.
+    const unchecked = await app.inject({
+      method: 'POST',
+      url: `/api/repair-tickets/${TICKET1}/bill`,
+      payload: { laborFeeMinor: 50000, paymentMethod: 'cash' },
+    })
+    expect(unchecked.statusCode).toBe(400)
+    expect(unchecked.body).toContain('REPAIR_QA_REQUIRED')
+    expect(invoiceCreateMock).not.toHaveBeenCalled()
+
+    const failNoNote = await app.inject({
+      method: 'POST',
+      url: `/api/repair-tickets/${TICKET1}/quality-check`,
+      payload: { result: 'fail' },
+    })
+    expect(failNoNote.statusCode).toBe(400)
+
+    const passed = await app.inject({
+      method: 'POST',
+      url: `/api/repair-tickets/${TICKET1}/quality-check`,
+      payload: { result: 'pass' },
+    })
+    expect(passed.statusCode, passed.body).toBe(200)
+    expect(passed.json().data.latestQuality).toBe('pass')
+    expect(state.quality).toHaveLength(1)
+    expect(state.quality[0]).toMatchObject({
+      source_type: 'repair',
+      source_id: TICKET1,
+      event_kind: 'pass',
     })
 
     const billed = await app.inject({
