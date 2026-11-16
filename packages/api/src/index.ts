@@ -9,6 +9,8 @@ export {
   setAppEdition,
   getAppEdition,
   registerLocalTransport,
+  requestSyncSoon,
+  onSyncRequested,
   registerFallbackTransport,
   localRequest,
   onOfflineRefusal,
@@ -21,6 +23,13 @@ export {
   type LocalTransportResponse,
   type LocalTransportAdapter,
 } from './lib/client'
+export {
+  executionSiteFor,
+  registerDeviceReadiness,
+  resetDeviceReadiness,
+  type DeviceOperation,
+  type ExecutionSite,
+} from './lib/execution-site'
 export { registerOfflineQueue, type OfflineQueue } from './lib/offline-queue'
 export {
   registerEntitySyncReader,
@@ -268,11 +277,23 @@ export {
   useDashboardKPIs,
   useAIInsights,
   useDashboardSales,
+  useLowStockVariants,
+  useTodaySessions,
+  usePackageCreditsLow,
+  useOpenRepairTickets,
   dashboardKeys,
   type DashboardKPIs,
   type AIInsight,
   type SalesDataPoint,
   type SalesChartData,
+  type LowStockVariantItem,
+  type LowStockVariantsResponse,
+  type TodaySessionItem,
+  type TodaySessionsResponse,
+  type PackageCreditLowItem,
+  type PackageCreditsLowResponse,
+  type OpenRepairTicketItem,
+  type OpenRepairTicketsResponse,
 } from './hooks/dashboard'
 
 // ─── Employees ────────────────────────────────────────────

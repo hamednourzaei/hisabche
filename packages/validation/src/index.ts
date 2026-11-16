@@ -527,6 +527,7 @@ export {
   grantEndsOn,
   grantStateOn,
   grantStatuses,
+  grantStatusesFromRows,
   planGrantConsumption,
   suspensionIntervals,
   unattributedBalance,
@@ -541,6 +542,8 @@ export type {
   GrantSuspensionEvent,
   LedgerAllocationFact,
   LedgerGrantFact,
+  PackageLedgerRowFact,
+  PackageSuspensionFact,
 } from './schemas/universal-core/package-grant-allocation.domain'
 
 // ---------- Sync protocol (local-first push/pull) ----------

@@ -134,6 +134,10 @@ export const DASHBOARD_PART_IDS = [
   'insights',
   'activities',
   'manufacturing',
+  'lowStockVariants',
+  'todaySessions',
+  'packageCreditsLow',
+  'openRepairTickets',
 ] as const
 
 export type DashboardPartId = (typeof DASHBOARD_PART_IDS)[number]
@@ -184,6 +188,13 @@ const GENERIC_DASHBOARD: readonly DashboardPartId[] = [
   'activities',
   'manufacturing',
 ]
+
+/**
+ * The parts EVERY business has. A trade's own part (today's sessions, open
+ * repair tickets, …) is extra: a profile that does not name it does not get it,
+ * and `dashboardUnion` never appends it for a trade that did not ask.
+ */
+export const GENERIC_DASHBOARD_PART_IDS: readonly DashboardPartId[] = GENERIC_DASHBOARD
 
 const GENERIC_INVOICE: InvoiceDefaults = { extraVisibleColumns: [] }
 
@@ -271,11 +282,30 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     capabilities: ['variants'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
+    dashboard: [
+      'lowStockVariants',
+      'kpis',
+      'workQueue',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
   },
   shoes: {
     capabilities: ['variants'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
+    // Reads the clothing spec; the size/colour reorder part is the same one.
+    dashboard: [
+      'lowStockVariants',
+      'kpis',
+      'workQueue',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
   },
   electronics: {
     capabilities: ['serialized_items', 'variants'],
@@ -291,6 +321,16 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     capabilities: ['serialized_items', 'variants'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
+    // Reads the repairs spec; the open-ticket board is the same one.
+    dashboard: [
+      'openRepairTickets',
+      'workQueue',
+      'kpis',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
   },
   computerComponents: {
     capabilities: ['serialized_items', 'variants'],
@@ -306,6 +346,94 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     capabilities: ['serialized_items', 'auto_fitments'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
+  },
+  beautySalon: {
+    capabilities: [],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+    dashboard: [
+      'todaySessions',
+      'kpis',
+      'workQueue',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
+    vocabulary: { productKey: 'industry.vocabulary.service' },
+  },
+  barber: {
+    capabilities: [],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+    dashboard: [
+      'todaySessions',
+      'kpis',
+      'workQueue',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
+    vocabulary: { productKey: 'industry.vocabulary.service' },
+  },
+  education: {
+    capabilities: ['package_credits'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+    dashboard: [
+      'packageCreditsLow',
+      'todaySessions',
+      'kpis',
+      'workQueue',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
+    vocabulary: {
+      customerKey: 'industry.vocabulary.student',
+      productKey: 'industry.vocabulary.course',
+    },
+  },
+  repairs: {
+    capabilities: ['work_queue_sla'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+    dashboard: [
+      'openRepairTickets',
+      'workQueue',
+      'kpis',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
+    vocabulary: { productKey: 'industry.vocabulary.repairItem' },
+  },
+  // Auto repair and IT service both read the repairs spec: same open-ticket
+  // board, no specialised capability claimed that the engine does not have.
+  mechanic: {
+    dashboard: [
+      'openRepairTickets',
+      'workQueue',
+      'kpis',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
+  },
+  itServices: {
+    dashboard: [
+      'openRepairTickets',
+      'workQueue',
+      'kpis',
+      'chart',
+      'insights',
+      'activities',
+      'manufacturing',
+    ],
   },
   restaurant: {
     capabilities: [],

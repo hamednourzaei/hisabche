@@ -22,7 +22,11 @@
     "vocabulary": {
       "piece": "Piece",
       "dish": "Dish",
-      "drink": "Drink"
+      "drink": "Drink",
+      "service": "Service",
+      "student": "Student",
+      "course": "Course",
+      "repairItem": "Repair Item"
     }
   },
   "app": {
@@ -3228,7 +3232,65 @@
       "contractsDue": "Contracts due for billing",
       "procurementMismatches": "Procurement mismatches",
       "openQualityFailures": "Open quality failures"
-    }
+    },
+    "lowStockVariants": {
+      "title": "Low Stock Variants",
+      "empty": "All variants have sufficient stock.",
+      "noVariants": "No product variants registered yet.",
+      "product": "Product",
+      "variant": "Variant",
+      "stock": "Stock",
+      "min": "Min"
+    },
+    "todaySessions": {
+      "title": "Today's Sessions",
+      "total": "Total sessions",
+      "empty": "No sessions scheduled for today.",
+      "noServices": "No services defined yet.",
+      "depositsHeld": "Deposits Held",
+      "customer": "Customer",
+      "service": "Service",
+      "specialist": "Specialist",
+      "status": "Status",
+      "statuses": {
+        "scheduled": "Scheduled",
+        "checked_in": "Checked in",
+        "in_progress": "In progress",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "no_show": "Did not attend"
+      },
+      "time": "Time"
+    },
+    "packageCreditsLow": {
+      "title": "Package Credits Low",
+      "empty": "No packages running low on credits.",
+      "noPackages": "No packages allocated yet.",
+      "customer": "Customer",
+      "package": "Package",
+      "remaining": "Remaining Sessions",
+      "total": "Total Credits"
+    },
+    "openRepairTickets": {
+      "title": "Open Repair Tickets",
+      "empty": "No open repair tickets.",
+      "noTickets": "No repair tickets recorded yet.",
+      "ticket": "Ticket #",
+      "device": "Device",
+      "problem": "Problem",
+      "technician": "Technician",
+      "status": "Status",
+      "statuses": {
+        "received": "Received",
+        "diagnosing": "Diagnosing",
+        "waiting_parts": "Waiting for parts",
+        "repairing": "Repairing",
+        "ready": "Ready",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled"
+      }
+    },
+    "partUnavailable": "This number could not be read on this device."
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -5444,6 +5506,7 @@
     "warehouseNone": "Choose warehouse",
     "warehouseMissing": "Without a warehouse, the product total changes but no warehouse's stock does.",
     "savedOffline": "The invoice is saved on this device and will be recorded as soon as you are back online.",
+    "recordedOnDevice": "Recorded on this device — sending",
     "recurrence": {
       "title": "Repeat this invoice automatically",
       "kind": "Repeat",
@@ -12379,7 +12442,11 @@
       "chart": "Sales chart",
       "insights": "Smart suggestions",
       "activities": "Recent activity",
-      "manufacturing": "Production summary"
+      "manufacturing": "Production summary",
+      "lowStockVariants": "Low Stock Variants",
+      "todaySessions": "Today's Sessions",
+      "packageCreditsLow": "Low Package Credits",
+      "openRepairTickets": "Open Repair Tickets"
     },
     "hubSections": "Sections of this page",
     "settings": {

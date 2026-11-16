@@ -10,7 +10,13 @@
 // never the customer and never another GRANT. Nothing here posts money, refunds, expires or deletes anything.
 // ============================================
 
-import { grantStatuses, type GrantState, type LedgerAllocationFact } from '@hisabche/validation'
+import {
+  grantStatusesFromRows,
+  type GrantState,
+  type LedgerAllocationFact,
+  type PackageLedgerRowFact,
+  type PackageSuspensionFact,
+} from '@hisabche/validation'
 import { supabase } from '../../db'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -120,62 +126,35 @@ export class PackageGrantsService {
       effectiveDate: a.effective_date,
     }))
 
-    const allocated = new Set(allocations.map((a) => a.entryId))
-    const consumeIds = new Set(rows.filter((r) => r.entry_type === 'CONSUME').map((r) => r.id))
-    const reversed = new Set(
-      rows
-        .filter((r) => r.entry_type === 'REVERSAL' && r.reference_entry_id)
-        .map((r) => r.reference_entry_id as string),
-    )
-    // consumptions that predate the allocation rows: charged to the oldest GRANTs with no deferred amount
-    const legacyConsumed = rows.reduce((sum, r) => {
-      if (r.entry_type === 'CONSUME' && !allocated.has(r.id)) return sum + Number(r.quantity)
-      if (
-        r.entry_type === 'REVERSAL' &&
-        r.reference_entry_id &&
-        consumeIds.has(r.reference_entry_id) &&
-        !allocated.has(r.reference_entry_id)
-      ) {
-        return sum - Number(r.quantity)
-      }
-      return sum
-    }, 0)
+    const facts: PackageLedgerRowFact[] = rows.map((row) => ({
+      id: row.id,
+      entryType: row.entry_type,
+      quantity: Number(row.quantity),
+      referenceEntryId: row.reference_entry_id,
+      effectiveDate: row.effective_date,
+      deferredAmount: row.deferred_amount == null ? null : Number(row.deferred_amount),
+      termMonths: row.term_months ?? null,
+    }))
 
-    const statuses = grantStatuses(
-      {
-        grants: grants.map((g) => ({
-          id: g.id,
-          startsOn: g.effective_date,
-          quantity: Number(g.quantity),
-          deferredAmount: g.deferred_amount == null ? null : Number(g.deferred_amount),
-          termMonths: g.term_months ?? null,
-        })),
-        adjustments: rows
-          .filter((r) => r.entry_type === 'ADJUSTMENT' && r.reference_entry_id)
-          .map((r) => ({ grantId: r.reference_entry_id as string, quantity: Number(r.quantity) })),
-        allocations,
-        reversedConsumeIds: reversed,
-        suspensionEvents: (
-          (suspensionRes.data ?? []) as Array<{
-            grant_entry_id: string
-            kind: 'SUSPEND' | 'RESUME'
-            effective_on: string
-          }>
-        ).map((s, order) => ({
-          grantId: s.grant_entry_id,
-          kind: s.kind,
-          effectiveOn: s.effective_on,
-          order,
-        })),
-        legacyConsumed,
-      },
-      today,
-    )
+    const suspensions: PackageSuspensionFact[] = (
+      (suspensionRes.data ?? []) as Array<{
+        grant_entry_id: string
+        kind: 'SUSPEND' | 'RESUME'
+        effective_on: string
+      }>
+    ).map((s, order) => ({
+      grantId: s.grant_entry_id,
+      kind: s.kind,
+      effectiveOn: s.effective_on,
+      order,
+    }))
 
+    const statuses = grantStatusesFromRows({ rows: facts, allocations, suspensions, today })
+    const packageOf = new Map(grants.map((grant) => [grant.id, grant.package_product_id]))
     return statuses.map((status) => ({
       ...status,
       customerId,
-      packageProductId: grants.find((g) => g.id === status.id)!.package_product_id,
+      packageProductId: packageOf.get(status.id) as string,
     }))
   }
 

@@ -217,6 +217,48 @@ async function firstDay(page: Page, trade: string, index: number) {
     await page.waitForLoadState('networkidle')
     await expectHealthy(page, `${trade} dashboard`)
 
+    // V69.5/V69.6: the representative trades (and the trades whose documents
+    // read a representative's spec) mount their specialised parts; every other
+    // trade mounts none. The part MUST be there - the old check skipped
+    // silently when the card was missing, which is the failure it existed for.
+    const partsByTrade: Partial<Record<string, readonly string[]>> = {
+      clothing: ['lowStockVariants'],
+      shoes: ['lowStockVariants'],
+      beautySalon: ['todaySessions'],
+      barber: ['todaySessions'],
+      education: ['packageCreditsLow', 'todaySessions'],
+      repairs: ['openRepairTickets'],
+      mobilePhones: ['openRepairTickets'],
+      mechanic: ['openRepairTickets'],
+      itServices: ['openRepairTickets'],
+    }
+    const SPECIALIZED_PARTS = [
+      'lowStockVariants',
+      'todaySessions',
+      'packageCreditsLow',
+      'openRepairTickets',
+    ] as const
+    const expectedParts = partsByTrade[trade] ?? []
+    for (const part of SPECIALIZED_PARTS) {
+      const locator = page.locator(`[data-dashboard-part="${part}"]`)
+      if (!expectedParts.includes(part)) {
+        await expect(locator, `${trade}: mounts no ${part} card`).toHaveCount(0)
+        continue
+      }
+      const card = locator.first()
+      await expect(card, `${trade}: its ${part} card is mounted`).toBeVisible({
+        timeout: 60_000,
+      })
+      const text = await card.innerText()
+      expect(text, `${trade}: ${part} shows no raw i18n key`).not.toMatch(RAW_KEY)
+      expect(text, `${trade}: ${part} is not an error boundary`).not.toMatch(
+        /مشکلی پیش آمد|خطایی رخ داد/,
+      )
+      // Online the endpoint answers: an empty card is allowed (a fresh shop),
+      // «the number could not be read» is not.
+      expect(text, `${trade}: ${part} was readable`).not.toContain('خوانده نشد')
+    }
+
     // 3. The trade's first product, with an opening stock of 50.
     await pace()
     await page.goto(`${WEB}/fa/warehouse?add=true`)

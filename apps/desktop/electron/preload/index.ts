@@ -26,6 +26,11 @@ const bridge: HisabcheBridge = {
     resolveQueue: (clientId, status, error) =>
       ipcRenderer.invoke(IPC.dbResolveQueue, { clientId, status, error }),
     setWorkspace: (workspaceId) => ipcRenderer.invoke(IPC.dbSetWorkspace, { workspaceId }),
+    claim: (clientId, owner, leaseMs) =>
+      ipcRenderer.invoke(IPC.dbClaim, { clientId, owner, leaseMs }),
+    markSynced: (workspaceId, table, pulledAt) =>
+      ipcRenderer.invoke(IPC.dbMarkSynced, { workspaceId, table, pulledAt }),
+    syncedTables: (workspaceId) => ipcRenderer.invoke(IPC.dbSyncedTables, { workspaceId }),
   },
   print: {
     html: (input) => ipcRenderer.invoke(IPC.printHtml, input),

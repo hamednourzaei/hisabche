@@ -109,6 +109,10 @@ export const FEATURE_REGISTRY = {
   'dashboard.ai_insight': { execution: 'local', plans: ALL },
   'dashboard.manufacturing_card': { execution: 'server', plans: CLOUD },
   'dashboard.currency_rates': { execution: 'local', plans: ALL },
+  'dashboard.low_stock_variants': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  'dashboard.today_sessions': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  'dashboard.package_credits_low': { execution: 'local', plans: ALL, alwaysAllowed: true },
+  'dashboard.open_repair_tickets': { execution: 'local', plans: ALL, alwaysAllowed: true },
 
   // ─── Invoices ───────────────────────────────────────────────────────────
   'invoice.list': { execution: 'local', plans: ALL, alwaysAllowed: true },

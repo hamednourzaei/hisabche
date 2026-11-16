@@ -187,6 +187,8 @@ async function drain(): Promise<void> {
 
   for (const entry of pending) {
     if (gate.blockedBy(entry)) continue
+    const claimed = await localDb.claimQueue(entry.clientId, 'mobile-sync-runner', 30_000)
+    if (!claimed) continue
     try {
       await pushEntry(entry)
       await localDb.resolveQueue(entry.clientId, 'done')

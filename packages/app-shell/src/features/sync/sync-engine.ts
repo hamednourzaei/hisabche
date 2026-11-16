@@ -46,7 +46,7 @@ import { useCurrencyStore, useWorkspaceStore } from '@hisabche/store'
 import { API_BASE_URL, apiClient } from '@/shared/lib/api'
 import { bridge } from '@/shared/lib/bridge'
 import { currentOutboxOwner, headersForEntry, isOwnedBy } from './outbox-owner'
-import { markTableSynced } from './device-sync-state'
+import { hasPulledEverything, loadSyncedTables, markTableSynced } from './device-sync-state'
 import { useSyncStore } from '@hisabche/store'
 import {
   createPushGate,
@@ -104,6 +104,14 @@ const BACKGROUND_ENTITIES = [
   'order_deposits',
   'order_deposit_applications',
   'order_deposit_refunds',
+  // V70.2 — the four tables that had a local home and no way to reach it.
+  // Background, not essential: a sale can be made before a variant or a repair
+  // ticket arrives, but a session delivered on the other shift, a package
+  // credit already spent and a ticket already opened must arrive at all.
+  'product_variants',
+  'service_delivery_sessions',
+  'package_credit_ledger',
+  'repair_tickets',
 ] as const
 
 const DELTA_ENTITIES = [...ESSENTIAL_ENTITIES, ...BACKGROUND_ENTITIES] as const
@@ -280,6 +288,103 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     origin: 'server',
     sync_state: 'synced',
   }),
+  // ─── V70.2: the four pulled tables ───────────────────────────────────────
+  //
+  // ⚠️ `version` IS WRITTEN WHERE THE LOCAL TABLE HAS IT (`product_variants`
+  // and `repair_tickets`, migration v26). The session and the credit ledger
+  // predate the version column locally, so a version sent for them would be
+  // dropped by `WRITABLE_COLUMNS` — and neither is writable from a device
+  // anyway (the server refuses the write, not the column).
+  product_variants: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    version: num(r.version) || 1,
+    template_product_id: str(r.template_product_id) ?? '',
+    sku: str(r.sku) ?? '',
+    barcode: str(r.barcode),
+    // jsonb on the server, TEXT on the device: a raw string is already JSON.
+    attributes:
+      typeof r.attributes === 'string' ? r.attributes : JSON.stringify(r.attributes ?? []),
+    price_override_minor: r.price_override_minor === null ? null : num(r.price_override_minor),
+    cost_override_minor: r.cost_override_minor === null ? null : num(r.cost_override_minor),
+    is_active: r.is_active === false ? 0 : 1,
+    created_at: str(r.created_at) ?? nowIso(),
+    // The server's variant table has no `updated_at`; the local one wants a
+    // value, and `created_at` is the truth we have.
+    updated_at: str(r.created_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
+  service_delivery_sessions: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    customer_id: str(r.customer_id) ?? '',
+    service_offering_id: str(r.service_offering_id) ?? '',
+    practitioner_id: str(r.practitioner_id),
+    branch_id: str(r.branch_id),
+    session_date: str(r.session_date) ?? '',
+    start_time: str(r.start_time) ?? '',
+    end_time: str(r.end_time) ?? '',
+    duration_minutes: num(r.duration_minutes),
+    status: str(r.status) ?? 'scheduled',
+    settlement_method: str(r.settlement_method) ?? 'package_credit',
+    package_credit_id: str(r.package_credit_id),
+    invoice_id: str(r.invoice_id),
+    client_notes: str(r.client_notes),
+    internal_notes: str(r.internal_notes),
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
+  package_credit_ledger: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    customer_id: str(r.customer_id) ?? '',
+    package_product_id: str(r.package_product_id) ?? '',
+    entry_type: str(r.entry_type) ?? '',
+    // CREDITS, not money: the balance is derived from every entry, so a
+    // rounded quantity would make the device show credits the customer does
+    // not have.
+    quantity: num(r.quantity),
+    unit: str(r.unit),
+    source_document_type: str(r.source_document_type),
+    source_document_id: str(r.source_document_id),
+    source_line_id: str(r.source_line_id),
+    reference_entry_id: str(r.reference_entry_id),
+    idempotency_key: str(r.idempotency_key),
+    notes: str(r.notes),
+    expires_at: str(r.expires_at),
+    effective_date: str(r.effective_date) ?? '',
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
+  repair_tickets: (r) => ({
+    id: r.id,
+    workspace_id: str(r.workspace_id) ?? '',
+    version: num(r.version) || 1,
+    number: num(r.number),
+    customer_id: str(r.customer_id) ?? '',
+    serial_id: str(r.serial_id),
+    device_label: str(r.device_label) ?? '',
+    problem: str(r.problem) ?? '',
+    status: str(r.status) ?? 'received',
+    // The server decides warranty from the serial; the device only displays it.
+    under_warranty: r.under_warranty === true ? 1 : 0,
+    estimate_minor: r.estimate_minor === null ? null : num(r.estimate_minor),
+    currency: str(r.currency),
+    technician_employee_id: str(r.technician_employee_id),
+    promised_on: str(r.promised_on),
+    invoice_id: str(r.invoice_id),
+    created_by: str(r.created_by) ?? '',
+    created_at: str(r.created_at) ?? nowIso(),
+    updated_at: str(r.updated_at) ?? nowIso(),
+    closed_at: str(r.closed_at),
+    origin: 'server',
+    sync_state: 'synced',
+  }),
 }
 
 /** Accept header: binary preferred, JSON understood. */
@@ -453,6 +558,27 @@ async function discardInvoiceProjection(invoiceId: string): Promise<void> {
 }
 
 /**
+ * Confirm server acceptance of an invoice (V68.5):
+ * Updates the local row with the official server invoice_number and id in ONE transaction.
+ */
+async function confirmServerInvoice(
+  clientId: string,
+  serverId: string,
+  invoiceNumber: string,
+): Promise<boolean> {
+  try {
+    const res = await localRequest<{ confirmed?: boolean }>(
+      'POST',
+      `/invoices/${clientId}/confirm-server`,
+      { serverId, invoiceNumber },
+    )
+    return Boolean(res?.confirmed)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Write the SERVER's answer about credit onto the local invoice row (V53 OD-3).
  *
  * The device never decides this: `pending_validation` and `rejected` are set only from a refusal the server
@@ -518,7 +644,7 @@ async function rehydrate(workspaceId: string | null): Promise<number> {
     written += await snapshotEntity(entity)
     // The device knows this table now. A reader that asks before this point
     // gets "not available offline", never an empty list.
-    markTableSynced(entity)
+    markTableSynced(entity, workspaceId, nowIso())
   }
   pullProgress = null
   publishStages()
@@ -727,7 +853,17 @@ export async function pullAll(): Promise<number> {
   if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return 0
   const workspaceId = useWorkspaceStore.getState().workspaceId ?? null
   const stored = workspaceId ? readCursor(workspaceId) : null
-  if (workspaceId && stored !== null) return pullDelta(workspaceId, stored)
+  if (workspaceId && stored !== null) {
+    // ⚠️ A CURSOR IS NOT PROOF THE ROWS ARE HERE. It lives in localStorage; the
+    // rows live in SQLite and are purged when the cache is pointed at another
+    // workspace. A device that came back to this workspace with its old cursor
+    // pulled only the changes since — onto empty tables. The device's own
+    // stamps (written next to the rows, purged with them) decide: no stamps,
+    // no delta. A host without stamps keeps the cursor's word, as before.
+    if (!bridge()?.db.syncedTables) return pullDelta(workspaceId, stored)
+    if (!hasPulledEverything(workspaceId)) await loadSyncedTables(workspaceId)
+    if (hasPulledEverything(workspaceId)) return pullDelta(workspaceId, stored)
+  }
   return rehydrate(workspaceId)
 }
 
@@ -825,7 +961,7 @@ export function handleBookingSyncConflict(input: {
   }
 }
 
-async function pushEntry(entry: QueueEntry): Promise<void> {
+async function pushEntry(entry: QueueEntry): Promise<unknown> {
   // ⚠️ WHICH ROAD IS DECIDED IN THE CONTRACT, NOT HERE.
   //
   // `POST /api/sync/push` writes the row with optimistic concurrency and no
@@ -1094,8 +1230,8 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
   }
 
   if (entry.operation === 'create') {
-    await apiClient.post(endpoint, entry.payload, { headers })
-    return
+    const res = await apiClient.post(endpoint, entry.payload, { headers })
+    return res?.data
   }
   if (entry.operation === 'update') {
     await apiClient.patch(`${endpoint}/${String(entry.payload.id)}`, entry.payload, { headers })
@@ -1120,6 +1256,7 @@ async function pushEntry(entry: QueueEntry): Promise<void> {
     if ((error as Partial<ApiError>).status === 404) return
     throw error
   }
+  return undefined
 }
 
 import { deriveStableBatchId, getPersistentDeviceId } from './sync-identity'
@@ -1270,17 +1407,34 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
         continue
       }
 
+      if (desktop?.db?.claim) {
+        const claimed = await desktop.db.claim(entry.clientId, 'app-shell-sync-engine', 30_000)
+        if (!claimed) continue
+      }
+
       inFlight.add(entry.clientId)
       publishStages()
       try {
-        await pushEntry(entry)
+        const pushResult = (await pushEntry(entry)) as Record<string, unknown> | undefined
         await desktop.db.resolveQueue(entry.clientId, 'done')
-        // D3: the server owns this invoice now. The device's projection (the
-        // temporary number and the rows the engine wrote) goes before the pull
-        // brings the server's row — otherwise the device shows two invoices
-        // for one sale.
+        // D3: the server owns this invoice now.
         if (entry.entity === 'invoice' && entry.operation === 'create') {
-          await discardInvoiceProjection(entry.clientId)
+          const serverId = typeof pushResult?.id === 'string' ? pushResult.id : null
+          const invoiceNumber =
+            typeof pushResult?.invoice_number === 'string'
+              ? pushResult.invoice_number
+              : typeof pushResult?.invoiceNumber === 'string'
+                ? pushResult.invoiceNumber
+                : null
+
+          // The official number lands on the device's own row at once; when
+          // it cannot (an older engine, a row the pull already replaced), the
+          // projection goes and the pull brings the server's row — never both.
+          const confirmed =
+            serverId && invoiceNumber
+              ? await confirmServerInvoice(entry.clientId, serverId, invoiceNumber)
+              : false
+          if (!confirmed) await discardInvoiceProjection(entry.clientId)
         }
         gate.markSent(entry)
         committed = [

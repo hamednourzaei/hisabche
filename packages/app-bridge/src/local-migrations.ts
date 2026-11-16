@@ -777,6 +777,25 @@ const V25_REPAIR_TICKETS: LocalMigration = {
   statements: [...REPAIR_TICKETS_STATEMENTS],
 }
 
+/**
+ * v25 -> v26: the identity a pulled row needs (V70.2).
+ *
+ * `product_variants` and `repair_tickets` were created without `version`, and
+ * `repair_tickets` without `origin`/`sync_state` too. The pull now carries all
+ * four tables, and a row stored without its `version` is a row whose first
+ * offline edit the server refuses as a version conflict — exactly the bug the
+ * snapshot path was fixed for (#153).
+ */
+const V26_PULL_IDENTITY: LocalMigration = {
+  to: 26,
+  statements: [
+    `ALTER TABLE product_variants ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE repair_tickets ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE repair_tickets ADD COLUMN origin TEXT NOT NULL DEFAULT 'local'`,
+    `ALTER TABLE repair_tickets ADD COLUMN sync_state TEXT NOT NULL DEFAULT 'local_only'`,
+  ],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -802,6 +821,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V23_OPERATIONAL_PROFILE,
   V24_SERVICE_STATUS_AUDIT,
   V25_REPAIR_TICKETS,
+  V26_PULL_IDENTITY,
 ]
 
 /**

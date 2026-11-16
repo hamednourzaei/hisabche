@@ -494,3 +494,159 @@ export function useDashboardSales(
     networkMode: 'always',
   })
 }
+
+// ─── V69.5 Industry Dashboard Parts ──────────────────────────────────────────
+
+export interface LowStockVariantItem {
+  variantId: string
+  templateProductId: string
+  productName: string
+  sku: string
+  attributes: Array<{ name: string; value: string }>
+  currentStock: number
+  minStock: number
+}
+
+export interface LowStockVariantsResponse {
+  items: LowStockVariantItem[]
+  totalLowStock: number
+  /** Active variants the device/server read. 0 = none exist; null = could not be read. */
+  variantsCount: number | null
+  hidden?: boolean
+  /** The device/server cannot compute it yet (e.g. variant-stock not deployed). */
+  unavailable?: boolean
+}
+
+export function useLowStockVariants(options: { enabled?: boolean } = {}) {
+  const authReady = useAuthReady()
+  const isEnabled = options.enabled ?? true
+  return useQuery<LowStockVariantsResponse>({
+    queryKey: ['analytics', 'dashboard', 'low-stock-variants'],
+    queryFn: async () => {
+      const res = await apiClient.get<LowStockVariantsResponse>(
+        '/analytics/dashboard/low-stock-variants',
+      )
+      return res.data
+    },
+    enabled: Boolean(authReady && isEnabled),
+    ...DASHBOARD_LIVE,
+  })
+}
+
+export interface TodaySessionItem {
+  id: string
+  customerId: string
+  customerName: string
+  serviceId: string
+  serviceName: string
+  practitionerId: string | null
+  practitionerName: string | null
+  status: string
+  time: string
+  endTime: string
+  settlementMethod: string
+}
+
+export interface HeldDeposit {
+  currency: string
+  amountMinor: number
+}
+
+export interface TodaySessionsResponse {
+  date: string
+  sessions: TodaySessionItem[]
+  byStatus: Record<string, number>
+  byPractitioner: Record<string, number>
+  totalSessions: number
+  /** One row per currency — never one mixed total. */
+  depositsHeld: HeldDeposit[]
+  hidden?: boolean
+  unavailable?: boolean
+}
+
+export function useTodaySessions(options: { enabled?: boolean } = {}) {
+  const authReady = useAuthReady()
+  const isEnabled = options.enabled ?? true
+  return useQuery<TodaySessionsResponse>({
+    queryKey: ['analytics', 'dashboard', 'today-sessions'],
+    queryFn: async () => {
+      const res = await apiClient.get<TodaySessionsResponse>('/analytics/dashboard/today-sessions')
+      return res.data
+    },
+    enabled: Boolean(authReady && isEnabled),
+    ...DASHBOARD_LIVE,
+  })
+}
+
+export interface PackageCreditLowItem {
+  customerId: string
+  customerName: string
+  packageProductId: string
+  packageName: string
+  totalCredits: number
+  remainingCredits: number
+}
+
+export interface PackageCreditsLowResponse {
+  items: PackageCreditLowItem[]
+  lowCount: number
+  /** GRANT rows the ledger holds. 0 = nothing allocated yet; null = could not be read. */
+  packagesCount: number | null
+  hidden?: boolean
+  unavailable?: boolean
+}
+
+export function usePackageCreditsLow(options: { enabled?: boolean } = {}) {
+  const authReady = useAuthReady()
+  const isEnabled = options.enabled ?? true
+  return useQuery<PackageCreditsLowResponse>({
+    queryKey: ['analytics', 'dashboard', 'package-credits-low'],
+    queryFn: async () => {
+      const res = await apiClient.get<PackageCreditsLowResponse>(
+        '/analytics/dashboard/package-credits-low',
+      )
+      return res.data
+    },
+    enabled: Boolean(authReady && isEnabled),
+    ...DASHBOARD_LIVE,
+  })
+}
+
+export interface OpenRepairTicketItem {
+  id: string
+  number: string
+  customerId: string
+  customerName: string
+  deviceLabel: string
+  problem: string
+  status: string
+  technicianId: string | null
+  technicianName: string | null
+  createdAt: string
+}
+
+export interface OpenRepairTicketsResponse {
+  items: OpenRepairTicketItem[]
+  byStatus: Record<string, number>
+  totalOpen: number
+  /** Every ticket ever recorded. 0 = none yet; null = could not be read. */
+  totalTickets: number | null
+  hidden?: boolean
+  unavailable?: boolean
+}
+
+export function useOpenRepairTickets(options: { enabled?: boolean } = {}) {
+  const authReady = useAuthReady()
+  const isEnabled = options.enabled ?? true
+  return useQuery<OpenRepairTicketsResponse>({
+    queryKey: ['analytics', 'dashboard', 'open-repair-tickets'],
+    queryFn: async () => {
+      const res = await apiClient.get<OpenRepairTicketsResponse>(
+        '/analytics/dashboard/open-repair-tickets',
+      )
+      return res.data
+    },
+    enabled: Boolean(authReady && isEnabled),
+    ...DASHBOARD_LIVE,
+  })
+}

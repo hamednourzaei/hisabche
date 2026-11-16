@@ -1,0 +1,226 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { GAPS } from './competitor-gaps.data.mjs'
+
+export const FAMILY_LABELS = {
+  pos: 'صندوق و فروش خرد',
+  services: 'خدمات و نوبت',
+  finance: 'مالی و خزانه',
+  hr: 'حقوق و منابع انسانی',
+  production: 'تولید و موجودی',
+  repair: 'تعمیر/خودرو/تجهیزات',
+  purchasing: 'خرید و تأمین',
+  integration: 'اتصال و اکوسیستم',
+  security: 'امنیت و حاکمیت',
+  other: 'سایر',
+}
+
+export const BUCKET_LABELS = {
+  retail: 'خرده‌فروشی/عمده (`RETAIL_STORE`)',
+  generic: 'عمومی (`GENERIC_BUSINESS`)',
+  service: 'خدمات (`SERVICE_REPAIR`/سالن/آموزش)',
+}
+
+const compact = (s) => s.toLowerCase().replace(/[_\-.]/g, '')
+const faDigit = (n) => String(n).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[Number(d)])
+
+export function loadInventories(root) {
+  const routes = readdirSync(join(root, 'backend/src/routes'))
+    .filter((f) => f.endsWith('.routes.ts'))
+    .map((f) => f.replace('.routes.ts', ''))
+  const services = readdirSync(join(root, 'backend/src/services'), { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+
+  const sqlFiles = readdirSync(join(root, 'docs')).filter((f) => f.endsWith('.sql'))
+  const tables = new Set()
+  for (const f of sqlFiles) {
+    const sql = readFileSync(join(root, 'docs', f), 'utf8')
+    for (const m of sql.matchAll(
+      /create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z0-9_]+)/gi,
+    )) {
+      tables.add(m[1].toLowerCase())
+    }
+  }
+
+  const registry = readFileSync(
+    join(root, 'packages/validation/src/schemas/feature-registry.ts'),
+    'utf8',
+  )
+  const features = [...registry.matchAll(/^\s{2}'([a-z0-9_.]+)':\s*\{/gm)].map((m) => m[1])
+
+  return {
+    route: routes.map((n) => ({ name: n, key: compact(n) })),
+    service: services.map((n) => ({ name: n, key: compact(n) })),
+    table: [...tables].map((n) => ({ name: n, key: compact(n) })),
+    feature: features.map((n) => ({ name: n, key: compact(n) })),
+  }
+}
+
+export function probeHits(terms, inventories) {
+  const hits = { route: [], service: [], table: [], feature: [] }
+  for (const term of terms) {
+    const needle = compact(term)
+    for (const kind of Object.keys(hits)) {
+      for (const entry of inventories[kind]) {
+        if (entry.key.includes(needle) && !hits[kind].includes(entry.name))
+          hits[kind].push(entry.name)
+      }
+    }
+  }
+  return hits
+}
+
+export function readIndustries(root) {
+  const src = readFileSync(
+    join(root, 'packages/validation/src/schemas/industry-profiles.ts'),
+    'utf8',
+  )
+  const block = src.slice(src.indexOf('export const INDUSTRY_KEYS'), src.indexOf('] as const'))
+  const ids = [...block.matchAll(/'([A-Za-z]+)'/g)].map((m) => m[1])
+
+  const doc = readFileSync(join(root, 'docs/industries/INDUSTRY-REGISTRY.md'), 'utf8').split(
+    /\r?\n/,
+  )
+  const archetypeById = new Map()
+  for (const line of doc) {
+    const m = line.match(/^\|\s*\d+\s*\|\s*`([^`]+)`\s*\|.*?\|\s*`([A-Z_]+)`\s*\|/)
+    if (m) archetypeById.set(m[1], m[2])
+  }
+
+  const missing = ids.filter((id) => !archetypeById.has(id))
+  if (missing.length > 0) throw new Error(`archetype missing for: ${missing.join(', ')}`)
+
+  return ids.map((id) => ({ id, archetype: archetypeById.get(id) }))
+}
+
+export function bucketOf(archetype) {
+  if (archetype === 'RETAIL_STORE') return 'retail'
+  if (archetype === 'GENERIC_BUSINESS') return 'generic'
+  return 'service'
+}
+
+export function buildModel(root) {
+  const inventories = loadInventories(root)
+  const industries = readIndustries(root)
+
+  if (GAPS.length !== 60) throw new Error(`expected exactly 60 gaps, found ${GAPS.length}`)
+
+  const gaps = GAPS.map((gap) => {
+    const hits = probeHits(gap.probe, inventories)
+    const total = Object.values(hits).reduce((a, v) => a + v.length, 0)
+    return { ...gap, hits, total }
+  })
+
+  const claimed = gaps.filter((gap) => gap.total > 0)
+  if (claimed.length > 0) {
+    throw new Error(
+      `gap(s) claim absence but the name exists: ${claimed
+        .map(
+          (g) =>
+            `${g.id}→${Object.entries(g.hits)
+              .filter(([, v]) => v.length > 0)
+              .map(([k, v]) => `${k}:${v[0]}`)
+              .join(',')}`,
+        )
+        .join(' | ')}`,
+    )
+  }
+
+  const industriesWithGaps = industries.map((industry) => {
+    const bucket = bucketOf(industry.archetype)
+    const applicable = gaps.filter(
+      (gap) => gap.applies.buckets.includes(bucket) || gap.applies.ids.includes(industry.id),
+    )
+    return { ...industry, bucket, gaps: applicable.map((g) => g.id) }
+  })
+
+  return { gaps, industries: industriesWithGaps, inventories }
+}
+
+export function renderCatalog(model) {
+  const { gaps } = model
+  const families = Object.keys(FAMILY_LABELS)
+  const lines = []
+  lines.push('# V70.1 — کاتالوگ ۶۰ شکاف رقیب (GENERATED — دستی ویرایش نکن)')
+  lines.push('')
+  lines.push(
+    '<!-- GENERATED by scripts/industry/generate-gap-matrix.mjs. Source: competitor-gaps.data.mjs -->',
+  )
+  lines.push('')
+  lines.push(
+    'هر ردیف با probe روی چهار فهرست واقعی سنجیده شده: نام routeهای بک‌اند، پوشه‌های سرویس،',
+  )
+  lines.push(
+    'جدول‌های SQL و کلیدهای `FEATURE_REGISTRY`. `PROBE=۰` یعنی هیچ نامی با این واژه‌ها منطبق نیست؛',
+  )
+  lines.push('یعنی «قابلیت وجود ندارد» فقط پس از تأیید دستی در فاز ساخت همان شکاف پذیرفته می‌شود.')
+  lines.push('')
+  lines.push('## خلاصه')
+  lines.push('')
+  lines.push(`- شکاف‌ها: **${gaps.length}**`)
+  lines.push(`- صنف‌های ماتریس: **${model.industries.length}**`)
+  lines.push(
+    `- پوشش: حداقل **${Math.min(...model.industries.map((i) => i.gaps.length))}** و حداکثر **${Math.max(
+      ...model.industries.map((i) => i.gaps.length),
+    )}** شکاف برای هر صنف`,
+  )
+  const familyCounts = families
+    .map((f) => [f, gaps.filter((g) => g.family === f).length])
+    .filter(([, n]) => n > 0)
+  lines.push(
+    `- خانواده‌ها: ${familyCounts.map(([f, n]) => `**${FAMILY_LABELS[f]}** ${n}`).join(' · ')}`,
+  )
+  lines.push('')
+  lines.push('## جدول شکاف‌ها')
+  lines.push('')
+  lines.push(
+    '| id | خانواده | شکاف | fa / en | رقیب مرجع | probe (route/service/table/feature) | صنف‌ها | فاز |',
+  )
+  lines.push('| --- | --- | --- | --- | --- | --- | ---: | --- |')
+  for (const gap of gaps) {
+    const ev = `${faDigit(gap.hits.route.length)}/${faDigit(gap.hits.service.length)}/${faDigit(gap.hits.table.length)}/${faDigit(gap.hits.feature.length)}`
+    const count = model.industries.filter((i) => i.gaps.includes(gap.id)).length
+    lines.push(
+      `| ${gap.id} | ${FAMILY_LABELS[gap.family]} | ${gap.fa} | ${gap.fa} / ${gap.en} | ${gap.benchmark} | ${ev} | ${count} | ${gap.phase} |`,
+    )
+  }
+  lines.push('')
+  lines.push('## کنترل کیفیت داده')
+  lines.push('')
+  lines.push('| بررسی | نتیجه |')
+  lines.push('| --- | --- |')
+  lines.push(
+    `| شناسه یکتا | ${new Set(gaps.map((g) => g.id)).size === gaps.length ? 'PASS' : 'FAIL'} |`,
+  )
+  lines.push(`| هیچ probe غیرصفر | ${gaps.every((g) => g.total === 0) ? 'PASS' : 'FAIL'} |`)
+  lines.push(
+    `| هر شکاف ≥۱ صنف | ${gaps.every((g) => model.industries.some((i) => i.gaps.includes(g.id))) ? 'PASS' : 'FAIL'} |`,
+  )
+  lines.push('')
+  return lines.join('\n')
+}
+
+export function renderMatrix(model) {
+  const lines = []
+  lines.push('# ماتریس شکاف رقیب برای ۶۷ صنف (GENERATED — دستی ویرایش نکن)')
+  lines.push('')
+  lines.push('<!-- GENERATED by scripts/industry/generate-gap-matrix.mjs -->')
+  lines.push('')
+  lines.push(
+    'هر صنف بر اساس archetype خودش (از `docs/industries/INDUSTRY-REGISTRY.md`) شکاف‌های مربوط را می‌گیرد.',
+  )
+  lines.push(
+    'نگاشت دوم ساخته نشده است؛ جزئیات هر شکاف در `docs/architecture/V70-COMPETITOR-GAPS.md`.',
+  )
+  lines.push('')
+  lines.push('| # | صنف | archetype | تعداد | شکاف‌ها |')
+  lines.push('| ---: | --- | --- | ---: | --- |')
+  model.industries.forEach((industry, index) => {
+    lines.push(
+      `| ${index + 1} | \`${industry.id}\` | \`${industry.archetype}\` | ${industry.gaps.length} | ${industry.gaps.join(', ')} |`,
+    )
+  })
+  lines.push('')
+  return lines.join('\n')
+}

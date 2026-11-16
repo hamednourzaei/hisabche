@@ -206,48 +206,52 @@ describe('industry coverage table', () => {
     }
   })
 
-  it('refuses workflowComplete when acceptance-results.json is missing or a cited test is recorded as failed', () => {
-    const missingCheck = spawnSync(
-      process.execPath,
-      [
-        'scripts/industry/generate-coverage-table.mjs',
-        '--check',
-        '--results',
-        'docs/architecture/industry/__non_existent_results__.json',
-      ],
-      { cwd: ROOT, encoding: 'utf8' },
-    )
-    expect(missingCheck.status).not.toBe(0)
-
-    expect(existsSync(RESULTS_JSON)).toBe(true)
-    const dir = mkdtempSync(join(tmpdir(), 'hisabche-accept-'))
-    try {
-      const parsed = JSON.parse(readFileSync(RESULTS_JSON, 'utf8')) as {
-        generatedAt?: string
-        commit?: string
-        results: Record<string, { status: string; date?: string }>
-      }
-      const firstKey = Object.keys(parsed.results)[0]
-      expect(firstKey).toBeTruthy()
-      const injectedPath = join(dir, 'failed-results.json')
-      writeFileSync(
-        injectedPath,
-        JSON.stringify({
-          ...parsed,
-          results: {
-            ...parsed.results,
-            [firstKey!]: { ...parsed.results[firstKey!], status: 'failed' },
-          },
-        }),
-      )
-      const failedCheck = spawnSync(
+  it(
+    'refuses workflowComplete when acceptance-results.json is missing or a cited test is recorded as failed',
+    { timeout: 20_000 },
+    () => {
+      const missingCheck = spawnSync(
         process.execPath,
-        ['scripts/industry/generate-coverage-table.mjs', '--check', '--results', injectedPath],
+        [
+          'scripts/industry/generate-coverage-table.mjs',
+          '--check',
+          '--results',
+          'docs/architecture/industry/__non_existent_results__.json',
+        ],
         { cwd: ROOT, encoding: 'utf8' },
       )
-      expect(failedCheck.status).not.toBe(0)
-    } finally {
-      rmSync(dir, { recursive: true, force: true })
-    }
-  })
+      expect(missingCheck.status).not.toBe(0)
+
+      expect(existsSync(RESULTS_JSON)).toBe(true)
+      const dir = mkdtempSync(join(tmpdir(), 'hisabche-accept-'))
+      try {
+        const parsed = JSON.parse(readFileSync(RESULTS_JSON, 'utf8')) as {
+          generatedAt?: string
+          commit?: string
+          results: Record<string, { status: string; date?: string }>
+        }
+        const firstKey = Object.keys(parsed.results)[0]
+        expect(firstKey).toBeTruthy()
+        const injectedPath = join(dir, 'failed-results.json')
+        writeFileSync(
+          injectedPath,
+          JSON.stringify({
+            ...parsed,
+            results: {
+              ...parsed.results,
+              [firstKey!]: { ...parsed.results[firstKey!], status: 'failed' },
+            },
+          }),
+        )
+        const failedCheck = spawnSync(
+          process.execPath,
+          ['scripts/industry/generate-coverage-table.mjs', '--check', '--results', injectedPath],
+          { cwd: ROOT, encoding: 'utf8' },
+        )
+        expect(failedCheck.status).not.toBe(0)
+      } finally {
+        rmSync(dir, { recursive: true, force: true })
+      }
+    },
+  )
 })

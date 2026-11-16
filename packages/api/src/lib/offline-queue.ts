@@ -87,7 +87,7 @@ export interface OfflineQueue {
    * is gated behind a signed-in session and a device without one must still be
    * able to say "I do not know" instead of "nothing here".
    */
-  hasSynced?(table: 'product' | 'customer'): boolean
+  hasSynced?(table: 'product' | 'customer' | 'invoice'): boolean
 }
 
 let queue: OfflineQueue | null = null

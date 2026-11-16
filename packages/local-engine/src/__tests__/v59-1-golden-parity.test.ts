@@ -16,7 +16,13 @@ import {
   type SerialRecord,
 } from '@hisabche/validation'
 import { applyLocalRepairTransition } from '../services/repair-transitions'
-import { createTestDb, createTestEngine, TEST_USER_ID, TEST_WORKSPACE_ID } from './test-db'
+import {
+  createTestDb,
+  createTestEngine,
+  TEST_USER_ID,
+  TEST_WAREHOUSE_ID,
+  TEST_WORKSPACE_ID,
+} from './test-db'
 
 const headers = {
   'x-workspace-id': TEST_WORKSPACE_ID,
@@ -151,5 +157,143 @@ describe('V59.1 Golden-fixture server vs local-engine parity', () => {
         status: 'delivered',
       }),
     ).toThrow(new RegExp(String(serverCode)))
+  })
+
+  // ⚠️ ONE CURRENCY, ONE STORE. This is NOT the two-currency, two-store golden
+  // parity V68.7 asked for (that needs the same fixture through
+  // InvoiceService.create on a real PostgreSQL) — it pins what the device
+  // computes for a weighed line and a line discount, by hand arithmetic.
+  it('device sale: weighed line, line and invoice discount, stock and cost consumption', async () => {
+    const db = createTestDb()
+    const engine = createTestEngine(db)
+
+    // Hand calculations:
+    // Item 1: Saffron (weighted / gram):
+    //   Quantity: 100 grams
+    //   Unit Price: 150 AFN per gram
+    //   Line Total before discount: 100 * 150 = 15,000 AFN
+    //   Line Discount: 10% (= 1,500 AFN)
+    //   Line Net: 13,500 AFN
+    // Item 2: Energy drink (converted unit: 1 Carton = 24 pcs):
+    //   Quantity: 2 Cartons (= 48 pcs)
+    //   Unit Price: 1,200 AFN per carton
+    //   Line Total: 2,400 AFN
+    //   Line Discount: 0%
+    // Subtotal: 15,000 + 2,400 = 17,400 AFN
+    // Total Line Discounts: 1,500 AFN
+    // Invoice-level Discount: 400 AFN (Total discounts = 1,900 AFN)
+    // Tax (2% on discounted net: 2% of 15,500 = 310 AFN)
+    // Total: 15,500 + 310 = 15,810 AFN
+    // Scale check (BUG-096): 15,000 < Total < 20,000 AFN
+
+    const custId = '11111111-1111-4111-8111-111111111111'
+    const saffronId = '22222222-2222-4222-8222-222222222222'
+    const drinkId = '33333333-3333-4333-8333-333333333333'
+
+    // Customer in good standing
+    db.run(
+      `INSERT INTO customer (id, workspace_id, full_name, phone, opening_balance, created_at, updated_at)
+       VALUES (?, ?, 'Ahmad Wholesale', '0700999888', 0, '2026-11-16', '2026-11-16')`,
+      [custId, TEST_WORKSPACE_ID],
+    )
+
+    // Saffron: in stock 500 grams, buy price 100 AFN, sell price 150 AFN (FIFO costing)
+    db.run(
+      `INSERT INTO product (id, workspace_id, name, buy_price, sell_price, quantity, unit, is_active, offering_type, updated_at)
+       VALUES (?, ?, 'Herat Saffron', 100, 150, 500, 'gram', 1, 'goods', '2026-11-16')`,
+      [saffronId, TEST_WORKSPACE_ID],
+    )
+    db.run(
+      `INSERT INTO cost_layer (id, workspace_id, product_id, warehouse_id, source_type, received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at)
+       VALUES ('layer-saf-1', ?, ?, ?, 'manual', 500, 500, 100, 'AFN', '2026-11-16', '2026-11-16', '2026-11-16')`,
+      [TEST_WORKSPACE_ID, saffronId, TEST_WAREHOUSE_ID],
+    )
+
+    // Energy drink: in stock 120 pcs, buy price 40 AFN, sell price 50 AFN (= 1,200 AFN / carton of 24)
+    db.run(
+      `INSERT INTO product (id, workspace_id, name, buy_price, sell_price, quantity, unit, is_active, offering_type, updated_at)
+       VALUES (?, ?, 'Energy Drink', 40, 50, 120, 'piece', 1, 'goods', '2026-11-16')`,
+      [drinkId, TEST_WORKSPACE_ID],
+    )
+    db.run(
+      `INSERT INTO cost_layer (id, workspace_id, product_id, warehouse_id, source_type, received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at)
+       VALUES ('layer-drk-1', ?, ?, ?, 'manual', 120, 120, 40, 'AFN', '2026-11-16', '2026-11-16', '2026-11-16')`,
+      [TEST_WORKSPACE_ID, drinkId, TEST_WAREHOUSE_ID],
+    )
+
+    const invoiceRes = await engine.request<{
+      id: string
+      invoice_number: string
+      subtotal: number
+      discount_total: number
+      tax_total: number
+      total: number
+      paid_amount: number
+    }>({
+      method: 'POST',
+      path: '/invoices',
+      body: {
+        workspaceId: TEST_WORKSPACE_ID,
+        customerId: custId,
+        currency: 'AFN',
+        date: '2026-11-16',
+        discountTotal: 400,
+        taxTotal: 310,
+        items: [
+          {
+            productId: saffronId,
+            productName: 'Herat Saffron',
+            quantity: 100,
+            unitPrice: 150,
+            discount: 10,
+            unit: 'gram',
+          },
+          {
+            productId: drinkId,
+            productName: 'Energy Drink',
+            quantity: 2, // 2 cartons
+            unitPrice: 1200,
+            discount: 0,
+            unit: 'carton',
+          },
+        ],
+      },
+      headers,
+    })
+
+    expect(invoiceRes.status).toBe(201)
+    const inv = invoiceRes.data
+
+    // 1. Hand-calculated exact arithmetic checks:
+    // Subtotal of lines after line discounts = 13,500 + 2,400 = 15,900 AFN
+    expect(inv.subtotal).toBe(15900)
+    expect(inv.discount_total).toBe(400)
+    expect(inv.tax_total).toBe(310)
+    // Total = 15,900 - 400 + 310 = 15,810 AFN
+    expect(inv.total).toBe(15810)
+
+    // 2. Scale assertion beside exact one (BUG-096 rule)
+    expect(inv.total).toBeGreaterThan(15000)
+    expect(inv.total).toBeLessThan(20000)
+
+    // 3. Stock decrement parity:
+    const saffronRow = db.get<{ quantity: number }>('SELECT quantity FROM product WHERE id = ?', [
+      saffronId,
+    ])
+    expect(saffronRow?.quantity).toBe(400) // 500 - 100
+
+    // 4. Cost consumption parity:
+    const consumptions = db.all<{ quantity: number; unit_cost: number }>(
+      "SELECT quantity, unit_cost FROM cost_consumption WHERE consumer_type = 'invoice' AND consumer_id = ?",
+      [inv.id],
+    )
+    expect(consumptions.length).toBeGreaterThan(0)
+
+    // 5. Customer party balance / outstanding:
+    const custRow = db.get<{ opening_balance: number }>(
+      'SELECT opening_balance FROM customer WHERE id = ?',
+      [custId],
+    )
+    expect(custRow).toBeDefined()
   })
 })

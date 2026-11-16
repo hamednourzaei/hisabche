@@ -4,7 +4,7 @@
 // N3 cash forecast, N4 stale opportunities.
 //
 // All five endpoints existed and had no caller.
-import { InventoryOpsContainer } from '@hisabche/ui'
+import { InventoryOpsContainer } from '@hisabche/ui/components/ui/inventory-ops/containers/inventory-ops-container'
 
 const titles: Record<string, string> = {
   fa: 'عملیات و پیش‌بینی',

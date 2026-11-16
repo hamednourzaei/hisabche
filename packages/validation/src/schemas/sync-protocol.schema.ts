@@ -75,6 +75,22 @@ export const syncEntitySchema = z.enum([
   'order_deposits',
   'order_deposit_applications',
   'order_deposit_refunds',
+  // V70.2 — the four tables the pull did not carry (reviewer, item 1).
+  //
+  // Each of these already existed on BOTH sides: the server's service reads it,
+  // the device's SQLite has it, and the local engine writes it. What was
+  // missing was the road between them, so a variant added at the counter,
+  // a session delivered by another practitioner, a package credit spent
+  // elsewhere or a repair ticket opened on another shift simply never arrived.
+  //
+  // ⚠️ Adding a name here is not enough. The table needs `version` plus the
+  // bump/change-log triggers (docs/operational-pull-02-migration.sql), and the
+  // device needs a `FROM_LOG` mapper. `sync-operational-pull.test.ts` fails if
+  // any of the three is missing.
+  'product_variants',
+  'service_delivery_sessions',
+  'package_credit_ledger',
+  'repair_tickets',
 ])
 export type SyncEntity = z.infer<typeof syncEntitySchema>
 

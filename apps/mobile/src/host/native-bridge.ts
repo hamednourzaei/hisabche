@@ -115,6 +115,15 @@ const db = {
     workspaceId: string,
   ): Promise<{ purged: boolean; blockedByPendingMutations: number }> =>
     localDb.setWorkspace(workspaceId),
+
+  claim: (clientId: string, owner: string, leaseMs?: number): Promise<boolean> =>
+    localDb.claimQueue(clientId, owner, leaseMs),
+
+  markSynced: (workspaceId: string, table: string, pulledAt: string): Promise<void> =>
+    localDb.markTableSynced(workspaceId, table, pulledAt),
+
+  syncedTables: (workspaceId: string): Promise<Record<string, string>> =>
+    localDb.syncedTables(workspaceId),
 }
 
 // ─── printing ─────────────────────────────────────────────────────────────
@@ -250,6 +259,9 @@ const HANDLERS: Record<string, (...args: never[]) => unknown> = {
   'db.queue': db.queue as never,
   'db.resolveQueue': db.resolveQueue as never,
   'db.setWorkspace': db.setWorkspace as never,
+  'db.claim': db.claim as never,
+  'db.markSynced': db.markSynced as never,
+  'db.syncedTables': db.syncedTables as never,
   'print.html': print.html as never,
   'print.escPos': print.escPos as never,
   'print.listPrinters': print.listPrinters as never,

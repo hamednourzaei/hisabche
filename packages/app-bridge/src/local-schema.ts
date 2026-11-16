@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 25
+export const SCHEMA_VERSION = 26
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -1175,7 +1175,54 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'origin',
     'sync_state',
   ],
-  // ─── Customer advances (v18) ─────────────────────────────────
+  // V70.2. Both tables exist in SQLite (local-universal-core-schema.ts) and were
+  // written by the local engines, but a pull could not land a row in them: a
+  // table with no entry here drops every column of the payload silently.
+  //
+  // `version`, `origin` and `sync_state` arrive with migration v26 (both tables
+  // were born without them), so the pull can store the optimistic-concurrency
+  // token the next offline edit must send back.
+  product_variants: [
+    'id',
+    'workspace_id',
+    'version',
+    'template_product_id',
+    'sku',
+    'barcode',
+    'attributes',
+    'price_override_minor',
+    'cost_override_minor',
+    'is_active',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  repair_tickets: [
+    'id',
+    'workspace_id',
+    'version',
+    'number',
+    'customer_id',
+    'serial_id',
+    'device_label',
+    'problem',
+    'status',
+    'under_warranty',
+    'customer_approved',
+    'estimate_minor',
+    'currency',
+    'technician_employee_id',
+    'promised_on',
+    'invoice_id',
+    'created_by',
+    'created_at',
+    'updated_at',
+    'closed_at',
+    'origin',
+    'sync_state',
+  ],
   // The pull writes these; the backup reads every table in `localTableSchema`.
   order_deposits: [
     'id',

@@ -10,7 +10,8 @@ import type { PackId } from '@hisabche/validation'
 
 const PACK_PREFETCHERS: Partial<Record<PackId, ReadonlyArray<() => Promise<unknown>>>> = {
   operations: [
-    () => import('@/features/inventory-ops/operations-page'),
+    // The page is a lazy() wrapper: warm the container it loads.
+    () => import('@hisabche/ui/components/ui/inventory-ops/containers/inventory-ops-container'),
     () => import('@/features/cycle-count/stock-count-page'),
   ],
   manufacturing: [() => import('@/features/manufacturing/manufacturing-page')],

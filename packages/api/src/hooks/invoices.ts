@@ -16,7 +16,8 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import apiClient, { type ApiError, localRequest } from '../lib/client'
+import apiClient, { type ApiError, localRequest, requestSyncSoon } from '../lib/client'
+import { executionSiteFor } from '../lib/execution-site'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
@@ -104,7 +105,12 @@ function toDeviceParams(filters: object): DeviceParams {
  * takes the server path.
  */
 async function readInvoicesFromDevice<T>(path: string, params?: DeviceParams): Promise<T | null> {
-  if (!getOfflineQueue()?.isOffline()) return null
+  const offline = getOfflineQueue()
+  const isOffline = offline?.isOffline() ?? false
+  const shouldReadDevice =
+    isOffline ||
+    (executionSiteFor('invoice.create') === 'device' && (offline?.hasSynced?.('invoice') ?? false))
+  if (!shouldReadDevice) return null
   return localRequest<T>('GET', path, undefined, params)
 }
 
@@ -279,6 +285,33 @@ export async function submitInvoice({
   const writeLocally = async (): Promise<(Invoice & { pendingSync: true }) | null> => {
     const created = await localRequest<Invoice>('POST', '/invoices', input)
     return created ? { ...created, pendingSync: true } : null
+  }
+
+  // V68.3 — the device records the sale first, even online.
+  //
+  // The person is told «recorded» from the device's own SQLite and never waits
+  // for the round trip; the push that follows still runs the server's
+  // `InvoiceService.create` under the same key (permission, credit, the
+  // official number). The server is out of the WAITING path, not out of the sale.
+  //
+  // Never without a key: a replay could become a second sale.
+  if (idempotencyKey && executionSiteFor('invoice.create') === 'device') {
+    try {
+      const local = await writeLocally()
+      if (local) {
+        requestSyncSoon()
+        return local
+      }
+    } catch (refusal) {
+      // Offline, the device's answer is the only one there is.
+      if (offline?.isOffline()) throw refusal
+      // ⚠️ ONLINE, A REFUSAL BY THE DEVICE IS NOT THE LAST WORD. Serials, expiry
+      // batches, package credits and cost layers are the server's and no pull
+      // delivers them yet (`NOT_PULLED_YET` in device-sync-state.ts): the device
+      // may be refusing a sale only because it never received the row. The
+      // engine wrote nothing (its write is one transaction), so the server is
+      // asked, exactly as before V68 — and ITS refusal is the one shown.
+    }
   }
 
   // Without a key a replay could become a second sale: never queue that.

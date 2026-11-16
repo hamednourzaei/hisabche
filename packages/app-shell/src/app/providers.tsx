@@ -5,7 +5,9 @@
 import {
   createNotificationMutationCache,
   LOCAL_OWNER_HEADER,
+  getAppEdition,
   readStorage,
+  registerDeviceReadiness,
   registerEntitySyncReader,
   registerLocalTransport,
   registerOfflineQueue,
@@ -22,7 +24,7 @@ import { bindActiveWorkspace, useWorkspaceStore } from '@hisabche/store'
 
 import { useAuthStore } from '@/features/auth/auth.store'
 import { currentOutboxOwner } from '@/features/sync/outbox-owner'
-import { hasSyncedTable } from '@/features/sync/device-sync-state'
+import { deviceReadyFor, hasSyncedTable } from '@/features/sync/device-sync-state'
 import { MAX_ATTEMPTS, stagesSnapshot } from '@/features/sync/sync-engine'
 import { reasonOf, stageOf } from '@/features/sync/outbox-stage'
 import { bridge, localApi } from '@/shared/lib/bridge'
@@ -81,6 +83,12 @@ if (typeof window !== 'undefined') {
           : req.headers,
       })
     })
+    // The offline edition already runs everything on the device, through the
+    // transport itself, and has no outbox to fill: it is never «device-first».
+    registerDeviceReadiness(
+      (workspaceId, operation) =>
+        getAppEdition() !== 'offline' && deviceReadyFor(workspaceId, operation),
+    )
   }
 
   const isOffline =

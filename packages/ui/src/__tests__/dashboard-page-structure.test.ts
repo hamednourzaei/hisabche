@@ -69,6 +69,22 @@ const PAGE_IMPORTS = new Set([
   'next/navigation',
 ])
 
+/**
+ * The screen itself, by its own subpath — only a CONTAINER declared in the package's
+ * `exports` (15 Nov 2026). A container the hubs load lazily cannot stay in the barrel:
+ * a static re-export there makes every `lazy()` of it a no-op in the shell build.
+ */
+const UI_EXPORTS = Object.keys(
+  (
+    JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8')) as {
+      exports: Record<string, string>
+    }
+  ).exports,
+)
+const isScreenSubpath = (source: string): boolean =>
+  /^@hisabche\/ui\/components\/ui\/[a-z-]+\/containers\/[a-z-]+-container$/.test(source) &&
+  UI_EXPORTS.includes(source.replace('@hisabche/ui', '.'))
+
 describe('the dashboard route tree holds routes, not components', () => {
   it('found the pages', () => {
     // Without this the suite passes vacuously the day the path changes.
@@ -89,7 +105,7 @@ describe('the dashboard route tree holds routes, not components', () => {
     const offending = pages.flatMap((page) =>
       [...page.code.matchAll(/^import[^'"]*['"]([^'"]+)['"]/gm)]
         .map((m) => m[1]!)
-        .filter((source) => !PAGE_IMPORTS.has(source))
+        .filter((source) => !PAGE_IMPORTS.has(source) && !isScreenSubpath(source))
         .map((source) => `${page.rel} ← ${source}`),
     )
     expect(offending).toEqual([])

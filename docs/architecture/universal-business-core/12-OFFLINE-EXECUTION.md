@@ -62,3 +62,18 @@ COMMIT;
 ```
 
 If the device loses power mid-operation, the SQLite WAL rollback guarantees zero orphaned outbox records or inconsistent stock balances.
+
+---
+
+## 4. Local-First Execution Site & Parity (V68)
+
+1. **Decision Contract**:
+   `executionSiteFor(operation)` (`packages/api/src/lib/execution-site.ts`) determines whether an operation executes on `device` or `server`.
+   - Returns `'device'` only when local transport exists, active workspace is set, and all required tables are verified synced via `deviceReadyFor(workspaceId, operation)`.
+   - Never inspects hardware heuristics, RAM size, or `DeviceClass`.
+2. **Persistent Readiness**:
+   Device table sync timestamps are persisted in the SQLite `meta` table per workspace (`synced:<ws>:<table>`). App restarts preserve readiness state; switching workspaces re-evaluates against the newly active workspace.
+3. **Outbox Claim Protocol**:
+   Concurrent runners (native Android background vs WebView shell) acquire an atomic time-bounded lease (`claimQueue`) in SQLite before pushing. Two runners never push the same row simultaneously.
+4. **Server Confirmation & Re-keying**:
+   The server processes the pushed outbox row idempotently using the client's `Idempotency-Key`. Upon receiving 200/201 with the official `invoice_number` and server `id`, the device runs `confirmServerInvoice` to atomically update the header, re-key child lines, movements, cost allocations, and clear dirty flags.

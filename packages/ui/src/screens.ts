@@ -43,7 +43,6 @@ export { AccountingPage } from './components/ui/accounting'
 export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 
 // ---------- Sync ----------
-export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 
 // ---------- Settings ----------
 export {
@@ -56,25 +55,18 @@ export {
 } from './components/ui/settings'
 
 // ---------- CRM ----------
-export { CrmContainer } from './components/ui/crm/containers/crm-container'
 export { PublicTaskContainer } from './components/ui/crm/containers/public-task-container'
 
 // ---------- Workflow / Approvals ----------
 export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
-export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
-export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
 export { MarketplaceContainer } from './components/ui/marketplace/containers/marketplace-container'
-export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 export { ApprovalsHubContainer } from './components/ui/workflow/containers/approvals-hub-container'
 
 // ---------- Billing ----------
 export { BillingContainer } from './components/ui/billing'
 export { BillingHubContainer } from './components/ui/billing/containers/billing-hub-container'
-export { WalletContainer } from './components/ui/wallet/wallet-container'
 export { MarketSellerContainer } from './components/ui/market/market-seller-container'
 export { AnalysisContainer } from './components/ui/analysis/analysis-container'
-export { PromotionsContainer } from './components/ui/promotions/promotions-container'
-export { CampaignsContainer } from './components/ui/campaigns/campaigns-container'
 
 // ---------- Onboarding ----------
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
@@ -113,10 +105,6 @@ export { AttendanceSelfContainer } from './components/ui/team-and-payroll/contai
 // segments and desktop mounts the same modules from react-router — neither owns
 // a private copy.
 export { TillContainer } from './components/ui/till/containers/till-container'
-export { AssetsContainer } from './components/ui/assets/containers/assets-container'
-export { BankContainer } from './components/ui/bank/containers/bank-container'
-export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
-export { DataMigrationContainer } from './components/ui/data-migration/containers/data-migration-container'
 export { DataAndSyncContainer } from './components/ui/data-and-sync/containers/data-and-sync-container'
 export { DataHubContainer } from './components/ui/data-and-sync/containers/data-hub-container'
 export { WorkQueueContainer } from './components/ui/work-queue/containers/work-queue-container'
@@ -124,13 +112,10 @@ export { CustomerListContainer } from './components/ui/customers/containers/cust
 export { Invoice360Container } from './components/ui/invoice-detail/containers/invoice-360-container'
 export { Customer360Container } from './components/ui/customers/containers/customer-360-container'
 export { ProductListContainer } from './components/ui/products/containers/product-list-container'
-export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
-export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
 
 // ---------- Offline conflicts ----------
 // The review queue for offline writes the server refused. For an offline-first
 // product this is not an admin screen — it is where unrecorded money waits.
-export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
 
 // ---------- Separation of duties ----------
 export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
@@ -141,5 +126,4 @@ export { GovernanceHubContainer } from './components/ui/governance/containers/go
 // that exists on one machine and not the others.
 export { AiAssistantContainer } from './components/ui/ai/containers/ai-assistant-container'
 export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
-export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'
 export { SettingsHubContainer } from './components/ui/settings/settings-hub-container'

@@ -73,10 +73,14 @@ describe('Architecture Boundaries & Core Mechanical Enforcement', () => {
 
   it('guarantees one definition per core business rule across the codebase', () => {
     const rulesToTest = [
-      { name: 'buildProfitReport', declRegex: /export\s+function\s+buildProfitReport\s*\(/g },
-      { name: 'buildInstallmentPlan', declRegex: /export\s+function\s+buildInstallmentPlan\s*\(/g },
-      { name: 'planPayrollOutcome', declRegex: /export\s+function\s+planPayrollOutcome\s*\(/g },
-      { name: 'buildGeneralLedger', declRegex: /export\s+function\s+buildGeneralLedger\s*\(/g },
+      // ⚠️ No `g` flag. `RegExp.prototype.test` keeps `lastIndex` between calls
+      // when the flag is set, so a match late in one file could hide a
+      // declaration at the top of the next file — a second definition could
+      // then pass this guard unnoticed. `test` never needed the flag.
+      { name: 'buildProfitReport', declRegex: /export\s+function\s+buildProfitReport\s*\(/ },
+      { name: 'buildInstallmentPlan', declRegex: /export\s+function\s+buildInstallmentPlan\s*\(/ },
+      { name: 'planPayrollOutcome', declRegex: /export\s+function\s+planPayrollOutcome\s*\(/ },
+      { name: 'buildGeneralLedger', declRegex: /export\s+function\s+buildGeneralLedger\s*\(/ },
     ]
 
     const searchDirs = [path.join(ROOT, 'backend/src'), path.join(ROOT, 'packages')]
@@ -102,16 +106,17 @@ describe('Architecture Boundaries & Core Mechanical Enforcement', () => {
       return files
     }
 
-    const allTsFiles = searchDirs.flatMap(scanAllTs)
+    // Every candidate is read ONCE. The four rules are four views of the same
+    // text, and re-reading ~3k files per rule was most of this test's cost.
+    const sources = searchDirs.flatMap(scanAllTs).map((file) => ({
+      file: path.relative(ROOT, file).replace(/\\/g, '/'),
+      content: fs.readFileSync(file, 'utf8'),
+    }))
 
     for (const rule of rulesToTest) {
-      const definitionSites: string[] = []
-      for (const file of allTsFiles) {
-        const content = fs.readFileSync(file, 'utf8')
-        if (rule.declRegex.test(content)) {
-          definitionSites.push(path.relative(ROOT, file).replace(/\\/g, '/'))
-        }
-      }
+      const definitionSites = sources
+        .filter((source) => rule.declRegex.test(source.content))
+        .map((source) => source.file)
       expect(
         definitionSites.length,
         `Rule "${rule.name}" must have exactly ONE definition site across backend & packages, found: ${JSON.stringify(definitionSites)}`,

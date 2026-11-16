@@ -10,7 +10,59 @@
 --   5. Derived `partially_fulfilled` / `fulfilled` and per-line `delivered_quantity`
 --
 -- Additive, idempotent. Post-migration verification query generated — PENDING HUMAN CONFIRMATION.
+--
+-- PREREQUISITES — run these first, in this order (each with its VERIFY):
+--   1. docs/developer-platform-migration.sql            (api_keys, enqueue_webhook_event)
+--   2. docs/developer-platform-03-commerce-migration.sql (sales_orders, sales_order_items,
+--                                                        emit_sales_order_event)
+--   3. docs/stock-reservations-01-migration.sql          (stock_reservations, stock_reserve,
+--                                                        stock_release_reservation,
+--                                                        stock_settle_reservation)
+-- Check which are present: docs/FINDING-sales-orders-02-prerequisites.sql
+-- The guard below stops this file before it changes anything if one is missing.
 -- ============================================================================
+
+-- 0. Preflight: refuse to start on a database without the prerequisites.
+DO $preflight$
+DECLARE
+  v_missing text[] := ARRAY[]::text[];
+BEGIN
+  IF to_regclass('public.api_keys') IS NULL THEN
+    v_missing := array_append(v_missing, 'table api_keys  -> docs/developer-platform-migration.sql'::text);
+  END IF;
+  IF to_regprocedure('public.enqueue_webhook_event(uuid, uuid, text, jsonb)') IS NULL THEN
+    v_missing := array_append(v_missing, 'function enqueue_webhook_event  -> docs/developer-platform-migration.sql'::text);
+  END IF;
+  IF to_regclass('public.sales_orders') IS NULL THEN
+    v_missing := array_append(v_missing, 'table sales_orders  -> docs/developer-platform-03-commerce-migration.sql'::text);
+  END IF;
+  IF to_regclass('public.sales_order_items') IS NULL THEN
+    v_missing := array_append(v_missing, 'table sales_order_items  -> docs/developer-platform-03-commerce-migration.sql'::text);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public' AND p.proname = 'emit_sales_order_event') THEN
+    v_missing := array_append(v_missing, 'function emit_sales_order_event  -> docs/developer-platform-03-commerce-migration.sql'::text);
+  END IF;
+  IF to_regclass('public.stock_reservations') IS NULL THEN
+    v_missing := array_append(v_missing, 'table stock_reservations  -> docs/stock-reservations-01-migration.sql'::text);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                 WHERE n.nspname = 'public'
+                   AND p.proname IN ('stock_reserve', 'stock_release_reservation', 'stock_settle_reservation')
+                 HAVING count(DISTINCT p.proname) = 3) THEN
+    v_missing := array_append(v_missing, 'functions stock_reserve / stock_release_reservation / stock_settle_reservation  -> docs/stock-reservations-01-migration.sql'::text);
+  END IF;
+  IF to_regclass('public.warehouse_stock') IS NULL THEN
+    v_missing := array_append(v_missing, 'table warehouse_stock  -> docs/base-schema-migration.sql'::text);
+  END IF;
+
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'sales-orders-02: prerequisites missing, nothing was changed. Run first: %',
+      array_to_string(v_missing, ' | ')
+      USING ERRCODE = 'P0001';
+  END IF;
+END
+$preflight$;
 
 -- 1. Extend sales_orders status CHECK + quote columns + warehouse default
 ALTER TABLE public.sales_orders

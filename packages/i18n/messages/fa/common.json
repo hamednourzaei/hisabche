@@ -22,7 +22,11 @@
     "vocabulary": {
       "piece": "قطعه",
       "dish": "غذا",
-      "drink": "نوشیدنی"
+      "drink": "نوشیدنی",
+      "service": "خدمت",
+      "student": "دانش‌آموز",
+      "course": "دوره",
+      "repairItem": "دستگاه تعمیری"
     }
   },
   "app": {
@@ -3228,7 +3232,65 @@
       "contractsDue": "قراردادهای در موعد صدور",
       "procurementMismatches": "مغایرت تطبیق خرید",
       "openQualityFailures": "موارد باز کیفیت و قرنطینه"
-    }
+    },
+    "lowStockVariants": {
+      "title": "واریانت‌های با موجودی کم",
+      "empty": "تمام واریانت‌ها موجودی کافی دارند.",
+      "noVariants": "هنوز واریانت کالایی ثبت نشده است.",
+      "product": "کالا",
+      "variant": "واریانت",
+      "stock": "موجودی",
+      "min": "حداقل"
+    },
+    "todaySessions": {
+      "title": "نوبت‌های امروز",
+      "total": "کل نوبت‌ها",
+      "empty": "امروز هیچ نوبتی ثبت نشده است.",
+      "noServices": "هنوز خدمتی تعریف نشده است.",
+      "depositsHeld": "ودیعه‌های نزد ما",
+      "customer": "مشتری",
+      "service": "خدمت",
+      "specialist": "متخصص",
+      "status": "وضعیت",
+      "statuses": {
+        "scheduled": "زمان‌بندی‌شده",
+        "checked_in": "پذیرش‌شده",
+        "in_progress": "در حال انجام",
+        "delivered": "تحویل‌شده",
+        "cancelled": "لغوشده",
+        "no_show": "حاضر نشد"
+      },
+      "time": "ساعت"
+    },
+    "packageCreditsLow": {
+      "title": "بسته‌های در آستانه اتمام",
+      "empty": "هیچ بسته‌ای در آستانه اتمام اعتبار نیست.",
+      "noPackages": "هنوز هیچ بسته‌ای تخصیص نیافته است.",
+      "customer": "مشتری",
+      "package": "بسته",
+      "remaining": "مانده جلسات",
+      "total": "کل اعتبار"
+    },
+    "openRepairTickets": {
+      "title": "قبض‌های تعمیر باز",
+      "empty": "قبض تعمیر بازی در جریان نیست.",
+      "noTickets": "هنوز هیچ قبض تعمیری ثبت نشده است.",
+      "ticket": "شماره قبض",
+      "device": "دستگاه",
+      "problem": "ایراد",
+      "technician": "تکنسین",
+      "status": "وضعیت",
+      "statuses": {
+        "received": "دریافت شد",
+        "diagnosing": "در حال عیب‌یابی",
+        "waiting_parts": "منتظر قطعه",
+        "repairing": "در حال تعمیر",
+        "ready": "آماده‌ی تحویل",
+        "delivered": "تحویل شد",
+        "cancelled": "لغو"
+      }
+    },
+    "partUnavailable": "این عدد روی این دستگاه خوانده نشد."
   },
   "unit": {
     "piece": "عدد",
@@ -5444,6 +5506,7 @@
     "warehouseNone": "انتخاب انبار",
     "warehouseMissing": "بدون انتخاب انبار، موجودی کل کالا تغییر می‌کند اما موجودی هیچ انباری تغییر نمی‌کند.",
     "savedOffline": "فاکتور روی این دستگاه ذخیره شد و به‌محض وصل شدن اینترنت ثبت می‌شود.",
+    "recordedOnDevice": "روی این دستگاه ثبت شد — در حال ارسال",
     "recurrence": {
       "title": "این فاکتور خودکار تکرار شود",
       "kind": "دوره‌ی تکرار",
@@ -12379,7 +12442,11 @@
       "chart": "نمودار فروش",
       "insights": "پیشنهادهای هوشمند",
       "activities": "فعالیت‌های اخیر",
-      "manufacturing": "خلاصه‌ی تولید"
+      "manufacturing": "خلاصه‌ی تولید",
+      "lowStockVariants": "واریانت‌های با موجودی کم",
+      "todaySessions": "نوبت‌های امروز",
+      "packageCreditsLow": "بسته‌های با اعتبار کم",
+      "openRepairTickets": "قبض‌های تعمیر باز"
     },
     "hubSections": "بخش‌های این صفحه",
     "settings": {

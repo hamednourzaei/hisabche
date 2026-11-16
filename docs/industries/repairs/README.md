@@ -1,0 +1,82 @@
+# تعمیرات (`repairs`)
+
+<!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
+
+## حقایق از کد
+
+|           |                                   |
+| --------- | --------------------------------- |
+| شناسه     | `repairs`                         |
+| نام       | تعمیرات · تعمیرات · Repairs       |
+| نوع       | صنف                               |
+| خانواده   | [تعمیرات](../families/repairs.md) |
+| پروفایل   | `specialized`                     |
+| archetype | `SERVICE_REPAIR`                  |
+
+**وضعیت**
+
+- سفر پایه (ثبت‌نام → اولین فروش → سود و زیان): `EXISTING_BUT_INCOMPLETE` — `backend/src/__tests__/v59-1-repair-routes-http.test.ts`، `backend/src/__tests__/http-e2e-business-day.test.ts`، `backend/src/__tests__/journey-industries-3.pg.test.ts`
+- تجربه‌ی اختصاصی صنف: `EXISTING_BUT_INCOMPLETE`
+
+**DNA عملیاتی** (از `inferOperationalDna`)
+
+| محور         | مقدار                                        |
+| ------------ | -------------------------------------------- |
+| offering     | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS`      |
+| intake       | `JOB_TICKET`                                 |
+| inventory    | `SPARE_PARTS`                                |
+| settlement   | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
+| workforce    | `UNRESOLVED`                                 |
+| customer     | `SERVICE_ASSET_PROFILE`                      |
+| topology     | `SINGLE_LOCATION`                            |
+| unitTracking | `SERIAL_NUMBERS`                             |
+
+**ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `job_tickets`، `order_deposits`، `payroll`، `products`، `team`، `warehouse`
+
+**منوی پیشنهادی — پنهان می‌شود:** `/manufacturing`، `/till`
+
+**داشبورد (ترتیب):** `openRepairTickets`، `workQueue`، `kpis`، `chart`، `insights`، `activities`، `manufacturing`
+
+**کالای تازه:** واحد `piece` · فیلدهای جلو: `name`، `sellPrice`
+
+**ستون‌های اضافه‌ی فاکتور:** —
+
+**قابلیت‌های روشن**
+
+| قابلیت           | وضعیت                     | موتور · آفلاین                 | شاهد یا محدودیت         |
+| ---------------- | ------------------------- | ------------------------------ | ----------------------- |
+| `work_queue_sla` | `EXISTING_BUT_INCOMPLETE` | `work_orders_repair` · partial | `SLA_BREACH_ALERT_ONLY` |
+
+## تفاوت با خانواده‌ی «تعمیرات»
+
+### هویت و مدل کسب‌وکار
+
+پروفایل اختصاصی دارد (1 قابلیت روشن).
+
+### گردش کار روزانه
+
+سند کامل: [DAILY-WORKFLOW.md](./DAILY-WORKFLOW.md)
+
+### صفحه‌به‌صفحه
+
+سند کامل: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
+
+### عملیات و تراکنش
+
+سند کامل: [OPERATIONS-AND-TRANSACTIONS.md](./OPERATIONS-AND-TRANSACTIONS.md)
+
+### KPI و گزارش
+
+سند کامل: [KPI-AND-REPORTS.md](./KPI-AND-REPORTS.md)
+
+### نقش‌ها و دسترسی
+
+سند کامل: [ROLES-AND-PERMISSIONS.md](./ROLES-AND-PERMISSIONS.md)
+
+### آفلاین و دستگاه
+
+سند کامل: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
+
+### شکاف‌ها و نیازمندی‌ها
+
+سند کامل: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

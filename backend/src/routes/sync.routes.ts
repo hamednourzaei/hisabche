@@ -21,6 +21,7 @@ import {
   syncLeaseRequestSchema,
   syncPullRequestSchema,
   syncPushRequestSchema,
+  type SyncEntity,
 } from '@hisabche/validation'
 import { z } from 'zod'
 import {
@@ -37,7 +38,7 @@ import {
 
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
-import { syncService, SyncError } from '../services/sync.service'
+import { syncService, PULL_COLUMNS, SyncError } from '../services/sync.service'
 import { cursorWatcher } from '../services/sync-stream'
 import { supabase } from '../db'
 import { summariseSync, type MutationRow } from '../services/sync-overview.domain'
@@ -243,7 +244,13 @@ export async function syncRoutes(fastify: FastifyInstance) {
      GET /api/sync/snapshot — one page of a full rebuild (request #153)
      ═══════════════════════════════════════════════════════════════════════ */
   const snapshotQuery = z.object({
-    entity: z.enum(['product', 'customer', 'invoice']),
+    // Derived from PULL_COLUMNS, not a second list: an entity a device can pull
+    // is an entity it can rebuild, and the two cannot drift apart again.
+    entity: z.enum(
+      Object.entries(PULL_COLUMNS)
+        .filter(([, columns]) => columns !== null)
+        .map(([entity]) => entity) as [SyncEntity, ...SyncEntity[]],
+    ),
     after: z.string().uuid().optional(),
     limit: z.coerce.number().int().min(1).max(1000).default(500),
   })

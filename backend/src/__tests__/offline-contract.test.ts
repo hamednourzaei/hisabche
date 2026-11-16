@@ -108,6 +108,28 @@ const OFFLINE_POSITION: Record<string, { syncs: boolean; because: string }> = {
     syncs: true,
     because: 'a refunded advance must stop being offered on every device',
   },
+
+  // ─── V70.2: four tables the pull did not carry ──────────────────────────
+  //
+  // Same shape as the operational set: they travel DOWN only (their allow-list
+  // is `[]`), because each write moves money, stock or credit. What the device
+  // gains is the other counter's truth instead of its own stale copy.
+  product_variants: {
+    syncs: true,
+    because: 'a variant priced at one counter must not sell at the old price at the next',
+  },
+  service_delivery_sessions: {
+    syncs: true,
+    because: 'a session another practitioner already delivered must not be booked again',
+  },
+  package_credit_ledger: {
+    syncs: true,
+    because: 'credits spent elsewhere must stop being offered as a balance',
+  },
+  repair_tickets: {
+    syncs: true,
+    because: 'a ticket opened on another shift is work this bench has to do',
+  },
 }
 
 describe('the offline contract', () => {

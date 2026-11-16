@@ -27,6 +27,12 @@ const TABLE: Record<string, string> = {
   order_deposits: 'order_deposits',
   order_deposit_applications: 'order_deposit_applications',
   order_deposit_refunds: 'order_deposit_refunds',
+  // V70.2 — the four tables the pull did not carry. The device stores each under
+  // the server's own name, so the mapping is identity (unlike product_stock).
+  product_variants: 'product_variants',
+  service_delivery_sessions: 'service_delivery_sessions',
+  package_credit_ledger: 'package_credit_ledger',
+  repair_tickets: 'repair_tickets',
 }
 
 describe('sync pull columns', () => {

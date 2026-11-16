@@ -18,8 +18,9 @@ describe('the dashboard is almost live', () => {
     expect(DASHBOARD_LIVE.refetchIntervalInBackground).toBe(false)
   })
 
-  it('KPIs, insights and the sales chart all use it — none has its own staleTime', () => {
-    expect(src.split('...DASHBOARD_LIVE,').length - 1).toBe(3)
+  // KPIs, insights, the sales chart, and the four trade parts (V69.5).
+  it('every dashboard read uses it — none has its own staleTime', () => {
+    expect(src.split('...DASHBOARD_LIVE,').length - 1).toBe(7)
     expect(src).not.toMatch(/staleTime: 1?[0-9]{2}_000/)
   })
 })

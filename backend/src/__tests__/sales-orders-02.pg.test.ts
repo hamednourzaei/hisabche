@@ -13,6 +13,10 @@ describe('sales-orders-02-migration.sql (PG)', () => {
       resolve(__dirname, '../../docs/stock-reservations-01-migration.sql'),
       'utf8',
     )
+    const platformSql = readFileSync(
+      resolve(__dirname, '../../docs/developer-platform-migration.sql'),
+      'utf8',
+    )
     const commerceSql = readFileSync(
       resolve(__dirname, '../../docs/developer-platform-03-commerce-migration.sql'),
       'utf8',
@@ -23,6 +27,7 @@ describe('sales-orders-02-migration.sql (PG)', () => {
     )
     await pg.sql.unsafe(baseSql)
     await pg.sql.unsafe(stockResSql)
+    await pg.sql.unsafe(platformSql)
     await pg.sql.unsafe(commerceSql)
     // Idempotent check: run migration twice
     await pg.sql.unsafe(migSql)
@@ -103,5 +108,39 @@ describe('sales-orders-02-migration.sql (PG)', () => {
         expect(activeRes!.c).toBe(0)
       }
     }
+  })
+})
+
+describe('sales-orders-02-migration.sql preflight (PG)', () => {
+  let pg: PgTestHandle
+
+  beforeAll(async () => {
+    pg = await startPg()
+    await pg.sql.unsafe(
+      readFileSync(resolve(__dirname, '../../docs/base-schema-migration.sql'), 'utf8'),
+    )
+  }, 60_000)
+
+  afterAll(async () => {
+    await stopPg(pg)
+  })
+
+  it('stops with a named list of prerequisites and changes nothing when sales_orders is missing', async () => {
+    const migSql = readFileSync(
+      resolve(__dirname, '../../docs/sales-orders-02-migration.sql'),
+      'utf8',
+    )
+    let message = ''
+    try {
+      await pg.sql.unsafe(migSql)
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error)
+    }
+    expect(message).toContain('sales-orders-02: prerequisites missing, nothing was changed')
+    expect(message).toContain('developer-platform-03-commerce-migration.sql')
+    expect(message).toContain('stock-reservations-01-migration.sql')
+    const [row] =
+      await pg.sql`SELECT to_regclass('public.sales_order_deliveries') IS NULL AS absent`
+    expect(row!.absent).toBe(true)
   })
 })

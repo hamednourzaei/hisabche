@@ -30,6 +30,19 @@ const INDUSTRY_IDENTIFIERS = new Set([
 ])
 
 /**
+ * A file that never names the industry cannot compare it to a literal, so the
+ * AST is only built for files whose text passes this gate.
+ *
+ * The result is identical: `findIndustryBranches` can only report a node whose
+ * identifier — or whose element-access string literal — is one of the names
+ * above, and in every one of those cases that name is present in the source
+ * text as a word. What changes is the cost: ~90% of the TypeScript files in
+ * this repository stop at one regex instead of a full parse, which is the
+ * difference between an 11-second guard and a sub-second one.
+ */
+const NAMES_INDUSTRY = new RegExp(`\\b(?:${[...INDUSTRY_IDENTIFIERS].join('|')})\\b`)
+
+/**
  * The registry, its resolver and tests are the places allowed to name an
  * industry. Tests are excluded because they must be able to name the value
  * they assert.
@@ -134,6 +147,7 @@ describe('industry is a registry row, not a branch', () => {
         const relativePath = normalise(relative(REPO_ROOT, file))
         if (isAllowed(relativePath)) continue
         const source = readFileSync(file, 'utf8')
+        if (!NAMES_INDUSTRY.test(source)) continue
         violations.push(...findIndustryBranches(source, relativePath))
       }
     }

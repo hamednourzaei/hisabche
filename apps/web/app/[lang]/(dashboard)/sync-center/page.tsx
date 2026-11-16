@@ -1,4 +1,4 @@
-import { SyncCenterContainer } from '@hisabche/ui'
+import { SyncCenterContainer } from '@hisabche/ui/components/ui/sync-center/containers/sync-center-container'
 
 const titles: Record<string, string> = {
   fa: 'مرکز همگام‌سازی',

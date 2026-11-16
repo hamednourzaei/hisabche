@@ -1,1 +1,1 @@
-export { DevelopersContainer as default } from '@hisabche/ui/screens'
+export { DevelopersContainer as default } from '@hisabche/ui/components/ui/developers/containers/developers-container'

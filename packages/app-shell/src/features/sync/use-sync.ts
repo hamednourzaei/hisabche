@@ -4,9 +4,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getAppEdition } from '@hisabche/api'
+import { getAppEdition, onSyncRequested } from '@hisabche/api'
 
 import { bridge } from '@/shared/lib/bridge'
+import { loadSyncedTables, resetSyncedTables } from './device-sync-state'
 import { resetTransientFailuresOnReconnect, runSync, startSyncStream } from './sync-engine'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
@@ -90,6 +91,7 @@ export function useBackgroundSync(workspaceId: string | null): void {
       void resetTransientFailuresOnReconnect().then(() => runSync(queryClient))
 
     trigger()
+    const unsubSyncRequested = onSyncRequested(trigger)
     window.addEventListener('online', onReconnect)
     const timer = window.setInterval(trigger, BACKGROUND_INTERVAL_MS)
     // Near-realtime: another device's sale reaches this one within seconds.
@@ -97,6 +99,7 @@ export function useBackgroundSync(workspaceId: string | null): void {
     const stream = workspaceId ? startSyncStream(workspaceId, trigger) : null
 
     return () => {
+      unsubSyncRequested()
       window.removeEventListener('online', onReconnect)
       window.clearInterval(timer)
       stream?.stop()
@@ -140,8 +143,12 @@ export function useWorkspaceCache(workspaceId: string | null): {
       // A purge empties every cached table, so anything already rendered from
       // the old workspace is now stale in React Query's cache too.
       if (result.purged) {
+        // The host deleted the pull stamps with the rows; memory follows.
+        resetSyncedTables()
         await queryClient.invalidateQueries()
       }
+      // After a reload the device still knows what it pulled (V68.1).
+      await loadSyncedTables(workspaceId)
     })()
 
     return () => {

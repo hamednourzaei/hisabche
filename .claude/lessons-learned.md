@@ -2336,3 +2336,27 @@ Electron Ø¨Ø§Ø²Ø³Ø§Ø²ÛŒ Ø´Ø¯Ù‡Â» Ùˆ **Ù‡ÛŒÚ† Ú
 - ⚠️ **متن دری راهنما کپی فارسی بود** — حالا با واژه‌نامه (جنس، گدام، بل، دوکان) و گارد.
 - گاردی که یک خط را لفظی می‌خواند (`if (items.length < 2) return null`، `walkedIds`) را با تغییر ساختار راضی کن نه با شل‌کردن: `HubTabs` حالا دور همان `HubTabBar` قدیمی می‌پیچد.
 - گارد: `packages/ui/src/__tests__/guide-teaches-only-what-exists.test.ts` (با fixture شکسته). گزارش: `docs/architecture/V67-GUIDES-DOCS.md`.
+
+## درس ۲۶۴ — فاکتور دستگاه local-first است؛ مکان اجرا فقط executionSiteFor؛ آمادگی پایدار به‌ازای workspace (۱۶ نوامبر ۲۰۲۶)
+
+- ⚠️ **مکان اجرا بر اساس آمادگی داده است، نه مشخصات سخت‌افزاری:** تصمیم‌گیری در `executionSiteFor` منحصراً وابسته به وجود ترنسپورت محلی و کامل بودن همگام‌سازی جدول‌های پیش‌نیاز در دیتابیس دستگاه (`deviceReadyFor`) است. دستگاه ضعیف نباید عدد یا رفتار متفاوت تولید کند؛ ماژول تصمیم نباید به `runtime-policy`، رم یا کلاس سخت‌افزار ارجاع دهد (`execution-site-not-device-class.test.ts`).
+- ⚠️ **آمادگی دستگاه باید پایدار و به‌ازای workspace ذخیره شود:** ذخیره‌ی حافظه‌ای وضعیت همگام‌سازی با reload شل از بین می‌رفت. متادیتا در جدول `meta` در SQLite بومی دستگاه به کلید `synced:<workspaceId>:<table>` با ثبت مهرزمانی `pulledAt` نگه‌داری می‌شود تا سوئیچ بین چند workspace وضعیت‌های مستقل و پایدار ایجاد کند (`device-operation-reads.test.ts`).
+- ⚠️ **ادعای تک‌مالکی برای صف outbox (اجاره‌ی ردیف):** در اندروید وجود دو runner هم‌زمان (سرویس بومی Background و WebView شل) بدون مکانیزم قفل، ریسک ارسال دوگانه ایجاد می‌کرد. تابع اتمیک `claimQueue(clientId, owner, leaseMs)` ردیف صف را منحصراً اجاره می‌دهد تا از هم‌زمانی ناخواسته جلوگیری شود (`outbox-single-pusher.test.ts`).
+- ⚠️ **سرور از مسیر انتظار کاربر خارج می‌شود اما حذف نمی‌شود:** فاکتور بلافاصله در SQLite ثبت و با شناسه موقت `OFF-...` به صورت local-first چاپ/مشاهده می‌شود؛ در هنگام push، سرور با همان `Idempotency-Key` اعتبارسنجی کرده و پس از صدور شماره و شناسه رسمی، route محلی `confirmServerInvoice` کلیدها و وضعیت dirty را به صورت اتمیک به‌روزرسانی می‌کند (`device-invoice-roundtrip.test.ts`).
+- ⚠️ **رد موتور محلی (۴xx) هرگز به سرور fallback نمی‌کند:** بازگشت به سرور بعد از ردّ شدن در موتور محلی یعنی ایجاد دو مجموعه قانون متناقض؛ در صورت رد محلی خطا فوراً اعلام می‌شود.
+
+## درس ۲۶۵ — سند صنف که کارت وعده می‌دهد باید در پروفایل هم باشد؛ هر اقدام آفلاین مکان اجرا دارد (۱۶ نوامبر ۲۰۲۶)
+
+- ⚠️ **سند و پروفایل دو جای یک ادعا هستند:** `docs/industries/shoes/README.md` می‌گفت «همان مشخصات `clothing` را می‌خواند»، ولی `PROFILES.shoes.dashboard` کارت `lowStockVariants` را نداشت. قاعده: هر صنفی که سندش نماینده‌ای را پوشش می‌دهد، همان قطعه را در `OVERRIDES` هم بگیرد؛ گارد `industry-dashboard-parts.test.ts` (۱۶ تست) هر دو طرف را می‌سنجد.
+- ⚠️ **حالت خالی بدون شمارش واقعی دروغ است:** «هنوز هیچ واریانتی نیست» فقط وقتی درست است که provider واقعاً `count` را خوانده باشد؛ `todaySessions` یک پیام صادقانه دارد چون «خدمتی تعریف نشده» از داده معلوم نیست (`products` فیلد «خدمت است» ندارد).
+- ⚠️ **جدول آفلاین را از ماتریس بساز، نه از حافظه:** builder روی endpoint بی‌ردیف خطا می‌دهد و برچسب وضعیت را از `OFFLINE_ENDPOINT_MATRIX` می‌گذارد (`industry-offline-device.test.ts`).
+- ⚠️ **مکان اجرا یک قرارداد سه‌عضوی است:** `executionSiteFor` فقط `invoice.create`/`payment.record`/`invoice.return` را می‌شناسد؛ برای عمل دیگر ادعای `device` نکن و مسیر سوم نساز. وب هرگز میزبان ثبت نمی‌کند.
+- ⚠️ **تعارض رزرو آفلاین LWW نیست:** `409` روی `POST /resource-bookings` به `handleBookingSyncConflict` می‌رود ⇒ `PENDING_REVIEW` + `RESOURCE_SLOT_OVERLAP` و خطای `permanent`؛ رزرو دور ریخته یا بازنویسی نمی‌شود.
+- ⚠️ **گارد سند را با injection بسنج:** تغییر موقت `PENDING_REVIEW` به `LAST_WRITE_WINS` در builder تست را قرمز کرد؛ بدون آن، گارد فقط «متنی هست» را تکرار می‌کند.
+- ⚠️ **`sellable-industries.json` و `capability-matrix.csv` روی درخت commit‌نشده «قابل فروش نیست» می‌شوند** (`acceptanceWorktreeDirty: true`)؛ بعد از commit مالک دوباره تولید شوند، نه اینکه عدد سبز ادعا شود.
+
+## درس ۲۶۶ — migration پیش‌نیازش را نام ببرد؛ `text[] || 'متن'` آرایه می‌خواند (۱۶ نوامبر ۲۰۲۶)
+
+`sales-orders-02` روی دیتابیس زنده با `relation "public.sales_orders" does not exist` افتاد: جدول را `developer-platform-03-commerce-migration.sql` می‌سازد که اجرا نشده بود، و تست pg هر سه پیش‌نیاز را خودش اجرا می‌کرد (حتی `developer-platform-migration.sql` را نه). حالا فایل یک بلوک preflight دارد که پیش از هر تغییری پیش‌نیازهای گم‌شده را با نام فایل می‌گوید، و `FINDING-sales-orders-02-prerequisites.sql` همان را فقط‌خواندنی نشان می‌دهد.
+⚠️ اولین نسخه‌ی خودِ گارد روی زنده افتاد: در PL/pgSQL `v_text_array || 'literal'` لیترال بی‌نوع را آرایه می‌خواند (`22P02 malformed array literal`). همیشه `array_append(arr, '…'::text)`. گاردی که هرگز روی Postgres اجرا نشده، همان‌قدر اثبات‌نشده است که migration — این دستگاه embedded-postgres ندارد (`postgres.exe` در `.p/` نیست).
+✅ ۱۶ نوامبر: صاحب پروژه `developer-platform-03-commerce` و `sales-orders-02` را روی دیتابیس زنده اجرا کرد؛ VERIFY هر دو و FINDING پیش‌نیازها همه true. (`MIGRATIONS-PENDING.md` تولیدی است و عمداً همه را PENDING نگه می‌دارد — دستی ویرایش نشد.)

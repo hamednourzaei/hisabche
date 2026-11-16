@@ -12,11 +12,11 @@ decides. A WebSocket only says _when_ to look — never _what_ is true.
 
 ## 1. Where data lives on each platform
 
-| Platform           | Local store                                                                                           | Sync                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Windows (Electron) | SQLite (better-sqlite3) in the main process, reached over IPC (`@hisabche/app-bridge` contract)       | pull by change-log cursor + push from `sync_queue` — `packages/app-shell/src/features/sync/sync-engine.ts` |
-| Android (Expo)     | SQLite (expo-sqlite) in the native host, same contract and same schema (`app-bridge/local-schema.ts`) | push from the same queue shape — `apps/mobile/src/features/offline/sync-runner.ts` (no pull yet)           |
-| Web                | none (persisted React Query cache only)                                                               | online only; a write without network fails there                                                           |
+| Platform           | Local store                                                                                           | Sync                                                                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows (Electron) | SQLite (better-sqlite3) in the main process, reached over IPC (`@hisabche/app-bridge` contract)       | pull by change-log cursor + push from `sync_queue` — `packages/app-shell/src/features/sync/sync-engine.ts`                            |
+| Android (Expo)     | SQLite (expo-sqlite) in the native host, same contract and same schema (`app-bridge/local-schema.ts`) | background push via native `sync-runner.ts` + WebView shell `sync-engine.ts` (pull snapshot/delta + push with atomic row lease claim) |
+| Web                | none (persisted React Query cache only)                                                               | online only; a write without network fails there                                                                                      |
 
 `packages/sync` is the shared **protocol** layer: the binary codec
 (`@hisabche/sync/wire`) and the wake-up client (`@hisabche/sync/stream`).
@@ -93,9 +93,16 @@ what protects it (idempotency key, one Postgres function, conditional update,
 unique index, lease), with evidence the guard test checks. Known gaps are
 written there, not hidden.
 
-## 6. Not done yet
+## 6. Local-First Device Execution (V68)
 
-- Android pulls nothing (push only); it would use the same snapshot + pull.
+- **Execution site decision**: Pure module `executionSiteFor(op)` (`packages/api/src/lib/execution-site.ts`). Evaluates based strictly on local transport availability and persistent data readiness (`deviceReadyFor`), never on hardware class or memory heuristics.
+- **Persistent readiness per workspace**: Backed by device SQLite `meta` table with keys `synced:<workspaceId>:<table>` and timestamps (`pulledAt`). reload keeps readiness; changing workspaces verifies separate readiness.
+- **Single outbox pusher**: Atomic lease claim (`claimQueue`) prevents race conditions between Android native background runner and WebView app-shell sync runner.
+- **Invoice Roundtrip**: Device assigns temporary `OFF-...` number and dirty status; on push, server creates official record with idempotency and returns official number; `confirmServerInvoice` transactionally updates local header, lines, cost consumptions, and journal entries.
+
+## 7. Not done yet
+
+- Android pulls via WebView app-shell (`sync-engine.ts`); single-pusher concurrency is guaranteed via atomic row lease claim (`claimQueue`).
 - Invoice line items are not mirrored on the device (the header is).
 - `sync_change_log` on production: confirm with
   `select to_regclass('public.sync_change_log');` — if NULL, desktop takes a

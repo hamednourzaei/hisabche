@@ -323,3 +323,88 @@ export function grantStatuses(
     deferredAmount: grant.deferredAmount,
   }))
 }
+
+// ─── From raw ledger rows to statuses (ONE derivation, read by server and device) ─────────────────────────────
+
+/** One row of `package_credit_ledger`, as both the server and the device read it. */
+export interface PackageLedgerRowFact {
+  readonly id: string
+  readonly entryType: string
+  readonly quantity: number
+  readonly referenceEntryId: string | null
+  readonly effectiveDate: string
+  readonly deferredAmount: number | null
+  readonly termMonths: number | null
+}
+
+/** One row of `package_credit_suspensions`. */
+export interface PackageSuspensionFact {
+  readonly grantId: string
+  readonly kind: 'SUSPEND' | 'RESUME'
+  readonly effectiveOn: string
+  /** Position in the append-only log; two rows on one day keep their order. */
+  readonly order: number
+}
+
+/**
+ * The status of every GRANT of ONE (customer, package) on `today`, derived from
+ * the ledger rows themselves.
+ *
+ * ⚠️ This is the ONLY place the allocation rules are applied to raw rows. The
+ * grants route, the device's local engine and every dashboard card call this
+ * function; none of them re-derives `legacyConsumed`, the reversed set or the
+ * adjustments — a second copy of that arithmetic is a second answer.
+ */
+export function grantStatusesFromRows(input: {
+  rows: readonly PackageLedgerRowFact[]
+  allocations: readonly LedgerAllocationFact[]
+  suspensions: readonly PackageSuspensionFact[]
+  today: string
+}): GrantStatus[] {
+  const grants = input.rows.filter((row) => row.entryType === 'GRANT')
+  if (grants.length === 0) return []
+
+  const allocated = new Set(input.allocations.map((allocation) => allocation.entryId))
+  const consumeIds = new Set(
+    input.rows.filter((row) => row.entryType === 'CONSUME').map((row) => row.id),
+  )
+  const reversed = new Set(
+    input.rows
+      .filter((row) => row.entryType === 'REVERSAL' && row.referenceEntryId)
+      .map((row) => row.referenceEntryId as string),
+  )
+  // Consumptions written before allocation rows existed: charged, oldest first,
+  // to the GRANTs that carry no deferred amount.
+  const legacyConsumed = input.rows.reduce((sum, row) => {
+    if (row.entryType === 'CONSUME' && !allocated.has(row.id)) return sum + row.quantity
+    if (
+      row.entryType === 'REVERSAL' &&
+      row.referenceEntryId &&
+      consumeIds.has(row.referenceEntryId) &&
+      !allocated.has(row.referenceEntryId)
+    ) {
+      return sum - row.quantity
+    }
+    return sum
+  }, 0)
+
+  return grantStatuses(
+    {
+      grants: grants.map((row) => ({
+        id: row.id,
+        startsOn: row.effectiveDate,
+        quantity: row.quantity,
+        deferredAmount: row.deferredAmount,
+        termMonths: row.termMonths,
+      })),
+      adjustments: input.rows
+        .filter((row) => row.entryType === 'ADJUSTMENT' && row.referenceEntryId)
+        .map((row) => ({ grantId: row.referenceEntryId as string, quantity: row.quantity })),
+      allocations: [...input.allocations],
+      reversedConsumeIds: reversed,
+      suspensionEvents: [...input.suspensions],
+      legacyConsumed,
+    },
+    input.today,
+  )
+}

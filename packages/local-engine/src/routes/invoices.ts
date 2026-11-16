@@ -1404,4 +1404,90 @@ export function registerInvoiceRoutes(router: Router): void {
       return { removed: items.changes + delHeader.changes }
     })
   })
+
+  // ─── POST /invoices/:id/confirm-server ──────────────────────
+  //
+  // V68.5: the server accepted a sale this device recorded first.
+  //
+  // The device wrote it under a temporary number (OFF-…) and its own id. The
+  // server answered the push with the official number and ITS id. This puts
+  // both on the device's own row at once — the person sees the real number
+  // without waiting for the next pull — and moves everything the device hung
+  // on the temporary id to the server's id, in ONE transaction, so «cancel
+  // this sale» later finds its lines, stock movement, cost and posting.
+  //
+  // It moves references and nothing else: no amount, quantity or balance is
+  // recomputed here. The pull that follows overwrites the header and lines
+  // with the server's own.
+  //
+  // `confirmed: false` is an answer, not an error: the caller then deletes the
+  // projection (D3) and lets the pull bring the server's row.
+  router.post('/invoices/:id/confirm-server', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    requireCapability(ctx, 'invoice.create')
+    const { workspaceId } = ctx
+    const clientId = params.id
+    const body = (c.body ?? {}) as Record<string, unknown>
+    const serverId = typeof body.serverId === 'string' ? body.serverId.trim() : ''
+    const invoiceNumber = typeof body.invoiceNumber === 'string' ? body.invoiceNumber.trim() : ''
+    if (!serverId || !invoiceNumber) {
+      throw new ValidationError('CONFIRM_SERVER_INVOICE_INCOMPLETE: serverId and invoiceNumber')
+    }
+
+    return db.transaction(() => {
+      const mine = db.get<{ id: string }>(
+        'SELECT id FROM invoice WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+        [clientId, workspaceId],
+      )
+      if (!mine) return { confirmed: false, reason: 'NOT_ON_DEVICE' }
+
+      const now = new Date().toISOString()
+
+      if (serverId === clientId) {
+        db.run(
+          `UPDATE invoice SET invoice_number = ?, sync_state = 'synced', dirty = 0, updated_at = ?
+            WHERE id = ? AND workspace_id = ?`,
+          [invoiceNumber, now, clientId, workspaceId],
+        )
+        return { confirmed: true, id: serverId, invoiceNumber }
+      }
+
+      // The pull was faster: the server's row is already here under its own
+      // id. Two rows for one sale is the one thing this must never leave.
+      const pulled = db.get<{ id: string }>('SELECT id FROM invoice WHERE id = ?', [serverId])
+      if (pulled) return { confirmed: false, reason: 'ALREADY_PULLED' }
+
+      db.run('UPDATE invoice_item SET invoice_id = ? WHERE invoice_id = ?', [serverId, clientId])
+      db.run('UPDATE payment_allocation SET invoice_id = ? WHERE invoice_id = ?', [
+        serverId,
+        clientId,
+      ])
+      db.run(
+        "UPDATE cost_consumption SET consumer_id = ? WHERE consumer_type = 'invoice' AND consumer_id = ?",
+        [serverId, clientId],
+      )
+      db.run(
+        "UPDATE cost_layer SET source_id = ? WHERE source_type = 'invoice' AND source_id = ?",
+        [serverId, clientId],
+      )
+      db.run(
+        "UPDATE lot_allocations SET consumer_id = ? WHERE consumer_type = 'invoice' AND consumer_id = ?",
+        [serverId, clientId],
+      )
+      db.run('UPDATE inventory_movement SET reference = ? WHERE reference = ?', [
+        serverId,
+        clientId,
+      ])
+      db.run(
+        "UPDATE journal_entry SET source_id = ? WHERE source_type = 'invoice' AND source_id = ?",
+        [serverId, clientId],
+      )
+      db.run(
+        `UPDATE invoice SET id = ?, invoice_number = ?, sync_state = 'synced', dirty = 0, updated_at = ?
+          WHERE id = ? AND workspace_id = ?`,
+        [serverId, invoiceNumber, now, clientId, workspaceId],
+      )
+      return { confirmed: true, id: serverId, invoiceNumber }
+    })
+  })
 }

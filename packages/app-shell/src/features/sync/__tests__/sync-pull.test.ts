@@ -132,6 +132,11 @@ describe('first pull: complete snapshot through /sync/snapshot, then the log fro
           'order_deposits',
           'order_deposit_applications',
           'order_deposit_refunds',
+          // V70.2: pulled now, empty in this workspace too.
+          'product_variants',
+          'service_delivery_sessions',
+          'package_credit_ledger',
+          'repair_tickets',
         ].includes(String(params.entity))
       ) {
         return asJson({ rows: [], hasMore: false, nextAfter: null })

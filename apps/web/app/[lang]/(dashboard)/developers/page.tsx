@@ -1,5 +1,5 @@
 // apps/web/app/[lang]/(dashboard)/developers/page.tsx
-import { DevelopersContainer } from '@hisabche/ui'
+import { DevelopersContainer } from '@hisabche/ui/components/ui/developers/containers/developers-container'
 
 const titles: Record<string, string> = {
   fa: 'توسعه‌دهندگان و اتصال‌ها',

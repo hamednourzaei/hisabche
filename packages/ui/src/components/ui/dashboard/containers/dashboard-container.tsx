@@ -40,6 +40,10 @@ import { formatNumber, toIsoDay } from '@hisabche/formatting'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { ManufacturingDashboardCard } from '../../manufacturing/manufacturing-dashboard-card'
 import { SalonOperationsCard } from '../salon-operations-card'
+import { LowStockVariantsCard } from '../low-stock-variants-card'
+import { TodaySessionsCard } from '../today-sessions-card'
+import { PackageCreditsLowCard } from '../package-credits-low-card'
+import { OpenRepairTicketsCard } from '../open-repair-tickets-card'
 import { OwnerCommandCenterSection } from '../owner-command-center'
 import { nameOfCurrency } from '../../../../lib/currency-name'
 
@@ -448,6 +452,42 @@ export function DashboardContainer() {
           from={toIsoDay(dateRange.from)}
           to={toIsoDay(dateRange.to)}
           onOpen={() => push('/manufacturing')}
+        />
+      ) : null}
+
+      {profile.dashboard.includes('lowStockVariants') && look.shows('lowStockVariants') ? (
+        <LowStockVariantsCard
+          t={t}
+          locale={intlLocale}
+          enabled={look.active('lowStockVariants')}
+          onOpen={() => push('/warehouse')}
+        />
+      ) : null}
+
+      {profile.dashboard.includes('todaySessions') && look.shows('todaySessions') ? (
+        <TodaySessionsCard
+          t={t}
+          locale={intlLocale}
+          enabled={look.active('todaySessions')}
+          onOpen={() => push('/customers?tab=sessions')}
+        />
+      ) : null}
+
+      {profile.dashboard.includes('packageCreditsLow') && look.shows('packageCreditsLow') ? (
+        <PackageCreditsLowCard
+          t={t}
+          locale={intlLocale}
+          enabled={look.active('packageCreditsLow')}
+          onOpen={() => push('/customers')}
+        />
+      ) : null}
+
+      {profile.dashboard.includes('openRepairTickets') && look.shows('openRepairTickets') ? (
+        <OpenRepairTicketsCard
+          t={t}
+          locale={intlLocale}
+          enabled={look.active('openRepairTickets')}
+          onOpen={() => push('/customers?tab=sessions&view=repairs')}
         />
       ) : null}
 

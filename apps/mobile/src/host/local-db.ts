@@ -215,12 +215,87 @@ export async function queue(): Promise<QueueEntry[]> {
   })) as QueueEntry[]
 }
 
+export async function claimQueue(
+  clientId: string,
+  owner: string,
+  leaseMs: number = 30_000,
+): Promise<boolean> {
+  const db = require_()
+  const key = `claim:queue:${clientId}`
+  const now = Date.now()
+
+  let acquired = false
+  await db.withTransactionAsync(async () => {
+    const existing = await db.getFirstAsync<{ value?: string }>(
+      'SELECT value FROM meta WHERE key = ?',
+      [key],
+    )
+    if (existing?.value) {
+      const [existingOwner, rawExpires] = existing.value.split(':')
+      const expiresAt = Number(rawExpires ?? 0)
+      if (now < expiresAt && existingOwner !== owner) {
+        acquired = false
+        return
+      }
+    }
+    const val = `${owner}:${now + leaseMs}`
+    await db.runAsync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [key, val])
+    acquired = true
+  })
+
+  return acquired
+}
+
+/**
+ * «This device pulled `table` for `workspaceId`» (V68.1). Same rule as the
+ * desktop host: kept in `meta`, removed with the cached rows on a switch.
+ */
+export async function markTableSynced(
+  workspaceId: string,
+  table: string,
+  pulledAt: string,
+): Promise<void> {
+  const db = require_()
+  const current = await db.getFirstAsync<{ value: string }>(
+    `SELECT value FROM meta WHERE key = 'workspace_id'`,
+  )
+  // A stamp for a workspace the cache does not hold would be a lie.
+  if (current?.value !== workspaceId) return
+  await db.runAsync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [
+    `synced:${workspaceId}:${table}`,
+    pulledAt,
+  ])
+}
+
+export async function syncedTables(workspaceId: string): Promise<Record<string, string>> {
+  const db = require_()
+  const current = await db.getFirstAsync<{ value: string }>(
+    `SELECT value FROM meta WHERE key = 'workspace_id'`,
+  )
+  if (current?.value !== workspaceId) return {}
+  const prefix = `synced:${workspaceId}:`
+  const rows = await db.getAllAsync<{ key: string; value: string }>(
+    'SELECT key, value FROM meta WHERE substr(key, 1, ?) = ?',
+    [prefix.length, prefix],
+  )
+  const out: Record<string, string> = {}
+  for (const row of rows) out[row.key.slice(prefix.length)] = row.value
+  return out
+}
+
 export async function resolveQueue(
   clientId: string,
   status: 'done' | 'failed',
   error?: string,
 ): Promise<void> {
   const db = require_()
+
+  // Clean up any held row claim
+  try {
+    await db.runAsync('DELETE FROM meta WHERE key = ?', [`claim:queue:${clientId}`])
+  } catch {
+    // Ignore cleanup error if meta table unavailable
+  }
 
   // ⚠️ A DONE ENTRY IS DELETED, NOT MARKED. Keeping it would replay on the
   // next drain unless every reader remembered to filter — and one that forgot
@@ -263,6 +338,8 @@ export async function setWorkspace(
     for (const table of CACHED_TABLES) {
       await db.runAsync(`DELETE FROM ${table}`)
     }
+    // The pull stamps describe the rows just deleted (V68.1).
+    await db.runAsync(`DELETE FROM meta WHERE substr(key, 1, 7) = 'synced:'`)
     await db.runAsync('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)', [
       'workspace_id',
       normalizeValue(workspaceId) as string,

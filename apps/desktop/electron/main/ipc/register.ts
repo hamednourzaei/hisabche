@@ -16,6 +16,9 @@ import {
   dbQuerySchema,
   dbResolveQueueSchema,
   dbSetWorkspaceSchema,
+  dbClaimSchema,
+  dbMarkSyncedSchema,
+  dbSyncedTablesSchema,
   dbUpsertSchema,
   dbRemoveSchema,
   exportFileSchema,
@@ -186,6 +189,33 @@ export function registerIpcHandlers(): void {
       'record.delete',
       true,
     )(({ workspaceId }, event) => db.setCachedWorkspace(workspaceId)),
+  )
+  handle(
+    IPC.dbClaim,
+    dbClaimSchema,
+    // The same level as resolving a queue row: a claim decides who sends it.
+    authenticateAndAuthorize(
+      'record.delete',
+      true,
+    )(({ clientId, owner, leaseMs }, event) => db.claimQueue(clientId, owner, leaseMs)),
+  )
+  handle(
+    IPC.dbMarkSynced,
+    dbMarkSyncedSchema,
+    authenticateAndAuthorize(
+      'record.create',
+      true,
+    )(({ workspaceId, table, pulledAt }, event) =>
+      db.markTableSynced(workspaceId, table, pulledAt),
+    ),
+  )
+  handle(
+    IPC.dbSyncedTables,
+    dbSyncedTablesSchema,
+    authenticateAndAuthorize(
+      'record.read',
+      true,
+    )(({ workspaceId }, event) => db.syncedTables(workspaceId)),
   )
 
   // ─── Printing ─────────────────────────────────────────── (High privilege)

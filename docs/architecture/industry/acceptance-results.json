@@ -1,240 +1,274 @@
 {
-  "generatedAt": "2026-11-15T11:17:55.412Z",
-  "commit": "baf99c1089087b27d8c20fd4d104bb8656c76b06",
-  "worktreeDirty": false,
-  "dirtyFiles": [],
+  "generatedAt": "2026-11-16T12:56:27.699Z",
+  "commit": "881ae1c124729a8f3bcfdaf1ac68ec21529e2dbb",
+  "worktreeDirty": true,
+  "dirtyFiles": [
+    "M .claude/lessons-learned.md",
+    " M CLAUDE.md",
+    " M apps/desktop/electron/main/db/database.ts",
+    " M apps/desktop/electron/main/ipc/register.ts",
+    " M apps/desktop/electron/preload/index.ts",
+    " M apps/mobile/src/features/offline/sync-runner.ts",
+    " M apps/mobile/src/host/local-db.ts",
+    " M apps/mobile/src/host/native-bridge.ts",
+    " M apps/web/app/[lang]/(dashboard)/developers/page.tsx",
+    " M apps/web/app/[lang]/(dashboard)/operations/page.tsx",
+    " M apps/web/app/[lang]/(dashboard)/sync-center/page.tsx",
+    " M apps/web/e2e/journey-industries.spec.ts",
+    " M backend/src/routes/analytics.routes.ts",
+    " M docs/architecture/MEASUREMENTS.md",
+    " M docs/architecture/universal-business-core/12-OFFLINE-EXECUTION.md",
+    " M documents/OFFLINE_SYNC.md",
+    " M packages/api/src/hooks/customers.ts",
+    " M packages/api/src/hooks/dashboard.ts",
+    " M packages/api/src/hooks/invoices.ts",
+    " M packages/api/src/hooks/products.ts",
+    " M packages/api/src/index.ts",
+    " M packages/api/src/lib/client.ts",
+    " M packages/api/src/lib/offline-queue.ts",
+    " M packages/app-bridge/src/contract.ts",
+    " M packages/app-bridge/src/webview-rpc.ts",
+    " M packages/app-shell/src/app/providers.tsx",
+    " M packages/app-shell/src/features/developers/developers-page.tsx",
+    " M packages/app-shell/src/features/inventory-ops/operations-page.tsx",
+    " M packages/app-shell/src/features/packs/prefetch.ts",
+    " M packages/app-shell/src/features/sync/device-sync-state.ts",
+    " M packages/app-shell/src/features/sync/sync-engine.ts",
+    " M packages/app-shell/src/features/sync/use-sync.ts",
+    " M packages/i18n/messages/af/common.json",
+    " M packages/i18n/messages/en/common.json",
+    " M packages/i18n/messages/fa/common.json",
+    " M packages/local-engine/src/__tests__/v59-1-golden-parity.test.ts",
+    " M packages/local-engine/src/routes/dashboard.ts",
+    " M packages/local-engine/src/routes/invoices.ts",
+    " M packages/ui/package.json",
+    " M packages/ui/src/__tests__/dashboard-page-structure.test.ts",
+    " M packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx",
+    " M packages/ui/src/components/ui/invoice-builder/containers/invoice-preview-container.tsx",
+    " M packages/ui/src/index.ts",
+    " M packages/ui/src/screens.ts",
+    " M packages/validation/src/schemas/feature-registry.ts",
+    " M packages/validation/src/schemas/industry-profiles.ts",
+    " M packages/validation/src/schemas/offline-endpoint-matrix.ts",
+    "?? .claude/new-task.md",
+    "?? .easignore",
+    "?? docs/architecture/V68-V69-PROGRESS.md",
+    "?? docs/architecture/V68-V69-PROMPT.md",
+    "?? docs/industries/",
+    "?? packages/api/src/__tests__/device-reads-when-ready.test.ts",
+    "?? packages/api/src/__tests__/execution-site-not-device-class.test.ts",
+    "?? packages/api/src/__tests__/invoice-device-first.test.ts",
+    "?? packages/api/src/lib/execution-site.ts",
+    "?? packages/app-shell/src/features/sync/__tests__/device-invoice-roundtrip.test.ts",
+    "?? packages/app-shell/src/features/sync/__tests__/device-operation-reads.test.ts",
+    "?? packages/app-shell/src/features/sync/__tests__/outbox-single-pusher.test.ts",
+    "?? packages/local-engine/src/__tests__/device-invoice-latency.test.ts",
+    "?? packages/local-engine/src/__tests__/invoice-confirm-server.test.ts",
+    "?? packages/ui/src/components/ui/dashboard/low-stock-variants-card.tsx",
+    "?? packages/ui/src/components/ui/dashboard/open-repair-tickets-card.tsx",
+    "?? packages/ui/src/components/ui/dashboard/package-credits-low-card.tsx",
+    "?? packages/ui/src/components/ui/dashboard/today-sessions-card.tsx",
+    "?? packages/validation/src/__tests__/industry-dashboard-parts.test.ts",
+    "?? packages/validation/src/__tests__/industry-registry-doc.test.ts",
+    "?? packages/validation/src/__tests__/industry-specs-complete.test.ts",
+    "?? scripts/industry/generate-families.mjs",
+    "?? scripts/industry/generate-industry-readmes.mjs",
+    "?? scripts/industry/generate-industry-registry.mjs",
+    "?? scripts/industry/generate-representative-specs.mjs",
+    "?? scripts/industry/generate-shared-catalogs.mjs",
+    "?? scripts/industry/patch-i18n-v69-5.mjs"
+  ],
   "results": {
     "backend/src/__tests__/financial-flows-e2e.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 18,
       "passed": 18,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 24.278564453125
+      "durationMs": 22.384521484375
     },
     "backend/src/__tests__/http-e2e-business-day.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 234.859619140625
+      "durationMs": 154.5205078125
     },
     "backend/src/__tests__/journey-industries-1.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 15,
-      "passed": 15,
+      "passed": 0,
       "failed": 0,
-      "skipped": 0,
-      "durationMs": 83249.90454101562
+      "skipped": 15,
+      "durationMs": 0
     },
     "backend/src/__tests__/journey-industries-2.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 18,
-      "passed": 18,
+      "passed": 0,
       "failed": 0,
-      "skipped": 0,
-      "durationMs": 100323.21948242188
+      "skipped": 18,
+      "durationMs": 0
     },
     "backend/src/__tests__/journey-industries-3.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 19,
-      "passed": 19,
+      "passed": 0,
       "failed": 0,
-      "skipped": 0,
-      "durationMs": 105082.82080078125
+      "skipped": 19,
+      "durationMs": 0
     },
     "backend/src/__tests__/journey-industries-4.pg.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 19,
-      "passed": 19,
+      "passed": 0,
       "failed": 0,
-      "skipped": 0,
-      "durationMs": 105734.72729492188
+      "skipped": 19,
+      "durationMs": 0
     },
     "backend/src/__tests__/manufacturing-page-500s.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 5.242919921875
+      "durationMs": 4.3544921875
     },
     "backend/src/__tests__/service-delivery-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 10,
       "passed": 10,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 224.2626953125
+      "durationMs": 134.069580078125
     },
     "backend/src/__tests__/v59-1-clothing-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 265.7509765625
+      "durationMs": 120.139404296875
     },
     "backend/src/__tests__/v59-1-exchange-gl-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 2,
       "passed": 2,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 224.915771484375
+      "durationMs": 130.57568359375
     },
     "backend/src/__tests__/v59-1-gold-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 188.82421875
+      "durationMs": 106.1025390625
     },
     "backend/src/__tests__/v59-1-mobile-serials-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 100.822021484375
+      "durationMs": 70.63525390625
     },
     "backend/src/__tests__/v59-1-repair-routes-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 127.239013671875
+      "durationMs": 117.733154296875
     },
     "backend/src/__tests__/v60-http-families.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 4,
       "passed": 4,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 255.3359375
+      "durationMs": 166.626220703125
     },
     "backend/src/__tests__/workspace-journey-http.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 1,
       "passed": 1,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 746.3984375
+      "durationMs": 374.5458984375
     },
     "packages/api/src/__tests__/offline-matrix-guard.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 5,
       "passed": 5,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 14.37451171875
+      "durationMs": 14.731689453125
     },
     "packages/ui/src/__tests__/landing-claims.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 48,
       "passed": 48,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 9.2138671875
+      "durationMs": 9.1474609375
     },
     "packages/ui/src/__tests__/operating-profile-wiring.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 6,
       "passed": 6,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 36.408203125
+      "durationMs": 36.6337890625
     },
     "packages/validation/src/__tests__/dna-multi-industry.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 14,
       "passed": 14,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 26.247802734375
+      "durationMs": 30.612060546875
     },
     "packages/validation/src/__tests__/first-value.test.ts": {
       "status": "passed",
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "tests": 8,
       "passed": 8,
       "failed": 0,
       "skipped": 0,
-      "durationMs": 33.432861328125
+      "durationMs": 34.55419921875
     }
   },
   "postgres": {
-    "ran": true,
-    "reason": null,
-    "results": {
-      "backend/src/__tests__/journey-industries-1.pg.test.ts": {
-        "status": "passed",
-        "date": "2026-11-15",
-        "tests": 15,
-        "passed": 15,
-        "failed": 0,
-        "skipped": 0,
-        "durationMs": 81912.38012695312
-      },
-      "backend/src/__tests__/journey-industries-2.pg.test.ts": {
-        "status": "passed",
-        "date": "2026-11-15",
-        "tests": 18,
-        "passed": 18,
-        "failed": 0,
-        "skipped": 0,
-        "durationMs": 98757.08081054688
-      },
-      "backend/src/__tests__/journey-industries-3.pg.test.ts": {
-        "status": "passed",
-        "date": "2026-11-15",
-        "tests": 19,
-        "passed": 19,
-        "failed": 0,
-        "skipped": 0,
-        "durationMs": 106390.98559570312
-      },
-      "backend/src/__tests__/journey-industries-4.pg.test.ts": {
-        "status": "passed",
-        "date": "2026-11-15",
-        "tests": 19,
-        "passed": 19,
-        "failed": 0,
-        "skipped": 0,
-        "durationMs": 106760.4482421875
-      }
-    }
+    "ran": false,
+    "reason": "NOT_REQUESTED",
+    "results": {}
   },
   "browser": {
-    "ran": true,
-    "reason": null,
-    "results": {
-      "apps/web/e2e/journey-industries.spec.ts": {
-        "status": "passed"
-      }
-    }
+    "ran": false,
+    "reason": "NOT_REQUESTED",
+    "results": {}
   },
   "environment": {
     "runner": "scripts/industry/run-acceptance.mjs",
@@ -243,13 +277,20 @@
     "node": "v22.22.0",
     "platform": "win32-x64"
   },
-  "limitations": [],
+  "limitations": [
+    "SKIPPED_TESTS:backend/src/__tests__/journey-industries-1.pg.test.ts",
+    "SKIPPED_TESTS:backend/src/__tests__/journey-industries-2.pg.test.ts",
+    "SKIPPED_TESTS:backend/src/__tests__/journey-industries-3.pg.test.ts",
+    "SKIPPED_TESTS:backend/src/__tests__/journey-industries-4.pg.test.ts",
+    "POSTGRES_EVIDENCE_NOT_INCLUDED",
+    "BROWSER_VERIFICATION_NOT_RUN"
+  ],
   "totals": {
     "files": 20,
     "filesPassed": 20,
     "filesFailed": 0,
     "filesNotRun": 0,
     "tests": 207,
-    "testsPassed": 207
+    "testsPassed": 136
   }
 }

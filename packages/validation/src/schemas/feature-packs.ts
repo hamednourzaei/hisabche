@@ -11,6 +11,7 @@
 
 import { CAPABILITIES, ENGINES, ENGINE_KEYS, type EngineKey } from './business-capabilities'
 import type { CompositionPlan } from './business-problems'
+import type { DashboardPartId } from './industry-profiles'
 import type { SyncEntity } from './sync-protocol.schema'
 
 export const PACK_IDS = [
@@ -114,6 +115,9 @@ export const FEATURE_PACKS: Readonly<Record<PackId, FeaturePackDefinition>> = {
       'branch',
       'exchange_rate',
       'product_stock',
+      // V70.2: a variant is a product row's detail — it belongs to the pack
+      // that owns the product catalogue, not to a second one.
+      'product_variants',
     ],
     dependsOn: [],
     budgetKb: 650,
@@ -156,7 +160,17 @@ export const FEATURE_PACKS: Readonly<Record<PackId, FeaturePackDefinition>> = {
       'timesheets',
       'serviceDelivery',
     ],
-    syncEntities: ['time_entry'],
+    syncEntities: [
+      'time_entry',
+      // V70.2 — the Workforce pack owns the three operational tables its
+      // screens read: a delivered session, the package credit it consumed and
+      // the repair ticket a technician is working on. Pulling them with the
+      // pack means a device shows the other practitioner's session and the
+      // credit that was spent, instead of offering it a second time.
+      'service_delivery_sessions',
+      'package_credit_ledger',
+      'repair_tickets',
+    ],
     dependsOn: ['core'],
     budgetKb: 160,
     holdsLocalSchema: false,
@@ -258,4 +272,33 @@ export function packForRoute(pathname: string): PackId {
     }
   }
   return 'core'
+}
+
+// ─── Industry dashboard parts → the engine (and therefore the pack) behind them ───
+
+/**
+ * The engine each SPECIALISED dashboard part is a view of.
+ *
+ * A part is not a domain of its own: `todaySessions` is the appointments engine
+ * read for today, `openRepairTickets` is the repair work-order engine filtered
+ * to what is still in the workshop. So the pack a part belongs to follows from
+ * the engine — it is never decided by a second list.
+ *
+ * The six shell parts (`kpis`, `workQueue`, `chart`, `insights`, `activities`,
+ * `manufacturing`) are not here: they are the dashboard itself, and they mount
+ * for every trade.
+ */
+export const DASHBOARD_PART_ENGINE = {
+  lowStockVariants: 'inventory_catalog',
+  todaySessions: 'appointments_resources',
+  packageCreditsLow: 'package_credits',
+  openRepairTickets: 'work_orders_repair',
+} as const satisfies Partial<Record<DashboardPartId, EngineKey>>
+
+/** A dashboard part that is a view of a real engine. */
+export type EngineDashboardPart = keyof typeof DASHBOARD_PART_ENGINE
+
+/** The pack that owns a specialised dashboard part. */
+export function packForDashboardPart(part: EngineDashboardPart): PackId {
+  return ENGINES[DASHBOARD_PART_ENGINE[part]].pack
 }

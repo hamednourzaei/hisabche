@@ -88,6 +88,13 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   order_deposits: 'order_deposits',
   order_deposit_applications: 'order_deposit_applications',
   order_deposit_refunds: 'order_deposit_refunds',
+  // V70.2 — the four tables that existed on both sides but had no road
+  // between them. Table names are the server's; the device stores the same
+  // names locally, which is why the pull columns below are named after them.
+  product_variants: 'product_variants',
+  service_delivery_sessions: 'service_delivery_sessions',
+  package_credit_ledger: 'package_credit_ledger',
+  repair_tickets: 'repair_tickets',
 }
 
 /**
@@ -112,6 +119,13 @@ export const ENTITIES_WITH_VERSION: ReadonlySet<SyncEntity> = new Set([
   'order_deposits',
   'order_deposit_applications',
   'order_deposit_refunds',
+  // Added by docs/operational-pull-02-migration.sql: all four carry `version`
+  // from now on, so an offline edit of one of them is version-guarded like
+  // every other pulled row instead of overwriting blindly.
+  'product_variants',
+  'service_delivery_sessions',
+  'package_credit_ledger',
+  'repair_tickets',
 ])
 
 /** Canonical SQL pattern for the version-guarded UPDATE issued on versioned entities. */
@@ -198,6 +212,15 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
   order_deposits: [],
   order_deposit_applications: [],
   order_deposit_refunds: [],
+  // V70.2 — READ-ONLY for the same reason as the operational set: a variant's
+  // price override, a delivered session's settlement, a package credit entry
+  // and a repair ticket's status each move stock, credit or an invoice. They
+  // are written by their services (which reverse the ledger when it is wrong);
+  // a device that could write them could grant itself credit.
+  product_variants: [],
+  service_delivery_sessions: [],
+  package_credit_ledger: [],
+  repair_tickets: [],
 }
 
 /**
@@ -367,6 +390,87 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
   ],
   transaction: null,
   time_entry: null,
+  // ─── V70.2: the four tables the pull now carries ────────────────────────
+  product_variants: [
+    'id',
+    'workspace_id',
+    'version',
+    'template_product_id',
+    'sku',
+    'barcode',
+    'attributes',
+    'price_override_minor',
+    'cost_override_minor',
+    'is_active',
+    'created_at',
+    // ⚠️ NO `updated_at`: docs/universal-core-migration.sql creates this table
+    // without one and nothing adds it. Naming it here would turn every pull
+    // into a 500 (`sync-pull-columns.test.ts` refuses it).
+  ],
+  service_delivery_sessions: [
+    'id',
+    'workspace_id',
+    'version',
+    'customer_id',
+    'service_offering_id',
+    'practitioner_id',
+    'branch_id',
+    'session_date',
+    'start_time',
+    'end_time',
+    'duration_minutes',
+    'status',
+    'settlement_method',
+    'package_credit_id',
+    'invoice_id',
+    'client_notes',
+    'internal_notes',
+    'created_at',
+    'updated_at',
+  ],
+  // `quantity` here is CREDITS, not money: a package sells a number of
+  // sessions, so the column is numeric and the device keeps it as it came.
+  package_credit_ledger: [
+    'id',
+    'workspace_id',
+    'version',
+    'customer_id',
+    'package_product_id',
+    'entry_type',
+    'quantity',
+    'unit',
+    'source_document_type',
+    'source_document_id',
+    'source_line_id',
+    'reference_entry_id',
+    'idempotency_key',
+    'notes',
+    'expires_at',
+    'effective_date',
+    'created_at',
+    'updated_at',
+  ],
+  repair_tickets: [
+    'id',
+    'workspace_id',
+    'version',
+    'number',
+    'customer_id',
+    'serial_id',
+    'device_label',
+    'problem',
+    'status',
+    'under_warranty',
+    'estimate_minor',
+    'currency',
+    'technician_employee_id',
+    'promised_on',
+    'invoice_id',
+    'created_by',
+    'created_at',
+    'updated_at',
+    'closed_at',
+  ],
 }
 
 /** What a device stores of each invoice line. */
@@ -448,21 +552,36 @@ const SYNC_WRITE_CAPABILITY: Record<
   order_deposits: { create: 'invoice.create', update: 'invoice.create' },
   order_deposit_applications: { create: 'invoice.create', update: 'invoice.create' },
   order_deposit_refunds: { create: 'payment.record', update: 'payment.record' },
+  // V70.2 — unreachable as well: `DOMAIN_ONLY_ENTITIES` refuses all four before
+  // the capability is read. These are the capabilities their own domain routes
+  // require, kept here so the record stays exhaustive over `SyncEntity`.
+  product_variants: { create: 'product.write', update: 'product.write' },
+  service_delivery_sessions: { create: 'invoice.create', update: 'invoice.create' },
+  package_credit_ledger: { create: 'invoice.create', update: 'invoice.create' },
+  repair_tickets: { create: 'invoice.create', update: 'invoice.create' },
 }
 
 /**
- * Entities that exist in the pull but NEVER in the push.
+ * Entities that exist in the pull but NEVER in the push, and the domain route
+ * that owns each write.
  *
- * A deposit movement is one atomic financial transaction; `/sync/push` writes
+ * A deposit movement is one atomic financial transaction, and so is a variant's
+ * price override, a delivered session's settlement, a package credit entry or a
+ * repair ticket's status: each moves money, stock or credit. `/sync/push` writes
  * a single row into a single table. Rather than leave that road open with an
  * empty column list (which would insert a row whose every money column is
  * missing) it is refused here, with the domain endpoint named — the same answer
  * the app-bridge routing already gives on the device.
  */
-const DOMAIN_ONLY_ENTITIES: ReadonlySet<SyncEntity> = new Set([
-  'order_deposits',
-  'order_deposit_applications',
-  'order_deposit_refunds',
+const DOMAIN_ONLY_ENTITIES: ReadonlyMap<SyncEntity, string> = new Map([
+  ['order_deposits', 'POST /api/orders/:id/deposits'],
+  ['order_deposit_applications', 'POST /api/orders/:id/deposits'],
+  ['order_deposit_refunds', 'POST /api/orders/:id/deposits/refund'],
+  // V70.2
+  ['product_variants', 'POST /api/products/:id/variants'],
+  ['service_delivery_sessions', 'POST /api/service-delivery/sessions'],
+  ['package_credit_ledger', 'POST /api/package-credits/consume'],
+  ['repair_tickets', 'POST /api/repair-tickets'],
 ])
 
 class SyncError extends Error {
@@ -681,10 +800,11 @@ export class SyncService {
       )
     }
 
-    if (DOMAIN_ONLY_ENTITIES.has(mutation.entityType)) {
+    const domainRoute = DOMAIN_ONLY_ENTITIES.get(mutation.entityType)
+    if (domainRoute) {
       throw new SyncError(
         'forbidden',
-        `${mutation.entityType} cannot be written through /sync/push: a deposit movement is one atomic transaction. Route it through /api/orders/:id/deposits.`,
+        `${mutation.entityType} cannot be written through /sync/push: it is one atomic transaction that moves money, stock or credit. Route it through ${domainRoute}.`,
       )
     }
 

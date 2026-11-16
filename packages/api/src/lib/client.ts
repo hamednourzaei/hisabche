@@ -194,6 +194,32 @@ export function registerLocalTransport(adapter: LocalTransportAdapter): void {
   localTransportAdapter = adapter
 }
 
+type SyncRequestedListener = () => void
+const syncRequestedListeners = new Set<SyncRequestedListener>()
+
+/**
+ * Signal that a local write just landed and should be pushed to the server soon.
+ */
+export function requestSyncSoon(): void {
+  for (const listener of syncRequestedListeners) {
+    try {
+      listener()
+    } catch {
+      // safe broadcast
+    }
+  }
+}
+
+/**
+ * Listen for sync requests triggered by local-first writes.
+ */
+export function onSyncRequested(listener: SyncRequestedListener): () => void {
+  syncRequestedListeners.add(listener)
+  return () => {
+    syncRequestedListeners.delete(listener)
+  }
+}
+
 /**
  * Header the local engine reads to decide whether a write must ALSO be queued
  * for the server. Set by `localRequest` alone; the offline edition never sends

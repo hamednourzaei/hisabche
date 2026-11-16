@@ -154,23 +154,50 @@ function routesFor(item) {
 
 // ---------------------------------------------------------------
 // 3. Who mentions each hook.
+//
+// HOW THIS IS COMPUTED. The rule is unchanged — a hook counts as used when its
+// name appears as a word in a consumer file — but it is computed once, as an
+// index, instead of once per (hook × file) pair. The old shape built two
+// `RegExp` objects for every one of ~700 hooks against every one of thousands
+// of files, which was ~2 million regex compilations and 13 seconds of a test
+// run for a question that one token pass answers.
 // ---------------------------------------------------------------
 const consumerFiles = CONSUMER_DIRS.flatMap((dir) => walk(path.join(ROOT, dir)))
-const consumers = new Map(consumerFiles.map((file) => [file, readFileSync(file, 'utf8')]))
+const wanted = new Set(hooks.flatMap((item) => [item.hook, item.exportedAs]))
+
+/**
+ * `\bname\b` over a text is exactly «`name` is a maximal run of
+ * `[A-Za-z0-9_]` in it»: `$`, `.` and `-` are non-word characters, so they
+ * split a token the same way the boundary does. One pass per file therefore
+ * answers every hook at once.
+ */
+const mentionedIn = new Map()
+for (const file of consumerFiles) {
+  if (file === BARREL) continue
+  const source = readFileSync(file, 'utf8')
+  const seen = new Set()
+  for (const match of source.matchAll(/[A-Za-z0-9_]+/g)) {
+    const token = match[0]
+    if (!wanted.has(token) || seen.has(token)) continue
+    seen.add(token)
+    const where = mentionedIn.get(token) ?? new Set()
+    mentionedIn.set(token, where)
+    where.add(file)
+  }
+}
 
 const rows = []
 for (const item of hooks) {
   const names = [item.hook, item.exportedAs]
   const ownFile = path.join(ROOT, item.definedIn)
-  const mentions = []
-  for (const [file, source] of consumers) {
-    // Its own definition and the barrel that re-exports every hook by
-    // definition are not consumers.
-    if (file === ownFile || file === BARREL) continue
-    if (names.some((name) => new RegExp(`\\b${name}\\b`).test(source)))
-      mentions.push(relative(file))
+  const mentions = new Set()
+  for (const name of names) {
+    for (const file of mentionedIn.get(name) ?? []) {
+      // Its own definition is not a consumer of itself.
+      if (file !== ownFile) mentions.add(relative(file))
+    }
   }
-  if (mentions.length > 0) continue
+  if (mentions.size > 0) continue
 
   const duplicate = hooks.find(
     (other) => other !== item && other.hook === item.hook && other.definedIn !== item.definedIn,

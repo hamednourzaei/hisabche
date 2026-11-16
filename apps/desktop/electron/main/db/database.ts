@@ -369,8 +369,69 @@ export function readQueue(): QueueEntry[] {
   }))
 }
 
+export function claimQueue(clientId: string, owner: string, leaseMs: number = 30_000): boolean {
+  if (!db) return false
+  const key = `claim:queue:${clientId}`
+  const now = Date.now()
+
+  let acquired = false
+  const tx = db.transaction(() => {
+    const existing = db!.prepare('SELECT value FROM meta WHERE key = ?').get(key) as
+      { value?: string } | undefined
+    if (existing?.value) {
+      const [existingOwner, rawExpires] = existing.value.split(':')
+      const expiresAt = Number(rawExpires ?? 0)
+      if (now < expiresAt && existingOwner !== owner) {
+        acquired = false
+        return
+      }
+    }
+    const val = `${owner}:${now + leaseMs}`
+    db!.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(key, val)
+    acquired = true
+  })
+
+  tx()
+  return acquired
+}
+
+/**
+ * «This device pulled `table` for `workspaceId`» (V68.1).
+ *
+ * Kept in `meta` so it survives a reload, and removed with the cached rows
+ * when the cache is pointed at another workspace (`setCachedWorkspace`): a
+ * stamp that outlived its rows would call an empty table «ready».
+ */
+export function markTableSynced(workspaceId: string, table: string, pulledAt: string): void {
+  if (!db) return
+  // A stamp for a workspace the cache does not hold would be a lie.
+  if (getCachedWorkspace() !== workspaceId) return
+  db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
+    `synced:${workspaceId}:${table}`,
+    pulledAt,
+  )
+}
+
+export function syncedTables(workspaceId: string): Record<string, string> {
+  if (!db) return {}
+  if (getCachedWorkspace() !== workspaceId) return {}
+  const prefix = `synced:${workspaceId}:`
+  const rows = db
+    .prepare('SELECT key, value FROM meta WHERE substr(key, 1, ?) = ?')
+    .all(prefix.length, prefix) as Array<{ key: string; value: string }>
+  const out: Record<string, string> = {}
+  for (const row of rows) out[row.key.slice(prefix.length)] = row.value
+  return out
+}
+
 export function resolveQueue(clientId: string, status: 'done' | 'failed', error?: string): void {
   if (!db) return
+
+  try {
+    db.prepare(`DELETE FROM meta WHERE key = ?`).run(`claim:queue:${clientId}`)
+  } catch {
+    // Ignore cleanup error if meta table unavailable
+  }
 
   if (status === 'done') {
     db.prepare(`DELETE FROM sync_queue WHERE client_id = ?`).run(clientId)
@@ -466,6 +527,8 @@ export function setCachedWorkspace(workspaceId: string): {
       db!.prepare(`DELETE FROM ${table === 'transaction' ? '"transaction"' : table}`).run()
     }
     db!.prepare(`DELETE FROM sync_cursor`).run()
+    // The pull stamps describe the rows just deleted (V68.1).
+    db!.prepare(`DELETE FROM meta WHERE substr(key, 1, 7) = 'synced:'`).run()
     db!
       .prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('workspace_id', ?)`)
       .run(workspaceId)

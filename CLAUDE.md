@@ -197,7 +197,8 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 | **ممیزی V61/V63: سرویس‌های ۵۰۰، فرم درگاه، دیوار تلویزیون، ۱۱۳ مورد (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.1 · `V63-IMPLEMENTATION-PROGRESS.md` §8 · `admin/V63-113-ITEMS.md` — **۳ مهاجرت V61 تازه منتظر اجرا و VERIFY** |
 | **تصمیم‌های مالک V61: فروشنده = عضو، یک موتور تأیید، حذف دو نفره در کنسول (۱۲ نوامبر)** | `docs/architecture/V61-IMPLEMENTATION-PROGRESS.md` §0.2 — **invoices-seller-01 و admin-action-types-03 منتظر اجرا و VERIFY** |
 | **ممیزی V60 با کد و پرامپت V64 «قابل فروش» (۱۲ نوامبر)** | `docs/architecture/V60-IMPLEMENTATION-PROGRESS.md` §13 · `docs/architecture/V64-PROMPT.md` — **۱۳ صنف workflowComplete، ۳۰ بی‌پروفایل** |
-| **همه‌ی درس‌ها با شماره (۱–۲۶۲)**                                     | `.claude/lessons-learned.md`                                                |
+| **V68/V69: اجرای local-first، ۶۷ تجربه‌ی صنف، چهار نماینده با کد (۱۶ نوامبر)** | `docs/architecture/V68-V69-PROGRESS.md` · `V70-BACKLOG.md` · `docs/industries/README.md` — **۶۷ README، ۱۳ خانواده، ۴×۷ سند نماینده، ۴ قطعه‌ی داشبورد؛ `sellable` روی درخت commit‌نشده «قابل فروش نیست»** |
+| **همه‌ی درس‌ها با شماره (۱–۲۶۵)**                                     | `.claude/lessons-learned.md`                                                |
 | **واژه‌نامه‌ی دری (af) — برای هر کلید تازه**                          | `.claude/DARI-GLOSSARY.md`                                                  |
 | **کوئری‌های تشخیصی دیتابیس زنده**                                     | `docs/FINDING-*.sql` · `docs/TEST-A-BEFORE.sql`                             |
 | **باگ‌های Business OS (BOS-01 تا BOS-15)**                            | `.claude/BUG-REGISTRY.md` — بخش انتهایی                                     |
@@ -337,6 +338,11 @@ cd apps/admin     && npx tsc --noEmit
 
 - ⚠️ **ثابتِ مشترک را از یک سرویس نگیر.** `billing.service` هسته‌ی رفرال را import می‌کند (کمیسیون در یک نقطه)، و هسته برای قیمت پلن `billing.service` را import می‌کرد → چرخه‌ی ماژول → `referralService` برابر `undefined` و ۵۰۰ روی سایت زنده، **با سوئیت کاملاً سبز** (تست‌ها برگ‌ها را import می‌کنند و حلقه را نمی‌بندند). ثابت‌ها در ماژولی که **هیچ چیزی import نمی‌کند** (`services/plan-pricing.ts`). گارد: `no-service-import-cycles.test.ts`.
 - ⚠️ **سیگنال آمادگی بدون منبع داده، بدتر از نبودِ سیگنال است.** zustand-persist با استوریج همگام `onRehydrateStorage` را **حین `create()`** اجرا می‌کند، یعنی قبل از `registerTokenGetter` در خط بعد. `markTokenReady()` حالا سیگنال را نگه می‌دارد تا getter برسد (BUG-019).
+
+**همگام‌سازی، دستگاه و Local-First (V68)**
+
+- ⚠️ **فاکتور دستگاه local-first است؛ مکان اجرا فقط `executionSiteFor`؛ آمادگی پایدار به‌ازای workspace.** تصمیم‌گیری برای اجرای عملیات روی دستگاه یا سرور (`executionSiteFor`) فقط به وجود ترنسپورت محلی و کامل بودن همگام‌سازی جدول‌های پیش‌نیاز (`deviceReadyFor`) وابسته است، نه به رم یا کلاس سخت‌افزار (`DeviceClass`). وضعیت آمادگی جدول‌ها در جدول `meta` در SQLite دستگاه به‌ازای هر workspace با زمان `pulledAt` ذخیره می‌شود تا با reload از بین نرود. هم‌زمان دو pusher نباید یک ردیف outbox را ارسال کنند (`claimQueue` اتمیک). پس از تأیید ۲۰۰/۲۰۱ سرور، شماره‌ی رسمی و شناسه از طریق `confirmServerInvoice` در یک تراکنش به ردیف محلی بازمی‌گردد. ادعای «بک‌اند کاری نمی‌کند» غلط است: سرور با همان `Idempotency-Key` اعتبارسنجی نهایی، ممیزی و شماره‌گذاری رسمی را انجام می‌دهد.
+
 
 **برچسب و وضعیت**
 

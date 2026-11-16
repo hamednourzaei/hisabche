@@ -445,11 +445,14 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       // receipt until the sync engine sends it.
       if (created.pendingSync) {
         setSaveStatus('idle')
+        const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false
         toast.info(
-          t(
-            'invoiceBuilder.savedOffline',
-            'فاکتور روی این دستگاه ذخیره شد و به‌محض وصل شدن اینترنت ثبت می‌شود.',
-          ),
+          isOnline
+            ? t('invoiceBuilder.recordedOnDevice', 'روی این دستگاه ثبت شد — در حال ارسال')
+            : t(
+                'invoiceBuilder.savedOffline',
+                'فاکتور روی این دستگاه ذخیره شد و به‌محض وصل شدن اینترنت ثبت می‌شود.',
+              ),
         )
         submittedRef.current = true
         clearDraft()

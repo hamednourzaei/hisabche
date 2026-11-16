@@ -1,0 +1,134 @@
+# ============================================
+# What eas-cli must NOT upload (repository root — eas archives the whole monorepo).
+#
+# ⚠️ With an .easignore, .gitignore is NOT read: its rules are repeated below.
+# The archive had grown to 405 MB (upload reset at 41 MB, 15 Nov 2026) from
+# tracked folders the phone app never uses. apps/mobile/.easignore keeps its own
+# rules; they are repeated here with their path, because this file is the one
+# eas reads for a monorepo.
+# ============================================
+
+# --- From .gitignore ---
+# Dependencies
+node_modules
+# pnpm's virtual store (`virtualStoreDir` in pnpm-workspace.yaml)
+/.p/
+.pnp
+.pnp.js
+
+# Husky (local hooks — only _/ is generated)
+.husky/_
+
+# Turbo
+.turbo
+
+# Embedded Postgres data directories (see backend/src/__tests__/helpers/pg-temp-dir.ts)
+.pgtest
+
+# Build outputs
+dist
+build
+.next
+out
+.tmp
+/.temp_build/
+
+# React Native
+android/app/build
+ios/build
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Expo
+.expo
+dist/
+
+# Environment
+.env
+.env.local
+.env.production
+.env.staging
+.env.*
+# Holds a database password with DDL rights over every table. Never committed.
+.env.migrate
+.env.*.local
+!.env.example
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.tsbuildinfo
+.vercel
+.env*.local
+
+# Graphify knowledge graph (generated; rebuild with /graphify . --update)
+/graphify-out/
+
+# AI Codebase Intelligence Index (generated; rebuild with node scripts/build-ai-index.mjs)
+.ai/codebase/
+
+# Build temp folder: esbuild cannot delete its >1MB temp files under AppData\Local\Temp on this machine (7 Nov 2026).
+.esbuild-tmp/
+
+# --- Not part of the phone app (anchored: a bare `docs/` also dropped packages/ui/.../docs) ---
+/hisabche-promo-reel/
+/.temp_build/
+/test-intelligence-results/
+/docs/
+/graphify-out/
+/.ai/
+/.claude/
+/apps/web/.next/
+/apps/desktop/dist/
+/apps/desktop/out/
+
+# --- apps/mobile/.easignore, at its path ---
+/apps/mobile/assets/shell/
+/apps/mobile/android/build/
+/apps/mobile/android/app/build/
+/apps/mobile/android/.gradle/
+/apps/mobile/ios/build/
+/apps/mobile/android/app/src/main/assets/shell/
+
+# --- Nested .gitignore files, anchored at their folder ---
+# from apps/mobile/.gitignore
+/apps/mobile/assets/shell/
+/apps/mobile/android/app/src/main/assets/shell/
+# from apps/mobile/android/.gitignore
+/apps/mobile/android/**/.DS_Store
+/apps/mobile/android/**/build/
+/apps/mobile/android/**/.idea
+/apps/mobile/android/**/.gradle
+/apps/mobile/android/**/local.properties
+/apps/mobile/android/**/*.iml
+/apps/mobile/android/**/*.hprof
+/apps/mobile/android/**/.cxx/
+/apps/mobile/android/**/*.jsbundle
+# from apps/web/.gitignore
+/apps/web/**/.vercel
+/apps/web/**/.env*.local
+/apps/mobile/android/local.properties

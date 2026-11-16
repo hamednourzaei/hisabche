@@ -309,9 +309,7 @@ export { CustomerDetailContainer } from './components/ui/customers/containers/cu
 
 // ---------- Containers ----------
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
-export { ReferralsContainer } from './components/ui/referrals/containers/referrals-container'
 export { ReferralsView, type ReferralsViewProps } from './components/ui/referrals/referrals-view'
-export { DevelopersContainer } from './components/ui/developers/containers/developers-container'
 export {
   OAuthConsentContainer,
   type OAuthAuthorizeQuery,
@@ -329,7 +327,6 @@ export { PublicInvoiceContainer } from './components/ui/invoice-detail/container
 export { PublicPortalContainer } from './components/ui/customers/containers/public-portal-container'
 export { AttendanceSelfContainer } from './components/ui/team-and-payroll/containers/attendance-self-container'
 export { InvoiceBuilderContainer, InvoicePreviewContainer } from './components/ui/invoice-builder'
-export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
 
 // ---------- Dashboard ----------
@@ -366,7 +363,6 @@ export { AuditContainer } from './components/ui/audit/containers/audit-container
 export { AuditView } from './components/ui/audit/audit-view'
 
 // ---------- CRM ----------
-export { CrmContainer } from './components/ui/crm/containers/crm-container'
 export { CrmView, type CrmTabId } from './components/ui/crm/crm-view'
 export { PublicTaskContainer } from './components/ui/crm/containers/public-task-container'
 export { CustomerCrmPanel } from './components/ui/crm/customer-crm-panel'
@@ -383,7 +379,6 @@ export { ApprovalsContainer } from './components/ui/workflow/containers/approval
 export { ApprovalsView } from './components/ui/workflow/approvals-view'
 export { ApprovalCard } from './components/ui/workflow/approval-timeline'
 export { ApprovalActions } from './components/ui/workflow/approval-actions'
-export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
 export { ApprovalsHubContainer } from './components/ui/workflow/containers/approvals-hub-container'
 export { WorkflowTemplatesView } from './components/ui/workflow/workflow-templates-view'
 
@@ -414,11 +409,8 @@ export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/pers
 
 // ---------- Types ----------
 export { PricingContainer, BillingContainer, BillingStatusContainer } from './components/ui/billing'
-export { WalletContainer } from './components/ui/wallet/wallet-container'
 export { MarketSellerContainer } from './components/ui/market/market-seller-container'
 export { AnalysisContainer } from './components/ui/analysis/analysis-container'
-export { PromotionsContainer } from './components/ui/promotions/promotions-container'
-export { CampaignsContainer } from './components/ui/campaigns/campaigns-container'
 export { CustomersHubContainer } from './components/ui/customers/containers/customers-hub-container'
 export { ServiceDeliveryContainer } from './components/ui/service-delivery/containers/service-delivery-container'
 export {
@@ -468,13 +460,9 @@ export type { ActivityItemDto, ActivityGroupDto, EntitySummaryDto } from '@hisab
 // ---------- Tier 1/2 capabilities ----------
 export { TillContainer } from './components/ui/till/containers/till-container'
 export { TillView } from './components/ui/till/till-view'
-export { AssetsContainer } from './components/ui/assets/containers/assets-container'
 export { AssetsView } from './components/ui/assets/assets-view'
-export { BankContainer } from './components/ui/bank/containers/bank-container'
 export { BankView } from './components/ui/bank/bank-view'
-export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
 export { BudgetsView } from './components/ui/budgets/budgets-view'
-export { DataMigrationContainer } from './components/ui/data-migration/containers/data-migration-container'
 export { DataMigrationView } from './components/ui/data-migration/data-migration-view'
 export { WorkStateBadge, WorkStateNote } from './components/ui/state/work-state'
 export { DataAndSyncContainer } from './components/ui/data-and-sync/containers/data-and-sync-container'
@@ -490,10 +478,7 @@ export { Invoice360Container } from './components/ui/invoice-detail/containers/i
 export { Customer360Container } from './components/ui/customers/containers/customer-360-container'
 export { ProductListContainer } from './components/ui/products/containers/product-list-container'
 export { ProductListView } from './components/ui/products/product-list-view'
-export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
 export { TimesheetsView } from './components/ui/timesheets/timesheets-view'
-export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
-export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
 export { ConflictsView } from './components/ui/conflicts/conflicts-view'
 export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
 export { ExpiryView } from './components/ui/expiry/expiry-view'
@@ -525,7 +510,6 @@ export type { DocsArticleDef, DocsSectionDef, DocsGroupId } from './lib/docs/doc
 // ─── T11 / L2 — stock counting ───
 export { CycleCountView } from './components/ui/cycle-count/cycle-count-view'
 export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
-export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'
 export { DocsHelpLink, ROUTE_DOCS_MAP, docsSlugForPath } from './components/ui/docs/docs-help-link'
 
 export {

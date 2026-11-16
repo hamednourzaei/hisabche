@@ -1,0 +1,77 @@
+# پیک و تحویل بسته (`courier`)
+
+<!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
+
+## حقایق از کد
+
+|           |                                                             |
+| --------- | ----------------------------------------------------------- |
+| شناسه     | `courier`                                                   |
+| نام       | پیک و تحویل بسته · پیک و رساندن بسته · Courier and delivery |
+| نوع       | صنف                                                         |
+| خانواده   | [حمل‌ونقل](../families/transport.md)                        |
+| پروفایل   | `generic`                                                   |
+| archetype | `GENERIC_BUSINESS`                                          |
+
+**وضعیت**
+
+- سفر پایه (ثبت‌نام → اولین فروش → سود و زیان): `EXISTING_BUT_INCOMPLETE` — `backend/src/__tests__/v60-http-families.test.ts`، `backend/src/__tests__/financial-flows-e2e.test.ts`، `backend/src/__tests__/journey-industries-2.pg.test.ts`
+- تجربه‌ی اختصاصی صنف: `CONFIGURATION_REQUIRED` — پروفایل عمومی است؛ چیزی جز هسته‌ی مشترک وعده داده نشده.
+
+**DNA عملیاتی** (از `inferOperationalDna`)
+
+| محور       | مقدار                  |
+| ---------- | ---------------------- |
+| offering   | `DELIVERABLE_SERVICE`  |
+| intake     | `WALK_IN`              |
+| inventory  | `NONE`                 |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce  | `UNRESOLVED`           |
+| customer   | `STANDARD_PARTY`       |
+| topology   | `SINGLE_LOCATION`      |
+
+**ماژول‌های فعال:** `accounting`، `customers`، `delivery`، `invoices`، `payroll`، `team`
+
+**منوی پیشنهادی — پنهان می‌شود:** `/manufacturing`، `/market-seller`، `/till`، `/warehouse`
+
+**داشبورد (ترتیب):** `kpis`، `workQueue`، `chart`، `insights`، `activities`، `manufacturing`
+
+**کالای تازه:** واحد `piece` · فیلدهای جلو: —
+
+**ستون‌های اضافه‌ی فاکتور:** —
+
+**قابلیت‌های روشن:** هیچ قابلیت اختصاصی — فقط هسته‌ی مشترک.
+
+## تفاوت با خانواده‌ی «حمل‌ونقل»
+
+### هویت و مدل کسب‌وکار
+
+پروفایل عمومی: همان هسته‌ی مشترک با نام این صنف.
+
+### گردش کار روزانه
+
+مانند خانواده‌ی «حمل‌ونقل» — تفاوتی نیست.
+
+### صفحه‌به‌صفحه
+
+منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/manufacturing`، `/market-seller`، `/till`، `/warehouse`.
+
+### عملیات و تراکنش
+
+مانند خانواده‌ی «حمل‌ونقل» — تفاوتی نیست.
+
+### KPI و گزارش
+
+مانند خانواده‌ی «حمل‌ونقل» — تفاوتی نیست.
+
+### نقش‌ها و دسترسی
+
+مانند خانواده‌ی «حمل‌ونقل» — تفاوتی نیست.
+
+### آفلاین و دستگاه
+
+مانند خانواده‌ی «حمل‌ونقل» — تفاوتی نیست.
+
+### شکاف‌ها و نیازمندی‌ها
+
+شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است.

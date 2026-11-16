@@ -107,6 +107,9 @@
     "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
     "./components/ui/warehouse/containers/warehouse-container": "./src/components/ui/warehouse/containers/warehouse-container.tsx",
     "./components/ui/invoices/containers/invoices-container": "./src/components/ui/invoices/containers/invoices-container.tsx",
+    "./components/ui/developers/containers/developers-container": "./src/components/ui/developers/containers/developers-container.tsx",
+    "./components/ui/sync-center/containers/sync-center-container": "./src/components/ui/sync-center/containers/sync-center-container.tsx",
+    "./components/ui/inventory-ops/containers/inventory-ops-container": "./src/components/ui/inventory-ops/containers/inventory-ops-container.tsx",
     "./components/ui/customers": "./src/components/ui/customers.tsx"
   }
 }

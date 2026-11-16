@@ -39,6 +39,13 @@ export const MONEY_CACHE_PREFIXES = [
   'inventory',
   'inventory-valuation',
   'low-stock',
+  // The four industry dashboard parts (V69.5). A sale moves stock and a payment
+  // moves the session/package figures, so their cached responses are stale the
+  // moment money moves — same rule as `dashboard`.
+  'low-stock-variants',
+  'today-sessions',
+  'package-credits-low',
+  'open-repair-tickets',
   'product',
   'products',
   'warehouse-stock',

@@ -14,6 +14,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { asList } from '../lib/as-list'
 import apiClient, { type ApiError, getAppEdition, localRequest } from '../lib/client'
+import { executionSiteFor } from '../lib/execution-site'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -171,7 +172,12 @@ export async function fetchCustomers(
 
   const fromDevice = async (): Promise<CustomersPage> => (await fromEngine()) ?? fromRows()
 
-  if (canUseDevice && device.isOffline()) return fromDevice()
+  const shouldReadFromDevice =
+    canUseDevice &&
+    (device.isOffline() ||
+      (executionSiteFor('invoice.create') === 'device' &&
+        (device?.hasSynced?.('customer') ?? false)))
+  if (shouldReadFromDevice) return fromDevice()
 
   if (canUseDevice && options.preferDevice) {
     const answer = await fromDevice()

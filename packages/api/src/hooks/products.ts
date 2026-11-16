@@ -16,6 +16,7 @@
 
 import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient, { type ApiError, getAppEdition, localRequest } from '../lib/client'
+import { executionSiteFor } from '../lib/execution-site'
 import { getOfflineQueue } from '../lib/offline-queue'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
@@ -301,7 +302,10 @@ export async function fetchProducts(
     if (device?.readRows) return fromRows()
     return { products: [], total: 0, notAvailableOffline: true }
   }
-  if (device?.isOffline()) return fromDevice()
+  const shouldReadFromDevice =
+    device?.isOffline() ||
+    (executionSiteFor('invoice.create') === 'device' && (device?.hasSynced?.('product') ?? false))
+  if (shouldReadFromDevice) return fromDevice()
 
   if (device && options.preferDevice) {
     const answer = await fromDevice()
@@ -546,6 +550,15 @@ export function useProductsByIds(ids: readonly string[]) {
     queries: ids.map((id) => ({
       queryKey: [...productKeys.detail(id), 'on-hand'] as const,
       queryFn: async () => {
+        const offline = getOfflineQueue()
+        const shouldReadDevice =
+          offline?.isOffline() ||
+          (executionSiteFor('invoice.create') === 'device' &&
+            (offline?.hasSynced?.('product') ?? false))
+        if (shouldReadDevice) {
+          const local = await localRequest<Product>('GET', `/products/${id}`).catch(() => null)
+          if (local) return local
+        }
         const { data } = await apiClient.get<Product>(`/products/${id}`)
         return data
       },

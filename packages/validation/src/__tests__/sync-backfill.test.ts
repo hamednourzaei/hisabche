@@ -29,7 +29,14 @@ describe('planPackBackfill (V62 Slice 5)', () => {
     })
     expect(plan).toEqual({
       kind: 'delta_backfill',
-      entityTypes: ['time_entry'],
+      // V70.2 — the Workforce pack now delivers three more tables, so
+      // installing it must backfill them too, not just the hours it always had.
+      entityTypes: [
+        'time_entry',
+        'service_delivery_sessions',
+        'package_credit_ledger',
+        'repair_tickets',
+      ],
       fromCursor: 0,
       upToCursor: 420,
       resumeWithTypes: expect.arrayContaining(['invoice', 'time_entry']),

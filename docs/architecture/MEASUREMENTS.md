@@ -199,15 +199,26 @@ workspace opts in** — which is why `configured` in
 
 ---
 
-## 6. What would make this document complete
+## 7. Device sale latency (V68.8) — device path MEASURED, server path NOT measured
 
-1. Run the load scenario against a **seeded database** and fill the
-   persistence columns (queries per operation, rows per operation, and latencies
-   that include the database).
-2. ~~Build the divergence-rate alert~~ — **done**; it needs a threshold set per
-   workspace before it does anything.
-3. ~~Run the corpus on Electron main and React Native~~ — **done** under Jest.
-   Still unproven: the packaged binaries.
-4. ~~pg proof~~ — the one-command script
-   (`scripts/verify-core-divergence-pg.mjs`) passes 16/16 against a real
-   Postgres; see ADR-007.
+Command (from `packages/local-engine`): `npx vitest run src/__tests__/device-invoice-latency.test.ts --reporter=verbose`
+
+What ran: the real local engine (`POST /invoices` with the outbox header — validation, totals, stock,
+cost, posting and the outbox row in one transaction), a two-line cash sale, 5 warm-ups then 20 timed runs,
+on an in-memory SQLite in Node on the development machine (16 Nov 2026). Three consecutive executions:
+
+| Execution |  Median |     p95 |
+| --------- | ------: | ------: |
+| 1         | 0.62 ms | 0.91 ms |
+| 2         | 0.63 ms | 0.91 ms |
+| 3         | 0.62 ms | 0.88 ms |
+
+What these numbers do NOT include, and therefore do not prove:
+
+- the Electron IPC hop and a disk-backed SQLite on Windows (not measured);
+- a phone: expo-sqlite on flash storage behind the WebView bridge (`BLOCKED_EXTERNAL` — no device or emulator on this machine);
+- **the server path.** No live backend was called, so there is no measured ratio. An earlier version of this
+  section compared a stand-in three-table schema against a `setTimeout` of 45–65 ms and reported «574× faster»;
+  that figure was produced by the script itself, not by the product, and has been removed.
+
+The only claim this supports: on the device, recording a sale is not something a person waits for.

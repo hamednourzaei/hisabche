@@ -51,7 +51,20 @@ const OUT_LEVELS_CSV = `${OUT_DIR}/INDUSTRY-SUPPORT-LEVELS.csv`
 const OUT_SUPPORT = 'docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md'
 
 const problems = []
-const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8')
+// Every source file on disk is immutable for the life of this process, and
+// `lineOf` asks for the same few anchors hundreds of times (one per industry ×
+// capability row). Reading and splitting them once each is the difference
+// between ~1.7 s and a few hundred milliseconds per run — and the output is
+// byte-identical, because nothing here writes back into the tree.
+const textCache = new Map()
+const linesCache = new Map()
+const read = (relative) => {
+  const cached = textCache.get(relative)
+  if (cached !== undefined) return cached
+  const text = fs.readFileSync(path.join(ROOT, relative), 'utf8')
+  textCache.set(relative, text)
+  return text
+}
 const exists = (relative) => fs.existsSync(path.join(ROOT, relative))
 const readResults = () => {
   const full = path.isAbsolute(RESULTS_PATH) ? RESULTS_PATH : path.join(ROOT, RESULTS_PATH)
@@ -64,12 +77,20 @@ const readResults = () => {
   }
 }
 
+function linesOf(relative) {
+  const cached = linesCache.get(relative)
+  if (cached !== undefined) return cached
+  const lines = read(relative).split(/\r?\n/)
+  linesCache.set(relative, lines)
+  return lines
+}
+
 function lineOf(anchor) {
   if (!exists(anchor.file)) {
     problems.push(`missing file: ${anchor.file}`)
     return `${anchor.file}:?`
   }
-  const lines = read(anchor.file).split(/\r?\n/)
+  const lines = linesOf(anchor.file)
   const index = lines.findIndex((line) => line.includes(anchor.needle))
   if (index < 0) {
     problems.push(`needle not found in ${anchor.file}: ${anchor.needle}`)

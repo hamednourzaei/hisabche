@@ -18,7 +18,10 @@ describe('stable functions from workspace-profile hooks', () => {
       const start = source.indexOf(`export function ${name}() {`)
       expect(start).toBeGreaterThan(-1)
       const body = source.slice(start, source.indexOf('\n}\n', start))
-      expect(body).toContain('return useCallback(async (')
+      // Flattened first: the formatter breaks a long signature after the
+      // opening parenthesis, and the exact one-line form then never matches.
+      const flat = body.split(/\s+/).join(' ')
+      expect(flat).toMatch(/return useCallback\( ?async \(/)
       expect(body).not.toMatch(/\n {2}return async \(/)
     },
   )

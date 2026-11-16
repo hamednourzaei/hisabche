@@ -6,6 +6,7 @@
 import { resolveTimeZone } from '../utils/local-day'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
+import { supabase } from '../db'
 import { AnalyticsService } from '../services/analytics.service'
 import { OrderDepositService } from '../services/sales/order-deposit.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -19,6 +20,7 @@ import {
   maskDashboardKpis,
 } from '../services/analytics/dashboard-visibility.domain'
 import { toJsonSchema } from '../utils/json-schema'
+import { IndustryDashboardService } from '../services/analytics/industry-dashboard.service'
 
 // ═══════════════════════════════════════════════════════════
 // ✅ Production Schemas
@@ -321,6 +323,131 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to fetch financial analytics' })
       }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // V69.5 INDUSTRY DASHBOARD PARTS (member-scoped, read-only)
+  // The providers live in IndustryDashboardService; these routes only
+  // authenticate, check the capability and send the answer.
+  // ═══════════════════════════════════════════════════════════
+  const industryDashboard = new IndustryDashboardService()
+
+  /**
+   * Which figure group each industry part is about. What hides it is the
+   * capability that group already requires in `DASHBOARD_GROUP_REQUIRES` —
+   * there is no second list of capabilities here.
+   */
+  const industryPartGroup = {
+    lowStockVariants: 'stock',
+    todaySessions: 'sales',
+    packageCreditsLow: 'customers',
+    openRepairTickets: 'sales',
+  } as const
+
+  function hiddenFor(request: FastifyRequest, part: keyof typeof industryPartGroup): boolean {
+    return hiddenDashboardGroups((capability) => holds(request.tenancy, capability)).includes(
+      industryPartGroup[part],
+    )
+  }
+
+  fastify.get(
+    '/api/analytics/dashboard/low-stock-variants',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'low-stock-variants' }),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (hiddenFor(request, 'lowStockVariants')) {
+        return reply.send({
+          items: [],
+          totalLowStock: 0,
+          variantsCount: null,
+          hidden: true,
+          unavailable: false,
+        })
+      }
+      const result = await industryDashboard.lowStockVariants(request.tenancy)
+      return reply.send(result)
+    },
+  )
+
+  fastify.get(
+    '/api/analytics/dashboard/today-sessions',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'today-sessions' }),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (hiddenFor(request, 'todaySessions')) {
+        return reply.send({
+          date: '',
+          sessions: [],
+          byStatus: {},
+          byPractitioner: {},
+          totalSessions: 0,
+          depositsHeld: [],
+          hidden: true,
+          unavailable: false,
+        })
+      }
+      const result = await industryDashboard.todaySessions(request.tenancy)
+      return reply.send(result)
+    },
+  )
+
+  fastify.get(
+    '/api/analytics/dashboard/package-credits-low',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'package-credits-low' }),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (hiddenFor(request, 'packageCreditsLow')) {
+        return reply.send({
+          items: [],
+          lowCount: 0,
+          packagesCount: null,
+          hidden: true,
+          unavailable: false,
+        })
+      }
+      const result = await industryDashboard.packageCreditsLow(request.tenancy)
+      return reply.send(result)
+    },
+  )
+
+  fastify.get(
+    '/api/analytics/dashboard/open-repair-tickets',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'open-repair-tickets' }),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      if (hiddenFor(request, 'openRepairTickets')) {
+        return reply.send({
+          items: [],
+          byStatus: {},
+          totalOpen: 0,
+          totalTickets: null,
+          hidden: true,
+          unavailable: false,
+        })
+      }
+      const result = await industryDashboard.openRepairTickets(request.tenancy)
+      return reply.send(result)
     },
   )
 }

@@ -200,22 +200,37 @@ function offendingChains(source: string): Array<{ table: string; snippet: string
 describe('user_id is never the tenancy boundary for shared business data', () => {
   const files = walk(SRC).filter((f) => !relative(f).startsWith('__tests__/'))
 
-  it('finds source to scan', () => {
-    expect(files.length).toBeGreaterThan(20)
-  })
-
-  it.each(SHARED_TABLES)('no query filters %s by user_id', (table) => {
-    const offenders: string[] = []
-
+  /**
+   * Every offending chain in the backend source, grouped by table, read ONCE.
+   *
+   * This used to run inside the `it.each` body: 61 shared tables × 552 source
+   * files = ~34,000 `readFileSync` calls and comment-strips, 14.5 s of a 122 s
+   * suite, for one file. The assertions are unchanged — every table still gets
+   * its own test, its own message and the offending snippet — but the source is
+   * now read a single time.
+   */
+  const offendersByTable = (() => {
+    const byTable = new Map<string, string[]>()
     for (const file of files) {
       const rel = relative(file)
       if (EXEMPT.has(rel)) continue
 
       for (const chain of offendingChains(readFileSync(file, 'utf8'))) {
-        if (chain.table !== table) continue
-        offenders.push(`${rel}\n    ${chain.snippet}`)
+        if (!SHARED_TABLES.includes(chain.table)) continue
+        const list = byTable.get(chain.table) ?? []
+        list.push(`${rel}\n    ${chain.snippet}`)
+        byTable.set(chain.table, list)
       }
     }
+    return byTable
+  })()
+
+  it('finds source to scan', () => {
+    expect(files.length).toBeGreaterThan(20)
+  })
+
+  it.each(SHARED_TABLES)('no query filters %s by user_id', (table) => {
+    const offenders = offendersByTable.get(table) ?? []
 
     expect(
       offenders,

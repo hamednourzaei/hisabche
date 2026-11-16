@@ -24,6 +24,12 @@ export const IPC = {
   dbResolveQueue: 'db:resolveQueue',
   /** Point the local cache at a workspace, purging another workspace's rows. */
   dbSetWorkspace: 'db:setWorkspace',
+  /** Lease one outbox row to one pusher (V68.2). */
+  dbClaim: 'db:claim',
+  /** Record that a table was pulled for a workspace (V68.1). */
+  dbMarkSynced: 'db:markSynced',
+  /** Which tables this device has pulled for a workspace (V68.1). */
+  dbSyncedTables: 'db:syncedTables',
 
   // Native capabilities
   printHtml: 'print:html',
@@ -131,6 +137,11 @@ export const localTableSchema = z.enum([
   'promotion',
   'package_credit_ledger',
   'service_delivery_sessions',
+  // V70.2: the two tables the pull now carries that the bridge did not name.
+  // Both SQLite tables already existed (local-universal-core-schema.ts); a
+  // table the contract does not name cannot be written by a pull at all.
+  'product_variants',
+  'repair_tickets',
   'order_deposits',
   // The deposit movements (v18). Listed here so the backup carries them and
   // the pull can write what another device applied or refunded.
@@ -201,6 +212,34 @@ export const dbResolveQueueSchema = z.object({
  * the main process which workspace the cache is for, so it can purge.
  */
 export const dbSetWorkspaceSchema = z.object({
+  workspaceId: z.string().min(1).max(64),
+})
+
+/**
+ * One outbox row, one pusher at a time (V68.2).
+ *
+ * Android has two pushers (the native runner and the shell in the WebView).
+ * The lease is bounded so a pusher that died cannot hold a sale for ever.
+ */
+export const dbClaimSchema = z.object({
+  clientId: z.string().min(1).max(64),
+  owner: z.string().min(1).max(64),
+  leaseMs: z.number().int().min(1_000).max(120_000),
+})
+
+/**
+ * «This device has pulled this table for this workspace» (V68.1).
+ *
+ * Purpose-built instead of a generic key/value door: `meta` also holds which
+ * workspace the cache belongs to, and a page must not be able to rewrite that.
+ */
+export const dbMarkSyncedSchema = z.object({
+  workspaceId: z.string().min(1).max(64),
+  table: z.string().regex(/^[a-z_]{1,64}$/),
+  pulledAt: z.string().min(1).max(40),
+})
+
+export const dbSyncedTablesSchema = z.object({
   workspaceId: z.string().min(1).max(64),
 })
 
@@ -431,6 +470,16 @@ export interface HisabcheBridge {
       purged: boolean
       blockedByPendingMutations: number
     }>
+    /**
+     * Lease one outbox row to `owner` for `leaseMs`. False = somebody else is
+     * sending it right now; skip it. Optional: a host built before V68 has no
+     * second pusher to race with.
+     */
+    claim?(clientId: string, owner: string, leaseMs: number): Promise<boolean>
+    /** Record that `table` was pulled for `workspaceId`. Survives a reload. */
+    markSynced?(workspaceId: string, table: string, pulledAt: string): Promise<void>
+    /** table → pulledAt for everything this device pulled for `workspaceId`. */
+    syncedTables?(workspaceId: string): Promise<Record<string, string>>
   }
   print: {
     html(input: {

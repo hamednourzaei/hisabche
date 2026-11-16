@@ -18,6 +18,7 @@ import {
 } from '../schemas/business-capabilities'
 import {
   DASHBOARD_PART_IDS,
+  GENERIC_DASHBOARD_PART_IDS,
   INDUSTRY_KEYS,
   LEGACY_INDUSTRY_KEYS,
   PROFILES,
@@ -39,7 +40,9 @@ describe('industry registry', () => {
       const profile = PROFILES[key]
       expect(profile.key, key).toBe(key)
       expect(['specialized', 'generic'], key).toContain(profile.kind)
-      expect(profile.dashboard.length, key).toBe(DASHBOARD_PART_IDS.length)
+      // V69.5: every business has the generic parts; a trade's own part is
+      // extra and only where its profile names it.
+      for (const part of GENERIC_DASHBOARD_PART_IDS) expect(profile.dashboard, key).toContain(part)
       expect(new Set(profile.dashboard).size, key).toBe(profile.dashboard.length)
       for (const part of profile.dashboard) expect(DASHBOARD_PART_IDS, key).toContain(part)
       expect(INVOICE_UNIT_CHOICES, key).toContain(profile.productDefaults.unit)
@@ -158,7 +161,20 @@ describe('resolveBusinessProfile', () => {
 
   it('multi-industry dashboard keeps every existing part exactly once', () => {
     const profile = resolveBusinessProfile(['jewellery', 'manufacturing'])
-    expect([...profile.dashboard].sort()).toEqual([...DASHBOARD_PART_IDS].sort())
+    // Neither trade has a part of its own, so the union is the generic set —
+    // nobody is handed another trade's part.
+    expect([...profile.dashboard].sort()).toEqual([...GENERIC_DASHBOARD_PART_IDS].sort())
+  })
+
+  it('a trade keeps its own dashboard part first, and only that trade gets it', () => {
+    const salon = resolveBusinessProfile(['beautySalon'])
+    expect(salon.dashboard[0]).toBe('todaySessions')
+    expect(resolveBusinessProfile(['grocery']).dashboard).not.toContain('todaySessions')
+    // Two trades: both parts, each once.
+    const both = resolveBusinessProfile(['beautySalon', 'repairs'])
+    expect(both.dashboard).toContain('todaySessions')
+    expect(both.dashboard).toContain('openRepairTickets')
+    expect(new Set(both.dashboard).size).toBe(both.dashboard.length)
   })
 
   it('unions the extra invoice columns without duplicates', () => {

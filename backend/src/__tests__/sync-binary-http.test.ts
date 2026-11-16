@@ -31,15 +31,23 @@ vi.mock('../middleware/workspace.middleware', () => ({
 vi.mock('../db', () => ({ supabase: {} }))
 
 const sync = vi.hoisted(() => ({ pull: vi.fn(), push: vi.fn(), snapshot: vi.fn() }))
-vi.mock('../services/sync.service', () => ({
-  syncService: {
-    pull: sync.pull,
-    push: sync.push,
-    snapshot: sync.snapshot,
-    currentCursor: vi.fn(async () => 0),
-  },
-  SyncError: class extends Error {},
-}))
+vi.mock('../services/sync.service', async (importOriginal) => {
+  // `PULL_COLUMNS` builds the snapshot route's entity enum, so the mock has to
+  // carry it or the route fails to register. Taking the constant from the real
+  // module — not a hand-written stub — keeps this file honest about which
+  // entities a device may actually rebuild; only the queries are mocked.
+  const actual = await importOriginal<typeof import('../services/sync.service')>()
+  return {
+    PULL_COLUMNS: actual.PULL_COLUMNS,
+    syncService: {
+      pull: sync.pull,
+      push: sync.push,
+      snapshot: sync.snapshot,
+      currentCursor: vi.fn(async () => 0),
+    },
+    SyncError: class extends Error {},
+  }
+})
 
 const { syncRoutes } = await import('../routes/sync.routes')
 
