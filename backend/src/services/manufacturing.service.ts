@@ -993,6 +993,8 @@ export class ManufacturingService {
   }
 
   // ─── V58 — the production run's ledger entry ─────────────────
+  // Decision D1 (NEEDS_OWNER_DECISION, V72): no during-production WIP posting. Components stay in
+  // inventory until the run completes; the ONE entry below then moves them to finished goods.
 
   /**
    * Book one completed run's value transfer to the general ledger.

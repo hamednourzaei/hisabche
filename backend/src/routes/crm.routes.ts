@@ -75,7 +75,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/interactions',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
       schema: {
         body: toJsonSchema(createInteractionSchema),
         response: {
@@ -100,7 +100,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/interactions/:id/status',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateInteractionStatusSchema),
@@ -153,7 +153,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/interactions/:id/customer-outcome',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(recordCustomerOutcomeSchema),
@@ -305,7 +305,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/opportunities',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
       schema: {
         body: toJsonSchema(createOpportunitySchema),
         response: {
@@ -328,7 +328,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/opportunities/:id',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateOpportunitySchema),

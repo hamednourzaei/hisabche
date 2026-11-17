@@ -1061,6 +1061,8 @@ export {
   DASHBOARD_PART_IDS,
   PROFILES,
   canonicalIndustryTypes,
+  applyProfileVocabulary,
+  isSpecificTerm,
   primaryIndustryKeyOf,
   resolveBusinessProfile,
   industryKeysWithProfiles,
@@ -1523,3 +1525,5 @@ export {
   type InvoiceExchangeInput,
   type InvoiceExchangeRequest,
 } from './schemas/invoice-exchange.schema'
+
+export * from './schemas/crm-appointment.schema'

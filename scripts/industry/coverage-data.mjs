@@ -1244,3 +1244,94 @@ export function industryJourneyTestOf(trade) {
 for (const [trade, suite] of Object.entries(INDUSTRY_ACCEPTANCE_TESTS)) {
   suite.push(industryJourneyTestOf(trade))
 }
+
+/**
+ * EVIDENCE CLASSES for each test reference:
+ * - 'shared-core': verifies universal core business logic, not industry-specific flows
+ * - 'industry-http': verifies industry-specific HTTP routes and workflows
+ * - 'industry-pg': verifies industry-specific PostgreSQL transactions and journals
+ * - 'industry-browser': verifies end-to-end browser journey on clean committed tree
+ */
+export const VALID_EVIDENCE_CLASSES = [
+  'shared-core',
+  'industry-http',
+  'industry-pg',
+  'industry-browser',
+]
+
+export const TEST_METADATA = {
+  [TESTS.UNIT_CONV]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.MULTIPLIER]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.MEASUREMENT]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.TRACE]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.PRICE_LIST]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.PRICING]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.CREDIT]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.INSTALL]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.MANUFACTURE]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.TRANSFER]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.BARCODE]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.DEAD_STOCK]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.REVERSE]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.PROFILES]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.OFFLINE_MATRIX]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.UNIVERSAL_CORE]: { evidenceClass: 'shared-core', industrySpecific: false },
+  [TESTS.PARITY]: { evidenceClass: 'shared-core', industrySpecific: false },
+  'backend/src/__tests__/http-e2e-business-day.test.ts': {
+    evidenceClass: 'shared-core',
+    industrySpecific: false,
+  },
+  'backend/src/__tests__/financial-flows-e2e.test.ts': {
+    evidenceClass: 'shared-core',
+    industrySpecific: false,
+  },
+  'backend/src/__tests__/v60-http-families.test.ts': {
+    evidenceClass: 'shared-core',
+    industrySpecific: false,
+  },
+  'backend/src/__tests__/v59-1-gold-routes-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/v59-1-clothing-routes-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/v59-1-mobile-serials-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/v59-1-repair-routes-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/service-delivery-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/v59-1-exchange-gl-http.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  'backend/src/__tests__/manufacturing-page-500s.test.ts': {
+    evidenceClass: 'industry-http',
+    industrySpecific: true,
+  },
+  ...Object.fromEntries(
+    Array.from({ length: JOURNEY_SHARDS }, (_, i) => [
+      `backend/src/__tests__/journey-industries-${i + 1}.pg.test.ts`,
+      { evidenceClass: 'industry-pg', industrySpecific: true },
+    ]),
+  ),
+}
+
+export function getTestEvidenceClass(testPath) {
+  if (TEST_METADATA[testPath]) return TEST_METADATA[testPath]
+  if (testPath.endsWith('.pg.test.ts'))
+    return { evidenceClass: 'industry-pg', industrySpecific: true }
+  if (testPath.endsWith('.spec.ts'))
+    return { evidenceClass: 'industry-browser', industrySpecific: true }
+  if (testPath.includes('-http.test.ts'))
+    return { evidenceClass: 'industry-http', industrySpecific: true }
+  return { evidenceClass: 'shared-core', industrySpecific: false }
+}

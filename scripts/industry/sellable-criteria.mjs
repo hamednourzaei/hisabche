@@ -175,15 +175,17 @@ export const INDUSTRY_BROWSER_TESTS = Object.fromEntries(
 /**
  * Vetoes: a source fact that can only block a criterion.
  *
- * §2.2 requires the user to STATE the primary trade. Today the wizard derives it
- * from registry order (`primaryIndustryKeyOf`), so there is no question and no
- * label for one. A question cannot be asked without a label, which is why the
- * label is the needle: add the question, add `onboarding.primaryIndustry` in all
- * three catalogues, and the veto lifts on its own.
+ * §2.2 requires the user to STATE the primary trade. The wizard asks it when more
+ * than one trade is chosen (one trade IS the primary), and the answer reaches
+ * `inferOperationalDna` as `primaryTradeKey`.
+ *
+ * ⚠️ The needle is the CLICK that records the answer, not a catalogue label
+ * (V72, 16 Nov 2026): a label can exist with no question on any screen, and the
+ * old needle (`primaryIndustry` in en/common.json) would still have lifted the veto.
  */
 export const VETOES = {
   PRIMARY_INDUSTRY_NOT_ASKED: {
-    file: 'packages/i18n/messages/en/common.json',
-    needle: 'primaryIndustry',
+    file: 'packages/ui/src/components/ui/onboarding/onboarding-page.tsx',
+    needle: 'onSetPrimaryTradeKey?.(id)',
   },
 }

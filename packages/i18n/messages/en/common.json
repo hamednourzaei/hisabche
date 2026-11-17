@@ -25,6 +25,7 @@
       "drink": "Drink",
       "service": "Service",
       "student": "Student",
+      "client": "Client",
       "course": "Course",
       "repairItem": "Repair Item"
     }
@@ -2422,6 +2423,7 @@
     "subtitle": "Manage customer credits and debts",
     "creditInvoice": "Credit Invoice",
     "addCustomer": "Add New Customer",
+    "addParty": "Add New {party}",
     "addSupplier": "Add Supplier",
     "error_CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED": "Database schema does not support declared role yet. Run the migration first.",
     "error_CUSTOMER_DECLARED_ROLE_INVALID": "Invalid declared party role.",
@@ -5407,6 +5409,8 @@
       "title": "Customer and invoice details",
       "type": "Invoice type",
       "select": "Select customer",
+      "selectParty": "Select {party}",
+      "addAnotherParty": "Add another {party}…",
       "supplier": "Select supplier",
       "currency": "Invoice currency",
       "rate": "Column rate",

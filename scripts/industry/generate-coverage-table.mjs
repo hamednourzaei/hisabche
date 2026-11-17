@@ -35,6 +35,8 @@ import {
   SOURCES,
   STATUS,
   TESTS,
+  VALID_EVIDENCE_CLASSES,
+  getTestEvidenceClass,
 } from './coverage-data.mjs'
 
 const ROOT = process.cwd()
@@ -415,6 +417,10 @@ for (const key of industryKeys) {
   }
   for (const tf of testFiles) {
     if (!exists(tf)) problems.push(`missing acceptance test file for "${key}": ${tf}`)
+    const meta = getTestEvidenceClass(tf)
+    if (!meta || !VALID_EVIDENCE_CLASSES.includes(meta.evidenceClass)) {
+      problems.push(`unrecognized evidence class for test "${tf}" under "${key}"`)
+    }
   }
   levelsCsvLines.push(
     [key, String(registered), String(profiled), String(workflowComplete), testFiles.join('; ')]

@@ -155,6 +155,9 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/repair-tickets/:id/status': none(
       'the slip history is append-only; a wrong move is followed by the move back where REPAIR_MOVES allows it',
     ),
+    '/api/repair-tickets/:id/quality-check': none(
+      'the quality log is append-only; a wrong verdict is followed by the next check, and the latest one decides',
+    ),
     '/api/repair-tickets/:id/approve': inert,
     '/api/repair-tickets/:id/parts': unproven('POST /api/repair-tickets/:id/parts/:partId/release'),
     '/api/repair-tickets/:id/parts/:partId/consume': none(
@@ -308,6 +311,7 @@ describe('every way forward has a decided way back', () => {
     // repair final bill), +2 none (fx agent settle, repair part consume), +2 inert (repair approve, part release).
     // V60 (Slice 7 & Slice 10): +2 unproven (POST /api/resource-bookings, POST /api/purchase-orders/from-suggestions),
     // +1 inert (POST /api/resource-bookings/:id/release).
-    expect(counts).toEqual({ proven: 9, unproven: 32, none: 26, inert: 36 })
+    // V71 (repair QC): +1 none (POST /api/repair-tickets/:id/quality-check — append-only verdicts).
+    expect(counts).toEqual({ proven: 9, unproven: 32, none: 27, inert: 36 })
   })
 })

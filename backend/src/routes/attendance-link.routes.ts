@@ -28,6 +28,7 @@ import { z } from 'zod'
 import { BaseError } from '../errors/base.error'
 import { NotFoundError } from '../errors/database.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import {
   MAX_DAYS_BACK,
@@ -148,7 +149,9 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
 
     fastify.put(
       '/api/workplace/time-zone',
-      { preHandler: MEMBER },
+      {
+        preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
+      },
       handle(async (request, reply) => {
         // Moving «today» for every employee is the owner's decision.
         requireRole(request.tenancy, 'owner')
@@ -162,7 +165,9 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
 
     fastify.put(
       '/api/workplace/branches/:id/time-zone',
-      { preHandler: MEMBER },
+      {
+        preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')],
+      },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'owner')
         const { id } = idParams.parse(request.params)
@@ -188,7 +193,7 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
 
     fastify.post(
       '/api/attendance-links',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         return reply
@@ -199,7 +204,7 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
 
     fastify.delete(
       '/api/attendance-links/:id',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
@@ -211,7 +216,7 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
     // Forget the employee's registered phone, so a new one can be registered.
     fastify.delete(
       '/api/attendance-links/phone/:id',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
@@ -232,7 +237,7 @@ export function buildAttendanceLinkRoutes(links: AttendanceLinkService) {
 
     fastify.post(
       '/api/attendance-submissions/:id/decision',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)

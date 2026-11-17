@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-16T22:36:43.983Z",
-  "head": "98a2520ef755bc564e2870763f624d9b17a19596",
+  "generatedAt": "2026-11-17T05:53:12.415Z",
+  "head": "aa1d089621172cb3ced38dba40640397d608e66e",
   "acceptanceCommit": "98a2520ef755bc564e2870763f624d9b17a19596",
-  "evidenceFresh": true,
+  "evidenceFresh": false,
   "acceptanceWorktreeDirty": true,
   "criteria": [
     {
@@ -77,6 +77,7 @@
     }
   ],
   "limitations": [
+    "ACCEPTANCE_EVIDENCE_STALE",
     "EVIDENCE_NOT_ON_COMMITTED_TREE",
     "POSTGRES_EVIDENCE_MISSING",
     "BROWSER_VERIFICATION_NOT_RUN",
@@ -121,7 +122,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "wholesale",
@@ -150,7 +156,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "grocery",
@@ -179,7 +190,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "bakery",
@@ -208,7 +224,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "butcher",
@@ -237,7 +258,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "restaurant",
@@ -266,7 +292,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "cafe",
@@ -295,7 +326,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "fruitVegetable",
@@ -324,7 +360,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "dairy",
@@ -353,7 +394,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "nuts",
@@ -382,7 +428,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "spices",
@@ -411,7 +462,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "jewellery",
@@ -440,7 +496,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "watches",
@@ -469,7 +530,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "currencyExchange",
@@ -498,7 +564,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "clothing",
@@ -527,7 +598,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "fabric",
@@ -556,7 +632,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "fabricRoll",
@@ -585,7 +666,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "shoes",
@@ -614,7 +700,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "carpet",
@@ -643,7 +734,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "tailoring",
@@ -672,7 +768,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "mobilePhones",
@@ -701,7 +802,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "computers",
@@ -730,7 +836,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "computerComponents",
@@ -759,7 +870,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "electronics",
@@ -788,7 +904,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "itServices",
@@ -817,7 +938,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "hardware",
@@ -846,7 +972,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "buildingMaterials",
@@ -875,7 +1006,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "paint",
@@ -904,7 +1040,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "timber",
@@ -933,7 +1074,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "glass",
@@ -962,7 +1108,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "construction",
@@ -991,7 +1142,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "manufacturing",
@@ -1020,7 +1176,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "autoParts",
@@ -1049,7 +1210,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "carDealer",
@@ -1078,7 +1244,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "mechanic",
@@ -1107,7 +1278,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "fuel",
@@ -1136,7 +1312,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "furniture",
@@ -1165,7 +1346,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "kitchenware",
@@ -1194,7 +1380,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "homeAppliances",
@@ -1223,7 +1414,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "stationery",
@@ -1252,7 +1448,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "toys",
@@ -1281,7 +1482,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "giftShop",
@@ -1310,7 +1516,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "pharmacy",
@@ -1339,7 +1550,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "cosmetics",
@@ -1368,7 +1584,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "clinic",
@@ -1397,7 +1618,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "barber",
@@ -1426,7 +1652,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "beautySalon",
@@ -1455,7 +1686,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "optician",
@@ -1484,7 +1720,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "agriculture",
@@ -1513,7 +1754,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "livestock",
@@ -1542,7 +1788,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "seedsFertilizer",
@@ -1571,7 +1822,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "flowers",
@@ -1600,7 +1856,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "transport",
@@ -1629,7 +1890,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "freightTransport",
@@ -1658,7 +1924,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "passengerTransport",
@@ -1687,7 +1958,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "courier",
@@ -1716,7 +1992,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "travelAgency",
@@ -1745,7 +2026,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "realEstate",
@@ -1774,7 +2060,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "printing",
@@ -1803,7 +2094,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "photography",
@@ -1832,7 +2128,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "education",
@@ -1861,7 +2162,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "laundry",
@@ -1890,7 +2196,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "repairs",
@@ -1919,7 +2230,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "wedding",
@@ -1948,7 +2264,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "security",
@@ -1977,7 +2298,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "consulting",
@@ -2006,7 +2332,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     },
     {
       "key": "other",
@@ -2035,7 +2366,12 @@
       "operationsVerified": true,
       "postgresEvidence": false,
       "browserEvidence": false,
-      "missingEvidence": ["POSTGRES_JOURNEY", "BROWSER_JOURNEY", "EVIDENCE_NOT_ON_COMMITTED_TREE"]
+      "missingEvidence": [
+        "POSTGRES_JOURNEY",
+        "BROWSER_JOURNEY",
+        "ACCEPTANCE_EVIDENCE_STALE",
+        "EVIDENCE_NOT_ON_COMMITTED_TREE"
+      ]
     }
   ]
 }

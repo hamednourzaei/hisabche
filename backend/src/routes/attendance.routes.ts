@@ -30,6 +30,7 @@ import { z } from 'zod'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import {
   assignShiftBodySchema,
@@ -78,7 +79,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/attendance-sheet',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -105,19 +106,23 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.post('/api/shifts', { preHandler: MEMBER }, async (request: FastifyRequest, reply) => {
-    try {
-      requireRole(request.tenancy, 'manager')
-      const input = createShiftBodySchema.parse(request.body)
-      return reply.code(201).send(await shiftService.create(request.tenancy, input))
-    } catch (err) {
-      return fail(fastify, reply, err, 'Failed to save the shift')
-    }
-  })
+  fastify.post(
+    '/api/shifts',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        const input = createShiftBodySchema.parse(request.body)
+        return reply.code(201).send(await shiftService.create(request.tenancy, input))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to save the shift')
+      }
+    },
+  )
 
   fastify.patch(
     '/api/shifts/:id/active',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -148,7 +153,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/shift-assignments',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -162,7 +167,7 @@ export async function attendanceRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/shift-assignments/:id/cancel',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')

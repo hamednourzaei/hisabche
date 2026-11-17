@@ -24,7 +24,8 @@
       "dish": "غذا",
       "drink": "نوشیدنی",
       "service": "خدمت",
-      "student": "دانش‌آموز",
+      "student": "شاگرد",
+      "client": "مراجعه‌کننده",
       "course": "دوره",
       "repairItem": "دستگاه ترمیمی"
     }
@@ -2422,6 +2423,7 @@
     "subtitle": "مدیریت نسیه و بدهی مشتری‌ها",
     "creditInvoice": "فاکتور نسیه",
     "addCustomer": "افزودن مشتری جدید",
+    "addParty": "افزودن {party} جدید",
     "addSupplier": "افزودن تأمین‌کننده",
     "error_CUSTOMER_DECLARED_ROLE_SCHEMA_REQUIRED": "طرح دیتابیس از نقش مشخص‌شده پشتیبانی نمی‌کند. لطفاً اول مایگریشن را اجرا نمایید.",
     "error_CUSTOMER_DECLARED_ROLE_INVALID": "نقش طرف حساب نامعتبر است.",
@@ -5407,6 +5409,8 @@
       "title": "معلومات مشتری و بل",
       "type": "نوع بل",
       "select": "انتخاب مشتری",
+      "selectParty": "انتخاب {party}",
+      "addAnotherParty": "افزودن {party} دیگر…",
       "supplier": "انتخاب تهیه‌کننده",
       "currency": "اسعار بل",
       "rate": "نرخ ستون اسعاری",

@@ -1617,6 +1617,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     ],
   },
   {
+    // V71 QC: a check is one append-only quality event; a FAIL then moves the ticket through the
+    // same conditional `repair_ticket_move`. Two clicks write two events — the latest decides,
+    // and the handover trigger reads that latest one (repair-quality-01).
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/:id/quality-check',
+    mechanisms: ['check-then-write', 'conditional-update'],
+    evidence: [
+      { file: `${SVC}/repair/repair-ticket.service.ts`, text: "if (ticket.status !== 'ready')" },
+      { file: 'docs/repair-quality-01-migration.sql', text: 'ORDER BY q.occurred_at DESC' },
+    ],
+  },
+  {
     routeFile: 'repair.routes.ts',
     route: 'POST /api/repair-tickets/:id/approve',
     mechanisms: ['last-write-wins'],
@@ -1906,6 +1918,17 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'PATCH /api/products/:id/translations',
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${RT}/product.routes.ts`, text: "'/api/products/:id/translations'" }],
+  },
+  {
+    routeFile: 'appointment.routes.ts',
+    route: 'POST /api/appointments',
+    mechanisms: ['conditional-update'],
+    evidence: [
+      {
+        file: `${SVC}/crm/appointment.service.ts`,
+        text: 'Check conflicts directly in SQL for the assigned staff member and time window',
+      },
+    ],
   },
 ]
 

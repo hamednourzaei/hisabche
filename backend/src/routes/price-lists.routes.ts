@@ -26,6 +26,7 @@ import { priceListService } from '../services/commerce/price-list.service'
 import { requireRole } from '../services/tenancy.service'
 
 const READ = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
+const WRITE = [authenticate, requireWorkspaceContext, requireCapability('invoice.create')]
 const idParams = z.object({ id: z.string().uuid() })
 const customerParams = z.object({ customerId: z.string().uuid() })
 
@@ -81,18 +82,22 @@ export async function priceListRoutes(fastify: FastifyInstance) {
     },
   )
 
-  fastify.post('/api/price-lists', { preHandler: READ }, async (request: FastifyRequest, reply) => {
-    try {
-      requireRole(request.tenancy, 'manager')
-      return reply.code(201).send(await priceListService.create(request.tenancy, request.body))
-    } catch (err) {
-      return fail(fastify, reply, err, 'Failed to save the price list')
-    }
-  })
+  fastify.post(
+    '/api/price-lists',
+    { preHandler: WRITE },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        return reply.code(201).send(await priceListService.create(request.tenancy, request.body))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to save the price list')
+      }
+    },
+  )
 
   fastify.patch(
     '/api/price-lists/:id/active',
-    { preHandler: READ },
+    { preHandler: WRITE },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -107,7 +112,7 @@ export async function priceListRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/price-lists/:id/items',
-    { preHandler: READ },
+    { preHandler: WRITE },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -121,7 +126,7 @@ export async function priceListRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/price-lists/customers/:customerId',
-    { preHandler: READ },
+    { preHandler: WRITE },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')

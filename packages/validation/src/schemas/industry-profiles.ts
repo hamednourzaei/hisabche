@@ -21,9 +21,11 @@
 import type { CapabilityDiagnostic, CapabilityKey } from './business-capabilities'
 import { USABLE_CAPABILITIES, resolveCapabilities } from './business-capabilities'
 import {
+  GENERIC_TERMINOLOGY,
   operatingAnswersSchema,
   type LocationScope,
   type OperatingAnswers,
+  type TerminologyProfile,
   type YesNo,
 } from './operational-dna'
 
@@ -360,7 +362,10 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
       'activities',
       'manufacturing',
     ],
-    vocabulary: { productKey: 'industry.vocabulary.service' },
+    vocabulary: {
+      productKey: 'industry.vocabulary.service',
+      customerKey: 'industry.vocabulary.client',
+    },
   },
   barber: {
     capabilities: [],
@@ -375,7 +380,10 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
       'activities',
       'manufacturing',
     ],
-    vocabulary: { productKey: 'industry.vocabulary.service' },
+    vocabulary: {
+      productKey: 'industry.vocabulary.service',
+      customerKey: 'industry.vocabulary.client',
+    },
   },
   education: {
     capabilities: ['package_credits'],
@@ -930,6 +938,37 @@ export function resolveBusinessProfile(
 }
 
 /** Everything an onboarding screen needs, without a second catalogue. */
+/**
+ * ONE vocabulary: the trade profile's nouns (`productKey`, `customerKey`) fill the
+ * terminology slots the DNA resolver left generic (16 Nov 2026).
+ *
+ * Before this, a workspace WITH a DNA never saw its profile's nouns: `customerKey`
+ * was declared on profiles and read nowhere, so a school showed «طرف حساب» where
+ * its profile names a student. A word the DNA itself names (a trade namespace or
+ * an explicit presentation vocabulary) still wins: only a GENERIC slot is filled.
+ */
+export function applyProfileVocabulary(
+  terminology: TerminologyProfile,
+  vocabulary: Vocabulary,
+): TerminologyProfile {
+  const fill = (slot: 'itemLabelKey' | 'partyLabelKey', key: string | undefined) =>
+    key && terminology[slot] === GENERIC_TERMINOLOGY[slot] ? { [slot]: key } : {}
+  return {
+    ...terminology,
+    ...fill('itemLabelKey', vocabulary.productKey),
+    ...fill('partyLabelKey', vocabulary.customerKey),
+  }
+}
+
+/** True when a slot names this trade's own word rather than the neutral generic one. */
+export function isSpecificTerm(
+  terminology: TerminologyProfile,
+  slot: keyof TerminologyProfile,
+): boolean {
+  const key = terminology[slot]
+  return typeof key === 'string' && key.length > 0 && key !== GENERIC_TERMINOLOGY[slot]
+}
+
 export function industryKeysWithProfiles(): readonly IndustryKey[] {
   return INDUSTRY_KEYS
 }

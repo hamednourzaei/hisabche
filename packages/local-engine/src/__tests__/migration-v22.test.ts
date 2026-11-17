@@ -18,7 +18,10 @@ import { LOCAL_MIGRATIONS, isAlreadyApplied } from '../../../app-bridge/src/loca
 const CREATED: string[] = []
 
 function applyFrom(db: DatabaseSync, from: number): void {
-  for (const migration of LOCAL_MIGRATIONS.filter((m) => m.to > from)) {
+  // ONE step: this file proves v21 → v22. Applying every later migration too ran v26's
+  // ALTER TABLE product_variants on a minimal cache that never had the table (16 Nov 2026);
+  // a real cache has it since v8. Later steps are proven by their own files.
+  for (const migration of LOCAL_MIGRATIONS.filter((m) => m.to > from && m.to <= from + 1)) {
     for (const statement of migration.statements) {
       try {
         db.exec(statement)

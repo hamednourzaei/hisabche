@@ -26,6 +26,7 @@ import { z } from 'zod'
 import { BaseError } from '../errors/base.error'
 import { NotFoundError } from '../errors/database.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import {
   attendanceDeviceService,
@@ -125,7 +126,7 @@ export function buildAttendanceDeviceRoutes(devices: AttendanceDeviceService) {
 
     fastify.post(
       '/api/attendance-devices',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const created = await devices.create(request.tenancy, deviceBody.parse(request.body))
@@ -137,7 +138,7 @@ export function buildAttendanceDeviceRoutes(devices: AttendanceDeviceService) {
 
     fastify.post(
       '/api/attendance-devices/:id/key',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
@@ -148,7 +149,7 @@ export function buildAttendanceDeviceRoutes(devices: AttendanceDeviceService) {
 
     fastify.delete(
       '/api/attendance-devices/:id',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)
@@ -168,7 +169,7 @@ export function buildAttendanceDeviceRoutes(devices: AttendanceDeviceService) {
 
     fastify.post(
       '/api/attendance-devices/held/accept',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const body = z
@@ -204,7 +205,7 @@ export function buildAttendanceDeviceRoutes(devices: AttendanceDeviceService) {
 
     fastify.put(
       '/api/attendance-devices/:id/identities',
-      { preHandler: MEMBER },
+      { preHandler: [authenticate, requireWorkspaceContext, requireCapability('employee.write')] },
       handle(async (request, reply) => {
         requireRole(request.tenancy, 'manager')
         const { id } = idParams.parse(request.params)

@@ -5,6 +5,7 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { CrmAppointmentInputSchema } from '@hisabche/validation'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -30,14 +31,15 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
     { preHandler: write },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const workspaceId = request.tenancy.workspaceId
-      const body = request.body as {
-        customerId: string
-        staffEmployeeId: string
-        serviceProductId: string
-        startTime: string
-        endTime: string
-        notes?: string | undefined
+      const parsed = CrmAppointmentInputSchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'Invalid appointment payload',
+          code: 'VALIDATION_ERROR',
+          details: parsed.error.issues,
+        })
       }
+      const body = parsed.data
       try {
         const appointment = await service.createAppointment(workspaceId, body)
         return reply.status(201).send({ data: appointment })

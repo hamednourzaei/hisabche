@@ -27,6 +27,7 @@ import { z } from 'zod'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { campaignService } from '../services/campaigns/campaign.service'
 import { requireRole } from '../services/tenancy.service'
@@ -80,16 +81,20 @@ export async function campaignRoutes(fastify: FastifyInstance) {
     }
   })
 
-  fastify.post('/api/campaigns', { preHandler: MEMBER }, async (request: FastifyRequest, reply) => {
-    try {
-      requireRole(request.tenancy, 'manager')
-      return reply
-        .code(201)
-        .send(await campaignService.create(request.tenancy, campaignBody.parse(request.body)))
-    } catch (err) {
-      return fail(fastify, reply, err, 'Failed to save the campaign')
-    }
-  })
+  fastify.post(
+    '/api/campaigns',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')] },
+    async (request: FastifyRequest, reply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        return reply
+          .code(201)
+          .send(await campaignService.create(request.tenancy, campaignBody.parse(request.body)))
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to save the campaign')
+      }
+    },
+  )
 
   fastify.get(
     '/api/campaigns/:id',
@@ -121,7 +126,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/campaigns/:id/launch',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')
@@ -135,7 +140,7 @@ export async function campaignRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/campaigns/:id/cancel',
-    { preHandler: MEMBER },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('customer.write')] },
     async (request: FastifyRequest, reply) => {
       try {
         requireRole(request.tenancy, 'manager')

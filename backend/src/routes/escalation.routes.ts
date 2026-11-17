@@ -15,6 +15,7 @@ import { z } from 'zod'
 
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireRole } from '../services/tenancy.service'
 import { escalationService } from '../services/workflow/escalation.service'
@@ -66,7 +67,7 @@ export async function escalationRoutes(fastify: FastifyInstance) {
 
   fastify.put(
     '/api/v1/workflows/:id/escalation',
-    { preHandler: WRITE },
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workflow.manage')] },
     async (request: FastifyRequest, reply) => {
       try {
         const { id } = idParams.parse(request.params)

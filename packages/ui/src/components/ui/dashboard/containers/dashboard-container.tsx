@@ -259,7 +259,7 @@ export function DashboardContainer() {
               'برخی بخش‌های پروفایل کاری هنوز مشخص نشده‌اند؛ تنظیمات پایه را کامل کنید.',
             )}{' '}
             <span className="text-xs text-[hsl(var(--fg-secondary))]">
-              ({term('transactionLabelKey', 'تراکنش')} / {term('itemLabelKey', 'مورد')})
+              ({term('transactionLabelKey')} / {term('itemLabelKey')})
             </span>
           </span>
           <button
