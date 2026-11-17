@@ -9,7 +9,7 @@
 | ------------------------------ | ------- |
 | فایل route (بک‌اند)            | **125** |
 | پوشه سرویس                     | **79**  |
-| فایل SQL در `docs/`            | **528** |
+| فایل SQL در `docs/`            | **534** |
 | جدول استخراج‌شده از SQL        | **366** |
 | کلید `FEATURE_REGISTRY`        | **204** |
 | صنف در `INDUSTRY_KEYS`         | **67**  |
@@ -21,8 +21,8 @@ probe ساخته شود و هر موردی که در کد هست، `PRESENT` ع�
 
 ## ۲. پوشش قابلیت در ۶۷ صنف (از رجیستری تولیدی)
 
-- جمع `available`: **63** · جمع `partial`: **31** · جمع `planned`: **0**
-- صنف‌های بدون هیچ قابلیت اختصاصی: **16** (`retail`, `wholesale`, `bakery`, `restaurant`, `cafe`, `currencyExchange`, `itServices`, `mechanic`, `kitchenware`, `clinic`, `barber`, `beautySalon`, `courier`, `wedding`, `consulting`, `other`)
+- جمع `available`: **63** · جمع `partial`: **32** · جمع `planned`: **0**
+- صنف‌های بدون هیچ قابلیت اختصاصی: **15** (`retail`, `wholesale`, `bakery`, `restaurant`, `cafe`, `itServices`, `mechanic`, `kitchenware`, `clinic`, `barber`, `beautySalon`, `courier`, `wedding`, `consulting`, `other`)
 - توزیع archetype: `RETAIL_STORE`=14 · `GENERIC_BUSINESS`=48 · `SERVICE_REPAIR`=2 · `NAIL_TECH_BEAUTY`=1 · `SALON_MULTI_STAFF`=1 · `LANGUAGE_TEACHER`=1
 
 |   # | id                   | archetype           | available | partial | planned |
@@ -40,7 +40,7 @@ probe ساخته شود و هر موردی که در کد هست، `PRESENT` ع�
 |  11 | `spices`             | `GENERIC_BUSINESS`  |         2 |       0 |       0 |
 |  12 | `jewellery`          | `RETAIL_STORE`      |         3 |       0 |       0 |
 |  13 | `watches`            | `GENERIC_BUSINESS`  |         2 |       0 |       0 |
-|  14 | `currencyExchange`   | `GENERIC_BUSINESS`  |         0 |       0 |       0 |
+|  14 | `currencyExchange`   | `GENERIC_BUSINESS`  |         0 |       1 |       0 |
 |  15 | `clothing`           | `RETAIL_STORE`      |         0 |       1 |       0 |
 |  16 | `fabric`             | `RETAIL_STORE`      |         2 |       0 |       0 |
 |  17 | `fabricRoll`         | `GENERIC_BUSINESS`  |         2 |       0 |       0 |

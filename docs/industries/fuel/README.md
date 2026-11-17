@@ -47,6 +47,8 @@
 | `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
+**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `fuel_tank_reconciliation`
+
 ## تفاوت با خانواده‌ی «عمده‌فروشی»
 
 ### هویت و مدل کسب‌وکار
@@ -79,4 +81,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+ساخته‌نشده: `fuel_tank_reconciliation`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

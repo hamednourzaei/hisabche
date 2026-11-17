@@ -150,10 +150,26 @@ function registeredPlugins(files) {
     .sort()
 }
 
+/**
+ * The route files that answer an engine. A `route_owned` engine points at the
+ * route file itself — `routesImporting` would look for a route that imports a
+ * route and find nothing, which is how `agriculture_livestock` was reported as
+ * having no server route while `backend/src/index.ts` registered it.
+ */
+function routesForEngine(service) {
+  if (!service) return []
+  if (service.startsWith(`${ROUTES_DIR}/`)) return exists(service) ? [service] : []
+  return routesImporting(service)
+}
+
 /** Routes that answer a capability's OWN evidence (not its whole engine). */
 function routesForEvidence(evidence) {
   const hits = new Set()
   for (const file of evidence.sources) {
+    if (file.startsWith(`${ROUTES_DIR}/`)) {
+      if (exists(file)) hits.add(file)
+      continue
+    }
     for (const route of routesImporting(file)) hits.add(route)
   }
   return [...hits].sort()
@@ -173,9 +189,10 @@ for (const [key, body] of engineBlocks) {
   const clientHook = fieldOf(body, 'clientHook')
   const uiHost = fieldOf(body, 'uiHost')
   const offlineStatus = fieldOf(body, 'offlineStatus')
+  const structure = fieldOf(body, 'structure')
   const pack = fieldOf(body, 'pack')
 
-  const routeFilesForService = routesImporting(service)
+  const routeFilesForService = routesForEngine(service)
   const registered = registeredPlugins(routeFilesForService)
 
   const servicePresent = exists(service)
@@ -218,6 +235,7 @@ for (const [key, body] of engineBlocks) {
     uiHost,
     uiHostPresent,
     offlineStatus,
+    structure,
     pack,
     capabilities,
     availableCapabilities,
@@ -250,6 +268,7 @@ const capabilities = [...capabilityBlocks.entries()].map(([key, body]) => {
     evidenceFiles: evidenceFiles.length,
     evidencePresent: evidenceFiles.filter((file) => exists(file)).length,
     limitations: limitationsOf(body),
+    structure: engine?.structure ?? '',
   }
 })
 
@@ -275,6 +294,7 @@ const HEADER = [
   'evidence_files',
   'evidence_present',
   'limitations',
+  'engine_structure',
 ]
 
 /** Every cell is quoted, and no value contains a comma or a quote. */
@@ -308,6 +328,7 @@ for (const engine of engines.values()) {
       '',
       '',
       '',
+      engine.structure,
     ]
       .map(cell)
       .join(','),
@@ -336,6 +357,7 @@ for (const capability of capabilities) {
       capability.evidenceFiles,
       capability.evidencePresent,
       capability.limitations.join(';'),
+      capability.structure,
     ]
       .map(cell)
       .join(','),

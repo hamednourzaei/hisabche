@@ -14218,7 +14218,42 @@
     "tiered_pricing": {
       "label": "Tiered & wholesale pricing"
     },
+    "currency_exchange": {
+      "label": "Currency exchange"
+    },
+    "gold_trade": {
+      "label": "Old-gold trade-in"
+    },
+    "pharmacy_prescription": {
+      "label": "Prescription and its items"
+    },
+    "pharmacy_dispensing": {
+      "label": "Dispensing, substitution and insurance"
+    },
+    "insurance_claims": {
+      "label": "Insurance coverage and settlement"
+    },
+    "optical_prescription": {
+      "label": "Eye prescription and lens parameters"
+    },
+    "lens_order": {
+      "label": "Lens order and lab job"
+    },
+    "laundry_item_tracking": {
+      "label": "Item-level laundry tracking"
+    },
+    "production_batch": {
+      "label": "Production batch, yield and waste"
+    },
+    "fuel_tank_reconciliation": {
+      "label": "Fuel tank reconciliation and calibration"
+    },
+    "print_job": {
+      "label": "Print job and artwork approval"
+    },
     "limitations": {
+      "FX_TRADES_ONLINE_ONLY": "FX trades are recorded online only; rates and positions are not synced between offline devices.",
+      "OLD_GOLD_TRADE_IN_NOT_ON_INVOICE": "The old-gold trade-in calculation exists in the domain but is not applied on an invoice line.",
       "LINEAR_CUT_LOSS_NOT_TRACKED": "Waste from cutting by length is not tracked.",
       "TANK_DIP_CALIBRATION_NOT_TRACKED": "Tank dip calibration is not tracked.",
       "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "The rule exists but cannot be picked on an invoice line yet.",

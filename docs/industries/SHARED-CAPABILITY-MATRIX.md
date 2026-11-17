@@ -42,5 +42,16 @@
 | `livestock_register` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 | `crop_cycle` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 | `room_nights` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `currency_exchange` | partial | `EXISTING_BUT_INCOMPLETE` | `exchange` | online_required | 1 |
+| `gold_trade` | partial | `EXISTING_BUT_INCOMPLETE` | `pricing_rates` | available | ۰ |
+| `pharmacy_prescription` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `pharmacy_dispensing` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `insurance_claims` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `optical_prescription` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `lens_order` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `laundry_item_tracking` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `production_batch` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `fuel_tank_reconciliation` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `print_job` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 
 `EXISTING_AND_VERIFIED` فقط وقتی است که رجیستری یک فایل تست نام برده و آن فایل واقعاً هست.

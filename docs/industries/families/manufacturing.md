@@ -19,10 +19,10 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [تولیدی و کارگاه](../manufacturing/README.md) (`manufacturing`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
-| [زراعت و کشاورزی](../agriculture/README.md) (`agriculture`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `batch_expiry` | — |
-| [مالداری و دامداری](../livestock/README.md) (`livestock`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `serialized_items` | — |
-| [چاپ و تبلیغات](../printing/README.md) (`printing`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [تولیدی و کارگاه](../manufacturing/README.md) (`manufacturing`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | `production_batch` |
+| [زراعت و کشاورزی](../agriculture/README.md) (`agriculture`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `batch_expiry` | `crop_cycle` |
+| [مالداری و دامداری](../livestock/README.md) (`livestock`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `serialized_items` | `livestock_register` |
+| [چاپ و تبلیغات](../printing/README.md) (`printing`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | `print_job`، `production_batch` |
 
 ## پنج گردش کار
 
@@ -92,7 +92,7 @@
 
 ## شکاف‌های خانواده
 
-هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `crop_cycle`، `livestock_register`، `print_job`، `production_batch`.
 
 ## بر اساس اندازه
 

@@ -48,12 +48,24 @@ export const ENGINE_KEYS = [
   'package_credits',
   'workforce_payroll',
   'approvals_workflow',
+  'exchange',
 ] as const
 
 export type EngineKey = (typeof ENGINE_KEYS)[number]
 
 export type EngineOfflineStatus = 'available' | 'partial' | 'online_required' | 'unwired'
 export type EngineOfflineMode = 'local' | 'online_required'
+
+/**
+ * Who owns the domain logic behind an engine (V66 §2 — a route-only engine is a
+ * registry fact, not a missing service):
+ *   'service_owned'    — a domain service exists and a route imports it.
+ *   'route_owned'      — the registry points at the route file itself; the
+ *                        domain logic lives in the route. Named debt, never hidden.
+ *   'composed'         — several services together make the engine.
+ *   'external_adapter' — part of the operation depends on an outside service.
+ */
+export type EngineStructure = 'service_owned' | 'route_owned' | 'composed' | 'external_adapter'
 
 export interface EngineDefinition {
   readonly key: EngineKey
@@ -65,6 +77,7 @@ export interface EngineDefinition {
   readonly matrixFeature: string | null
   readonly offlineStatus: EngineOfflineStatus
   readonly offline: EngineOfflineMode
+  readonly structure: EngineStructure
   readonly pack: PackId
 }
 
@@ -88,6 +101,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'invoice.create',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('invoice.create'),
+    structure: 'service_owned',
     pack: 'core',
   },
   sales_orders: {
@@ -100,6 +114,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'sales.orders',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('sales.orders'),
+    structure: 'service_owned',
     pack: 'operations',
   },
   appointments_resources: {
@@ -113,6 +128,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'operations.service_delivery',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('operations.service_delivery'),
+    structure: 'service_owned',
     pack: 'workforce',
   },
   work_orders_repair: {
@@ -125,6 +141,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'operations.repairs',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('operations.repairs'),
+    structure: 'service_owned',
     pack: 'workforce',
   },
   projects_time: {
@@ -137,6 +154,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'project.manage',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('project.manage'),
+    structure: 'service_owned',
     pack: 'workforce',
   },
   production_bom: {
@@ -149,6 +167,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'manufacturing.bom',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('manufacturing.bom'),
+    structure: 'service_owned',
     pack: 'manufacturing',
   },
   procurement: {
@@ -161,6 +180,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'purchase.orders',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('purchase.orders'),
+    structure: 'service_owned',
     pack: 'operations',
   },
   delivery_logistics: {
@@ -173,6 +193,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'trade.delivery_notes',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('trade.delivery_notes'),
+    structure: 'service_owned',
     pack: 'operations',
   },
   quality_claims: {
@@ -185,6 +206,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'trade.warranties',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('trade.warranties'),
+    structure: 'service_owned',
     pack: 'operations',
   },
   contracts_recurring: {
@@ -197,6 +219,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'commerce.contracts',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('commerce.contracts'),
+    structure: 'route_owned',
     pack: 'operations',
   },
   assets_rental: {
@@ -209,6 +232,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: null,
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode(null),
+    structure: 'service_owned',
     pack: 'operations',
   },
   agriculture_livestock: {
@@ -221,6 +245,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: null,
     offlineStatus: 'unwired',
     offline: deriveEngineOfflineMode(null),
+    structure: 'route_owned',
     pack: 'operations',
   },
   costing_ledger: {
@@ -233,6 +258,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'accounting.profit_report',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('accounting.profit_report'),
+    structure: 'service_owned',
     pack: 'core',
   },
   forecast_insights: {
@@ -245,6 +271,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'ai.cashflow_forecast',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('ai.cashflow_forecast'),
+    structure: 'service_owned',
     pack: 'intelligence',
   },
   inventory_catalog: {
@@ -257,6 +284,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'product.variants',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('product.variants'),
+    structure: 'service_owned',
     pack: 'core',
   },
   pricing_rates: {
@@ -269,6 +297,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'pricing.price_lists',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('pricing.price_lists'),
+    structure: 'service_owned',
     pack: 'core',
   },
   deposits_installments: {
@@ -281,6 +310,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'order.deposits',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('order.deposits'),
+    structure: 'service_owned',
     pack: 'operations',
   },
   package_credits: {
@@ -294,6 +324,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'operations.service_delivery',
     offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('operations.service_delivery'),
+    structure: 'route_owned',
     pack: 'workforce',
   },
   workforce_payroll: {
@@ -307,6 +338,7 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'hr.payroll',
     offlineStatus: 'available',
     offline: deriveEngineOfflineMode('hr.payroll'),
+    structure: 'route_owned',
     pack: 'workforce',
   },
   approvals_workflow: {
@@ -319,7 +351,21 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
     matrixFeature: 'approvals.workflows',
     offlineStatus: 'online_required',
     offline: deriveEngineOfflineMode('approvals.workflows'),
+    structure: 'service_owned',
     pack: 'approvals',
+  },
+  exchange: {
+    key: 'exchange',
+    service: 'backend/src/services/exchange/exchange.service.ts',
+    localEngine: null,
+    localEngineRoute: null,
+    clientHook: 'packages/api/src/hooks/business-packs.ts',
+    uiHost: 'packages/ui/src/components/ui/business-packs/exchange-section.tsx',
+    matrixFeature: 'finance.currency_exchange',
+    offlineStatus: 'online_required',
+    offline: deriveEngineOfflineMode('finance.currency_exchange'),
+    structure: 'service_owned',
+    pack: 'core',
   },
 }
 
@@ -362,6 +408,19 @@ export const CAPABILITY_KEYS = [
   'livestock_register',
   'crop_cycle',
   'room_nights',
+  'currency_exchange',
+  'gold_trade',
+  // Specialty capabilities the 67 industries need and the registry did not name.
+  // They are 'planned': no engine, no evidence, no profile — WP-24/WP-25 own them.
+  'pharmacy_prescription',
+  'pharmacy_dispensing',
+  'insurance_claims',
+  'optical_prescription',
+  'lens_order',
+  'laundry_item_tracking',
+  'production_batch',
+  'fuel_tank_reconciliation',
+  'print_job',
 ] as const
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[number]
@@ -1096,6 +1155,124 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     evidence: NO_EVIDENCE,
     ...STANDALONE,
   },
+  currency_exchange: {
+    key: 'currency_exchange',
+    status: 'partial',
+    engine: 'exchange',
+    labelKey: 'capabilities.currency_exchange.label',
+    evidence: {
+      sources: [
+        'packages/validation/src/schemas/currency-exchange.ts',
+        'backend/src/services/exchange/exchange.service.ts',
+        'backend/src/routes/exchange.routes.ts',
+        'packages/api/src/hooks/business-packs.ts',
+        'packages/ui/src/components/ui/business-packs/exchange-section.tsx',
+      ],
+      tests: [
+        'backend/src/__tests__/v59-1-exchange-gl-http.test.ts',
+        'backend/src/__tests__/exchange-02.pg.test.ts',
+      ],
+    },
+    ...STANDALONE,
+    // Every FX endpoint is `online_required` in OFFLINE_ENDPOINT_MATRIX: the
+    // trade, the rate board, the positions and the cashbox reconciliation need
+    // the server. An offline FX claim would need the cross-device rate/stock
+    // conflict test first.
+    limitations: ['FX_TRADES_ONLINE_ONLY'],
+  },
+  gold_trade: {
+    key: 'gold_trade',
+    status: 'partial',
+    engine: 'pricing_rates',
+    labelKey: 'capabilities.gold_trade.label',
+    evidence: {
+      sources: [
+        'packages/validation/src/schemas/universal-core/gold-jewellery.domain.ts',
+        'backend/src/services/pricing/metal-rates.service.ts',
+      ],
+      tests: [
+        'packages/validation/src/__tests__/universal-core.test.ts',
+        'packages/local-engine/src/__tests__/universal-core-parity.test.ts',
+      ],
+    },
+    ...STANDALONE,
+    requires: [needs('gold_purity')],
+    // The old-gold trade-in calculation is a domain function with a parity test;
+    // no invoice line, route or screen calls it yet.
+    limitations: ['OLD_GOLD_TRADE_IN_NOT_ON_INVOICE'],
+  },
+  pharmacy_prescription: {
+    key: 'pharmacy_prescription',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.pharmacy_prescription.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  pharmacy_dispensing: {
+    key: 'pharmacy_dispensing',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.pharmacy_dispensing.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  insurance_claims: {
+    key: 'insurance_claims',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.insurance_claims.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  optical_prescription: {
+    key: 'optical_prescription',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.optical_prescription.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  lens_order: {
+    key: 'lens_order',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.lens_order.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  laundry_item_tracking: {
+    key: 'laundry_item_tracking',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.laundry_item_tracking.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  production_batch: {
+    key: 'production_batch',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.production_batch.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  fuel_tank_reconciliation: {
+    key: 'fuel_tank_reconciliation',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.fuel_tank_reconciliation.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  print_job: {
+    key: 'print_job',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.print_job.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
 }
 
 /** Capabilities whose whole chain is usable — the only ones that may be advertised as complete. */
@@ -1488,7 +1665,7 @@ export function resolveCapabilityPlan(
   if (pricingBasis.includes('AREA')) requested.add('area_pricing')
   if (pricingBasis.includes('VOLUME')) requested.add('volume_pricing')
   if (pricingBasis.includes('TIERED')) requested.add('tiered_pricing')
-  if (pricingBasis.includes('RATE_BOARD')) requested.add('multi_currency')
+  if (pricingBasis.includes('RATE_BOARD')) requested.add('currency_exchange')
 
   if (intake.includes('JOB_TICKET')) {
     requested.add('work_queue_sla')

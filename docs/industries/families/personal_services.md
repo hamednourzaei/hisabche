@@ -23,7 +23,7 @@
 | [آرایشگاه و سلمانی](../barber/README.md) (`barber`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
 | [ناخن و سالن زیبایی](../beautySalon/README.md) (`beautySalon`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
 | [عکاسی و فیلم‌برداری](../photography/README.md) (`photography`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit` | — |
-| [خشک‌شویی](../laundry/README.md) (`laundry`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [خشک‌شویی](../laundry/README.md) (`laundry`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | `laundry_item_tracking` |
 | [تالار و خدمات عروسی](../wedding/README.md) (`wedding`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
 ## پنج گردش کار
@@ -94,7 +94,7 @@
 
 ## شکاف‌های خانواده
 
-هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `laundry_item_tracking`.
 
 ## بر اساس اندازه
 

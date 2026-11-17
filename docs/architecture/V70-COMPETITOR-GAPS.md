@@ -15,73 +15,73 @@
 
 ## جدول شکاف‌ها
 
-| id   | خانواده             | شکاف                         | fa / en                                                 | رقیب مرجع                                 | probe (route/service/table/feature) | صنف‌ها | فاز |
-| ---- | ------------------- | ---------------------------- | ------------------------------------------------------- | ----------------------------------------- | ----------------------------------- | -----: | --- |
-| G01  | صندوق و فروش خرد    | کارت هدیه                    | کارت هدیه / Gift cards                                  | Square · Loyverse · Toast                 | ۰/۰/۰/۰                             |     67 | V71 |
-| G02  | صندوق و فروش خرد    | اعتبار فروشگاه               | اعتبار فروشگاه / Store credit                           | Shopify POS · Lightspeed                  | ۰/۰/۰/۰                             |     62 | V71 |
-| G03  | صندوق و فروش خرد    | فروش امانی/اقساطی            | فروش امانی/اقساطی / Layaway                             | Lightspeed · Jewelry POS                  | ۰/۰/۰/۰                             |     62 | V71 |
-| G04  | صندوق و فروش خرد    | انعام و تقسیم آن             | انعام و تقسیم آن / Tips and tip pooling                 | Toast · Square                            | ۰/۰/۰/۰                             |      7 | V71 |
-| G05  | صندوق و فروش خرد    | حق سرویس                     | حق سرویس / Service charge                               | Toast · Mindbody                          | ۰/۰/۰/۰                             |      5 | V71 |
-| G06  | صندوق و فروش خرد    | تقسیم صورتحساب               | تقسیم صورتحساب / Split bill                             | Toast · Loyverse                          | ۰/۰/۰/۰                             |      2 | V71 |
-| G07  | صندوق و فروش خرد    | نقشه میز                     | نقشه میز / Table map                                    | Toast · Square for Restaurants            | ۰/۰/۰/۰                             |      2 | V71 |
-| G08  | صندوق و فروش خرد    | نمایشگر آشپزخانه             | نمایشگر آشپزخانه / Kitchen display (KDS)                | Toast · Square KDS                        | ۰/۰/۰/۰                             |      2 | V71 |
-| G09  | صندوق و فروش خرد    | سفارش آنلاین                 | سفارش آنلاین / Online ordering                          | Toast · Shopify · Salla                   | ۰/۰/۰/۰                             |     17 | V71 |
-| G10  | صندوق و فروش خرد    | منوی QR                      | منوی QR / QR menu                                       | Toast · Loyverse                          | ۰/۰/۰/۰                             |      3 | V71 |
-| G14  | صندوق و فروش خرد    | تسویه پرداخت در محل (COD)    | تسویه پرداخت در محل (COD) / COD reconciliation          | Shopify · Salla · courier platforms       | ۰/۰/۰/۰                             |      3 | V71 |
-| G15  | خدمات و نوبت        | اشتراک مشتری                 | اشتراک مشتری / Customer subscriptions                   | Mindbody · Fresha · Zoho Subscriptions    | ۰/۰/۰/۰                             |      6 | V71 |
-| G20  | اتصال و اکوسیستم    | پورتال تأمین‌کننده           | پورتال تأمین‌کننده / Supplier portal                    | Odoo · SAP B1 · Zoho Inventory            | ۰/۰/۰/۰                             |     62 | V72 |
-| G22  | اتصال و اکوسیستم    | مدیریت اسناد                 | مدیریت اسناد / Document management                      | QuickBooks (attachments) · Odoo Documents | ۰/۰/۰/۰                             |     67 | V72 |
-| G23  | مالی و خزانه        | اتصال بانکی (bank feed)      | اتصال بانکی (bank feed) / Bank feeds                    | Xero · QuickBooks · Wave                  | ۰/۰/۰/۰                             |     67 | V72 |
-| G24  | مالی و خزانه        | قواعد تطبیق بانکی            | قواعد تطبیق بانکی / Bank matching rules                 | Xero · QuickBooks                         | ۰/۰/۰/۰                             |     67 | V72 |
-| G26  | مالی و خزانه        | سفته و برات                  | سفته و برات / Promissory notes                          | سپیدار · هلو · محک                        | ۰/۰/۰/۰                             |     49 | V72 |
-| G27  | مالی و خزانه        | اعتبار اسنادی                | اعتبار اسنادی / Letters of credit                       | SAP B1 · Odoo · 1C                        | ۰/۰/۰/۰                             |      3 | V72 |
-| G28  | مالی و خزانه        | ضمانت‌نامه بانکی             | ضمانت‌نامه بانکی / Bank guarantees                      | سپیدار · SAP B1                           | ۰/۰/۰/۰                             |      3 | V72 |
-| G29  | مالی و خزانه        | تنخواه گردان                 | تنخواه گردان / Petty cash                               | QuickBooks · سپیدار                       | ۰/۰/۰/۰                             |     67 | V72 |
-| G31  | صندوق و فروش خرد    | گزارش Z صندوق                | گزارش Z صندوق / Z-report                                | Loyverse · Square · Toast                 | ۰/۰/۰/۰                             |     16 | V71 |
-| G33  | مالی و خزانه        | صورتحساب الکترونیکی (مودیان) | صورتحساب الکترونیکی (مودیان) / E-invoicing clearance    | سپیدار · هلو · محک                        | ۰/۰/۰/۰                             |     67 | V72 |
-| G34  | مالی و خزانه        | اظهارنامه ارزش افزوده        | اظهارنامه ارزش افزوده / VAT return                      | Xero · QuickBooks · سپیدار                | ۰/۰/۰/۰                             |     67 | V72 |
-| G35  | حقوق و منابع انسانی | مالیات حقوق و فیش            | مالیات حقوق و فیش / Payroll tax filing                  | Gusto · Rippling · سپیدار                 | ۰/۰/۰/۰                             |     67 | V72 |
-| G36  | حقوق و منابع انسانی | سنوات و پایان خدمت           | سنوات و پایان خدمت / End-of-service gratuity            | سپیدار · محک                              | ۰/۰/۰/۰                             |     67 | V72 |
-| G37  | حقوق و منابع انسانی | برنامه شیفت کارکنان          | برنامه شیفت کارکنان / Shift scheduling board            | Deputy · When I Work · Mindbody           | ۰/۰/۰/۰                             |     67 | V72 |
-| G38  | حقوق و منابع انسانی | حضور بیومتریک                | حضور بیومتریک / Biometric attendance                    | سپیدار · ZKTeco integrations              | ۰/۰/۰/۰                             |     67 | V72 |
-| G41  | تعمیر/خودرو/تجهیزات | بازرسی کیفیت                 | بازرسی کیفیت / Quality inspection                       | Shopmonkey · RepairShopr                  | ۰/۰/۰/۰                             |      5 | V71 |
-| G44  | تعمیر/خودرو/تجهیزات | مرجوعی کالا (RMA)            | مرجوعی کالا (RMA) / RMA workflow                        | Shopify · Cin7 · Odoo                     | ۰/۰/۰/۰                             |     62 | V71 |
-| G45  | تعمیر/خودرو/تجهیزات | لیست سیاه IMEI               | لیست سیاه IMEI / IMEI blacklist                         | GSMA · RepairShopr                        | ۰/۰/۰/۰                             |      3 | V71 |
-| G46  | تعمیر/خودرو/تجهیزات | معاوضه دستگاه (trade-in)     | معاوضه دستگاه (trade-in) / Trade-in                     | CarDealer · phone retail POS              | ۰/۰/۰/۰                             |      4 | V71 |
-| G47  | تعمیر/خودرو/تجهیزات | تاریخچه خودرو / VIN          | تاریخچه خودرو / VIN / Vehicle history                   | Tekmetric · Shopmonkey                    | ۰/۰/۰/۰                             |      2 | V71 |
-| G49  | تعمیر/خودرو/تجهیزات | کارت سوخت                    | کارت سوخت / Fuel cards                                  | fleet platforms · Odoo                    | ۰/۰/۰/۰                             |      3 | V71 |
-| G50  | تعمیر/خودرو/تجهیزات | نگهداری ناوگان               | نگهداری ناوگان / Fleet maintenance                      | ServiceTitan · fleet platforms            | ۰/۰/۰/۰                             |      4 | V71 |
-| G53  | تولید و موجودی      | برنامه‌ریزی مواد (MRP)       | برنامه‌ریزی مواد (MRP) / Material requirements planning | Odoo MRP · Katana · Fishbowl              | ۰/۰/۰/۰                             |      1 | V72 |
-| G54  | تولید و موجودی      | دستور پخت و مواد اولیه       | دستور پخت و مواد اولیه / Recipes and ingredients        | Toast · MarketMan                         | ۰/۰/۰/۰                             |      4 | V71 |
-| G55  | تولید و موجودی      | ضایعات                       | ضایعات / Wastage tracking                               | MarketMan · Odoo                          | ۰/۰/۰/۰                             |      7 | V71 |
-| G57  | تولید و موجودی      | FEFO (اول انقضا، اول خروج)   | FEFO (اول انقضا، اول خروج) / FEFO picking               | Odoo · Cin7 · pharmacy systems            | ۰/۰/۰/۰                             |      5 | V71 |
-| G59  | تولید و موجودی      | برداشت، بسته‌بندی، ارسال     | برداشت، بسته‌بندی، ارسال / Pick, pack and ship          | ShipStation · Cin7 · Odoo                 | ۰/۰/۰/۰                             |      3 | V72 |
-| G60  | صندوق و فروش خرد    | چاپ برچسب بارکد              | چاپ برچسب بارکد / Barcode label printing                | Loyverse · Square · inFlow                | ۰/۰/۰/۰                             |     62 | V71 |
-| G62  | اتصال و اکوسیستم    | همگام‌سازی فروشگاه آنلاین    | همگام‌سازی فروشگاه آنلاین / Online store sync           | Shopify · WooCommerce · Salla · Zid       | ۰/۰/۰/۰                             |     62 | V72 |
-| G63  | اتصال و اکوسیستم    | کاتالوگ واتساپ               | کاتالوگ واتساپ / WhatsApp catalog                       | Salla · Zid · WhatsApp Business           | ۰/۰/۰/۰                             |     67 | V72 |
-| G65  | سایر                | باشگاه مشتریان و امتیاز      | باشگاه مشتریان و امتیاز / Loyalty points                | Loyverse · Square · Lightspeed            | ۰/۰/۰/۰                             |     62 | V71 |
-| G67  | خدمات و نوبت        | حق عضویت                     | حق عضویت / Membership fees                              | Mindbody · Fresha                         | ۰/۰/۰/۰                             |      5 | V71 |
-| G68  | خدمات و نوبت        | ظرفیت کلاس                   | ظرفیت کلاس / Class capacity                             | Mindbody · TeamUp                         | ۰/۰/۰/۰                             |      1 | V71 |
-| G69  | خدمات و نوبت        | لیست انتظار                  | لیست انتظار / Waitlist                                  | Fresha · Mindbody                         | ۰/۰/۰/۰                             |      6 | V71 |
-| G72  | خرید و تأمین        | امتیاز تأمین‌کننده           | امتیاز تأمین‌کننده / Supplier scorecards                | Odoo · SAP B1 · Zoho Inventory            | ۰/۰/۰/۰                             |      5 | V72 |
-| G73  | خرید و تأمین        | سفارش باز (blanket)          | سفارش باز (blanket) / Blanket purchase orders           | Odoo · SAP B1                             | ۰/۰/۰/۰                             |      2 | V72 |
-| G74  | خرید و تأمین        | درخواست خرید                 | درخواست خرید / Purchase requisitions                    | Odoo · Zoho Inventory                     | ۰/۰/۰/۰                             |      4 | V72 |
-| G76  | تولید و موجودی      | ارسال مستقیم از تأمین‌کننده  | ارسال مستقیم از تأمین‌کننده / Drop shipping             | Shopify · Cin7                            | ۰/۰/۰/۰                             |      3 | V72 |
-| G80  | مالی و خزانه        | تلفیق چند شرکت               | تلفیق چند شرکت / Multi-company consolidation            | QuickBooks · Xero · Odoo                  | ۰/۰/۰/۰                             |      4 | V72 |
-| G81  | مالی و خزانه        | قیمت‌گذاری انتقالی           | قیمت‌گذاری انتقالی / Transfer pricing                   | SAP B1 · NetSuite                         | ۰/۰/۰/۰                             |      2 | V72 |
-| G86  | سایر                | سناریوسازی مالی              | سناریوسازی مالی / Scenario planning                     | NetSuite · Adaptive Insights              | ۰/۰/۰/۰                             |      3 | V72 |
-| G89  | امنیت و حاکمیت      | ورود یکپارچه (SSO)           | ورود یکپارچه (SSO) / Single sign-on                     | QuickBooks · Xero · Zoho                  | ۰/۰/۰/۰                             |     67 | V72 |
-| G90  | امنیت و حاکمیت      | ورود دو مرحله‌ای             | ورود دو مرحله‌ای / Two-factor authentication            | Xero · QuickBooks                         | ۰/۰/۰/۰                             |     67 | V72 |
-| G91  | امنیت و حاکمیت      | قفل دستگاه با رمز            | قفل دستگاه با رمز / Device lock                         | Square · Toast (shared device PIN)        | ۰/۰/۰/۰                             |     67 | V71 |
-| G92  | امنیت و حاکمیت      | محل نگهداری داده             | محل نگهداری داده / Data residency                       | Odoo · SAP B1                             | ۰/۰/۰/۰                             |     67 | V72 |
-| G93  | امنیت و حاکمیت      | حقوق داده (DSAR)             | حقوق داده (DSAR) / Data subject requests                | GDPR-ready suites                         | ۰/۰/۰/۰                             |     67 | V72 |
-| G98  | سایر                | تخفیف پله‌ای                 | تخفیف پله‌ای / Volume tier pricing                      | QuickBooks · Xero · Zoho                  | ۰/۰/۰/۰                             |     62 | V71 |
-| G100 | سایر                | ثبت بیمه‌نامه                | ثبت بیمه‌نامه / Insurance register                      | Odoo · asset-heavy suites                 | ۰/۰/۰/۰                             |      5 | V72 |
+| id | خانواده | شکاف | fa / en | رقیب مرجع | probe (route/service/table/feature) | صنف‌ها | فاز |
+| --- | --- | --- | --- | --- | --- | ---: | --- |
+| G01 | صندوق و فروش خرد | کارت هدیه | کارت هدیه / Gift cards | Square · Loyverse · Toast | ۰/۰/۰/۰ | 67 | V71 |
+| G02 | صندوق و فروش خرد | اعتبار فروشگاه | اعتبار فروشگاه / Store credit | Shopify POS · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
+| G03 | صندوق و فروش خرد | فروش امانی/اقساطی | فروش امانی/اقساطی / Layaway | Lightspeed · Jewelry POS | ۰/۰/۰/۰ | 62 | V71 |
+| G04 | صندوق و فروش خرد | انعام و تقسیم آن | انعام و تقسیم آن / Tips and tip pooling | Toast · Square | ۰/۰/۰/۰ | 7 | V71 |
+| G05 | صندوق و فروش خرد | حق سرویس | حق سرویس / Service charge | Toast · Mindbody | ۰/۰/۰/۰ | 5 | V71 |
+| G06 | صندوق و فروش خرد | تقسیم صورتحساب | تقسیم صورتحساب / Split bill | Toast · Loyverse | ۰/۰/۰/۰ | 2 | V71 |
+| G07 | صندوق و فروش خرد | نقشه میز | نقشه میز / Table map | Toast · Square for Restaurants | ۰/۰/۰/۰ | 2 | V71 |
+| G08 | صندوق و فروش خرد | نمایشگر آشپزخانه | نمایشگر آشپزخانه / Kitchen display (KDS) | Toast · Square KDS | ۰/۰/۰/۰ | 2 | V71 |
+| G09 | صندوق و فروش خرد | سفارش آنلاین | سفارش آنلاین / Online ordering | Toast · Shopify · Salla | ۰/۰/۰/۰ | 17 | V71 |
+| G10 | صندوق و فروش خرد | منوی QR | منوی QR / QR menu | Toast · Loyverse | ۰/۰/۰/۰ | 3 | V71 |
+| G14 | صندوق و فروش خرد | تسویه پرداخت در محل (COD) | تسویه پرداخت در محل (COD) / COD reconciliation | Shopify · Salla · courier platforms | ۰/۰/۰/۰ | 3 | V71 |
+| G15 | خدمات و نوبت | اشتراک مشتری | اشتراک مشتری / Customer subscriptions | Mindbody · Fresha · Zoho Subscriptions | ۰/۰/۰/۰ | 6 | V71 |
+| G20 | اتصال و اکوسیستم | پورتال تأمین‌کننده | پورتال تأمین‌کننده / Supplier portal | Odoo · SAP B1 · Zoho Inventory | ۰/۰/۰/۰ | 62 | V72 |
+| G22 | اتصال و اکوسیستم | مدیریت اسناد | مدیریت اسناد / Document management | QuickBooks (attachments) · Odoo Documents | ۰/۰/۰/۰ | 67 | V72 |
+| G23 | مالی و خزانه | اتصال بانکی (bank feed) | اتصال بانکی (bank feed) / Bank feeds | Xero · QuickBooks · Wave | ۰/۰/۰/۰ | 67 | V72 |
+| G24 | مالی و خزانه | قواعد تطبیق بانکی | قواعد تطبیق بانکی / Bank matching rules | Xero · QuickBooks | ۰/۰/۰/۰ | 67 | V72 |
+| G26 | مالی و خزانه | سفته و برات | سفته و برات / Promissory notes | سپیدار · هلو · محک | ۰/۰/۰/۰ | 49 | V72 |
+| G27 | مالی و خزانه | اعتبار اسنادی | اعتبار اسنادی / Letters of credit | SAP B1 · Odoo · 1C | ۰/۰/۰/۰ | 3 | V72 |
+| G28 | مالی و خزانه | ضمانت‌نامه بانکی | ضمانت‌نامه بانکی / Bank guarantees | سپیدار · SAP B1 | ۰/۰/۰/۰ | 3 | V72 |
+| G29 | مالی و خزانه | تنخواه گردان | تنخواه گردان / Petty cash | QuickBooks · سپیدار | ۰/۰/۰/۰ | 67 | V72 |
+| G31 | صندوق و فروش خرد | گزارش Z صندوق | گزارش Z صندوق / Z-report | Loyverse · Square · Toast | ۰/۰/۰/۰ | 16 | V71 |
+| G33 | مالی و خزانه | صورتحساب الکترونیکی (مودیان) | صورتحساب الکترونیکی (مودیان) / E-invoicing clearance | سپیدار · هلو · محک | ۰/۰/۰/۰ | 67 | V72 |
+| G34 | مالی و خزانه | اظهارنامه ارزش افزوده | اظهارنامه ارزش افزوده / VAT return | Xero · QuickBooks · سپیدار | ۰/۰/۰/۰ | 67 | V72 |
+| G35 | حقوق و منابع انسانی | مالیات حقوق و فیش | مالیات حقوق و فیش / Payroll tax filing | Gusto · Rippling · سپیدار | ۰/۰/۰/۰ | 67 | V72 |
+| G36 | حقوق و منابع انسانی | سنوات و پایان خدمت | سنوات و پایان خدمت / End-of-service gratuity | سپیدار · محک | ۰/۰/۰/۰ | 67 | V72 |
+| G37 | حقوق و منابع انسانی | برنامه شیفت کارکنان | برنامه شیفت کارکنان / Shift scheduling board | Deputy · When I Work · Mindbody | ۰/۰/۰/۰ | 67 | V72 |
+| G38 | حقوق و منابع انسانی | حضور بیومتریک | حضور بیومتریک / Biometric attendance | سپیدار · ZKTeco integrations | ۰/۰/۰/۰ | 67 | V72 |
+| G41 | تعمیر/خودرو/تجهیزات | بازرسی کیفیت | بازرسی کیفیت / Quality inspection | Shopmonkey · RepairShopr | ۰/۰/۰/۰ | 5 | V71 |
+| G44 | تعمیر/خودرو/تجهیزات | مرجوعی کالا (RMA) | مرجوعی کالا (RMA) / RMA workflow | Shopify · Cin7 · Odoo | ۰/۰/۰/۰ | 62 | V71 |
+| G45 | تعمیر/خودرو/تجهیزات | لیست سیاه IMEI | لیست سیاه IMEI / IMEI blacklist | GSMA · RepairShopr | ۰/۰/۰/۰ | 3 | V71 |
+| G46 | تعمیر/خودرو/تجهیزات | معاوضه دستگاه (trade-in) | معاوضه دستگاه (trade-in) / Trade-in | CarDealer · phone retail POS | ۰/۰/۰/۰ | 4 | V71 |
+| G47 | تعمیر/خودرو/تجهیزات | تاریخچه خودرو / VIN | تاریخچه خودرو / VIN / Vehicle history | Tekmetric · Shopmonkey | ۰/۰/۰/۰ | 2 | V71 |
+| G49 | تعمیر/خودرو/تجهیزات | کارت سوخت | کارت سوخت / Fuel cards | fleet platforms · Odoo | ۰/۰/۰/۰ | 3 | V71 |
+| G50 | تعمیر/خودرو/تجهیزات | نگهداری ناوگان | نگهداری ناوگان / Fleet maintenance | ServiceTitan · fleet platforms | ۰/۰/۰/۰ | 4 | V71 |
+| G53 | تولید و موجودی | برنامه‌ریزی مواد (MRP) | برنامه‌ریزی مواد (MRP) / Material requirements planning | Odoo MRP · Katana · Fishbowl | ۰/۰/۰/۰ | 1 | V72 |
+| G54 | تولید و موجودی | دستور پخت و مواد اولیه | دستور پخت و مواد اولیه / Recipes and ingredients | Toast · MarketMan | ۰/۰/۰/۰ | 4 | V71 |
+| G55 | تولید و موجودی | ضایعات | ضایعات / Wastage tracking | MarketMan · Odoo | ۰/۰/۰/۰ | 7 | V71 |
+| G57 | تولید و موجودی | FEFO (اول انقضا، اول خروج) | FEFO (اول انقضا، اول خروج) / FEFO picking | Odoo · Cin7 · pharmacy systems | ۰/۰/۰/۰ | 5 | V71 |
+| G59 | تولید و موجودی | برداشت، بسته‌بندی، ارسال | برداشت، بسته‌بندی، ارسال / Pick, pack and ship | ShipStation · Cin7 · Odoo | ۰/۰/۰/۰ | 3 | V72 |
+| G60 | صندوق و فروش خرد | چاپ برچسب بارکد | چاپ برچسب بارکد / Barcode label printing | Loyverse · Square · inFlow | ۰/۰/۰/۰ | 62 | V71 |
+| G62 | اتصال و اکوسیستم | همگام‌سازی فروشگاه آنلاین | همگام‌سازی فروشگاه آنلاین / Online store sync | Shopify · WooCommerce · Salla · Zid | ۰/۰/۰/۰ | 62 | V72 |
+| G63 | اتصال و اکوسیستم | کاتالوگ واتساپ | کاتالوگ واتساپ / WhatsApp catalog | Salla · Zid · WhatsApp Business | ۰/۰/۰/۰ | 67 | V72 |
+| G65 | سایر | باشگاه مشتریان و امتیاز | باشگاه مشتریان و امتیاز / Loyalty points | Loyverse · Square · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
+| G67 | خدمات و نوبت | حق عضویت | حق عضویت / Membership fees | Mindbody · Fresha | ۰/۰/۰/۰ | 5 | V71 |
+| G68 | خدمات و نوبت | ظرفیت کلاس | ظرفیت کلاس / Class capacity | Mindbody · TeamUp | ۰/۰/۰/۰ | 1 | V71 |
+| G69 | خدمات و نوبت | لیست انتظار | لیست انتظار / Waitlist | Fresha · Mindbody | ۰/۰/۰/۰ | 6 | V71 |
+| G72 | خرید و تأمین | امتیاز تأمین‌کننده | امتیاز تأمین‌کننده / Supplier scorecards | Odoo · SAP B1 · Zoho Inventory | ۰/۰/۰/۰ | 5 | V72 |
+| G73 | خرید و تأمین | سفارش باز (blanket) | سفارش باز (blanket) / Blanket purchase orders | Odoo · SAP B1 | ۰/۰/۰/۰ | 2 | V72 |
+| G74 | خرید و تأمین | درخواست خرید | درخواست خرید / Purchase requisitions | Odoo · Zoho Inventory | ۰/۰/۰/۰ | 4 | V72 |
+| G76 | تولید و موجودی | ارسال مستقیم از تأمین‌کننده | ارسال مستقیم از تأمین‌کننده / Drop shipping | Shopify · Cin7 | ۰/۰/۰/۰ | 3 | V72 |
+| G80 | مالی و خزانه | تلفیق چند شرکت | تلفیق چند شرکت / Multi-company consolidation | QuickBooks · Xero · Odoo | ۰/۰/۰/۰ | 4 | V72 |
+| G81 | مالی و خزانه | قیمت‌گذاری انتقالی | قیمت‌گذاری انتقالی / Transfer pricing | SAP B1 · NetSuite | ۰/۰/۰/۰ | 2 | V72 |
+| G86 | سایر | سناریوسازی مالی | سناریوسازی مالی / Scenario planning | NetSuite · Adaptive Insights | ۰/۰/۰/۰ | 3 | V72 |
+| G89 | امنیت و حاکمیت | ورود یکپارچه (SSO) | ورود یکپارچه (SSO) / Single sign-on | QuickBooks · Xero · Zoho | ۰/۰/۰/۰ | 67 | V72 |
+| G90 | امنیت و حاکمیت | ورود دو مرحله‌ای | ورود دو مرحله‌ای / Two-factor authentication | Xero · QuickBooks | ۰/۰/۰/۰ | 67 | V72 |
+| G91 | امنیت و حاکمیت | قفل دستگاه با رمز | قفل دستگاه با رمز / Device lock | Square · Toast (shared device PIN) | ۰/۰/۰/۰ | 67 | V71 |
+| G92 | امنیت و حاکمیت | محل نگهداری داده | محل نگهداری داده / Data residency | Odoo · SAP B1 | ۰/۰/۰/۰ | 67 | V72 |
+| G93 | امنیت و حاکمیت | حقوق داده (DSAR) | حقوق داده (DSAR) / Data subject requests | GDPR-ready suites | ۰/۰/۰/۰ | 67 | V72 |
+| G98 | سایر | تخفیف پله‌ای | تخفیف پله‌ای / Volume tier pricing | QuickBooks · Xero · Zoho | ۰/۰/۰/۰ | 62 | V71 |
+| G100 | سایر | ثبت بیمه‌نامه | ثبت بیمه‌نامه / Insurance register | Odoo · asset-heavy suites | ۰/۰/۰/۰ | 5 | V72 |
 
 ## کنترل کیفیت داده
 
-| بررسی            | نتیجه |
-| ---------------- | ----- |
-| شناسه یکتا       | PASS  |
-| هیچ probe غیرصفر | PASS  |
-| هر شکاف ≥۱ صنف   | PASS  |
+| بررسی | نتیجه |
+| --- | --- |
+| شناسه یکتا | PASS |
+| هیچ probe غیرصفر | PASS |
+| هر شکاف ≥۱ صنف | PASS |

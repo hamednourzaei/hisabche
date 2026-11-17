@@ -6,6 +6,7 @@
 
 | نیاز | وضعیت |
 | --- | --- |
+| `laundry_item_tracking` | `NEW_CAPABILITY_REQUIRED` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | ACCEPTANCE_EVIDENCE_STALE | `EXISTING_BUT_INCOMPLETE` |

@@ -19,7 +19,7 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [صرافی](../currencyExchange/README.md) (`currencyExchange`) | `generic` | `GENERIC_BUSINESS` | — | — |
+| [صرافی](../currencyExchange/README.md) (`currencyExchange`) | `specialized` | `GENERIC_BUSINESS` | `currency_exchange` | — |
 | [نمایشگاه موتر](../carDealer/README.md) (`carDealer`) | `specialized` | `GENERIC_BUSINESS` | `serialized_items`، `auto_fitments` | — |
 
 ## پنج گردش کار

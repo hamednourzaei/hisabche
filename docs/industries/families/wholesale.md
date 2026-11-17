@@ -23,7 +23,7 @@
 | [رول پارچه (عمده)](../fabricRoll/README.md) (`fabricRoll`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
 | [مواد ساختمانی](../buildingMaterials/README.md) (`buildingMaterials`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
 | [چوب و الوار](../timber/README.md) (`timber`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
-| [تیل‌فروشی و گاز](../fuel/README.md) (`fuel`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [تیل‌فروشی و گاز](../fuel/README.md) (`fuel`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | `fuel_tank_reconciliation` |
 | [تخم و کود](../seedsFertilizer/README.md) (`seedsFertilizer`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `batch_expiry` | — |
 
 ## پنج گردش کار
@@ -95,7 +95,7 @@
 
 ## شکاف‌های خانواده
 
-هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `fuel_tank_reconciliation`.
 
 ## بر اساس اندازه
 

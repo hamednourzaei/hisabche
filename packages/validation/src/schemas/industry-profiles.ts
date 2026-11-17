@@ -171,8 +171,9 @@ export interface ProfileDefinition {
   /** What the trade asks for that the product can really do (available or partial). */
   readonly capabilities: readonly CapabilityKey[]
   /**
-   * Everything the trade asks for, planned ones included. The resolver reports
-   * the planned ones as unsupported instead of forgetting them.
+   * Every capability the trade needs, implemented or not — the requirement list,
+   * independent of implementation. Always a superset of `capabilities`; a
+   * planned requirement never turns anything on, it only appears as unsupported.
    */
   readonly requestedCapabilities: readonly CapabilityKey[]
   readonly invoiceDefaults: InvoiceDefaults
@@ -213,6 +214,8 @@ const GENERIC: Omit<ProfileDefinition, 'key'> = {
 }
 
 interface ProfileOverride {
+  /** What the trade needs, even where the product has nothing usable yet. */
+  readonly requested?: readonly CapabilityKey[]
   readonly capabilities?: readonly CapabilityKey[]
   readonly extraVisibleColumns?: readonly string[]
   readonly priceMultiplierSource?: string
@@ -229,6 +232,7 @@ interface ProfileOverride {
 const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   jewellery: {
     capabilities: ['measurement', 'weight_pricing', 'multi_unit'],
+    requested: ['gold_purity', 'making_charges', 'gold_trade'],
     extraVisibleColumns: ['weightGrams'],
     unit: 'gram',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
@@ -237,31 +241,37 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   watches: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['serialized_items', 'warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['unit', 'sellPrice'],
   },
   fabric: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   hardware: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['tiered_pricing'],
     unit: 'kg',
     emphasizedFields: ['unit', 'quantity'],
   },
   buildingMaterials: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['tiered_pricing', 'area_pricing'],
     unit: 'kg',
     emphasizedFields: ['unit', 'quantity'],
   },
   timber: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'quantity'],
   },
   fuel: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['fuel_tank_reconciliation', 'volume_pricing'],
     unit: 'liter',
     emphasizedFields: ['unit', 'quantity'],
   },
@@ -272,11 +282,13 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   grocery: {
     capabilities: ['multi_unit'],
+    requested: ['batch_expiry'],
     unit: 'piece',
     emphasizedFields: ['unit', 'quantity'],
   },
   pharmacy: {
     capabilities: ['batch_expiry', 'multi_unit'],
+    requested: ['pharmacy_prescription', 'pharmacy_dispensing', 'insurance_claims'],
     unit: 'piece',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
@@ -311,16 +323,19 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   electronics: {
     capabilities: ['serialized_items', 'variants'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   computers: {
     capabilities: ['serialized_items', 'variants'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   mobilePhones: {
     capabilities: ['serialized_items', 'variants'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     // Reads the repairs spec; the open-ticket board is the same one.
@@ -336,21 +351,25 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   computerComponents: {
     capabilities: ['serialized_items', 'variants'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   autoParts: {
     capabilities: ['auto_fitments'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   carDealer: {
     capabilities: ['serialized_items', 'auto_fitments'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   beautySalon: {
     capabilities: [],
+    requested: ['resource_capacity'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: [
@@ -369,6 +388,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   barber: {
     capabilities: [],
+    requested: ['resource_capacity'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: [
@@ -387,6 +407,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   education: {
     capabilities: ['package_credits'],
+    requested: ['installments'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: [
@@ -406,6 +427,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   repairs: {
     capabilities: ['work_queue_sla'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: [
@@ -422,6 +444,8 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   // Auto repair and IT service both read the repairs spec: same open-ticket
   // board, no specialised capability claimed that the engine does not have.
   mechanic: {
+    capabilities: [],
+    requested: ['work_queue_sla', 'warranty_claims'],
     dashboard: [
       'openRepairTickets',
       'workQueue',
@@ -433,6 +457,8 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     ],
   },
   itServices: {
+    capabilities: [],
+    requested: ['work_queue_sla', 'contracts_recurring'],
     dashboard: [
       'openRepairTickets',
       'workQueue',
@@ -445,6 +471,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   restaurant: {
     capabilities: [],
+    requested: ['table_service', 'recipe_bom', 'production_batch'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: ['workQueue', 'kpis', 'chart', 'activities', 'insights', 'manufacturing'],
@@ -452,6 +479,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   cafe: {
     capabilities: [],
+    requested: ['table_service', 'recipe_bom', 'production_batch'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     dashboard: ['workQueue', 'kpis', 'chart', 'activities', 'insights', 'manufacturing'],
@@ -459,16 +487,19 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   fabricRoll: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   tailoring: {
     capabilities: ['measurement'],
+    requested: ['length_pricing'],
     unit: 'meter',
     emphasizedFields: ['unit', 'quantity'],
   },
   manufacturing: {
     capabilities: ['multi_unit'],
+    requested: ['recipe_bom', 'production_batch', 'quality_inspection', 'cost_allocation'],
     unit: 'piece',
     emphasizedFields: ['unit', 'quantity'],
     dashboard: ['manufacturing', 'workQueue', 'kpis', 'chart', 'insights', 'activities'],
@@ -480,6 +511,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   fruitVegetable: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['batch_expiry'],
     unit: 'kg',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
@@ -495,16 +527,19 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   carpet: {
     capabilities: ['measurement', 'multi_unit', 'variants'],
+    requested: ['area_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   paint: {
     capabilities: ['measurement', 'multi_unit', 'variants'],
+    requested: ['volume_pricing'],
     unit: 'liter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   glass: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['area_pricing'],
     unit: 'piece',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
@@ -525,6 +560,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   homeAppliances: {
     capabilities: ['serialized_items', 'variants'],
+    requested: ['warranty_claims'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
@@ -550,16 +586,19 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   optician: {
     capabilities: ['batch_expiry', 'serialized_items', 'multi_unit'],
+    requested: ['optical_prescription', 'lens_order'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   agriculture: {
     capabilities: ['measurement', 'multi_unit', 'batch_expiry'],
+    requested: ['crop_cycle'],
     unit: 'kg',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   livestock: {
     capabilities: ['measurement', 'serialized_items', 'multi_unit'],
+    requested: ['livestock_register'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
@@ -575,48 +614,84 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   transport: {
     capabilities: ['multi_unit'],
+    requested: ['fleet_dispatch', 'delivery_pod'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   freightTransport: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['fleet_dispatch', 'delivery_pod'],
     unit: 'kg',
     emphasizedFields: ['unit', 'sellPrice'],
   },
   passengerTransport: {
     capabilities: ['multi_unit'],
+    requested: ['fleet_dispatch'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   travelAgency: {
     capabilities: ['multi_unit'],
+    requested: ['deposits_liability', 'installments'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   realEstate: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['asset_rental', 'contracts_recurring'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   printing: {
     capabilities: ['measurement', 'multi_unit'],
+    requested: ['print_job', 'production_batch'],
     unit: 'piece',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
   },
   photography: {
     capabilities: ['multi_unit'],
+    requested: ['resource_capacity', 'deposits_liability'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   laundry: {
     capabilities: ['multi_unit'],
+    requested: ['laundry_item_tracking', 'work_queue_sla'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
   security: {
     capabilities: ['multi_unit'],
+    requested: ['contracts_recurring'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
+  },
+  // Industries the review named that had no profile of their own. Their
+  // requirement list is the point: nothing is switched on that does not exist.
+  bakery: {
+    capabilities: [],
+    requested: ['recipe_bom', 'production_batch', 'batch_expiry'],
+  },
+  currencyExchange: {
+    capabilities: ['currency_exchange'],
+    unit: 'piece',
+    emphasizedFields: ['name', 'sellPrice'],
+  },
+  clinic: {
+    capabilities: [],
+    requested: ['resource_capacity'],
+  },
+  courier: {
+    capabilities: [],
+    requested: ['fleet_dispatch', 'delivery_pod'],
+  },
+  wedding: {
+    capabilities: [],
+    requested: ['resource_capacity', 'deposits_liability', 'contracts_recurring'],
+  },
+  consulting: {
+    capabilities: [],
+    requested: ['project_costing', 'timesheet_billing', 'contracts_recurring'],
   },
   other: {
     capabilities: [],
@@ -638,10 +713,9 @@ function build(key: IndustryKey): ProfileDefinition {
   const override = OVERRIDES[key]
   if (!override) return deepFreeze({ ...GENERIC, key })
 
-  const requestedCapabilities = override.capabilities ?? []
-  const capabilities = requestedCapabilities.filter((capability) =>
-    USABLE_CAPABILITIES.includes(capability),
-  )
+  const enabled = override.capabilities ?? []
+  const requestedCapabilities = [...new Set([...enabled, ...(override.requested ?? [])])]
+  const capabilities = enabled.filter((capability) => USABLE_CAPABILITIES.includes(capability))
   const dashboard = override.dashboard ?? GENERIC_DASHBOARD
 
   return deepFreeze({
@@ -858,8 +932,14 @@ export function resolveBusinessProfile(
   // ONE decision for which capabilities are really on: dependencies, conflicts
   // and versions are settled by the registry resolver, never re-derived here.
   const resolution = resolveCapabilities(
-    selectedDefinitions.flatMap((definition) => definition.requestedCapabilities),
+    selectedDefinitions.flatMap((definition) => definition.capabilities),
   )
+
+  // A requirement the registry cannot switch on is «requested and unbuilt»: it
+  // is reported, never enabled.
+  const requiredButUnusable = selectedDefinitions
+    .flatMap((definition) => definition.requestedCapabilities)
+    .filter((capability) => !USABLE_CAPABILITIES.includes(capability))
 
   const extraVisibleColumns = [
     ...new Set(selectedDefinitions.flatMap((d) => d.invoiceDefaults.extraVisibleColumns)),
@@ -933,7 +1013,7 @@ export function resolveBusinessProfile(
     recommendedModules,
     inventoryRelevant,
     notes,
-    unsupported: [...resolution.rejected],
+    unsupported: [...new Set([...resolution.rejected, ...requiredButUnusable])],
   })
 }
 

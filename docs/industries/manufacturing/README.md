@@ -46,6 +46,8 @@
 | --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
+**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `production_batch`
+
 ## تفاوت با خانواده‌ی «تولید»
 
 ### هویت و مدل کسب‌وکار
@@ -78,4 +80,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+ساخته‌نشده: `production_batch`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

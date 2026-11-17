@@ -92,9 +92,13 @@ export function buildRegistryData() {
       }
       const capsMatch = block.match(/capabilities:\s*\[([\s\S]*?)\]/)
       const caps = capsMatch ? [...capsMatch[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : []
-      overrides[key] = { capabilities: caps }
+      // The requirement list is independent of what is switched on: it records
+      // what the trade needs even when the registry has only a `planned` key.
+      const reqMatch = block.match(/requested:\s*\[([\s\S]*?)\]/)
+      const requested = reqMatch ? [...reqMatch[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : []
+      overrides[key] = { capabilities: caps, requested }
     } else {
-      overrides[key] = { capabilities: [] }
+      overrides[key] = { capabilities: [], requested: [] }
     }
   }
 
@@ -195,6 +199,23 @@ export function buildRegistryData() {
     if (planned.length > 0) capsParts.push(`planned: ${planned.join(', ')}`)
     const capsSummary = capsParts.length > 0 ? capsParts.join(' · ') : '—'
 
+    // Requirements — the needs of the trade, with the registry status of each.
+    const required = overrides[id]?.requested ?? []
+    const reqFeatures = []
+    const reqPartial = []
+    const reqPlanned = []
+    for (const c of required) {
+      const status = capStatusMap.get(c) ?? 'planned'
+      if (status === 'available') reqFeatures.push(c)
+      else if (status === 'partial') reqPartial.push(c)
+      else reqPlanned.push(c)
+    }
+    const reqParts = []
+    if (reqFeatures.length > 0) reqParts.push(`available: ${reqFeatures.join(', ')}`)
+    if (reqPartial.length > 0) reqParts.push(`partial: ${reqPartial.join(', ')}`)
+    if (reqPlanned.length > 0) reqParts.push(`planned: ${reqPlanned.join(', ')}`)
+    const reqSummary = reqParts.length > 0 ? reqParts.join(' · ') : '—'
+
     // Packs
     const packsSet = new Set(['core'])
     for (const c of caps) {
@@ -212,6 +233,7 @@ export function buildRegistryData() {
       archetype,
       presetDna,
       capabilities: capsSummary,
+      requirements: reqSummary,
       packs,
     })
   }
@@ -226,7 +248,7 @@ export function generateIndustryRegistryMarkdown() {
 
 <!-- GENERATED — دستی ویرایش نکن. ایجادشده توسط scripts/industry/generate-industry-registry.mjs -->
 
-این سند جدول تجمیعی و مرجع رسمی ۶۷ صنف/مدل تعریف‌شده در سیستم حسابچه است که هویت، طبقه‌بندی، مدل اولیه (Archetype)، الگوی DNA عملیاتی، قابلیت‌های فعال/ناقص/برنامه‌ریزی‌شده و بسته‌های ویژگی (Feature Packs) مربوط به هر کدام را به طور کامل ثبت و قفل می‌کند.
+این سند جدول تجمیعی و مرجع رسمی ۶۷ صنف/مدل تعریف‌شده در سیستم حسابچه است که هویت، طبقه‌بندی، مدل اولیه (Archetype)، الگوی DNA عملیاتی، قابلیت‌های فعال/ناقص/برنامه‌ریزی‌شده، **نیازمندی‌های هر صنف** (مستقل از وضعیت پیاده‌سازی) و بسته‌های ویژگی (Feature Packs) مربوط به هر کدام را به طور کامل ثبت و قفل می‌کند.
 
 ## خلاصه رجیستری
 
@@ -242,12 +264,12 @@ export function generateIndustryRegistryMarkdown() {
 
 ## جدول جامع اصناف (۶۷ صنف)
 
-| # | id | برچسب (fa / af / en) | طبقه‌بندی | Archetype | Preset DNA | قابلیت‌ها (available / partial / planned) | Feature Packs |
-| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- |
+| # | id | برچسب (fa / af / en) | طبقه‌بندی | Archetype | Preset DNA | قابلیت‌ها (available / partial / planned) | نیازمندی‌ها (available / partial / planned) | Feature Packs |
+| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
 `
 
   rows.forEach((row, idx) => {
-    md += `| ${idx + 1} | \`${row.id}\` | ${row.labels} | ${row.classification} | \`${row.archetype}\` | \`${row.presetDna}\` | ${row.capabilities} | \`${row.packs}\` |\n`
+    md += `| ${idx + 1} | \`${row.id}\` | ${row.labels} | ${row.classification} | \`${row.archetype}\` | \`${row.presetDna}\` | ${row.capabilities} | ${row.requirements} | \`${row.packs}\` |\n`
   })
 
   return md

@@ -81,6 +81,55 @@ describe('industry registry', () => {
       }
     }
   })
+
+  it('records what each trade needs next to what is switched on (V66 §3)', () => {
+    // «no blocker in the registry» is not «ready»: a requirement that nothing
+    // implements must still be named by the trade that needs it.
+    for (const key of INDUSTRY_KEYS) {
+      const profile = PROFILES[key]
+      expect(new Set(profile.requestedCapabilities).size, key).toBe(
+        profile.requestedCapabilities.length,
+      )
+      for (const capability of profile.capabilities) {
+        expect(profile.requestedCapabilities, `${key} → ${capability}`).toContain(capability)
+      }
+      for (const capability of profile.requestedCapabilities) {
+        expect(CAPABILITY_KEYS, `${key} → ${capability}`).toContain(capability)
+      }
+    }
+  })
+
+  it('a planned requirement is reported as unsupported and never switched on', () => {
+    const unsupportedOf = (industry: string) =>
+      resolveBusinessProfile([industry]).unsupported as readonly CapabilityKey[]
+
+    expect(PROFILES.bakery.capabilities).toEqual([])
+    expect(PROFILES.bakery.requestedCapabilities).toContain('production_batch')
+    expect(unsupportedOf('bakery')).toContain('production_batch')
+
+    expect(PROFILES.pharmacy.capabilities).not.toContain('pharmacy_prescription')
+    expect(unsupportedOf('pharmacy')).toEqual(
+      expect.arrayContaining(['pharmacy_prescription', 'pharmacy_dispensing', 'insurance_claims']),
+    )
+  })
+
+  it('names the specialty requirement the review listed for each trade', () => {
+    expect(PROFILES.jewellery.requestedCapabilities).toEqual(
+      expect.arrayContaining(['gold_purity', 'making_charges', 'gold_trade']),
+    )
+    expect(PROFILES.optician.requestedCapabilities).toEqual(
+      expect.arrayContaining(['optical_prescription', 'lens_order']),
+    )
+    expect(PROFILES.laundry.requestedCapabilities).toContain('laundry_item_tracking')
+    expect(PROFILES.manufacturing.requestedCapabilities).toEqual(
+      expect.arrayContaining(['recipe_bom', 'production_batch']),
+    )
+    expect(PROFILES.livestock.requestedCapabilities).toContain('livestock_register')
+    expect(PROFILES.fuel.requestedCapabilities).toContain('fuel_tank_reconciliation')
+    expect(PROFILES.printing.requestedCapabilities).toContain('print_job')
+    // The exchange engine is registered AND switched on for the trade it serves.
+    expect(PROFILES.currencyExchange.capabilities).toContain('currency_exchange')
+  })
 })
 
 describe('canonicalIndustryTypes', () => {

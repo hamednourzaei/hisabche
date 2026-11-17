@@ -19,7 +19,13 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { CAPABILITIES, ENGINES, type CapabilityStatus } from '../schemas/business-capabilities'
+import {
+  CAPABILITIES,
+  CAPABILITY_KEYS,
+  ENGINES,
+  ENGINE_KEYS,
+  type CapabilityStatus,
+} from '../schemas/business-capabilities'
 import {
   CLAIM_LANGUAGES,
   capabilityClaimViolations,
@@ -110,8 +116,34 @@ describe('the generated wiring matrix matches the registry', () => {
   it('has exactly one row per engine and one per capability, in registry terms', () => {
     expect(engineRows.map((row) => row.key).sort()).toEqual(Object.keys(ENGINES).sort())
     expect(capabilityRows.map((row) => row.key).sort()).toEqual(Object.keys(CAPABILITIES).sort())
-    expect(engineRows).toHaveLength(20)
-    expect(capabilityRows).toHaveLength(38)
+    // Derived, not typed: a new registry entry must reach the matrix or this fails.
+    expect(engineRows).toHaveLength(ENGINE_KEYS.length)
+    expect(capabilityRows).toHaveLength(CAPABILITY_KEYS.length)
+  })
+
+  it('registers the exchange engine the repository already ships', () => {
+    // V66 §2: `exchange` was missing from ENGINE_KEYS while its service, route,
+    // hook and screen all existed, so no generated document could name it.
+    expect(ENGINE_KEYS).toContain('exchange')
+    const row = engineRows.find((candidate) => candidate.key === 'exchange')
+    expect(row).toBeDefined()
+    expect(row!.service).toBe('backend/src/services/exchange/exchange.service.ts')
+    expect(row!.client_hook).toBe('packages/api/src/hooks/business-packs.ts')
+    expect(row!.ui_host).toBe('packages/ui/src/components/ui/business-packs/exchange-section.tsx')
+    expect(row!.engine_structure).toBe('service_owned')
+    expect(Number(row!.backend_route_files)).toBeGreaterThan(0)
+  })
+
+  it('a route-owned engine reports its own route as the executor', () => {
+    // The defect this pins: `agriculture_livestock` pointed at a route file and
+    // was reported as having no server route, although `index.ts` registers it.
+    const routeOwned = ENGINE_KEYS.filter((key) => ENGINES[key].structure === 'route_owned')
+    expect(routeOwned.length).toBeGreaterThan(0)
+    for (const key of routeOwned) {
+      const row = engineRows.find((candidate) => candidate.key === key)
+      expect(Number(row!.backend_route_files), key).toBeGreaterThan(0)
+      expect(row!.backend_routes_registered, key).not.toBe('')
+    }
   })
 
   it('says the same status the registry says', () => {

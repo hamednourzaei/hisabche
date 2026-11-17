@@ -11,11 +11,11 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | --- | --- |
 | Industry keys in the registry | 67 |
 | Selectable in onboarding | 67 |
-| Specialised profile | 51 |
-| General-purpose baseline | 16 |
+| Specialised profile | 52 |
+| General-purpose baseline | 15 |
 | Exact match with `JOURNEY_INDUSTRIES` | 14 |
 | Available capabilities | 3 |
-| Partial capabilities | 30 |
+| Partial capabilities | 32 |
 
 ## Industry registry
 
@@ -35,7 +35,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | عطاری و ادویه | `spices` | بله | — | تخصصی | measurement، multi_unit | `gram` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | طلا و جواهر | `jewellery` | بله | — | تخصصی | measurement، weight_pricing، multi_unit | `gram` | weightGrams | — | unit، sellPrice، quantity | kpis، workQueue، chart، activities، insights، manufacturing | productKey=industry.vocabulary.piece |
 | ساعت | `watches` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
-| صرافی | `currencyExchange` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| صرافی | `currencyExchange` | بله | — | تخصصی | currency_exchange | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | پوشاک | `clothing` | بله | — | تخصصی | variants | `piece` | — | — | name، sellPrice | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing | — |
 | پارچه متری و خرازی | `fabric` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | رول پارچه (عمده) | `fabricRoll` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
@@ -134,6 +134,17 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `livestock_register` | planned | فعال نیست |
 | `crop_cycle` | planned | فعال نیست |
 | `room_nights` | planned | فعال نیست |
+| `currency_exchange` | partial | فعال (جزئی) |
+| `gold_trade` | partial | فعال (جزئی) |
+| `pharmacy_prescription` | planned | فعال نیست |
+| `pharmacy_dispensing` | planned | فعال نیست |
+| `insurance_claims` | planned | فعال نیست |
+| `optical_prescription` | planned | فعال نیست |
+| `lens_order` | planned | فعال نیست |
+| `laundry_item_tracking` | planned | فعال نیست |
+| `production_batch` | planned | فعال نیست |
+| `fuel_tank_reconciliation` | planned | فعال نیست |
+| `print_job` | planned | فعال نیست |
 <!-- /industry-capability-table -->
 
 A capability is active when its status is `available` or `partial`; a `partial` one is real but

@@ -6,6 +6,8 @@
 
 | نیاز | وضعیت |
 | --- | --- |
+| `optical_prescription` | `NEW_CAPABILITY_REQUIRED` |
+| `lens_order` | `NEW_CAPABILITY_REQUIRED` |
 | `batch_expiry`: `BATCH_RETURN_RESTORE_MISSING` | `EXISTING_BUT_INCOMPLETE` |
 | `serialized_items`: `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |

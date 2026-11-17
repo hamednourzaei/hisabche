@@ -46,6 +46,8 @@
 | --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
+**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `laundry_item_tracking`
+
 ## تفاوت با خانواده‌ی «خدمات شخصی»
 
 ### هویت و مدل کسب‌وکار
@@ -78,4 +80,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+ساخته‌نشده: `laundry_item_tracking`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

@@ -14218,7 +14218,42 @@
     "tiered_pricing": {
       "label": "نرخ‌گذاری عمده و درجه‌دار"
     },
+    "currency_exchange": {
+      "label": "تبادله و معاملات ارزی"
+    },
+    "gold_trade": {
+      "label": "خرید و فروش طلای دست‌دوم"
+    },
+    "pharmacy_prescription": {
+      "label": "نسخه دوا و اقلام نسخه"
+    },
+    "pharmacy_dispensing": {
+      "label": "تحویل، تبدیل و بیمه دوا"
+    },
+    "insurance_claims": {
+      "label": "پوشش و تصفیه بیمه"
+    },
+    "optical_prescription": {
+      "label": "نسخه چشم و پارامتر عدسی"
+    },
+    "lens_order": {
+      "label": "سفارش عدسی و لابراتوار"
+    },
+    "laundry_item_tracking": {
+      "label": "پیگیری هر لباس"
+    },
+    "production_batch": {
+      "label": "بچ تولید، حاصل و ضایعات"
+    },
+    "fuel_tank_reconciliation": {
+      "label": "مغایرت مخزن و کالیبراسیون تیل"
+    },
+    "print_job": {
+      "label": "سفارش چاپ و تأیید طرح"
+    },
     "limitations": {
+      "FX_TRADES_ONLINE_ONLY": "معاملات ارزی فقط با انترنت ثبت می‌شوند؛ نرخ و موجودی بین دستگاه‌های آفلاین همگام نمی‌شود.",
+      "OLD_GOLD_TRADE_IN_NOT_ON_INVOICE": "محاسبه طلای دست‌دوم فقط در دامنه وجود دارد و در فاکتور تطبیق نمی‌شود.",
       "LINEAR_CUT_LOSS_NOT_TRACKED": "ضایعات برش طولی ثبت نمی‌شود.",
       "TANK_DIP_CALIBRATION_NOT_TRACKED": "کالیبراسیون اندازه‌گیری تانک ثبت نمی‌شود.",
       "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "قاعده‌اش هست، ولی هنوز روی خط بل انتخاب نمی‌شود.",

@@ -6,6 +6,7 @@
 
 | نیاز | وضعیت |
 | --- | --- |
+| `livestock_register` | `NEW_CAPABILITY_REQUIRED` |
 | `serialized_items`: `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |

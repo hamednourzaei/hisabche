@@ -42,6 +42,8 @@
 
 **قابلیت‌های روشن:** هیچ قابلیت اختصاصی — فقط هسته‌ی مشترک.
 
+**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `table_service`، `production_batch`
+
 ## تفاوت با خانواده‌ی «غذا و پذیرایی»
 
 ### هویت و مدل کسب‌وکار
@@ -74,4 +76,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+ساخته‌نشده: `table_service`، `production_batch`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

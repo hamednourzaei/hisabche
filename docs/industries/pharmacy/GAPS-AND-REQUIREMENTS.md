@@ -6,6 +6,9 @@
 
 | نیاز | وضعیت |
 | --- | --- |
+| `pharmacy_prescription` | `NEW_CAPABILITY_REQUIRED` |
+| `pharmacy_dispensing` | `NEW_CAPABILITY_REQUIRED` |
+| `insurance_claims` | `NEW_CAPABILITY_REQUIRED` |
 | `batch_expiry`: `BATCH_RETURN_RESTORE_MISSING` | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |

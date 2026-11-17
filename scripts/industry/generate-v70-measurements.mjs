@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { formatMarkdown } from '../lib/format-markdown.mjs'
+
 const ROOT = 'C:/Users/hamed/Desktop/hisabche'
 const read = (p) => readFileSync(join(ROOT, p), 'utf8')
 
@@ -307,7 +309,10 @@ md.push(
 )
 md.push('')
 
-writeFileSync(join(ROOT, 'docs/architecture/V70-MEASUREMENTS.md'), md.join(eol), 'utf8')
+// Committed Markdown goes through prettier; format here so the generator, the
+// file on disk and `prettier --check` stay in agreement (see format-markdown.mjs).
+const measurementsPath = join(ROOT, 'docs/architecture/V70-MEASUREMENTS.md')
+writeFileSync(measurementsPath, await formatMarkdown(measurementsPath, md.join(eol)), 'utf8')
 
 console.log(
   `routes=${routes.length} services=${services.length} sql=${sqlFiles.length} tables=${tables.size} features=${featureKeys.length} industries=${industryIds.length} registryRows=${rows.length}`,

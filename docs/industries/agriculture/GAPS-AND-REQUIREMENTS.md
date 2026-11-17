@@ -6,6 +6,7 @@
 
 | نیاز | وضعیت |
 | --- | --- |
+| `crop_cycle` | `NEW_CAPABILITY_REQUIRED` |
 | `batch_expiry`: `BATCH_RETURN_RESTORE_MISSING` | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |

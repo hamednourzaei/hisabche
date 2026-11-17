@@ -10,13 +10,13 @@
 | نام | صرافی · صرافی · Currency exchange |
 | نوع | صنف |
 | خانواده | [مالی و بازرگانی](../families/finance_trading.md) |
-| پروفایل | `generic` |
+| پروفایل | `specialized` |
 | archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
 - سفر پایه (ثبت‌نام → اولین فروش → سود و زیان): `EXISTING_BUT_INCOMPLETE` — `backend/src/__tests__/v59-1-exchange-gl-http.test.ts`، `backend/src/__tests__/financial-flows-e2e.test.ts`، `backend/src/__tests__/journey-industries-3.pg.test.ts`
-- تجربه‌ی اختصاصی صنف: `CONFIGURATION_REQUIRED` — پروفایل عمومی است؛ چیزی جز هسته‌ی مشترک وعده داده نشده.
+- تجربه‌ی اختصاصی صنف: `EXISTING_BUT_INCOMPLETE`
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
@@ -36,17 +36,21 @@
 
 **داشبورد (ترتیب):** `kpis`، `workQueue`، `chart`، `insights`، `activities`، `manufacturing`
 
-**کالای تازه:** واحد `piece` · فیلدهای جلو: —
+**کالای تازه:** واحد `piece` · فیلدهای جلو: `name`، `sellPrice`
 
 **ستون‌های اضافه‌ی فاکتور:** —
 
-**قابلیت‌های روشن:** هیچ قابلیت اختصاصی — فقط هسته‌ی مشترک.
+**قابلیت‌های روشن**
+
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
+| `currency_exchange` | `EXISTING_BUT_INCOMPLETE` | `exchange` · online_required | `FX_TRADES_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «مالی و بازرگانی»
 
 ### هویت و مدل کسب‌وکار
 
-پروفایل عمومی: همان هسته‌ی مشترک با نام این صنف.
+پروفایل اختصاصی دارد (1 قابلیت روشن).
 
 ### گردش کار روزانه
 
@@ -54,7 +58,7 @@
 
 ### صفحه‌به‌صفحه
 
-منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/till`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
+فرم کالا این فیلدها را جلو می‌گذارد: `name`، `sellPrice`. منوی پیشنهادی این نشانی‌ها را پنهان می‌کند: `/till`. سند: [PAGE-BY-PAGE-UX.md](./PAGE-BY-PAGE-UX.md)
 
 ### عملیات و تراکنش
 
@@ -70,8 +74,8 @@
 
 ### آفلاین و دستگاه
 
-مانند خانواده‌ی «مالی و بازرگانی» — تفاوتی نیست. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
+موتورهای این صنف که فقط آنلاین کار می‌کنند: `exchange`. سند: [OFFLINE-AND-DEVICE.md](./OFFLINE-AND-DEVICE.md)
 
 ### شکاف‌ها و نیازمندی‌ها
 
-شکاف اختصاصی ثبت نشده؛ شکاف‌های خانواده در سند خانواده آمده است. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+نیمه‌کاره: `currency_exchange` (`FX_TRADES_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

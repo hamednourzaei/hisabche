@@ -25,12 +25,26 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 import { CAPABILITIES, EVIDENCE, TESTS } from './coverage-data.mjs'
 
 const ROOT = process.cwd()
 const CHECK_ONLY = process.argv.includes('--check')
 const OUT_DIR = path.join(ROOT, 'docs', 'campaigns')
+
+/**
+ * The commit this report describes. Every acceptance number must be tied to a
+ * commit: `git` on PATH is a Windows shim that silently no-ops, so it is spawned
+ * by absolute executable lookup (AGENTS.md §7).
+ */
+const CURRENT_HEAD = (() => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+  } catch {
+    return null
+  }
+})()
 
 // ---------------------------------------------------------------
 // 1. Phases. A phase is a gate, not a date.
@@ -78,6 +92,7 @@ const WORK_PACKAGES = [
       'area_pricing',
       'volume_pricing',
       'multi_unit',
+      'fuel_tank_reconciliation',
     ],
     coverage: ['unitConversion', 'weightPricing', 'lengthPricing', 'areaPricing', 'dualUom'],
   },
@@ -99,15 +114,15 @@ const WORK_PACKAGES = [
     id: 'WP-06',
     phase: 'C1',
     title: 'طلا: عیار و اجرت روی ردیف فاکتور',
-    capabilities: ['gold_purity', 'making_charges'],
+    capabilities: ['gold_purity', 'making_charges', 'gold_trade'],
     coverage: ['goldPurity', 'makingCharges', 'oldGold'],
   },
   {
     id: 'WP-07',
     phase: 'C1',
-    title: 'صرافی: موقعیت ارزی و کنترل صندوق',
-    capabilities: [],
-    coverage: ['offlineSales'],
+    title: 'صرافی: موتور رسمی، موقعیت ارزی و کنترل صندوق',
+    capabilities: ['currency_exchange'],
+    coverage: [],
   },
   {
     id: 'WP-08',
@@ -120,7 +135,7 @@ const WORK_PACKAGES = [
     id: 'WP-09',
     phase: 'C2',
     title: 'تولید: BOM نسخه‌دار و بهای تمام‌شده واقعی',
-    capabilities: ['recipe_bom', 'cost_allocation'],
+    capabilities: ['recipe_bom', 'cost_allocation', 'production_batch', 'print_job'],
     coverage: ['manufacturing'],
   },
   {
@@ -225,14 +240,14 @@ const WORK_PACKAGES = [
     id: 'WP-24',
     phase: 'C3',
     title: 'نسخه چشم و سفارش عدسی (اصلاح رجیستری + دامنه مشترک)',
-    capabilities: [],
+    capabilities: ['optical_prescription', 'lens_order'],
     coverage: [],
   },
   {
     id: 'WP-25',
     phase: 'C3',
     title: 'نسخه دارو و پوشش بیمه (اصلاح رجیستری + دامنه مشترک)',
-    capabilities: [],
+    capabilities: ['pharmacy_prescription', 'pharmacy_dispensing', 'insurance_claims'],
     coverage: [],
   },
   {
@@ -240,6 +255,13 @@ const WORK_PACKAGES = [
     phase: 'C0',
     title: 'اصلاح رجیستری و تخصیص قابلیت به ۶۷ صنف',
     capabilities: [],
+    coverage: [],
+  },
+  {
+    id: 'WP-27',
+    phase: 'C2',
+    title: 'خدمات آیتم‌محور: رهگیری تک‌به‌تک لباس (خشکشویی)',
+    capabilities: ['laundry_item_tracking'],
     coverage: [],
   },
 ]
@@ -321,27 +343,46 @@ for (const line of read('docs/industries/SHARED-CAPABILITY-MATRIX.md').split('\n
 }
 if (MATRIX_STATUS.size === 0) throw new Error('shared capability matrix parsed as empty')
 
+/** `available: a, b · partial: c · planned: d` → three lists (capabilities and requirements). */
+const parseBuckets = (cellText) => {
+  const buckets = { available: [], partial: [], planned: [] }
+  for (const part of (cellText ?? '').split('·')) {
+    const separator = part.indexOf(':')
+    if (separator < 0) continue
+    const bucket = part.slice(0, separator).trim().toLowerCase()
+    if (!buckets[bucket]) continue
+    for (const value of part.slice(separator + 1).split(',')) {
+      const clean = value.trim().replace(/`/g, '')
+      if (clean) buckets[bucket].push(clean)
+    }
+  }
+  return buckets
+}
+
 const REGISTRY = []
 for (const line of read('docs/industries/INDUSTRY-REGISTRY.md').split('\n')) {
   if (!/^\|\s*\d+\s*\|/.test(line)) continue
   const cells = line.split('|').map((cell) => cell.trim())
   const id = cells[2]?.replace(/`/g, '')
   if (!id) continue
-  const capabilities = { available: [], partial: [], planned: [] }
-  for (const part of (cells[7] ?? '').split('·')) {
-    const separator = part.indexOf(':')
-    if (separator < 0) continue
-    const bucket = part.slice(0, separator).trim().toLowerCase()
-    const list = part.slice(separator + 1).trim()
-    if (!capabilities[bucket]) continue
-    for (const value of list.split(',')) {
-      const clean = value.trim().replace(/`/g, '')
-      if (clean) capabilities[bucket].push(clean)
-    }
-  }
-  REGISTRY.push({ id, archetype: (cells[5] ?? '').replace(/`/g, ''), capabilities })
+  REGISTRY.push({
+    id,
+    archetype: (cells[5] ?? '').replace(/`/g, ''),
+    capabilities: parseBuckets(cells[7]),
+    // The requirement column is implementation-independent: it is what the
+    // trade needs, including capabilities the registry can only mark `planned`.
+    requirements: parseBuckets(cells[8]),
+  })
 }
 if (REGISTRY.length !== 67) throw new Error(`registry parsed ${REGISTRY.length} rows, expected 67`)
+
+/** Does this industry ask for the capability — as an ON feature or as a requirement? */
+const needs = (industry, capability) =>
+  ['capabilities', 'requirements'].some((column) =>
+    ['available', 'partial', 'planned'].some((bucket) =>
+      industry[column][bucket].includes(capability),
+    ),
+  )
 
 const SELLABLE = JSON.parse(read('docs/architecture/industry/sellable-industries.json'))
 const SELLABLE_BY_KEY = new Map(SELLABLE.industries.map((row) => [row.key, row]))
@@ -400,6 +441,7 @@ const engineRows = ENGINE_ROWS.map((record) => {
   return {
     key: record.key,
     pack: record.pack || '—',
+    structure: record.engine_structure || '—',
     status: record.status,
     routes: routeCount(record),
     local: present(record, 'local_engine_present'),
@@ -444,23 +486,26 @@ const capabilityRows = [...MATRIX_STATUS.entries()].map(([capability, matrixStat
     .filter(([, ok]) => !ok)
     .map(([layer]) => layer)
 
-  const coverageCodes = CAPABILITY_COVERAGE.get(capability) ?? []
-  const broken = coverageCodes
-    .map((codeKey) => ({ codeKey, entry: COVERAGE.get(codeKey) }))
-    .filter(({ entry }) => entry && entry.unhealthy.length > 0)
-    .map(
-      ({ codeKey, entry }) => `${codeKey}:${entry.unhealthy.map((item) => item.state).join('/')}`,
-    )
+  // OWN evidence: the files the registry names for THIS capability. Only presence
+  // is measured — a file on disk is not a working flow (that is C5's job).
+  const evidenceFiles = Number(wiring.evidence_files || 0)
+  const evidencePresent = Number(wiring.evidence_present || 0)
+  const evidence =
+    evidenceFiles > 0 && evidencePresent === evidenceFiles ? 'FILE_PRESENT' : 'FILE_MISSING'
 
-  const industries = REGISTRY.filter(
-    (industry) =>
-      industry.capabilities.partial.includes(capability) ||
-      industry.capabilities.planned.includes(capability),
-  ).length
+  // Shared package anchors answer a wider question and are reported separately;
+  // they never decide the capability's verdict.
+  const coverageCodes = CAPABILITY_COVERAGE.get(capability) ?? []
+
+  // The requirement, not the current ON list, decides who is affected: a trade
+  // that asks for a capability the registry never derived still needs it.
+  const affected = REGISTRY.filter((industry) => needs(industry, capability)).length
+  const blocked = matrixStatus === 'available' ? 0 : affected
+  const unmappedEngine = wiring.engine ? 0 : affected
 
   let verdict
   if (wiring.status === 'planned' || !wiring.engine) verdict = 'NO_ENGINE'
-  else if (broken.length > 0) verdict = 'ANCHOR_BROKEN'
+  else if (evidence === 'FILE_MISSING') verdict = 'EVIDENCE_MISSING'
   else if (missingLayers.length > 0) verdict = 'UNWIRED'
   else if (wiring.status === 'available' && matrixStatus === 'available') verdict = 'WIRED'
   else if (wiring.status === 'available' && matrixStatus !== 'available') verdict = 'MATRIX_STALE'
@@ -472,15 +517,19 @@ const capabilityRows = [...MATRIX_STATUS.entries()].map(([capability, matrixStat
     capability,
     matrixStatus,
     engine: wiring.engine || '—',
+    engineStructure: wiring.engine_structure || '—',
     engineStatus: wiring.status,
     missingLayers,
     limitations,
-    evidence: Number(wiring.evidence_present || 0),
-    coverage: coverageCodes.map(
+    evidence,
+    evidencePresent,
+    evidenceFiles,
+    sharedEvidence: coverageCodes.map(
       (codeKey) => `${codeKey}:${COVERAGE.get(codeKey)?.status ?? 'UNDECLARED'}`,
     ),
-    broken,
-    industries,
+    affected,
+    blocked,
+    unmappedEngine,
     workPackage: workPackage.id,
     phase: workPackage.phase,
     verdict,
@@ -492,28 +541,53 @@ for (const row of capabilityRows) verdictCounts[row.verdict] = (verdictCounts[ro
 
 const workPackageLoad = new Map()
 for (const row of capabilityRows) {
-  workPackageLoad.set(row.workPackage, (workPackageLoad.get(row.workPackage) ?? 0) + row.industries)
+  workPackageLoad.set(row.workPackage, (workPackageLoad.get(row.workPackage) ?? 0) + row.blocked)
 }
 
 // ---------------------------------------------------------------
 // 7. Per-industry view.
 // ---------------------------------------------------------------
+// An acceptance number is only evidence for the commit it was recorded on.
+const staleReasons = []
+if (SELLABLE.evidenceFresh !== true) staleReasons.push('evidenceFresh=false')
+if (SELLABLE.acceptanceWorktreeDirty === true) staleReasons.push('worktree dirty')
+if (CURRENT_HEAD && SELLABLE.acceptanceCommit !== CURRENT_HEAD) {
+  staleReasons.push(
+    `acceptance ${String(SELLABLE.acceptanceCommit).slice(0, 7)} ≠ HEAD ${CURRENT_HEAD.slice(0, 7)}`,
+  )
+}
+const EVIDENCE_STALE = staleReasons.length > 0
+
 const industryRows = REGISTRY.map((industry) => {
   const sellable = SELLABLE_BY_KEY.get(industry.id)
-  const blockers = [...industry.capabilities.partial, ...industry.capabilities.planned].filter(
-    (capability) => CAPABILITY_TO_WP.has(capability),
-  )
+  const required = [
+    ...new Set(
+      ['capabilities', 'requirements'].flatMap((column) =>
+        ['available', 'partial', 'planned'].flatMap((bucket) => industry[column][bucket]),
+      ),
+    ),
+  ]
+  // «No blocker in the registry» is not «ready»: a requirement the registry never
+  // derived is still unmet and still blocks the trade.
+  const unmet = required.filter((capability) => MATRIX_STATUS.get(capability) !== 'available')
+  const blockers = unmet.filter((capability) => CAPABILITY_TO_WP.has(capability))
+  const unmapped = unmet.filter((capability) => !CAPABILITY_TO_WP.has(capability))
   const packages = [...new Set(blockers.map((capability) => CAPABILITY_TO_WP.get(capability)))]
   const earliest = packages
     .map((workPackage) => workPackage.phase)
     .sort((a, b) => (PHASE_INDEX.get(a) ?? 99) - (PHASE_INDEX.get(b) ?? 99))[0]
+  const measuredStatus = sellable?.status ?? 'UNMEASURED'
   return {
     id: industry.id,
     archetype: industry.archetype,
-    status: sellable?.status ?? 'UNMEASURED',
+    measuredStatus,
+    status: sellable && EVIDENCE_STALE ? 'STALE_EVIDENCE' : measuredStatus,
     met: sellable ? Object.values(sellable.criteria).filter(Boolean).length : 0,
     total: sellable ? Object.keys(sellable.criteria).length : 10,
+    required: required.length,
+    unmet: unmet.length,
     blockers,
+    unmapped,
     packages: packages.map((workPackage) => workPackage.id),
     phase: earliest ?? 'C5',
   }
@@ -522,12 +596,25 @@ const industryRows = REGISTRY.map((industry) => {
 const phaseCounts = {}
 for (const row of industryRows) phaseCounts[row.phase] = (phaseCounts[row.phase] ?? 0) + 1
 
+const requirementIndustries = industryRows.filter((row) => row.required > 0).length
+const blockedIndustries = industryRows.filter((row) => row.unmet > 0).length
+const unmappedRequirements = industryRows.reduce((sum, row) => sum + row.unmapped.length, 0)
+const unmappedEngineDemand = capabilityRows.reduce((sum, row) => sum + row.unmappedEngine, 0)
+
 // ---------------------------------------------------------------
 // 8. Render.
 // ---------------------------------------------------------------
 const tick = (value) => (value ? '✓' : '—')
 const code = (value) => `\`${value}\``
-const generated = `<!-- GENERATED by scripts/industry/campaign-status.mjs — دستی ویرایش نکن. HEAD ${SELLABLE.head ?? 'unknown'} -->`
+const generated = `<!-- GENERATED by scripts/industry/campaign-status.mjs — دستی ویرایش نکن. HEAD ${CURRENT_HEAD ?? 'unknown'} · acceptance ${SELLABLE.acceptanceCommit ?? 'unknown'} · evidenceFresh ${SELLABLE.evidenceFresh === true ? 'true' : 'false'} -->`
+
+const evidenceBanner =
+  staleReasons.length === 0
+    ? ''
+    : [
+        '> ⚠️ **شاهد پذیرش تازه نیست:** ' + staleReasons.join(' · '),
+        '> عدد «اندازه‌گیری‌شده» از درخت دیگری می‌آید؛ تا اجرای دوباره‌ی پذیرش روی همین commit، وضعیت `STALE_EVIDENCE` است.',
+      ].join('\n')
 
 const wiringDoc = [
   '# وضعیت سیم‌کشی موتورها',
@@ -549,13 +636,13 @@ const wiringDoc = [
   `| بدون UI | ${engineGapCounts.ui} |`,
   `| بدون service | ${engineGapCounts.service} |`,
   '',
-  '| موتور | بسته | وضعیت | مسیر | آفلاین | Hook | UI | کمبود |',
-  '| --- | --- | --- | ---: | ---: | ---: | ---: | --- |',
+  '| موتور | بسته | ساختار | وضعیت | مسیر | آفلاین | Hook | UI | کمبود |',
+  '| --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- |',
   ...engineRows.map(
     (row) =>
-      `| ${code(row.key)} | ${row.pack} | ${row.status} | ${row.routes} | ${tick(row.local)} | ${tick(
-        row.hook,
-      )} | ${tick(row.ui)} | ${row.gaps.join(', ') || '—'} |`,
+      `| ${code(row.key)} | ${row.pack} | ${row.structure} | ${row.status} | ${row.routes} | ${tick(
+        row.local,
+      )} | ${tick(row.hook)} | ${tick(row.ui)} | ${row.gaps.join(', ') || '—'} |`,
   ),
   '',
   '## موتورهای بدون Local Engine',
@@ -581,22 +668,36 @@ const reconciliationDoc = [
   '| سنجه | مقدار |',
   '| --- | --- |',
   `| قابلیت ماتریس | ${MATRIX_STATUS.size} |`,
-  `| قابلیت با لنگر کد (coverage-data) | ${COVERAGE.size} |`,
+  `| قابلیت با لنگر بسته (coverage-data) | ${COVERAGE.size} |`,
   `| بسته کاری | ${WORK_PACKAGES.length} |`,
+  `| صنوف با نیازمندی ثبت‌شده | ${requirementIndustries} |`,
+  `| صنوف با نیازمندی برآورده‌نشده | ${blockedIndustries} |`,
+  `| نیازمندی بی‌موتور | ${unmappedEngineDemand} |`,
+  `| نیازمندی بی‌بسته | ${unmappedRequirements} |`,
   `| حکم | ${Object.entries(verdictCounts)
     .map(([verdict, count]) => `${verdict}=${count}`)
     .join(' · ')} |`,
   '',
-  '| قابلیت | ماتریس | موتور | وضعیت موتور | لایه غایب | محدودیت | فایل شاهد | کد | صنوف | بسته | فاز | حکم |',
-  '| --- | --- | --- | --- | --- | --- | ---: | --- | ---: | --- | --- | --- |',
+  '| قابلیت | ماتریس | موتور | ساختار | وضعیت موتور | لایه غایب | محدودیت | شاهد خود قابلیت | شاهد بسته | صنوف نیازمند | مسدود | بی‌موتور | بسته | فاز | حکم |',
+  '| --- | --- | --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |',
   ...capabilityRows.map(
     (row) =>
-      `| ${code(row.capability)} | ${row.matrixStatus} | ${code(row.engine)} | ${row.engineStatus} | ${
-        row.missingLayers.join(', ') || '—'
-      } | ${row.limitations.map(code).join(' ') || '—'} | ${row.evidence} | ${
-        row.coverage.map(code).join(', ') || '—'
-      } | ${row.industries} | ${row.workPackage} | ${row.phase} | ${row.verdict} |`,
+      `| ${code(row.capability)} | ${row.matrixStatus} | ${code(row.engine)} | ${row.engineStructure} | ${
+        row.engineStatus
+      } | ${row.missingLayers.join(', ') || '—'} | ${row.limitations.map(code).join(' ') || '—'} | ${
+        row.evidence
+      } (${row.evidencePresent}/${row.evidenceFiles}) | ${
+        row.sharedEvidence.map(code).join(', ') || '—'
+      } | ${row.affected} | ${row.blocked} | ${row.unmappedEngine} | ${row.workPackage} | ${
+        row.phase
+      } | ${row.verdict} |`,
   ),
+  '',
+  '> «شاهد خود قابلیت» فقط وجود فایل‌هایی را می‌سنجد که رجیستری برای همان قابلیت نام برده است. ' +
+    '«شاهد بسته» لنگرهای `coverage-data.mjs` است و حکم را عوض نمی‌کند.',
+  '',
+  '> «صنوف نیازمند» از ستون نیازمندی‌های `INDUSTRY-REGISTRY.md` می‌آید؛ «مسدود» یعنی همان نیاز ' +
+    'هنوز `available` نیست و «بی‌موتور» یعنی هیچ موتوری پشت آن نیست.',
   '',
   '## معنی حکم‌ها',
   '',
@@ -608,8 +709,9 @@ const reconciliationDoc = [
   '| `LIMITATION_NAMED` | لایه‌ها کامل‌اند، یک محدودیت نام‌دار باقی است |',
   '| `UNWIRED` | یکی از لایه‌ها (service/آفلاین/Hook/UI) وجود ندارد |',
   '| `PARTIAL_UNNAMED` | `partial` بدون محدودیت و بدون لایه غایب — نیازمند بررسی دستی |',
-  '| `NO_ENGINE` | موتور `planned` یا خالی |',
-  '| `ANCHOR_BROKEN` | لنگر کد/تست ادعاشده پیدا نشد |',
+  '| `NO_ENGINE` | موتور `planned` یا خالی — نیازمندی ثبت شده ولی چیزی پشتش نیست |',
+  '| `EVIDENCE_MISSING` | رجیستری فایلی برای این قابلیت نام نبرده یا فایل نام‌برده روی دیسک نیست |',
+  '| `FILE_PRESENT`/`FILE_MISSING` | فقط وجود فایل سنجیده می‌شود؛ گردش کاربر در C5 تأیید می‌شود |',
   '',
   '## لنگرهای ناسالم',
   '',
@@ -638,6 +740,8 @@ const reconciliationDoc = [
   '- وجود لایه یعنی فایل و ردیف سیم‌کشی هست؛ یعنی گردش کامل کاربر تأیید نشده است.',
   '- هیچ نتیجه‌ی PostgreSQL یا مرورگری در این سند نیست؛ آن شاهد در فاز C5 ساخته می‌شود.',
   '- تعداد صنوف مسدود از رجیستری می‌آید؛ خطای رجیستری در این سند هم تکرار می‌شود.',
+  '- «شاهد خود قابلیت» یعنی فایل هست، نه اینکه گردش کار می‌کند یا روی PostgreSQL اجرا شده است.',
+  '- نیازمندی‌ای که هیچ صنفی در رجیستری ثبت نکرده باشد، در شمارش «صنوف نیازمند» دیده نمی‌شود.',
   '',
 ].join('\n')
 
@@ -646,29 +750,40 @@ const matrixDoc = [
   '',
   generated,
   '',
-  'وضعیت هر صنف از `sellable-industries.json` و موانع آن از `INDUSTRY-REGISTRY.md` خوانده می‌شود. ' +
-    '«فاز» اولین فازی است که می‌تواند این صنف را باز کند.',
+  'وضعیت هر صنف از `sellable-industries.json` خوانده می‌شود؛ موانع آن از ستون نیازمندی‌ها و ' +
+    'قابلیت‌های `INDUSTRY-REGISTRY.md` می‌آید. «فاز» اولین فازی است که می‌تواند این صنف را باز کند.',
   '',
+  ...(evidenceBanner ? [evidenceBanner, ''] : []),
   '| سنجه | مقدار |',
   '| --- | --- |',
   `| صنوف | ${industryRows.length} |`,
   `| معیارهای فعلی | ${Math.max(...industryRows.map((row) => row.met))}/${industryRows[0]?.total ?? 10} |`,
   `| SELLABLE | ${industryRows.filter((row) => SELLABLE_BY_KEY.get(row.id)?.sellable).length} |`,
+  `| شاهد تازه | ${EVIDENCE_STALE ? 0 : industryRows.length} |`,
+  `| نیازمندی بی‌بسته | ${unmappedRequirements} |`,
   `| توزیع فاز | ${Object.entries(phaseCounts)
     .sort((a, b) => (PHASE_INDEX.get(a[0]) ?? 99) - (PHASE_INDEX.get(b[0]) ?? 99))
     .map(([phase, count]) => `${phase}=${count}`)
     .join(' · ')} |`,
   '',
-  '| # | صنف | Archetype | وضعیت | معیار | موانع | بسته‌ها | فاز |',
-  '| ---: | --- | --- | --- | ---: | --- | --- | --- |',
+  '| # | صنف | Archetype | وضعیت | اندازه‌گیری‌شده | معیار | نیاز | برآورده‌نشده | موانع | بسته‌ها | فاز |',
+  '| ---: | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |',
   ...industryRows.map(
     (row, index) =>
-      `| ${index + 1} | ${code(row.id)} | ${row.archetype} | ${row.status} | ${row.met}/${
-        row.total
-      } | ${row.blockers.map(code).join(', ') || '—'} | ${row.packages.join(', ') || '—'} | ${
-        row.phase
-      } |`,
+      `| ${index + 1} | ${code(row.id)} | ${row.archetype} | ${row.status} | ${
+        row.measuredStatus
+      } | ${row.met}/${row.total} | ${row.required} | ${row.unmet} | ${
+        row.blockers.map(code).join(', ') || '—'
+      } | ${row.packages.join(', ') || '—'} | ${row.phase} |`,
   ),
+  '',
+  '## معنی وضعیت‌ها',
+  '',
+  '| وضعیت | معنی |',
+  '| --- | --- |',
+  '| `STALE_EVIDENCE` | عدد اندازه‌گیری‌شده از commit دیگری (یا درخت ناپاک) است و قابل استناد نیست |',
+  '| `WORKFLOW_VERIFIED` | گردش صنف با تست‌های همین مخزن تأیید شده؛ شاهد PostgreSQL و مرورگر ندارد |',
+  '| `UNMEASURED` | صنف در `sellable-industries.json` نیست |',
   '',
   '## فازها',
   '',
@@ -676,7 +791,8 @@ const matrixDoc = [
   '| --- | --- |',
   ...PHASES.map(([id, title]) => `| ${id} | ${title} |`),
   '',
-  '> فاز `C5` یعنی صنف مانع قابلیتی ندارد و فقط شاهد PostgreSQL و مرورگر آن باقی است.',
+  '> فاز `C5` یعنی هیچ نیازمندی برآورده‌نشده‌ای نمانده و فقط شاهد تازه PostgreSQL و مرورگر باقی است. ' +
+    'تا وقتی شاهد تازه نباشد، وضعیت صنف `STALE_EVIDENCE` می‌ماند.',
   '',
 ].join('\n')
 

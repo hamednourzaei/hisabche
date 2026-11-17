@@ -261,7 +261,15 @@ describe('the effective business profile is built from the resolver', () => {
     const profile = resolveBusinessProfile(['pharmacy'])
     expect(profile.capabilities).toEqual(['multi_unit', 'batch_expiry'])
     expect(profile.partialCapabilities).toEqual(['batch_expiry'])
-    expect(profile.unsupported).toEqual([])
+    // batch_expiry is no longer unsupported. The pharmacy's named requirements
+    // (prescription, dispensing, insurance) are unbuilt, so they are REPORTED —
+    // never switched on — and never leak into `capabilities`.
+    expect(profile.unsupported).not.toContain('batch_expiry')
+    expect(profile.unsupported).toEqual([
+      'pharmacy_prescription',
+      'pharmacy_dispensing',
+      'insurance_claims',
+    ])
     expect(profile.notes).toContain('industry.supportNote.partial')
   })
 

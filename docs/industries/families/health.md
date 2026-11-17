@@ -19,9 +19,9 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [دواخانه و داروخانه](../pharmacy/README.md) (`pharmacy`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit`، `batch_expiry` | — |
+| [دواخانه و داروخانه](../pharmacy/README.md) (`pharmacy`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit`، `batch_expiry` | `pharmacy_prescription`، `pharmacy_dispensing`، `insurance_claims` |
 | [کلینیک و مطب](../clinic/README.md) (`clinic`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
-| [عینک‌فروشی](../optician/README.md) (`optician`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit`، `batch_expiry`، `serialized_items` | — |
+| [عینک‌فروشی](../optician/README.md) (`optician`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit`، `batch_expiry`، `serialized_items` | `optical_prescription`، `lens_order` |
 
 ## پنج گردش کار
 
@@ -91,7 +91,7 @@
 
 ## شکاف‌های خانواده
 
-هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `insurance_claims`، `lens_order`، `optical_prescription`، `pharmacy_dispensing`، `pharmacy_prescription`.
 
 ## بر اساس اندازه
 
