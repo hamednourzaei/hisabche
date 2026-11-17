@@ -2,9 +2,9 @@
 
 **تاریخ:** ۱۷ نوامبر ۲۰۲۶
 **مخزن:** `C:\Users\hamed\Desktop\hisabche`
-**HEAD:** `9094ec0d96a282f3da73bdf9c9e5d29b2848d6c1` (`main`)
+**HEAD:** شروع دور `9094ec0d`؛ مالک در پایان دور `f28003e2 fixed ci 20` را ثبت کرد و ۴۲۲ فایل این دور را commit کرد.
 **درخت کاری هنگام شروع:** ۲ فایل untracked از صاحب کار (`docs/architecture/V73-PRODUCTION-READINESS.md`, `scripts/check-terminology.mjs`)؛ هیچ فایل ردیابی‌شده‌ای تغییر نکرده بود.
-**درخت کاری هنگام پایان:** ۴۲۲ فایل modified + ۲ فایل untracked؛ همه‌ی تغییرات در working tree است و commit/push نشده.
+**درخت کاری هنگام پایان:** فقط همین سند (modified) و `docs/sales/SELLABILITY-EXECUTION-PLAN.md` (untracked)؛ بقیه‌ی کار در `f28003e2` ثبت شده است.
 
 > این سند جایگزین ممیزی قبلی همین فایل است. اعداد زیر فقط از اجرای همین دور آمده‌اند. ادعای آمادگی انتشار نمی‌شود؛ بخش PostgreSQL و مرورگر همچنان `BLOCKED_EXTERNAL` است.
 
@@ -14,13 +14,13 @@
 - نقص واژگانیِ اثبات‌شده رفع شد: ۱۳ کلید `common.*` که `resolveTerminologyProfile` تولید می‌کرد در هیچ‌یک از سه کاتالوگ وجود نداشت؛ اکنون در `fa`/`af`/`en` resolve می‌شوند (۱۲۶ کلید `common` در هر سه، parity کامل).
 - یک گارد رگرسیون اضافه شد که هر کلید واژگان تولیدشده توسط DNA و هر ۵ slot هر ۶ trade namespace را در هر سه کاتالوگ می‌سنجد. قرمز/سبز شدنش با حذف و بازگردانی یک کلید (بایت‌به‌بایت) اثبات شد.
 - ۴ گارد سندِ generated که در HEAD قرمز بودند با اجرای generatorهای موجود سبز شدند: registry، sellable، capability-matrix، competitor-gap. یکی از آن‌ها یک ارجاع غلط واقعی داشت (`DELETE /attendance-links/:x` به خطی اشاره می‌کرد که آن route را ثبت نمی‌کند).
-- PostgreSQL و مرورگر همچنان اجرا نشده‌اند: `psql`/`postgres`/`initdb`/`pg_ctl` در این ماشین نیستند و runner مرورگر محلی هم در دسترس نیست. هیچ dependency‌ای نصب نشد.
+- PostgreSQL و مرورگر همچنان اجرا نشده‌اند: هیچ `initdb`/`postgres`/`pg_ctl` روی این ماشین نیست. Playwright 1.62.1 و Chromium موجودند، اما journey مرورگر به PostgreSQL واقعی وابسته است. هیچ dependency‌ای نصب نشد.
 
 ## ۲. وضعیت پایه‌ی اندازه‌گیری‌شده (پیش از تغییرات این دور)
 
 | مورد                                                                   | مقدار مشاهده‌شده                                                                                                                                                                                                                                                                                                   |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm code-intel status`                                               | `PARTIALLY_STALE` — indexed HEAD `aa1d0896`، current `9094ec0d` (index بازسازی نشد)                                                                                                                                                                                                                                |
+| `pnpm code-intel status`                                               | `PARTIALLY_STALE` — indexed HEAD `aa1d0896`، current `f28003e2` (index بازسازی نشد)                                                                                                                                                                                                                                |
 | `docs/industries/**` در HEAD                                           | با رجیستری جاری هم‌خوان نبود؛ `generate-industry-docs.mjs` ۴۰۷ فایل را بازنویسی کرد                                                                                                                                                                                                                                |
 | گاردهای generated قرمز                                                 | `industry-specs-complete` (۱۱ تست)، `industry-diff-doc` (۵)، `industry-registry-doc` (۵)، `sellable-industries` (۱۳)، `capability-matrix-csv` (۸)، `competitor-gap-matrix` (۷) — همه با اجرای generator موجود سبز شدند. `industry-coverage-table` (۸) هم بازتولید و سبز شد، اما قرمز بودنش در شروع اندازه‌گیری نشد |
 | کلیدهای واژگان DNA                                                     | ۱۳ کلید `common.*` در هیچ‌یک از سه کاتالوگ نبود                                                                                                                                                                                                                                                                    |
@@ -76,17 +76,21 @@
 
 ## ۶. شواهد آزمون (اعداد همین دور)
 
-| بسته/فرمان                                                                      | نتیجه                                       |
-| ------------------------------------------------------------------------------- | ------------------------------------------- |
-| `packages/validation` → `npx vitest run`                                        | **۹۱ فایل، ۱۱۲۴ تست، همه passed**           |
-| `packages/validation` → `npx tsc --noEmit`                                      | exit 0                                      |
-| `packages/validation` → `npx eslint operational-dna.ts operational-dna.test.ts` | 0 error                                     |
-| `packages/ui` → `i18n-keys-exist.test.ts`                                       | ۵/۵                                         |
-| `packages/ui` → docs/industry guards (۵ فایل)                                   | ۸۵ passed، ۲ skipped                        |
-| گاردهای بازتولیدشده (۴ فایل)                                                    | ۳۳/۳۳                                       |
-| PostgreSQL                                                                      | **اجرا نشد — BLOCKED_EXTERNAL**             |
-| Browser/Playwright                                                              | **اجرا نشد — BLOCKED_EXTERNAL**             |
-| Backend / API / UI full suite                                                   | اجرا نشد (فقط حوزه‌های تغییرکرده اجرا شدند) |
+| بسته/فرمان                                                                      | نتیجه                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/validation` → `npx vitest run`                                        | **۹۱ فایل، ۱۱۲۴ تست، همه passed**                                                                                                                                                                |
+| `packages/validation` → `npx tsc --noEmit`                                      | exit 0                                                                                                                                                                                           |
+| `packages/validation` → `npx eslint operational-dna.ts operational-dna.test.ts` | 0 error                                                                                                                                                                                          |
+| `packages/ui` → `i18n-keys-exist.test.ts`                                       | ۵/۵                                                                                                                                                                                              |
+| `packages/ui` → docs/industry guards (۵ فایل)                                   | ۸۵ passed، ۲ skipped                                                                                                                                                                             |
+| گاردهای بازتولیدشده (۴ فایل)                                                    | ۳۳/۳۳                                                                                                                                                                                            |
+| `backend` → `npx vitest run --project unit`                                     | **۴۶۳ فایل، ۵۸۲۶ تست: ۵۸۲۵ passed؛ ۱ timeout ۵ثانیه‌ای در `referral-programme.test.ts` که در اجرای تک‌فایل ۲۹/۲۹ سبز شد**                                                                        |
+| `packages/api` → `npx vitest run`                                               | **۴۴ فایل، ۳۲۰/۳۲۰**                                                                                                                                                                             |
+| `packages/ui` → `npx vitest run`                                                | **۲۳۳ فایل (۲۳۲ passed، ۱ skipped)؛ ۲۸۷۶ تست: ۲۸۷۴ passed، ۲ skipped**                                                                                                                           |
+| `packages/local-engine` → `npx vitest run`                                      | **۹۰ فایل، ۵۸۶ تست: ۵۸۴ passed؛ ۲ timeout زیر بار هم‌زمانی؛ هر دو فایل تنها ۸/۸ سبز**                                                                                                            |
+| `tsc --noEmit` (backend, api, ui, web)                                          | هر چهار بسته `EXIT=0`                                                                                                                                                                            |
+| PostgreSQL                                                                      | **اجرا نشد — BLOCKED_EXTERNAL**؛ جست‌وجوی `initdb.exe`/`postgres.exe` در Program Files، Program Files (x86)، ProgramData، Programs، tools و scoop هیچ نتیجه‌ای نداشت؛ بسته‌ی native فقط DLL دارد |
+| Browser/Playwright                                                              | **اجرا نشد — BLOCKED_EXTERNAL**؛ `@playwright/test 1.62.1` از `apps/web` resolve می‌شود و Chromium نصب است، اما journey به PostgreSQL واقعی نیاز دارد                                            |
 
 ## ۷. پوشش ۶۷ صنعت
 
@@ -112,7 +116,7 @@
 ## ۱۱. بلاکرهای خارجی (دقیق)
 
 1. PostgreSQL آزمون: `psql`, `postgres`, `initdb`, `pg_ctl` همه `NOT_FOUND`؛ باینری‌های native داخل `embedded-postgres` ناقص‌اند. prerequisite: یک PostgreSQL آزمون محلیِ نصب‌شده (جدا از Supabase زنده) یا `PGLITE_DIR` معتبر؛ سپس `*.pg.test.ts` و `scripts/industry/run-acceptance.mjs` قابل اجراست.
-2. Browser: نیاز به Playwright محلی + journey server با PostgreSQL آزمون؛ سپس `node scripts/industry/run-acceptance.mjs --browser`.
+2. Browser: خود Playwright مانع نیست — `@playwright/test 1.62.1` از `apps/web` resolve می‌شود و Chromium (build 1234/1248) نصب است؛ `playwright.journey.config.ts` و `journey-server.ts` موجودند. تنها مانع، PostgreSQL واقعی برای journey backend است؛ پس از P1 اجرا کنید: `node scripts/industry/run-acceptance.mjs --browser`.
 3. `code-intel` index نسبت به HEAD جاری stale است؛ بازسازی index به تصمیم صاحب کار نیاز دارد (`STALE`).
 
 ## ۱۲. نقشه‌ی اسناد درخواستی کمپین به فایل‌های موجود
@@ -127,6 +131,7 @@
 | INDUSTRY-KPI-MATRIX                                 | `docs/industries/*/KPI-AND-REPORTS.md`                                                           |
 | OFFLINE-OPERATION-MATRIX                            | `docs/industries/OFFLINE-WORKFLOW-MATRIX.md`                                                     |
 | ACCEPTANCE-EVIDENCE-67                              | `docs/industries/ACCEPTANCE-CRITERIA.md` + `sellable-industries.json`                            |
+| برنامه‌ی فازبندی فروش‌پذیری (۶/۲۱/۴۰)               | `docs/sales/SELLABILITY-EXECUTION-PLAN.md`                                                       |
 
 سند دوم با نام دیگر ساخته نشد تا دو منبع حقیقت به وجود نیاید.
 
@@ -151,10 +156,10 @@
 
 ## ۱۴. اقدامات مالک
 
-1. commit کردن تغییرات working tree (۴۲۲ فایل؛ اکثراً اسناد generated) — بدون amend/history rewrite.
-2. اجرای `pnpm verify` یا معادل آن روی ماشین خودتان برای بسته‌های backend/api/ui که در این دور اجرا نشدند.
-3. فراهم‌کردن PostgreSQL آزمون محلی و اجرای `*.pg.test.ts` + `node scripts/industry/run-acceptance.mjs`.
-4. فراهم‌کردن Playwright محلی و اجرای `node scripts/industry/run-acceptance.mjs --browser`.
+1. commit کردن دو سند باقی‌مانده (`docs/architecture/V73-PRODUCTION-READINESS.md` و `docs/sales/SELLABILITY-EXECUTION-PLAN.md`) — بقیه‌ی کار در `f28003e2` ثبت شده است.
+2. مجموعه‌ی تست‌ها در همین دور اجرا شد (جدول بخش ۳)؛ فقط روی ماشین خودتان یک بار دیگر تأیید کنید.
+3. فراهم‌کردن PostgreSQL آزمون محلی و اجرای `*.pg.test.ts` + `node scripts/industry/run-acceptance.mjs --postgres`.
+4. اجرای `node scripts/industry/run-acceptance.mjs --browser` (Playwright 1.62.1 و Chromium موجودند؛ مانع، همان PostgreSQL است).
 5. تصمیم درباره‌ی بازسازی code-intel index (اکنون `STALE`).
 6. تصمیم‌های باز V72: D14 (capability پروژه/فیلد سفارشی)، D15 (restore)، D16 (جهت مانده‌ی بازپرداخت تأمین‌کننده).
 
