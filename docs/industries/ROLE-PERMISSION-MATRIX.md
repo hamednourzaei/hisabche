@@ -2,14 +2,14 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-| مجوز               | `owner` | `admin` | `member` | `viewer` |
-| ------------------ | ------- | ------- | -------- | -------- |
-| `record.read`      | ✓       | ✓       | ✓        | ✓        |
-| `record.create`    | ✓       | ✓       | ✓        | —        |
-| `record.update`    | ✓       | ✓       | ✓        | —        |
-| `record.delete`    | ✓       | —       | —        | —        |
-| `member.invite`    | ✓       | ✓       | —        | —        |
-| `workspace.manage` | ✓       | —       | —        | —        |
+| مجوز | `owner` | `admin` | `member` | `viewer` |
+| --- | --- | --- | --- | --- |
+| `record.read` | ✓ | ✓ | ✓ | ✓ |
+| `record.create` | ✓ | ✓ | ✓ | — |
+| `record.update` | ✓ | ✓ | ✓ | — |
+| `record.delete` | ✓ | — | — | — |
+| `member.invite` | ✓ | ✓ | — | — |
+| `workspace.manage` | ✓ | — | — | — |
 
 این جدول نقش‌های پایه‌ی دستگاه است (`packages/auth-core`).
 

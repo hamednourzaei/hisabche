@@ -7,137 +7,133 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 
 ## Summary
 
-| Measure                               | Value |
-| ------------------------------------- | ----- |
-| Industry keys in the registry         | 67    |
-| Selectable in onboarding              | 67    |
-| Specialised profile                   | 51    |
-| General-purpose baseline              | 16    |
-| Exact match with `JOURNEY_INDUSTRIES` | 14    |
-| Available capabilities                | 3     |
-| Partial capabilities                  | 30    |
+| Measure | Value |
+| --- | --- |
+| Industry keys in the registry | 67 |
+| Selectable in onboarding | 67 |
+| Specialised profile | 51 |
+| General-purpose baseline | 16 |
+| Exact match with `JOURNEY_INDUSTRIES` | 14 |
+| Available capabilities | 3 |
+| Partial capabilities | 30 |
 
 ## Industry registry
 
 <!-- industry-registry-table -->
-
-| Industry label             | Internal key         | Selectable in onboarding | Exact `JOURNEY_INDUSTRIES` match | Profile status | Registered capabilities                    | Default product unit | Extra visible invoice columns | Price multiplier source | Emphasized product fields | Dashboard order                                                                               | Vocabulary                                                                     |
-| -------------------------- | -------------------- | ------------------------ | -------------------------------- | -------------- | ------------------------------------------ | -------------------- | ----------------------------- | ----------------------- | ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| خرده‌فروشی                 | `retail`             | بله                      | بله                              | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| عمده‌فروشی                 | `wholesale`          | بله                      | بله                              | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| خواروبار و سوپرمارکت       | `grocery`            | بله                      | بله                              | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| نانوایی و قنادی            | `bakery`             | بله                      | بله                              | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| قصابی                      | `butcher`            | بله                      | —                                | تخصصی          | measurement، multi_unit، batch_expiry      | `kg`                 | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| رستوران                    | `restaurant`         | بله                      | بله                              | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | workQueue، kpis، chart، activities، insights، manufacturing                                   | productKey=industry.vocabulary.dish                                            |
-| کافه و قهوه‌خانه           | `cafe`               | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | workQueue، kpis، chart، activities، insights، manufacturing                                   | productKey=industry.vocabulary.drink                                           |
-| میوه و سبزی                | `fruitVegetable`     | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `kg`                 | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| لبنیات                     | `dairy`              | بله                      | —                                | تخصصی          | batch_expiry، multi_unit                   | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| خشکبار و آجیل              | `nuts`               | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `kg`                 | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| عطاری و ادویه              | `spices`             | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `gram`               | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| طلا و جواهر                | `jewellery`          | بله                      | —                                | تخصصی          | measurement، weight_pricing، multi_unit    | `gram`               | weightGrams                   | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، activities، insights، manufacturing                                   | productKey=industry.vocabulary.piece                                           |
-| ساعت                       | `watches`            | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `piece`              | —                             | —                       | unit، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| صرافی                      | `currencyExchange`   | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| پوشاک                      | `clothing`           | بله                      | —                                | تخصصی          | variants                                   | `piece`              | —                             | —                       | name، sellPrice           | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing                 | —                                                                              |
-| پارچه متری و خرازی         | `fabric`             | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `meter`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| رول پارچه (عمده)           | `fabricRoll`         | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `meter`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| کفش                        | `shoes`              | بله                      | —                                | تخصصی          | variants                                   | `piece`              | —                             | —                       | name، sellPrice           | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing                 | —                                                                              |
-| فرش و قالین                | `carpet`             | بله                      | —                                | تخصصی          | measurement، multi_unit، variants          | `meter`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| خیاطی                      | `tailoring`          | بله                      | —                                | تخصصی          | measurement                                | `meter`              | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| موبایل و لوازم جانبی       | `mobilePhones`       | بله                      | —                                | تخصصی          | serialized_items، variants                 | `piece`              | —                             | —                       | name، sellPrice           | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing                | —                                                                              |
-| کامپیوتر و لپ‌تاپ          | `computers`          | بله                      | —                                | تخصصی          | serialized_items، variants                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| قطعات کامپیوتر             | `computerComponents` | بله                      | —                                | تخصصی          | serialized_items، variants                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| لوازم برقی و الکترونیک     | `electronics`        | بله                      | بله                              | تخصصی          | serialized_items، variants                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| خدمات کامپیوتری            | `itServices`         | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing                | —                                                                              |
-| آهن‌فروشی و ابزار          | `hardware`           | بله                      | بله                              | تخصصی          | measurement، multi_unit                    | `kg`                 | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مواد ساختمانی              | `buildingMaterials`  | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `kg`                 | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| رنگ و ابزار نقاشی          | `paint`              | بله                      | —                                | تخصصی          | measurement، multi_unit، variants          | `liter`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| چوب و الوار                | `timber`             | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `meter`              | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| شیشه و آلومینیوم           | `glass`              | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| ساخت‌وساز و پیمانکاری      | `construction`       | بله                      | بله                              | تخصصی          | measurement، multi_unit                    | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| تولیدی و کارگاه            | `manufacturing`      | بله                      | بله                              | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | unit، quantity            | manufacturing، workQueue، kpis، chart، insights، activities                                   | —                                                                              |
-| قطعات موتر و یدکی          | `autoParts`          | بله                      | بله                              | تخصصی          | auto_fitments                              | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| نمایشگاه موتر              | `carDealer`          | بله                      | —                                | تخصصی          | serialized_items، auto_fitments            | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مکانیکی و سرویس            | `mechanic`           | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing                | —                                                                              |
-| تیل‌فروشی و گاز            | `fuel`               | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `liter`              | —                             | —                       | unit، quantity            | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مبل و اثاثیه               | `furniture`          | بله                      | بله                              | تخصصی          | variants، multi_unit                       | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| ظروف و لوازم آشپزخانه      | `kitchenware`        | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| لوازم خانگی                | `homeAppliances`     | بله                      | —                                | تخصصی          | serialized_items، variants                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| لوازم‌التحریر و کتاب       | `stationery`         | بله                      | بله                              | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| اسباب‌بازی                 | `toys`               | بله                      | —                                | تخصصی          | variants، multi_unit                       | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| کادو و تزئینات             | `giftShop`           | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| دواخانه و داروخانه         | `pharmacy`           | بله                      | بله                              | تخصصی          | batch_expiry، multi_unit                   | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| لوازم آرایشی و بهداشتی     | `cosmetics`          | بله                      | بله                              | تخصصی          | batch_expiry، variants، multi_unit         | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| کلینیک و مطب               | `clinic`             | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| آرایشگاه و سلمانی          | `barber`             | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | todaySessions، kpis، workQueue، chart، insights، activities، manufacturing                    | productKey=industry.vocabulary.service                                         |
-| ناخن و سالن زیبایی         | `beautySalon`        | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | todaySessions، kpis، workQueue، chart، insights، activities، manufacturing                    | productKey=industry.vocabulary.service                                         |
-| عینک‌فروشی                 | `optician`           | بله                      | —                                | تخصصی          | batch_expiry، serialized_items، multi_unit | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| زراعت و کشاورزی            | `agriculture`        | بله                      | —                                | تخصصی          | measurement، multi_unit، batch_expiry      | `kg`                 | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مالداری و دامداری          | `livestock`          | بله                      | —                                | تخصصی          | measurement، serialized_items، multi_unit  | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| تخم و کود                  | `seedsFertilizer`    | بله                      | —                                | تخصصی          | measurement، multi_unit، batch_expiry      | `kg`                 | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| گل و گیاه                  | `flowers`            | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| ترانسپورت و باربری         | `transport`          | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| حمل بار و باربری           | `freightTransport`   | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `kg`                 | —                             | —                       | unit، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مسافربری                   | `passengerTransport` | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| پیک و تحویل بسته           | `courier`            | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| آژانس مسافرتی              | `travelAgency`       | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| املاک و مشاورین            | `realEstate`         | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| چاپ و تبلیغات              | `printing`           | بله                      | —                                | تخصصی          | measurement، multi_unit                    | `piece`              | —                             | —                       | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| عکاسی و فیلم‌برداری        | `photography`        | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| آموزشگاه و کورس            | `education`          | بله                      | —                                | تخصصی          | package_credits                            | `piece`              | —                             | —                       | name، sellPrice           | packageCreditsLow، todaySessions، kpis، workQueue، chart، insights، activities، manufacturing | customerKey=industry.vocabulary.student، productKey=industry.vocabulary.course |
-| خشک‌شویی                   | `laundry`            | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| تعمیرات                    | `repairs`            | بله                      | —                                | تخصصی          | work_queue_sla                             | `piece`              | —                             | —                       | name، sellPrice           | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing                | productKey=industry.vocabulary.repairItem                                      |
-| تالار و خدمات عروسی        | `wedding`            | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| خدمات امنیتی               | `security`           | بله                      | —                                | تخصصی          | multi_unit                                 | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| مشاوره و حسابداری          | `consulting`         | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | —                         | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-| کسب‌وکارت پیدا نشد؟ (سایر) | `other`              | بله                      | —                                | پایه (عمومی)   | —                                          | `piece`              | —                             | —                       | name، sellPrice           | kpis، workQueue، chart، insights، activities، manufacturing                                   | —                                                                              |
-
+| Industry label | Internal key | Selectable in onboarding | Exact `JOURNEY_INDUSTRIES` match | Profile status | Registered capabilities | Default product unit | Extra visible invoice columns | Price multiplier source | Emphasized product fields | Dashboard order | Vocabulary |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| خرده‌فروشی | `retail` | بله | بله | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| عمده‌فروشی | `wholesale` | بله | بله | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| خواروبار و سوپرمارکت | `grocery` | بله | بله | تخصصی | multi_unit | `piece` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| نانوایی و قنادی | `bakery` | بله | بله | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| قصابی | `butcher` | بله | — | تخصصی | measurement، multi_unit، batch_expiry | `kg` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| رستوران | `restaurant` | بله | بله | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | workQueue، kpis، chart، activities، insights، manufacturing | productKey=industry.vocabulary.dish |
+| کافه و قهوه‌خانه | `cafe` | بله | — | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | workQueue، kpis، chart، activities، insights، manufacturing | productKey=industry.vocabulary.drink |
+| میوه و سبزی | `fruitVegetable` | بله | — | تخصصی | measurement، multi_unit | `kg` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| لبنیات | `dairy` | بله | — | تخصصی | batch_expiry، multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| خشکبار و آجیل | `nuts` | بله | — | تخصصی | measurement، multi_unit | `kg` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| عطاری و ادویه | `spices` | بله | — | تخصصی | measurement، multi_unit | `gram` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| طلا و جواهر | `jewellery` | بله | — | تخصصی | measurement، weight_pricing، multi_unit | `gram` | weightGrams | — | unit، sellPrice، quantity | kpis، workQueue، chart، activities، insights، manufacturing | productKey=industry.vocabulary.piece |
+| ساعت | `watches` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| صرافی | `currencyExchange` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| پوشاک | `clothing` | بله | — | تخصصی | variants | `piece` | — | — | name، sellPrice | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing | — |
+| پارچه متری و خرازی | `fabric` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| رول پارچه (عمده) | `fabricRoll` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| کفش | `shoes` | بله | — | تخصصی | variants | `piece` | — | — | name، sellPrice | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing | — |
+| فرش و قالین | `carpet` | بله | — | تخصصی | measurement، multi_unit، variants | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| خیاطی | `tailoring` | بله | — | تخصصی | measurement | `meter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| موبایل و لوازم جانبی | `mobilePhones` | بله | — | تخصصی | serialized_items، variants | `piece` | — | — | name، sellPrice | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing | — |
+| کامپیوتر و لپ‌تاپ | `computers` | بله | — | تخصصی | serialized_items، variants | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| قطعات کامپیوتر | `computerComponents` | بله | — | تخصصی | serialized_items، variants | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| لوازم برقی و الکترونیک | `electronics` | بله | بله | تخصصی | serialized_items، variants | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| خدمات کامپیوتری | `itServices` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing | — |
+| آهن‌فروشی و ابزار | `hardware` | بله | بله | تخصصی | measurement، multi_unit | `kg` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مواد ساختمانی | `buildingMaterials` | بله | — | تخصصی | measurement، multi_unit | `kg` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| رنگ و ابزار نقاشی | `paint` | بله | — | تخصصی | measurement، multi_unit، variants | `liter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| چوب و الوار | `timber` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| شیشه و آلومینیوم | `glass` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| ساخت‌وساز و پیمانکاری | `construction` | بله | بله | تخصصی | measurement، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| تولیدی و کارگاه | `manufacturing` | بله | بله | تخصصی | multi_unit | `piece` | — | — | unit، quantity | manufacturing، workQueue، kpis، chart، insights، activities | — |
+| قطعات موتر و یدکی | `autoParts` | بله | بله | تخصصی | auto_fitments | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| نمایشگاه موتر | `carDealer` | بله | — | تخصصی | serialized_items، auto_fitments | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مکانیکی و سرویس | `mechanic` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing | — |
+| تیل‌فروشی و گاز | `fuel` | بله | — | تخصصی | measurement، multi_unit | `liter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مبل و اثاثیه | `furniture` | بله | بله | تخصصی | variants، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| ظروف و لوازم آشپزخانه | `kitchenware` | بله | — | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| لوازم خانگی | `homeAppliances` | بله | — | تخصصی | serialized_items، variants | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| لوازم‌التحریر و کتاب | `stationery` | بله | بله | تخصصی | multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| اسباب‌بازی | `toys` | بله | — | تخصصی | variants، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| کادو و تزئینات | `giftShop` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| دواخانه و داروخانه | `pharmacy` | بله | بله | تخصصی | batch_expiry، multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| لوازم آرایشی و بهداشتی | `cosmetics` | بله | بله | تخصصی | batch_expiry، variants، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| کلینیک و مطب | `clinic` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| آرایشگاه و سلمانی | `barber` | بله | — | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | todaySessions، kpis، workQueue، chart، insights، activities، manufacturing | productKey=industry.vocabulary.service، customerKey=industry.vocabulary.client |
+| ناخن و سالن زیبایی | `beautySalon` | بله | — | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | todaySessions، kpis، workQueue، chart، insights، activities، manufacturing | productKey=industry.vocabulary.service، customerKey=industry.vocabulary.client |
+| عینک‌فروشی | `optician` | بله | — | تخصصی | batch_expiry، serialized_items، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| زراعت و کشاورزی | `agriculture` | بله | — | تخصصی | measurement، multi_unit، batch_expiry | `kg` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مالداری و دامداری | `livestock` | بله | — | تخصصی | measurement، serialized_items، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| تخم و کود | `seedsFertilizer` | بله | — | تخصصی | measurement، multi_unit، batch_expiry | `kg` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| گل و گیاه | `flowers` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| ترانسپورت و باربری | `transport` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| حمل بار و باربری | `freightTransport` | بله | — | تخصصی | measurement، multi_unit | `kg` | — | — | unit، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مسافربری | `passengerTransport` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| پیک و تحویل بسته | `courier` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| آژانس مسافرتی | `travelAgency` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| املاک و مشاورین | `realEstate` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| چاپ و تبلیغات | `printing` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| عکاسی و فیلم‌برداری | `photography` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| آموزشگاه و کورس | `education` | بله | — | تخصصی | package_credits | `piece` | — | — | name، sellPrice | packageCreditsLow، todaySessions، kpis، workQueue، chart، insights، activities، manufacturing | customerKey=industry.vocabulary.student، productKey=industry.vocabulary.course |
+| خشک‌شویی | `laundry` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| تعمیرات | `repairs` | بله | — | تخصصی | work_queue_sla | `piece` | — | — | name، sellPrice | openRepairTickets، workQueue، kpis، chart، insights، activities، manufacturing | productKey=industry.vocabulary.repairItem |
+| تالار و خدمات عروسی | `wedding` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| خدمات امنیتی | `security` | بله | — | تخصصی | multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| مشاوره و حسابداری | `consulting` | بله | — | پایه (عمومی) | — | `piece` | — | — | — | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| کسب‌وکارت پیدا نشد؟ (سایر) | `other` | بله | — | پایه (عمومی) | — | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
 <!-- /industry-registry-table -->
 
 ## Capability registry
 
 <!-- industry-capability-table -->
-
-| Capability             | Status    | Active in a resolved profile |
-| ---------------------- | --------- | ---------------------------- |
-| `measurement`          | available | فعال                         |
-| `weight_pricing`       | available | فعال                         |
-| `length_pricing`       | partial   | فعال (جزئی)                  |
-| `volume_pricing`       | partial   | فعال (جزئی)                  |
-| `area_pricing`         | partial   | فعال (جزئی)                  |
-| `roll_cutting`         | partial   | فعال (جزئی)                  |
-| `tiered_pricing`       | partial   | فعال (جزئی)                  |
-| `multi_unit`           | available | فعال                         |
-| `batch_expiry`         | partial   | فعال (جزئی)                  |
-| `recipe_bom`           | partial   | فعال (جزئی)                  |
-| `variants`             | partial   | فعال (جزئی)                  |
-| `table_service`        | planned   | فعال نیست                    |
-| `serialized_items`     | partial   | فعال (جزئی)                  |
-| `auto_fitments`        | partial   | فعال (جزئی)                  |
-| `gold_purity`          | partial   | فعال (جزئی)                  |
-| `making_charges`       | partial   | فعال (جزئی)                  |
-| `resource_capacity`    | partial   | فعال (جزئی)                  |
-| `work_queue_sla`       | partial   | فعال (جزئی)                  |
-| `sales_orders`         | partial   | فعال (جزئی)                  |
-| `procurement_planning` | partial   | فعال (جزئی)                  |
-| `three_way_match`      | partial   | فعال (جزئی)                  |
-| `project_costing`      | partial   | فعال (جزئی)                  |
-| `timesheet_billing`    | partial   | فعال (جزئی)                  |
-| `contracts_recurring`  | partial   | فعال (جزئی)                  |
-| `deposits_liability`   | partial   | فعال (جزئی)                  |
-| `installments`         | partial   | فعال (جزئی)                  |
-| `package_credits`      | partial   | فعال (جزئی)                  |
-| `delivery_pod`         | partial   | فعال (جزئی)                  |
-| `fleet_dispatch`       | partial   | فعال (جزئی)                  |
-| `asset_rental`         | planned   | فعال نیست                    |
-| `quality_inspection`   | partial   | فعال (جزئی)                  |
-| `warranty_claims`      | partial   | فعال (جزئی)                  |
-| `cost_allocation`      | partial   | فعال (جزئی)                  |
-| `approval_workflow`    | partial   | فعال (جزئی)                  |
-| `owner_forecast`       | partial   | فعال (جزئی)                  |
-| `livestock_register`   | planned   | فعال نیست                    |
-| `crop_cycle`           | planned   | فعال نیست                    |
-| `room_nights`          | planned   | فعال نیست                    |
-
+| Capability | Status | Active in a resolved profile |
+| --- | --- | --- |
+| `measurement` | available | فعال |
+| `weight_pricing` | available | فعال |
+| `length_pricing` | partial | فعال (جزئی) |
+| `volume_pricing` | partial | فعال (جزئی) |
+| `area_pricing` | partial | فعال (جزئی) |
+| `roll_cutting` | partial | فعال (جزئی) |
+| `tiered_pricing` | partial | فعال (جزئی) |
+| `multi_unit` | available | فعال |
+| `batch_expiry` | partial | فعال (جزئی) |
+| `recipe_bom` | partial | فعال (جزئی) |
+| `variants` | partial | فعال (جزئی) |
+| `table_service` | planned | فعال نیست |
+| `serialized_items` | partial | فعال (جزئی) |
+| `auto_fitments` | partial | فعال (جزئی) |
+| `gold_purity` | partial | فعال (جزئی) |
+| `making_charges` | partial | فعال (جزئی) |
+| `resource_capacity` | partial | فعال (جزئی) |
+| `work_queue_sla` | partial | فعال (جزئی) |
+| `sales_orders` | partial | فعال (جزئی) |
+| `procurement_planning` | partial | فعال (جزئی) |
+| `three_way_match` | partial | فعال (جزئی) |
+| `project_costing` | partial | فعال (جزئی) |
+| `timesheet_billing` | partial | فعال (جزئی) |
+| `contracts_recurring` | partial | فعال (جزئی) |
+| `deposits_liability` | partial | فعال (جزئی) |
+| `installments` | partial | فعال (جزئی) |
+| `package_credits` | partial | فعال (جزئی) |
+| `delivery_pod` | partial | فعال (جزئی) |
+| `fleet_dispatch` | partial | فعال (جزئی) |
+| `asset_rental` | planned | فعال نیست |
+| `quality_inspection` | partial | فعال (جزئی) |
+| `warranty_claims` | partial | فعال (جزئی) |
+| `cost_allocation` | partial | فعال (جزئی) |
+| `approval_workflow` | partial | فعال (جزئی) |
+| `owner_forecast` | partial | فعال (جزئی) |
+| `livestock_register` | planned | فعال نیست |
+| `crop_cycle` | planned | فعال نیست |
+| `room_nights` | planned | فعال نیست |
 <!-- /industry-capability-table -->
 
 A capability is active when its status is `available` or `partial`; a `partial` one is real but

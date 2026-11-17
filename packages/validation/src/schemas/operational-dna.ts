@@ -444,6 +444,22 @@ export const GENERIC_TERMINOLOGY: TerminologyProfile = {
 }
 
 /**
+ * The trades that own a `terminology.trades.<namespace>.*` vocabulary block.
+ *
+ * Exported so the catalog guard can prove every namespace this resolver can emit
+ * exists in all three locales: a name added here without its translations makes
+ * `t(key)` throw and the screen silently loses the trade's own word.
+ */
+export const TERMINOLOGY_TRADE_NAMESPACES = [
+  'clothing',
+  'beautySalon',
+  'mobilePhones',
+  'repairs',
+  'jewellery',
+  'currencyExchange',
+] as const
+
+/**
  * Fallback chain: explicit DNA terminology → specialized trade/archetype keys →
  * generic neutral keys (never retail when unknown).
  */
@@ -455,14 +471,7 @@ export function resolveTerminologyProfile(
   const tradeNs =
     !unresolved &&
     tradeKey &&
-    [
-      'clothing',
-      'beautySalon',
-      'mobilePhones',
-      'repairs',
-      'jewellery',
-      'currencyExchange',
-    ].includes(tradeKey)
+    (TERMINOLOGY_TRADE_NAMESPACES as readonly string[]).includes(tradeKey)
       ? tradeKey
       : null
 

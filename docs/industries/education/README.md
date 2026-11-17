@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                          |
-| --------- | -------------------------------------------------------- |
-| شناسه     | `education`                                              |
-| نام       | آموزشگاه و کورس · آموزشگاه و کورس · Training and courses |
-| نوع       | صنف                                                      |
-| خانواده   | [آموزش](../families/education.md)                        |
-| پروفایل   | `specialized`                                            |
-| archetype | `LANGUAGE_TEACHER`                                       |
+| | |
+| --- | --- |
+| شناسه | `education` |
+| نام | آموزشگاه و کورس · آموزشگاه و کورس · Training and courses |
+| نوع | صنف |
+| خانواده | [آموزش](../families/education.md) |
+| پروفایل | `specialized` |
+| archetype | `LANGUAGE_TEACHER` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                   |
-| ---------- | --------------------------------------- |
-| offering   | `PACKAGE_SESSION`                       |
-| intake     | `CLASS_ATTENDANCE`                      |
-| inventory  | `UNRESOLVED`                            |
+| محور | مقدار |
+| --- | --- |
+| offering | `PACKAGE_SESSION` |
+| intake | `CLASS_ATTENDANCE` |
+| inventory | `UNRESOLVED` |
 | settlement | `PACKAGE_CREDITS`، `DEPOSIT_PREPAYMENT` |
-| workforce  | `UNRESOLVED`                            |
-| customer   | `STUDENT_PROFILE`                       |
-| topology   | `SEAT_OR_ROOM_BASED`                    |
+| workforce | `UNRESOLVED` |
+| customer | `STUDENT_PROFILE` |
+| topology | `SEAT_OR_ROOM_BASED` |
 
 **ماژول‌های فعال:** `accounting`، `attendance`، `consumables`، `customers`، `inventory`، `invoices`، `order_deposits`، `package_credits`، `payroll`، `services`، `team`، `warehouse`
 
@@ -42,8 +42,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت            | وضعیت                     | موتور · آفلاین              | شاهد یا محدودیت     |
-| ----------------- | ------------------------- | --------------------------- | ------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `package_credits` | `EXISTING_BUT_INCOMPLETE` | `package_credits` · partial | `GRANT_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «آموزش»

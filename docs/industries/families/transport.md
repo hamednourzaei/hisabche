@@ -17,12 +17,12 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                                    | پروفایل       | archetype          | قابلیت‌های روشن             | ساخته‌نشده |
-| ---------------------------------------------------------------------- | ------------- | ------------------ | --------------------------- | ---------- |
-| [ترانسپورت و باربری](../transport/README.md) (`transport`)             | `specialized` | `GENERIC_BUSINESS` | `multi_unit`                | —          |
-| [حمل بار و باربری](../freightTransport/README.md) (`freightTransport`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | —          |
-| [مسافربری](../passengerTransport/README.md) (`passengerTransport`)     | `specialized` | `GENERIC_BUSINESS` | `multi_unit`                | —          |
-| [پیک و تحویل بسته](../courier/README.md) (`courier`)                   | `generic`     | `GENERIC_BUSINESS` | —                           | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [ترانسپورت و باربری](../transport/README.md) (`transport`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [حمل بار و باربری](../freightTransport/README.md) (`freightTransport`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [مسافربری](../passengerTransport/README.md) (`passengerTransport`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [پیک و تحویل بسته](../courier/README.md) (`courier`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
 ## پنج گردش کار
 
@@ -63,22 +63,22 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی        | از کجا می‌آید                                                |
-| -------------- | ------------------------------------------------------------ |
-| سفرهای امروز   | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) |
-| طلب از مشتریان | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز)     |
-| فروش دوره      | `GET /analytics/sales` (آفلاین: در دسترس)                    |
-| رزرو وسیله‌ها  | `GET /resource-bookings` (آفلاین: در دسترس)                  |
-| حقوق دوره      | `GET /payrolls/summary` (آفلاین: در دسترس)                   |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| سفرهای امروز | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) |
+| طلب از مشتریان | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز) |
+| فروش دوره | `GET /analytics/sales` (آفلاین: در دسترس) |
+| رزرو وسیله‌ها | `GET /resource-bookings` (آفلاین: در دسترس) |
+| حقوق دوره | `GET /payrolls/summary` (آفلاین: در دسترس) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/customers`        | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                               |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                           |
-| `/accounting`       | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)).                                                        |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/customers` | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
+| `/accounting` | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

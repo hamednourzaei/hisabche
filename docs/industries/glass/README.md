@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                           |
-| --------- | --------------------------------------------------------- |
-| شناسه     | `glass`                                                   |
-| نام       | شیشه و آلومینیوم · شیشه و آلومینیوم · Glass and aluminium |
-| نوع       | صنف                                                       |
-| خانواده   | [خرده‌فروشی](../families/retail.md)                       |
-| پروفایل   | `specialized`                                             |
-| archetype | `RETAIL_STORE`                                            |
+| | |
+| --- | --- |
+| شناسه | `glass` |
+| نام | شیشه و آلومینیوم · شیشه و آلومینیوم · Glass and aluminium |
+| نوع | صنف |
+| خانواده | [خرده‌فروشی](../families/retail.md) |
+| پروفایل | `specialized` |
+| archetype | `RETAIL_STORE` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `PHYSICAL_GOODS`       |
-| intake     | `COUNTER_POS`          |
-| inventory  | `RETAIL_STOCK`         |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `COUNTER_POS` |
+| inventory | `RETAIL_STOCK` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `pos`، `products`، `team`، `warehouse`
 
@@ -42,10 +42,10 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت        | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                         |
-| ------------- | ----------------------- | --------------------------- | ------------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
-| `multi_unit`  | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts`    |
+| `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «خرده‌فروشی»
 

@@ -17,12 +17,12 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                             | پروفایل       | archetype          | قابلیت‌های روشن                                 | ساخته‌نشده |
-| --------------------------------------------------------------- | ------------- | ------------------ | ----------------------------------------------- | ---------- |
-| [تولیدی و کارگاه](../manufacturing/README.md) (`manufacturing`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit`                                    | —          |
-| [زراعت و کشاورزی](../agriculture/README.md) (`agriculture`)     | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `batch_expiry`     | —          |
-| [مالداری و دامداری](../livestock/README.md) (`livestock`)       | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `serialized_items` | —          |
-| [چاپ و تبلیغات](../printing/README.md) (`printing`)             | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                     | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [تولیدی و کارگاه](../manufacturing/README.md) (`manufacturing`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [زراعت و کشاورزی](../agriculture/README.md) (`agriculture`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `batch_expiry` | — |
+| [مالداری و دامداری](../livestock/README.md) (`livestock`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`، `serialized_items` | — |
+| [چاپ و تبلیغات](../printing/README.md) (`printing`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
 
 ## پنج گردش کار
 
@@ -63,23 +63,23 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی           | از کجا می‌آید                                           |
-| ----------------- | ------------------------------------------------------- |
-| تولید دوره        | `GET /manufacturing/runs` (فقط آنلاین) (فقط آنلاین)     |
-| مواد رو به اتمام  | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس) |
-| فروش دوره         | `GET /analytics/sales` (آفلاین: در دسترس)               |
-| بهای تولید        | `GET /manufacturing/report` (فقط آنلاین)                |
-| سفارش خرید در راه | `GET /purchase-orders` (آفلاین: در دسترس)               |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| تولید دوره | `GET /manufacturing/runs` (فقط آنلاین) (فقط آنلاین) |
+| مواد رو به اتمام | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس) |
+| فروش دوره | `GET /analytics/sales` (آفلاین: در دسترس) |
+| بهای تولید | `GET /manufacturing/report` (فقط آنلاین) |
+| سفارش خرید در راه | `GET /purchase-orders` (آفلاین: در دسترس) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `/manufacturing`    | فرمول، ثبت تولید و گزارش (`GET /manufacturing/runs` (فقط آنلاین)).                                                  |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                    |
-| `/accounting`       | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)).                                             |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/manufacturing` | فرمول، ثبت تولید و گزارش (`GET /manufacturing/runs` (فقط آنلاین)). |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/accounting` | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

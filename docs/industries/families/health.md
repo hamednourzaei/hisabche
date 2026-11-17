@@ -17,11 +17,11 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                      | پروفایل       | archetype          | قابلیت‌های روشن                                  | ساخته‌نشده |
-| -------------------------------------------------------- | ------------- | ------------------ | ------------------------------------------------ | ---------- |
-| [دواخانه و داروخانه](../pharmacy/README.md) (`pharmacy`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit`، `batch_expiry`                     | —          |
-| [کلینیک و مطب](../clinic/README.md) (`clinic`)           | `generic`     | `NAIL_TECH_BEAUTY` | —                                                | —          |
-| [عینک‌فروشی](../optician/README.md) (`optician`)         | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit`، `batch_expiry`، `serialized_items` | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [دواخانه و داروخانه](../pharmacy/README.md) (`pharmacy`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit`، `batch_expiry` | — |
+| [کلینیک و مطب](../clinic/README.md) (`clinic`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
+| [عینک‌فروشی](../optician/README.md) (`optician`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit`، `batch_expiry`، `serialized_items` | — |
 
 ## پنج گردش کار
 
@@ -62,23 +62,23 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی             | از کجا می‌آید                                                |
-| ------------------- | ------------------------------------------------------------ |
-| نوبت‌های امروز      | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) |
-| فروش امروز          | `GET /analytics/dashboard` (آفلاین: در دسترس)                |
-| کالای رو به انقضا   | بخش انقضا در `/warehouse?tab=expiry`                         |
-| کالای رو به اتمام   | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس)      |
-| طلب از بیماران/بیمه | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز)     |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| نوبت‌های امروز | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) |
+| فروش امروز | `GET /analytics/dashboard` (آفلاین: در دسترس) |
+| کالای رو به انقضا | بخش انقضا در `/warehouse?tab=expiry` |
+| کالای رو به اتمام | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس) |
+| طلب از بیماران/بیمه | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)).            |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                               |
-| `/customers`        | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
-| `/till`             | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)).                                                             |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                           |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/customers` | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
+| `/till` | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                |
-| --------- | ---------------------------------------------- |
-| شناسه     | `laundry`                                      |
-| نام       | خشک‌شویی · خشک‌شویی · Dry cleaning             |
-| نوع       | صنف                                            |
-| خانواده   | [خدمات شخصی](../families/personal_services.md) |
-| پروفایل   | `specialized`                                  |
-| archetype | `GENERIC_BUSINESS`                             |
+| | |
+| --- | --- |
+| شناسه | `laundry` |
+| نام | خشک‌شویی · خشک‌شویی · Dry cleaning |
+| نوع | صنف |
+| خانواده | [خدمات شخصی](../families/personal_services.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `UNRESOLVED`           |
-| intake     | `WALK_IN`              |
-| inventory  | `UNRESOLVED`           |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `services`، `team`، `warehouse`
 
@@ -42,8 +42,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت       | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                      |
-| ------------ | ----------------------- | --------------------------- | ---------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «خدمات شخصی»

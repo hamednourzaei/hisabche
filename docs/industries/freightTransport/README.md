@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                                   |
-| --------- | ----------------------------------------------------------------- |
-| شناسه     | `freightTransport`                                                |
-| نام       | حمل بار و باربری · حمل بار و باربری · Freight and cargo transport |
-| نوع       | صنف                                                               |
-| خانواده   | [حمل‌ونقل](../families/transport.md)                              |
-| پروفایل   | `specialized`                                                     |
-| archetype | `GENERIC_BUSINESS`                                                |
+| | |
+| --- | --- |
+| شناسه | `freightTransport` |
+| نام | حمل بار و باربری · حمل بار و باربری · Freight and cargo transport |
+| نوع | صنف |
+| خانواده | [حمل‌ونقل](../families/transport.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `DELIVERABLE_SERVICE`  |
-| intake     | `WALK_IN`              |
-| inventory  | `NONE`                 |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE` |
+| intake | `WALK_IN` |
+| inventory | `NONE` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `delivery`، `invoices`، `payroll`، `team`
 
@@ -42,10 +42,10 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت        | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                         |
-| ------------- | ----------------------- | --------------------------- | ------------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
-| `multi_unit`  | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts`    |
+| `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «حمل‌ونقل»
 

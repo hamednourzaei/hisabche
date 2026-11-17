@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                        |
-| --------- | -------------------------------------- |
-| شناسه     | `wholesale`                            |
-| نام       | عمده‌فروشی · عمده‌فروشی · Wholesale    |
-| نوع       | مدل فروش                               |
-| خانواده   | [عمده‌فروشی](../families/wholesale.md) |
-| پروفایل   | `generic`                              |
-| archetype | `GENERIC_BUSINESS`                     |
+| | |
+| --- | --- |
+| شناسه | `wholesale` |
+| نام | عمده‌فروشی · عمده‌فروشی · Wholesale |
+| نوع | مدل فروش |
+| خانواده | [عمده‌فروشی](../families/wholesale.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                     |
-| ---------- | ----------------------------------------- |
-| offering   | `PHYSICAL_GOODS`                          |
-| intake     | `WALK_IN`                                 |
-| inventory  | `RETAIL_STOCK`                            |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `WALK_IN` |
+| inventory | `RETAIL_STOCK` |
 | settlement | `IMMEDIATE_SETTLEMENT`، `CUSTOMER_CREDIT` |
-| workforce  | `UNRESOLVED`                              |
-| customer   | `STANDARD_PARTY`                          |
-| topology   | `SINGLE_LOCATION`                         |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `team`، `warehouse`
 

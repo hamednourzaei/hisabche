@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                             |
-| --------- | ----------------------------------------------------------- |
-| شناسه     | `courier`                                                   |
-| نام       | پیک و تحویل بسته · پیک و رساندن بسته · Courier and delivery |
-| نوع       | صنف                                                         |
-| خانواده   | [حمل‌ونقل](../families/transport.md)                        |
-| پروفایل   | `generic`                                                   |
-| archetype | `GENERIC_BUSINESS`                                          |
+| | |
+| --- | --- |
+| شناسه | `courier` |
+| نام | پیک و تحویل بسته · پیک و رساندن بسته · Courier and delivery |
+| نوع | صنف |
+| خانواده | [حمل‌ونقل](../families/transport.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `DELIVERABLE_SERVICE`  |
-| intake     | `WALK_IN`              |
-| inventory  | `NONE`                 |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE` |
+| intake | `WALK_IN` |
+| inventory | `NONE` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `delivery`، `invoices`، `payroll`، `team`
 

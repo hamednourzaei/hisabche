@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                       |
-| --------- | ----------------------------------------------------- |
-| شناسه     | `security`                                            |
-| نام       | خدمات امنیتی · خدمات امنیتی · Security services       |
-| نوع       | صنف                                                   |
-| خانواده   | [حرفه‌ای و اداری](../families/professional_office.md) |
-| پروفایل   | `specialized`                                         |
-| archetype | `GENERIC_BUSINESS`                                    |
+| | |
+| --- | --- |
+| شناسه | `security` |
+| نام | خدمات امنیتی · خدمات امنیتی · Security services |
+| نوع | صنف |
+| خانواده | [حرفه‌ای و اداری](../families/professional_office.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                     |
-| ---------- | ----------------------------------------- |
-| offering   | `DELIVERABLE_SERVICE`                     |
-| intake     | `WALK_IN`                                 |
-| inventory  | `NONE`                                    |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE` |
+| intake | `WALK_IN` |
+| inventory | `NONE` |
 | settlement | `IMMEDIATE_SETTLEMENT`، `CUSTOMER_CREDIT` |
-| workforce  | `UNRESOLVED`                              |
-| customer   | `STANDARD_PARTY`                          |
-| topology   | `SINGLE_LOCATION`                         |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `invoices`، `payroll`، `team`
 
@@ -42,8 +42,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت       | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                      |
-| ------------ | ----------------------- | --------------------------- | ---------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «حرفه‌ای و اداری»

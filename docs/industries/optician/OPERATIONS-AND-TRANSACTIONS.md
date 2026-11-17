@@ -13,10 +13,10 @@
 
 ## موتورهای اختصاصی که این صنف روشن می‌کند
 
-| موتور               | قابلیت‌ها                          | آفلاین                                  |
-| ------------------- | ---------------------------------- | --------------------------------------- |
-| `sales_invoice`     | `multi_unit`                       | روی دستگاه هم اجرا می‌شود · `available` |
-| `inventory_catalog` | `batch_expiry`، `serialized_items` | روی دستگاه هم اجرا می‌شود · `partial`   |
+| موتور | قابلیت‌ها | آفلاین |
+| --- | --- | --- |
+| `sales_invoice` | `multi_unit` | روی دستگاه هم اجرا می‌شود · `available` |
+| `inventory_catalog` | `batch_expiry`، `serialized_items` | روی دستگاه هم اجرا می‌شود · `partial` |
 
 ## DNA عملیاتی
 

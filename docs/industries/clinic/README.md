@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                  |
-| --------- | ------------------------------------------------ |
-| شناسه     | `clinic`                                         |
-| نام       | کلینیک و مطب · کلینیک و مطب · Clinic and surgery |
-| نوع       | صنف                                              |
-| خانواده   | [سلامت](../families/health.md)                   |
-| پروفایل   | `generic`                                        |
-| archetype | `NAIL_TECH_BEAUTY`                               |
+| | |
+| --- | --- |
+| شناسه | `clinic` |
+| نام | کلینیک و مطب · کلینیک و مطب · Clinic and surgery |
+| نوع | صنف |
+| خانواده | [سلامت](../families/health.md) |
+| پروفایل | `generic` |
+| archetype | `NAIL_TECH_BEAUTY` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                        |
-| ---------- | -------------------------------------------- |
-| offering   | `TIME_SERVICE`                               |
-| intake     | `APPOINTMENT_BOOKING`                        |
-| inventory  | `SERVICE_CONSUMABLES`                        |
+| محور | مقدار |
+| --- | --- |
+| offering | `TIME_SERVICE` |
+| intake | `APPOINTMENT_BOOKING` |
+| inventory | `SERVICE_CONSUMABLES` |
 | settlement | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`                                 |
-| customer   | `CLIENT_CARE_PROFILE`                        |
-| topology   | `RESOURCE_CAPACITY`                          |
+| workforce | `UNRESOLVED` |
+| customer | `CLIENT_CARE_PROFILE` |
+| topology | `RESOURCE_CAPACITY` |
 
 **ماژول‌های فعال:** `accounting`، `appointments`، `consumables`، `customers`، `invoices`، `order_deposits`، `payroll`، `services`، `team`
 

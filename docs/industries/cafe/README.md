@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                         |
-| --------- | ------------------------------------------------------- |
-| شناسه     | `cafe`                                                  |
-| نام       | کافه و قهوه‌خانه · کافه و قهوه‌خانه · Cafe and teahouse |
-| نوع       | صنف                                                     |
-| خانواده   | [غذا و پذیرایی](../families/food_hospitality.md)        |
-| پروفایل   | `generic`                                               |
-| archetype | `GENERIC_BUSINESS`                                      |
+| | |
+| --- | --- |
+| شناسه | `cafe` |
+| نام | کافه و قهوه‌خانه · کافه و قهوه‌خانه · Cafe and teahouse |
+| نوع | صنف |
+| خانواده | [غذا و پذیرایی](../families/food_hospitality.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `UNRESOLVED`           |
-| intake     | `WALK_IN`              |
-| inventory  | `UNRESOLVED`           |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `services`، `team`، `warehouse`
 

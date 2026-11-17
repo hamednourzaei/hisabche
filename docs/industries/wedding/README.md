@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                                        |
-| --------- | ---------------------------------------------------------------------- |
-| شناسه     | `wedding`                                                              |
-| نام       | تالار و خدمات عروسی · تالار و خدمات عروسی · Wedding venue and services |
-| نوع       | صنف                                                                    |
-| خانواده   | [خدمات شخصی](../families/personal_services.md)                         |
-| پروفایل   | `generic`                                                              |
-| archetype | `GENERIC_BUSINESS`                                                     |
+| | |
+| --- | --- |
+| شناسه | `wedding` |
+| نام | تالار و خدمات عروسی · تالار و خدمات عروسی · Wedding venue and services |
+| نوع | صنف |
+| خانواده | [خدمات شخصی](../families/personal_services.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `UNRESOLVED`           |
-| intake     | `WALK_IN`              |
-| inventory  | `UNRESOLVED`           |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `resources`، `services`، `team`، `warehouse`
 

@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                                   |
-| --------- | ----------------------------------------------------------------- |
-| شناسه     | `photography`                                                     |
-| نام       | عکاسی و فیلم‌برداری · عکاسی و فیلم‌برداری · Photography and video |
-| نوع       | صنف                                                               |
-| خانواده   | [خدمات شخصی](../families/personal_services.md)                    |
-| پروفایل   | `specialized`                                                     |
-| archetype | `NAIL_TECH_BEAUTY`                                                |
+| | |
+| --- | --- |
+| شناسه | `photography` |
+| نام | عکاسی و فیلم‌برداری · عکاسی و فیلم‌برداری · Photography and video |
+| نوع | صنف |
+| خانواده | [خدمات شخصی](../families/personal_services.md) |
+| پروفایل | `specialized` |
+| archetype | `NAIL_TECH_BEAUTY` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                        |
-| ---------- | -------------------------------------------- |
-| offering   | `TIME_SERVICE`                               |
-| intake     | `APPOINTMENT_BOOKING`                        |
-| inventory  | `SERVICE_CONSUMABLES`                        |
+| محور | مقدار |
+| --- | --- |
+| offering | `TIME_SERVICE` |
+| intake | `APPOINTMENT_BOOKING` |
+| inventory | `SERVICE_CONSUMABLES` |
 | settlement | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`                                 |
-| customer   | `CLIENT_CARE_PROFILE`                        |
-| topology   | `RESOURCE_CAPACITY`                          |
+| workforce | `UNRESOLVED` |
+| customer | `CLIENT_CARE_PROFILE` |
+| topology | `RESOURCE_CAPACITY` |
 
 **ماژول‌های فعال:** `accounting`، `appointments`، `consumables`، `customers`، `invoices`، `order_deposits`، `payroll`، `services`، `team`
 
@@ -42,8 +42,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت       | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                      |
-| ------------ | ----------------------- | --------------------------- | ---------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «خدمات شخصی»

@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                              |
-| --------- | ------------------------------------------------------------ |
-| شناسه     | `bakery`                                                     |
-| نام       | نانوایی و قنادی · نانوایی و قنادی · Bakery and confectionery |
-| نوع       | صنف                                                          |
-| خانواده   | [غذا و پذیرایی](../families/food_hospitality.md)             |
-| پروفایل   | `generic`                                                    |
-| archetype | `GENERIC_BUSINESS`                                           |
+| | |
+| --- | --- |
+| شناسه | `bakery` |
+| نام | نانوایی و قنادی · نانوایی و قنادی · Bakery and confectionery |
+| نوع | صنف |
+| خانواده | [غذا و پذیرایی](../families/food_hospitality.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                             |
-| ---------- | --------------------------------- |
-| offering   | `PHYSICAL_GOODS`                  |
-| intake     | `WALK_IN`                         |
-| inventory  | `RAW_MATERIALS`، `FINISHED_GOODS` |
-| settlement | `IMMEDIATE_SETTLEMENT`            |
-| workforce  | `UNRESOLVED`                      |
-| customer   | `STANDARD_PARTY`                  |
-| topology   | `SINGLE_LOCATION`                 |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `WALK_IN` |
+| inventory | `RAW_MATERIALS`، `FINISHED_GOODS` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `team`، `warehouse`
 

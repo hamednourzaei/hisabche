@@ -5,13 +5,18 @@
 // Validates 8-axis Operational DNA, Archetype Presets & Inference Resolver
 // ============================================
 
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   ARCHETYPE_PRESETS,
+  GENERIC_TERMINOLOGY,
+  TERMINOLOGY_TRADE_NAMESPACES,
   effectiveDnaAxes,
   operationalDnaSchema,
   operatingQuestionsFor,
   resolveDnaCapabilities,
+  resolveTerminologyProfile,
   inferOperationalDna,
   setupGapsOf,
 } from '../schemas/operational-dna'
@@ -304,5 +309,113 @@ describe('V60 Slice 2: 15-axis DNA, backward compatibility & adaptive questions'
     expect(restaurant).toContain('hasExpiryDates')
     expect(restaurant).not.toContain('holdsCustomerAssets')
     expect(restaurant).not.toContain('rentsOutAssets')
+  })
+})
+
+// ─── Terminology catalog contract ─────────────────────────────────────
+//
+// `resolveTerminologyProfile` turns DNA labels into i18n keys. A key that no
+// catalog defines makes `t(key)` throw, and the screen loses its own word. This
+// guard compares the keys this schema can emit with the three live catalogs
+// (fa-IR, fa-AF, en), so a new preset or trade namespace cannot land half
+// translated.
+const ROOT = resolve(__dirname, '../../../..')
+const LOCALE_CODES = ['fa', 'af', 'en'] as const
+const TRADE_SLOTS = ['offering', 'document', 'storageLocation', 'operator', 'order'] as const
+
+/** Flattens a message tree into dotted keys (`common.customer`). */
+function flattenCatalogKeys(value: unknown, prefix: string, out: Set<string>): Set<string> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    if (prefix) out.add(prefix)
+    return out
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    flattenCatalogKeys(child, prefix ? `${prefix}.${key}` : key, out)
+  }
+  return out
+}
+
+const CATALOG_KEYS = new Map(
+  LOCALE_CODES.map((locale) => {
+    const file = resolve(ROOT, `packages/i18n/messages/${locale}/common.json`)
+    return [
+      locale,
+      flattenCatalogKeys(JSON.parse(readFileSync(file, 'utf8')), '', new Set<string>()),
+    ]
+  }),
+)
+
+/** Comment-stripped source, so a key quoted in a comment is not asserted. */
+const DNA_SOURCE = readFileSync(
+  resolve(ROOT, 'packages/validation/src/schemas/operational-dna.ts'),
+  'utf8',
+)
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '')
+
+function emittedLabelKeys(): string[] {
+  const fromPresets = [...DNA_SOURCE.matchAll(/'(common\.[A-Za-z0-9_.]+)'/g)].flatMap((match) =>
+    typeof match[1] === 'string' ? [match[1]] : [],
+  )
+  const fromGeneric = Object.values(GENERIC_TERMINOLOGY).filter(
+    (key): key is string => typeof key === 'string',
+  )
+  return [...new Set([...fromPresets, ...fromGeneric])].sort()
+}
+
+function missingIn(locale: (typeof LOCALE_CODES)[number], keys: readonly string[]): string[] {
+  const catalog = CATALOG_KEYS.get(locale)
+  if (!catalog) throw new Error(`no catalog loaded for ${locale}`)
+  return keys.filter((key) => !catalog.has(key))
+}
+
+describe('Terminology keys resolve in all three live catalogs', () => {
+  it('every common.* and generic key the DNA schema emits exists in fa, af and en', () => {
+    const keys = emittedLabelKeys()
+    expect(keys.length).toBeGreaterThan(20)
+    for (const locale of LOCALE_CODES) {
+      expect(missingIn(locale, keys), `missing in ${locale}`).toEqual([])
+    }
+  })
+
+  it('every trade namespace the resolver can emit defines its five slots in every locale', () => {
+    expect(TERMINOLOGY_TRADE_NAMESPACES.length).toBeGreaterThan(0)
+    for (const locale of LOCALE_CODES) {
+      for (const namespace of TERMINOLOGY_TRADE_NAMESPACES) {
+        const keys = TRADE_SLOTS.map((slot) => `terminology.trades.${namespace}.${slot}`)
+        expect(missingIn(locale, keys), `${namespace} in ${locale}`).toEqual([])
+      }
+    }
+  })
+
+  it('a resolved trade emits only existing keys, and an unknown trade keeps the generic word', () => {
+    const retailDna = ARCHETYPE_PRESETS.RETAIL_STORE
+    if (!retailDna) throw new Error('RETAIL_STORE preset is missing')
+    for (const namespace of TERMINOLOGY_TRADE_NAMESPACES) {
+      const profile = resolveTerminologyProfile(retailDna, namespace)
+      const keys = [
+        profile.itemLabelKey,
+        profile.transactionLabelKey,
+        profile.storageLabelKey,
+        profile.operatorLabelKey,
+        profile.orderLabelKey,
+      ].filter((key): key is string => typeof key === 'string')
+      expect(keys, `${namespace} does not emit all five trade slots`).toHaveLength(5)
+      for (const locale of LOCALE_CODES) {
+        expect(missingIn(locale, keys), `${namespace} in ${locale}`).toEqual([])
+      }
+    }
+
+    // An unknown trade never inherits another trade's word: the DNA's own label
+    // stays (`common.product`), and when the DNA carries no label the key stays
+    // generic, so `useTerminology` keeps the text the screen already shows.
+    const unowned = resolveTerminologyProfile(retailDna, 'notARegisteredTrade')
+    expect(unowned.itemLabelKey).toBe('common.product')
+    expect(unowned.transactionLabelKey).toBe('common.sale')
+
+    const noLabels = operationalDnaSchema.parse({ ...retailDna, terminology: undefined })
+    const bare = resolveTerminologyProfile(noLabels, 'notARegisteredTrade')
+    expect(bare.itemLabelKey).toBe(GENERIC_TERMINOLOGY.itemLabelKey)
+    expect(bare.transactionLabelKey).toBe(GENERIC_TERMINOLOGY.transactionLabelKey)
   })
 })

@@ -17,11 +17,11 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                       | پروفایل       | archetype          | قابلیت‌های روشن  | ساخته‌نشده |
-| --------------------------------------------------------- | ------------- | ------------------ | ---------------- | ---------- |
-| [خدمات کامپیوتری](../itServices/README.md) (`itServices`) | `generic`     | `GENERIC_BUSINESS` | —                | —          |
-| [مکانیکی و سرویس](../mechanic/README.md) (`mechanic`)     | `generic`     | `SERVICE_REPAIR`   | —                | —          |
-| [تعمیرات](../repairs/README.md) (`repairs`)               | `specialized` | `SERVICE_REPAIR`   | `work_queue_sla` | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [خدمات کامپیوتری](../itServices/README.md) (`itServices`) | `generic` | `GENERIC_BUSINESS` | — | — |
+| [مکانیکی و سرویس](../mechanic/README.md) (`mechanic`) | `generic` | `SERVICE_REPAIR` | — | — |
+| [تعمیرات](../repairs/README.md) (`repairs`) | `specialized` | `SERVICE_REPAIR` | `work_queue_sla` | — |
 
 ## پنج گردش کار
 
@@ -62,23 +62,23 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی                       | از کجا می‌آید                                                     |
-| ----------------------------- | ----------------------------------------------------------------- |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
 | پرونده‌های باز به تفکیک وضعیت | `GET /analytics/dashboard/open-repair-tickets` (آفلاین: در دسترس) |
-| کارهای آماده‌ی تحویل          | `GET /repair-tickets` (فقط آنلاین) (وضعیت `ready`)                |
-| منتظر قطعه                    | `GET /repair-tickets` (فقط آنلاین) (وضعیت `waiting_parts`)        |
-| فروش امروز                    | `GET /analytics/dashboard` (آفلاین: در دسترس)                     |
-| قطعه‌های رو به اتمام          | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس)           |
+| کارهای آماده‌ی تحویل | `GET /repair-tickets` (فقط آنلاین) (وضعیت `ready`) |
+| منتظر قطعه | `GET /repair-tickets` (فقط آنلاین) (وضعیت `waiting_parts`) |
+| فروش امروز | `GET /analytics/dashboard` (آفلاین: در دسترس) |
+| قطعه‌های رو به اتمام | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `/customers`        | پرونده‌های تعمیر هر مشتری (`GET /repair-tickets` (فقط آنلاین)).                                                     |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                    |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
-| `/till`             | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)).                                                  |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/customers` | پرونده‌های تعمیر هر مشتری (`GET /repair-tickets` (فقط آنلاین)). |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| `/till` | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

@@ -17,14 +17,14 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                                   | پروفایل       | archetype          | قابلیت‌های روشن                             | ساخته‌نشده |
-| --------------------------------------------------------------------- | ------------- | ------------------ | ------------------------------------------- | ---------- |
-| [عمده‌فروشی](../wholesale/README.md) (`wholesale`)                    | `generic`     | `GENERIC_BUSINESS` | —                                           | —          |
-| [رول پارچه (عمده)](../fabricRoll/README.md) (`fabricRoll`)            | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                 | —          |
-| [مواد ساختمانی](../buildingMaterials/README.md) (`buildingMaterials`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                 | —          |
-| [چوب و الوار](../timber/README.md) (`timber`)                         | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                 | —          |
-| [تیل‌فروشی و گاز](../fuel/README.md) (`fuel`)                         | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                 | —          |
-| [تخم و کود](../seedsFertilizer/README.md) (`seedsFertilizer`)         | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`، `batch_expiry` | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [عمده‌فروشی](../wholesale/README.md) (`wholesale`) | `generic` | `GENERIC_BUSINESS` | — | — |
+| [رول پارچه (عمده)](../fabricRoll/README.md) (`fabricRoll`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [مواد ساختمانی](../buildingMaterials/README.md) (`buildingMaterials`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [چوب و الوار](../timber/README.md) (`timber`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [تیل‌فروشی و گاز](../fuel/README.md) (`fuel`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [تخم و کود](../seedsFertilizer/README.md) (`seedsFertilizer`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `batch_expiry` | — |
 
 ## پنج گردش کار
 
@@ -65,23 +65,23 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی           | از کجا می‌آید                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| طلب سررسیدشده     | `GET /customers` (آفلاین: در دسترس) و `GET /payments/open-invoices/:x/:x` (آفلاین: در دسترس) |
-| فروش دوره         | `GET /analytics/sales` (آفلاین: در دسترس)                                                    |
-| سفارش خرید در راه | `GET /purchase-orders` (آفلاین: در دسترس)                                                    |
-| موجودی هر انبار   | `GET /warehouses/overview` (آفلاین: در دسترس)                                                |
-| سود به تفکیک ارز  | `GET /accounting/profit-report/by-currency` (آفلاین: در دسترس)                               |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| طلب سررسیدشده | `GET /customers` (آفلاین: در دسترس) و `GET /payments/open-invoices/:x/:x` (آفلاین: در دسترس) |
+| فروش دوره | `GET /analytics/sales` (آفلاین: در دسترس) |
+| سفارش خرید در راه | `GET /purchase-orders` (آفلاین: در دسترس) |
+| موجودی هر انبار | `GET /warehouses/overview` (آفلاین: در دسترس) |
+| سود به تفکیک ارز | `GET /accounting/profit-report/by-currency` (آفلاین: در دسترس) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                               |
-| `/customers`        | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)).            |
-| `/accounting`       | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)).                                                        |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                           |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/customers` | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| `/accounting` | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

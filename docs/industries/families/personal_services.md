@@ -17,14 +17,14 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                             | پروفایل       | archetype          | قابلیت‌های روشن | ساخته‌نشده |
-| --------------------------------------------------------------- | ------------- | ------------------ | --------------- | ---------- |
-| [خیاطی](../tailoring/README.md) (`tailoring`)                   | `specialized` | `GENERIC_BUSINESS` | `measurement`   | —          |
-| [آرایشگاه و سلمانی](../barber/README.md) (`barber`)             | `generic`     | `NAIL_TECH_BEAUTY` | —               | —          |
-| [ناخن و سالن زیبایی](../beautySalon/README.md) (`beautySalon`)  | `generic`     | `NAIL_TECH_BEAUTY` | —               | —          |
-| [عکاسی و فیلم‌برداری](../photography/README.md) (`photography`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit`    | —          |
-| [خشک‌شویی](../laundry/README.md) (`laundry`)                    | `specialized` | `GENERIC_BUSINESS` | `multi_unit`    | —          |
-| [تالار و خدمات عروسی](../wedding/README.md) (`wedding`)         | `generic`     | `GENERIC_BUSINESS` | —               | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [خیاطی](../tailoring/README.md) (`tailoring`) | `specialized` | `GENERIC_BUSINESS` | `measurement` | — |
+| [آرایشگاه و سلمانی](../barber/README.md) (`barber`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
+| [ناخن و سالن زیبایی](../beautySalon/README.md) (`beautySalon`) | `generic` | `NAIL_TECH_BEAUTY` | — | — |
+| [عکاسی و فیلم‌برداری](../photography/README.md) (`photography`) | `specialized` | `NAIL_TECH_BEAUTY` | `multi_unit` | — |
+| [خشک‌شویی](../laundry/README.md) (`laundry`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [تالار و خدمات عروسی](../wedding/README.md) (`wedding`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
 ## پنج گردش کار
 
@@ -65,23 +65,23 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی                               | از کجا می‌آید                                                               |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| نوبت‌های امروز به تفکیک متخصص و وضعیت | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس)                |
-| بیعانه‌ی نگه‌داشته                    | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) (به تفکیک ارز) |
-| فروش امروز                            | `GET /analytics/dashboard` (آفلاین: در دسترس)                               |
-| کمیسیون دوره                          | `GET /provider-commissions` (فقط آنلاین)                                    |
-| مشتریانی که نیامدند                   | `GET /service-delivery/sessions` (آفلاین: در دسترس) (وضعیت `no_show`)       |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| نوبت‌های امروز به تفکیک متخصص و وضعیت | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) |
+| بیعانه‌ی نگه‌داشته | `GET /analytics/dashboard/today-sessions` (آفلاین: در دسترس) (به تفکیک ارز) |
+| فروش امروز | `GET /analytics/dashboard` (آفلاین: در دسترس) |
+| کمیسیون دوره | `GET /provider-commissions` (فقط آنلاین) |
+| مشتریانی که نیامدند | `GET /service-delivery/sessions` (آفلاین: در دسترس) (وضعیت `no_show`) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `/customers`        | جلسه‌های خدمت و پیگیری مشتری (`GET /service-delivery/sessions` (آفلاین: در دسترس)).                                 |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                    |
-| `/till`             | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)).                                                  |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/customers` | جلسه‌های خدمت و پیگیری مشتری (`GET /service-delivery/sessions` (آفلاین: در دسترس)). |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/till` | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

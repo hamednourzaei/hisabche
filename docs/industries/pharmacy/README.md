@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                    |
-| --------- | -------------------------------------------------- |
-| شناسه     | `pharmacy`                                         |
-| نام       | دواخانه و داروخانه · دواخانه و داروخانه · Pharmacy |
-| نوع       | صنف                                                |
-| خانواده   | [سلامت](../families/health.md)                     |
-| پروفایل   | `specialized`                                      |
-| archetype | `GENERIC_BUSINESS`                                 |
+| | |
+| --- | --- |
+| شناسه | `pharmacy` |
+| نام | دواخانه و داروخانه · دواخانه و داروخانه · Pharmacy |
+| نوع | صنف |
+| خانواده | [سلامت](../families/health.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `UNRESOLVED`           |
-| intake       | `WALK_IN`              |
-| inventory    | `UNRESOLVED`           |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `EXPIRY_DATES`         |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `EXPIRY_DATES` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `services`، `team`، `warehouse`
 
@@ -43,10 +43,10 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت         | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت                                      |
-| -------------- | ------------------------- | ----------------------------- | ---------------------------------------------------- |
-| `multi_unit`   | `EXISTING_AND_VERIFIED`   | `sales_invoice` · available   | `packages/ui/src/__tests__/product-unit-set.test.ts` |
-| `batch_expiry` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `BATCH_RETURN_RESTORE_MISSING`                       |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
+| `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
+| `batch_expiry` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `BATCH_RETURN_RESTORE_MISSING` |
 
 ## تفاوت با خانواده‌ی «سلامت»
 

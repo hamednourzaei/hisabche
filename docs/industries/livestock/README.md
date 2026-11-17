@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                   |
-| --------- | ------------------------------------------------- |
-| شناسه     | `livestock`                                       |
-| نام       | مالداری و دامداری · مالداری و دامداری · Livestock |
-| نوع       | صنف                                               |
-| خانواده   | [تولید](../families/manufacturing.md)             |
-| پروفایل   | `specialized`                                     |
-| archetype | `GENERIC_BUSINESS`                                |
+| | |
+| --- | --- |
+| شناسه | `livestock` |
+| نام | مالداری و دامداری · مالداری و دامداری · Livestock |
+| نوع | صنف |
+| خانواده | [تولید](../families/manufacturing.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `UNRESOLVED`           |
-| intake       | `WALK_IN`              |
-| inventory    | `UNRESOLVED`           |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `SERIAL_NUMBERS`       |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `SERIAL_NUMBERS` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `services`، `team`، `warehouse`
 
@@ -43,11 +43,11 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت             | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت                                         |
-| ------------------ | ------------------------- | ----------------------------- | ------------------------------------------------------- |
-| `measurement`      | `EXISTING_AND_VERIFIED`   | `sales_invoice` · available   | `packages/validation/src/__tests__/measurement.test.ts` |
-| `multi_unit`       | `EXISTING_AND_VERIFIED`   | `sales_invoice` · available   | `packages/ui/src/__tests__/product-unit-set.test.ts`    |
-| `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`                  |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
+| `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
+| `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
+| `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «تولید»
 

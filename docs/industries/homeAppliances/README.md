@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                             |
-| --------- | ------------------------------------------- |
-| شناسه     | `homeAppliances`                            |
-| نام       | لوازم خانگی · لوازم خانگی · Home appliances |
-| نوع       | صنف                                         |
-| خانواده   | [خرده‌فروشی](../families/retail.md)         |
-| پروفایل   | `specialized`                               |
-| archetype | `RETAIL_STORE`                              |
+| | |
+| --- | --- |
+| شناسه | `homeAppliances` |
+| نام | لوازم خانگی · لوازم خانگی · Home appliances |
+| نوع | صنف |
+| خانواده | [خرده‌فروشی](../families/retail.md) |
+| پروفایل | `specialized` |
+| archetype | `RETAIL_STORE` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `PHYSICAL_GOODS`       |
-| intake       | `COUNTER_POS`          |
-| inventory    | `RETAIL_STOCK`         |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `SERIAL_NUMBERS`       |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `COUNTER_POS` |
+| inventory | `RETAIL_STOCK` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `SERIAL_NUMBERS` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `pos`، `products`، `team`، `warehouse`
 
@@ -43,9 +43,9 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت             | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت                        |
-| ------------------ | ------------------------- | ----------------------------- | -------------------------------------- |
-| `variants`         | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `COST_LAYERS_ARE_PRODUCT_KEYED`        |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
+| `variants` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `COST_LAYERS_ARE_PRODUCT_KEYED` |
 | `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «خرده‌فروشی»

@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                   |
-| --------- | ------------------------------------------------- |
-| شناسه     | `carDealer`                                       |
-| نام       | نمایشگاه موتر · نمایشگاه موتر · Car dealership    |
-| نوع       | صنف                                               |
-| خانواده   | [مالی و بازرگانی](../families/finance_trading.md) |
-| پروفایل   | `specialized`                                     |
-| archetype | `GENERIC_BUSINESS`                                |
+| | |
+| --- | --- |
+| شناسه | `carDealer` |
+| نام | نمایشگاه موتر · نمایشگاه موتر · Car dealership |
+| نوع | صنف |
+| خانواده | [مالی و بازرگانی](../families/finance_trading.md) |
+| پروفایل | `specialized` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `UNRESOLVED`           |
-| intake       | `WALK_IN`              |
-| inventory    | `UNRESOLVED`           |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `SERIAL_NUMBERS`       |
+| محور | مقدار |
+| --- | --- |
+| offering | `UNRESOLVED` |
+| intake | `WALK_IN` |
+| inventory | `UNRESOLVED` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `SERIAL_NUMBERS` |
 
 **ماژول‌های فعال:** `accounting`، `consumables`، `customers`، `inventory`، `invoices`، `payroll`، `products`، `services`، `team`، `warehouse`
 
@@ -43,10 +43,10 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت             | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت                        |
-| ------------------ | ------------------------- | ----------------------------- | -------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` |
-| `auto_fitments`    | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `CORE_CHARGE_NOT_APPLIED`              |
+| `auto_fitments` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `CORE_CHARGE_NOT_APPLIED` |
 
 ## تفاوت با خانواده‌ی «مالی و بازرگانی»
 

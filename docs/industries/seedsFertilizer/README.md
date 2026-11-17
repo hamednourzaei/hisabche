@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                              |
-| --------- | -------------------------------------------- |
-| شناسه     | `seedsFertilizer`                            |
-| نام       | تخم و کود · تخم و کود · Seeds and fertiliser |
-| نوع       | صنف                                          |
-| خانواده   | [عمده‌فروشی](../families/wholesale.md)       |
-| پروفایل   | `specialized`                                |
-| archetype | `RETAIL_STORE`                               |
+| | |
+| --- | --- |
+| شناسه | `seedsFertilizer` |
+| نام | تخم و کود · تخم و کود · Seeds and fertiliser |
+| نوع | صنف |
+| خانواده | [عمده‌فروشی](../families/wholesale.md) |
+| پروفایل | `specialized` |
+| archetype | `RETAIL_STORE` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `PHYSICAL_GOODS`       |
-| intake       | `COUNTER_POS`          |
-| inventory    | `RETAIL_STOCK`         |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `EXPIRY_DATES`         |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `COUNTER_POS` |
+| inventory | `RETAIL_STOCK` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `EXPIRY_DATES` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `pos`، `products`، `team`، `warehouse`
 
@@ -43,11 +43,11 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت         | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت                                         |
-| -------------- | ------------------------- | ----------------------------- | ------------------------------------------------------- |
-| `measurement`  | `EXISTING_AND_VERIFIED`   | `sales_invoice` · available   | `packages/validation/src/__tests__/measurement.test.ts` |
-| `multi_unit`   | `EXISTING_AND_VERIFIED`   | `sales_invoice` · available   | `packages/ui/src/__tests__/product-unit-set.test.ts`    |
-| `batch_expiry` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `BATCH_RETURN_RESTORE_MISSING`                          |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
+| `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
+| `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
+| `batch_expiry` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `BATCH_RETURN_RESTORE_MISSING` |
 
 ## تفاوت با خانواده‌ی «عمده‌فروشی»
 

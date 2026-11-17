@@ -4,3 +4,13 @@ release-readiness-results/
 .claude/
 CLAUDE.md
 *.js
+
+# Generated documentation that is compared with its generator byte for byte.
+# prettier rewrites markdown tables, so formatting these files in the pre-commit
+# hook makes the guard fail and, when the same file is partially staged, makes
+# lint-staged's "restore unstaged changes" step fail with "patch does not apply".
+docs/industries/
+docs/architecture/industry/industry-diff.generated.md
+docs/architecture/industry/INDUSTRY-SUPPORT-MATRIX.md
+docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.md
+docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.csv

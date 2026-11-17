@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                               |
-| --------- | ------------------------------------------------------------- |
-| شناسه     | `autoParts`                                                   |
-| نام       | قطعات موتر و یدکی · قطعات موتر و یدکی · Auto parts and spares |
-| نوع       | صنف                                                           |
-| خانواده   | [خرده‌فروشی](../families/retail.md)                           |
-| پروفایل   | `specialized`                                                 |
-| archetype | `SERVICE_REPAIR`                                              |
+| | |
+| --- | --- |
+| شناسه | `autoParts` |
+| نام | قطعات موتر و یدکی · قطعات موتر و یدکی · Auto parts and spares |
+| نوع | صنف |
+| خانواده | [خرده‌فروشی](../families/retail.md) |
+| پروفایل | `specialized` |
+| archetype | `SERVICE_REPAIR` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                        |
-| ---------- | -------------------------------------------- |
-| offering   | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS`      |
-| intake     | `JOB_TICKET`                                 |
-| inventory  | `SPARE_PARTS`                                |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS` |
+| intake | `JOB_TICKET` |
+| inventory | `SPARE_PARTS` |
 | settlement | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`                                 |
-| customer   | `SERVICE_ASSET_PROFILE`                      |
-| topology   | `SINGLE_LOCATION`                            |
+| workforce | `UNRESOLVED` |
+| customer | `SERVICE_ASSET_PROFILE` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `job_tickets`، `order_deposits`، `payroll`، `products`، `team`، `warehouse`
 
@@ -42,8 +42,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت          | وضعیت                     | موتور · آفلاین                | شاهد یا محدودیت           |
-| --------------- | ------------------------- | ----------------------------- | ------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `auto_fitments` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `CORE_CHARGE_NOT_APPLIED` |
 
 ## تفاوت با خانواده‌ی «خرده‌فروشی»

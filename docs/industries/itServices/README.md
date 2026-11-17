@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                 |
-| --------- | ----------------------------------------------- |
-| شناسه     | `itServices`                                    |
-| نام       | خدمات کامپیوتری · خدمات کامپیوتری · IT services |
-| نوع       | صنف                                             |
-| خانواده   | [تعمیرات](../families/repairs.md)               |
-| پروفایل   | `generic`                                       |
-| archetype | `GENERIC_BUSINESS`                              |
+| | |
+| --- | --- |
+| شناسه | `itServices` |
+| نام | خدمات کامپیوتری · خدمات کامپیوتری · IT services |
+| نوع | صنف |
+| خانواده | [تعمیرات](../families/repairs.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                     |
-| ---------- | ----------------------------------------- |
-| offering   | `DELIVERABLE_SERVICE`                     |
-| intake     | `WALK_IN`                                 |
-| inventory  | `NONE`                                    |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE` |
+| intake | `WALK_IN` |
+| inventory | `NONE` |
 | settlement | `IMMEDIATE_SETTLEMENT`، `CUSTOMER_CREDIT` |
-| workforce  | `UNRESOLVED`                              |
-| customer   | `STANDARD_PARTY`                          |
-| topology   | `SINGLE_LOCATION`                         |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `invoices`، `payroll`، `team`
 

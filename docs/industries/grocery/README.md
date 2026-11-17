@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                                       |
-| --------- | --------------------------------------------------------------------- |
-| شناسه     | `grocery`                                                             |
-| نام       | خواروبار و سوپرمارکت · خواروبار و سوپرمارکت · Grocery and supermarket |
-| نوع       | صنف                                                                   |
-| خانواده   | [خرده‌فروشی](../families/retail.md)                                   |
-| پروفایل   | `specialized`                                                         |
-| archetype | `RETAIL_STORE`                                                        |
+| | |
+| --- | --- |
+| شناسه | `grocery` |
+| نام | خواروبار و سوپرمارکت · خواروبار و سوپرمارکت · Grocery and supermarket |
+| نوع | صنف |
+| خانواده | [خرده‌فروشی](../families/retail.md) |
+| پروفایل | `specialized` |
+| archetype | `RETAIL_STORE` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                  |
-| ------------ | ---------------------- |
-| offering     | `PHYSICAL_GOODS`       |
-| intake       | `COUNTER_POS`          |
-| inventory    | `RETAIL_STOCK`         |
-| settlement   | `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`           |
-| customer     | `STANDARD_PARTY`       |
-| topology     | `SINGLE_LOCATION`      |
-| unitTracking | `EXPIRY_DATES`         |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `COUNTER_POS` |
+| inventory | `RETAIL_STOCK` |
+| settlement | `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `EXPIRY_DATES` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `pos`، `products`، `team`، `warehouse`
 
@@ -43,8 +43,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت       | وضعیت                   | موتور · آفلاین              | شاهد یا محدودیت                                      |
-| ------------ | ----------------------- | --------------------------- | ---------------------------------------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «خرده‌فروشی»

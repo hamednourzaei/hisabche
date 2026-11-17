@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                             |
-| --------- | ----------------------------------------------------------- |
-| شناسه     | `kitchenware`                                               |
-| نام       | ظروف و لوازم آشپزخانه · ظروف و لوازم آشپزخانه · Kitchenware |
-| نوع       | صنف                                                         |
-| خانواده   | [خرده‌فروشی](../families/retail.md)                         |
-| پروفایل   | `generic`                                                   |
-| archetype | `RETAIL_STORE`                                              |
+| | |
+| --- | --- |
+| شناسه | `kitchenware` |
+| نام | ظروف و لوازم آشپزخانه · ظروف و لوازم آشپزخانه · Kitchenware |
+| نوع | صنف |
+| خانواده | [خرده‌فروشی](../families/retail.md) |
+| پروفایل | `generic` |
+| archetype | `RETAIL_STORE` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                  |
-| ---------- | ---------------------- |
-| offering   | `PHYSICAL_GOODS`       |
-| intake     | `COUNTER_POS`          |
-| inventory  | `RETAIL_STOCK`         |
+| محور | مقدار |
+| --- | --- |
+| offering | `PHYSICAL_GOODS` |
+| intake | `COUNTER_POS` |
+| inventory | `RETAIL_STOCK` |
 | settlement | `IMMEDIATE_SETTLEMENT` |
-| workforce  | `UNRESOLVED`           |
-| customer   | `STANDARD_PARTY`       |
-| topology   | `SINGLE_LOCATION`      |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `payroll`، `pos`، `products`، `team`، `warehouse`
 

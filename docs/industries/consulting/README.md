@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                                   |
-| --------- | ----------------------------------------------------------------- |
-| شناسه     | `consulting`                                                      |
-| نام       | مشاوره و حسابداری · مشاوره و حسابداری · Consulting and accounting |
-| نوع       | صنف                                                               |
-| خانواده   | [حرفه‌ای و اداری](../families/professional_office.md)             |
-| پروفایل   | `generic`                                                         |
-| archetype | `GENERIC_BUSINESS`                                                |
+| | |
+| --- | --- |
+| شناسه | `consulting` |
+| نام | مشاوره و حسابداری · مشاوره و حسابداری · Consulting and accounting |
+| نوع | صنف |
+| خانواده | [حرفه‌ای و اداری](../families/professional_office.md) |
+| پروفایل | `generic` |
+| archetype | `GENERIC_BUSINESS` |
 
 **وضعیت**
 
@@ -20,15 +20,15 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور       | مقدار                                     |
-| ---------- | ----------------------------------------- |
-| offering   | `DELIVERABLE_SERVICE`                     |
-| intake     | `WALK_IN`                                 |
-| inventory  | `NONE`                                    |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE` |
+| intake | `WALK_IN` |
+| inventory | `NONE` |
 | settlement | `IMMEDIATE_SETTLEMENT`، `CUSTOMER_CREDIT` |
-| workforce  | `UNRESOLVED`                              |
-| customer   | `STANDARD_PARTY`                          |
-| topology   | `SINGLE_LOCATION`                         |
+| workforce | `UNRESOLVED` |
+| customer | `STANDARD_PARTY` |
+| topology | `SINGLE_LOCATION` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `invoices`، `payroll`، `team`
 

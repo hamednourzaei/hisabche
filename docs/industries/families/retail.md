@@ -17,38 +17,38 @@
 
 ## صنف‌های این خانواده
 
-| صنف                                                                      | پروفایل       | archetype          | قابلیت‌های روشن                               | ساخته‌نشده |
-| ------------------------------------------------------------------------ | ------------- | ------------------ | --------------------------------------------- | ---------- |
-| [خرده‌فروشی](../retail/README.md) (`retail`)                             | `generic`     | `RETAIL_STORE`     | —                                             | —          |
-| [خواروبار و سوپرمارکت](../grocery/README.md) (`grocery`)                 | `specialized` | `RETAIL_STORE`     | `multi_unit`                                  | —          |
-| [قصابی](../butcher/README.md) (`butcher`)                                | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`، `batch_expiry`   | —          |
-| [میوه و سبزی](../fruitVegetable/README.md) (`fruitVegetable`)            | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`                   | —          |
-| [لبنیات](../dairy/README.md) (`dairy`)                                   | `specialized` | `RETAIL_STORE`     | `multi_unit`، `batch_expiry`                  | —          |
-| [خشکبار و آجیل](../nuts/README.md) (`nuts`)                              | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`                   | —          |
-| [عطاری و ادویه](../spices/README.md) (`spices`)                          | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                   | —          |
-| [طلا و جواهر](../jewellery/README.md) (`jewellery`)                      | `specialized` | `GENERIC_BUSINESS` | `measurement`، `weight_pricing`، `multi_unit` | —          |
-| [ساعت](../watches/README.md) (`watches`)                                 | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                   | —          |
-| [پوشاک](../clothing/README.md) (`clothing`)                              | `specialized` | `GENERIC_BUSINESS` | `variants`                                    | —          |
-| [پارچه متری و خرازی](../fabric/README.md) (`fabric`)                     | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                   | —          |
-| [کفش](../shoes/README.md) (`shoes`)                                      | `specialized` | `GENERIC_BUSINESS` | `variants`                                    | —          |
-| [فرش و قالین](../carpet/README.md) (`carpet`)                            | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`، `variants`       | —          |
-| [موبایل و لوازم جانبی](../mobilePhones/README.md) (`mobilePhones`)       | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items`                | —          |
-| [کامپیوتر و لپ‌تاپ](../computers/README.md) (`computers`)                | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items`                | —          |
-| [قطعات کامپیوتر](../computerComponents/README.md) (`computerComponents`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items`                | —          |
-| [لوازم برقی و الکترونیک](../electronics/README.md) (`electronics`)       | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items`                | —          |
-| [آهن‌فروشی و ابزار](../hardware/README.md) (`hardware`)                  | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit`                   | —          |
-| [رنگ و ابزار نقاشی](../paint/README.md) (`paint`)                        | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`، `variants`       | —          |
-| [شیشه و آلومینیوم](../glass/README.md) (`glass`)                         | `specialized` | `RETAIL_STORE`     | `measurement`، `multi_unit`                   | —          |
-| [قطعات موتر و یدکی](../autoParts/README.md) (`autoParts`)                | `specialized` | `SERVICE_REPAIR`   | `auto_fitments`                               | —          |
-| [مبل و اثاثیه](../furniture/README.md) (`furniture`)                     | `specialized` | `RETAIL_STORE`     | `multi_unit`، `variants`                      | —          |
-| [ظروف و لوازم آشپزخانه](../kitchenware/README.md) (`kitchenware`)        | `generic`     | `RETAIL_STORE`     | —                                             | —          |
-| [لوازم خانگی](../homeAppliances/README.md) (`homeAppliances`)            | `specialized` | `RETAIL_STORE`     | `variants`، `serialized_items`                | —          |
-| [لوازم‌التحریر و کتاب](../stationery/README.md) (`stationery`)           | `specialized` | `RETAIL_STORE`     | `multi_unit`                                  | —          |
-| [اسباب‌بازی](../toys/README.md) (`toys`)                                 | `specialized` | `RETAIL_STORE`     | `multi_unit`، `variants`                      | —          |
-| [کادو و تزئینات](../giftShop/README.md) (`giftShop`)                     | `specialized` | `RETAIL_STORE`     | `multi_unit`                                  | —          |
-| [لوازم آرایشی و بهداشتی](../cosmetics/README.md) (`cosmetics`)           | `specialized` | `RETAIL_STORE`     | `multi_unit`، `batch_expiry`، `variants`      | —          |
-| [گل و گیاه](../flowers/README.md) (`flowers`)                            | `specialized` | `RETAIL_STORE`     | `multi_unit`                                  | —          |
-| [کسب‌وکارت پیدا نشد؟ (سایر)](../other/README.md) (`other`)               | `generic`     | `GENERIC_BUSINESS` | —                                             | —          |
+| صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
+| --- | --- | --- | --- | --- |
+| [خرده‌فروشی](../retail/README.md) (`retail`) | `generic` | `RETAIL_STORE` | — | — |
+| [خواروبار و سوپرمارکت](../grocery/README.md) (`grocery`) | `specialized` | `RETAIL_STORE` | `multi_unit` | — |
+| [قصابی](../butcher/README.md) (`butcher`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `batch_expiry` | — |
+| [میوه و سبزی](../fruitVegetable/README.md) (`fruitVegetable`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit` | — |
+| [لبنیات](../dairy/README.md) (`dairy`) | `specialized` | `RETAIL_STORE` | `multi_unit`، `batch_expiry` | — |
+| [خشکبار و آجیل](../nuts/README.md) (`nuts`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit` | — |
+| [عطاری و ادویه](../spices/README.md) (`spices`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [طلا و جواهر](../jewellery/README.md) (`jewellery`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `weight_pricing`، `multi_unit` | — |
+| [ساعت](../watches/README.md) (`watches`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [پوشاک](../clothing/README.md) (`clothing`) | `specialized` | `GENERIC_BUSINESS` | `variants` | — |
+| [پارچه متری و خرازی](../fabric/README.md) (`fabric`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [کفش](../shoes/README.md) (`shoes`) | `specialized` | `GENERIC_BUSINESS` | `variants` | — |
+| [فرش و قالین](../carpet/README.md) (`carpet`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `variants` | — |
+| [موبایل و لوازم جانبی](../mobilePhones/README.md) (`mobilePhones`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items` | — |
+| [کامپیوتر و لپ‌تاپ](../computers/README.md) (`computers`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items` | — |
+| [قطعات کامپیوتر](../computerComponents/README.md) (`computerComponents`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items` | — |
+| [لوازم برقی و الکترونیک](../electronics/README.md) (`electronics`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items` | — |
+| [آهن‌فروشی و ابزار](../hardware/README.md) (`hardware`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [رنگ و ابزار نقاشی](../paint/README.md) (`paint`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `variants` | — |
+| [شیشه و آلومینیوم](../glass/README.md) (`glass`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit` | — |
+| [قطعات موتر و یدکی](../autoParts/README.md) (`autoParts`) | `specialized` | `SERVICE_REPAIR` | `auto_fitments` | — |
+| [مبل و اثاثیه](../furniture/README.md) (`furniture`) | `specialized` | `RETAIL_STORE` | `multi_unit`، `variants` | — |
+| [ظروف و لوازم آشپزخانه](../kitchenware/README.md) (`kitchenware`) | `generic` | `RETAIL_STORE` | — | — |
+| [لوازم خانگی](../homeAppliances/README.md) (`homeAppliances`) | `specialized` | `RETAIL_STORE` | `variants`، `serialized_items` | — |
+| [لوازم‌التحریر و کتاب](../stationery/README.md) (`stationery`) | `specialized` | `RETAIL_STORE` | `multi_unit` | — |
+| [اسباب‌بازی](../toys/README.md) (`toys`) | `specialized` | `RETAIL_STORE` | `multi_unit`، `variants` | — |
+| [کادو و تزئینات](../giftShop/README.md) (`giftShop`) | `specialized` | `RETAIL_STORE` | `multi_unit` | — |
+| [لوازم آرایشی و بهداشتی](../cosmetics/README.md) (`cosmetics`) | `specialized` | `RETAIL_STORE` | `multi_unit`، `batch_expiry`، `variants` | — |
+| [گل و گیاه](../flowers/README.md) (`flowers`) | `specialized` | `RETAIL_STORE` | `multi_unit` | — |
+| [کسب‌وکارت پیدا نشد؟ (سایر)](../other/README.md) (`other`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
 ## پنج گردش کار
 
@@ -91,24 +91,24 @@
 
 ## پنج اولویت داشبورد
 
-| چه چیزی                   | از کجا می‌آید                                            |
-| ------------------------- | -------------------------------------------------------- |
-| فروش امروز و تعداد فاکتور | `GET /analytics/dashboard` (آفلاین: در دسترس)            |
-| صندوق باز و مانده‌ی نقد   | `GET /pos/sessions/current` (آفلاین: در دسترس)           |
-| کالاهای رو به اتمام       | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس)  |
-| طلب از مشتریان            | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز) |
-| کالای راکد                | `GET /inventory/dead-stock` (آفلاین: در دسترس)           |
+| چه چیزی | از کجا می‌آید |
+| --- | --- |
+| فروش امروز و تعداد فاکتور | `GET /analytics/dashboard` (آفلاین: در دسترس) |
+| صندوق باز و مانده‌ی نقد | `GET /pos/sessions/current` (آفلاین: در دسترس) |
+| کالاهای رو به اتمام | `GET /inventory/reorder-suggestions` (آفلاین: در دسترس) |
+| طلب از مشتریان | `GET /customers` (آفلاین: در دسترس) (مانده به تفکیک ارز) |
+| کالای راکد | `GET /inventory/dead-stock` (آفلاین: در دسترس) |
 
 ## صفحه‌ها
 
-| نشانی               | این خانواده آنجا چه می‌خواند                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/invoices`         | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)).                                               |
-| `/warehouse`        | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)).            |
-| `/till`             | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)).                                                             |
-| `/customers`        | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
-| `/accounting`       | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)).                                                        |
-| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)).                           |
+| نشانی | این خانواده آنجا چه می‌خواند |
+| --- | --- |
+| `/invoices` | فروش، خرید، مرجوعی و قیمت‌گذاری در یک جدول (`GET /invoices` (آفلاین: در دسترس)). |
+| `/warehouse` | کالا، موجودی هر انبار، قفسه‌ها (`GET /products` (آفلاین: در دسترس)، `GET /warehouses/overview` (آفلاین: در دسترس)). |
+| `/till` | صندوق نقد هر ارز (`GET /pos/sessions/current` (آفلاین: در دسترس)). |
+| `/customers` | طرف حساب، مانده به تفکیک ارز، پیگیری (`GET /customers` (آفلاین: در دسترس)، `GET /customers/:x/accounting` (آفلاین: در دسترس)). |
+| `/accounting` | دفتر، خزانه و گزارش‌ها (`GET /accounting/accounts` (آفلاین: در دسترس)). |
+| `/team-and-payroll` | کارمند، حضور و غیاب، حقوق (`GET /employees` (آفلاین: در دسترس)، `GET /payrolls` (آفلاین: در دسترس)). |
 
 چیدمان، اقدام‌ها و ده حالت هر صفحه برای همه‌ی خانواده‌ها یکی است: [SHARED-PAGE-CATALOG.md](../SHARED-PAGE-CATALOG.md). موبایل و ویندوز همان صفحه و همان قرارداد را دارند؛ زیر ۷۶۸px جدول‌ها کارت می‌شوند.
 

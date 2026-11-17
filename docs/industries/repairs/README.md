@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                   |
-| --------- | --------------------------------- |
-| شناسه     | `repairs`                         |
-| نام       | تعمیرات · تعمیرات · Repairs       |
-| نوع       | صنف                               |
-| خانواده   | [تعمیرات](../families/repairs.md) |
-| پروفایل   | `specialized`                     |
-| archetype | `SERVICE_REPAIR`                  |
+| | |
+| --- | --- |
+| شناسه | `repairs` |
+| نام | تعمیرات · تعمیرات · Repairs |
+| نوع | صنف |
+| خانواده | [تعمیرات](../families/repairs.md) |
+| پروفایل | `specialized` |
+| archetype | `SERVICE_REPAIR` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                                        |
-| ------------ | -------------------------------------------- |
-| offering     | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS`      |
-| intake       | `JOB_TICKET`                                 |
-| inventory    | `SPARE_PARTS`                                |
-| settlement   | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`                                 |
-| customer     | `SERVICE_ASSET_PROFILE`                      |
-| topology     | `SINGLE_LOCATION`                            |
-| unitTracking | `SERIAL_NUMBERS`                             |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS` |
+| intake | `JOB_TICKET` |
+| inventory | `SPARE_PARTS` |
+| settlement | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `SERVICE_ASSET_PROFILE` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `SERIAL_NUMBERS` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `job_tickets`، `order_deposits`، `payroll`، `products`، `team`، `warehouse`
 
@@ -43,8 +43,8 @@
 
 **قابلیت‌های روشن**
 
-| قابلیت           | وضعیت                     | موتور · آفلاین                 | شاهد یا محدودیت         |
-| ---------------- | ------------------------- | ------------------------------ | ----------------------- |
+| قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
+| --- | --- | --- | --- |
 | `work_queue_sla` | `EXISTING_BUT_INCOMPLETE` | `work_orders_repair` · partial | `SLA_BREACH_ALERT_ONLY` |
 
 ## تفاوت با خانواده‌ی «تعمیرات»

@@ -4,14 +4,14 @@
 
 ## حقایق از کد
 
-|           |                                                            |
-| --------- | ---------------------------------------------------------- |
-| شناسه     | `mechanic`                                                 |
-| نام       | مکانیکی و سرویس · مکانیکی و سرویس · Mechanic and servicing |
-| نوع       | صنف                                                        |
-| خانواده   | [تعمیرات](../families/repairs.md)                          |
-| پروفایل   | `generic`                                                  |
-| archetype | `SERVICE_REPAIR`                                           |
+| | |
+| --- | --- |
+| شناسه | `mechanic` |
+| نام | مکانیکی و سرویس · مکانیکی و سرویس · Mechanic and servicing |
+| نوع | صنف |
+| خانواده | [تعمیرات](../families/repairs.md) |
+| پروفایل | `generic` |
+| archetype | `SERVICE_REPAIR` |
 
 **وضعیت**
 
@@ -20,16 +20,16 @@
 
 **DNA عملیاتی** (از `inferOperationalDna`)
 
-| محور         | مقدار                                        |
-| ------------ | -------------------------------------------- |
-| offering     | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS`      |
-| intake       | `JOB_TICKET`                                 |
-| inventory    | `SPARE_PARTS`                                |
-| settlement   | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
-| workforce    | `UNRESOLVED`                                 |
-| customer     | `SERVICE_ASSET_PROFILE`                      |
-| topology     | `SINGLE_LOCATION`                            |
-| unitTracking | `SERIAL_NUMBERS`                             |
+| محور | مقدار |
+| --- | --- |
+| offering | `DELIVERABLE_SERVICE`، `PHYSICAL_GOODS` |
+| intake | `JOB_TICKET` |
+| inventory | `SPARE_PARTS` |
+| settlement | `DEPOSIT_PREPAYMENT`، `IMMEDIATE_SETTLEMENT` |
+| workforce | `UNRESOLVED` |
+| customer | `SERVICE_ASSET_PROFILE` |
+| topology | `SINGLE_LOCATION` |
+| unitTracking | `SERIAL_NUMBERS` |
 
 **ماژول‌های فعال:** `accounting`، `customers`، `inventory`، `invoices`، `job_tickets`، `order_deposits`، `payroll`، `products`، `team`، `warehouse`
 
