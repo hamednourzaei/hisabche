@@ -32,6 +32,8 @@
 import { buildEnqueue } from '@hisabche/app-bridge'
 import {
   canDrawFromDeposit,
+  DEFAULT_DEPOSIT_FORFEITURE_POLICY,
+  decideDepositForfeiture,
   depositBalanceOf,
   ledgerAmountOf,
   ledgerFractionDigitsOf,
@@ -39,6 +41,7 @@ import {
   validateApplyDeposit,
   validateRefundDeposit,
   type AccountRole,
+  type DepositForfeiturePolicy,
 } from '@hisabche/validation'
 
 import { requireCapability } from '../auth'
@@ -329,6 +332,38 @@ function requireApplicableInvoice(c: RouteHandlerContext, deposit: DepositRow, i
 }
 
 export function registerOrderDepositsRoutes(router: Router) {
+  // ─── WP-13: preview a deposit forfeiture before applying it ───
+  // A cancelled order must not silently take the customer's money. This route
+  // returns the SHARED decision; applying it stays with the caller, under its
+  // own locks, so the device and the server cannot drift apart.
+  router.post('/orders/:id/deposits/:depositId/forfeiture-decision', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.read')
+    const row = c.db.get<{ id: string; amount_minor: number }>(
+      `SELECT id, amount_minor FROM order_deposits
+       WHERE id = ? AND workspace_id = ? AND order_id = ? AND deleted_at IS NULL`,
+      [c.params.depositId, c.ctx.workspaceId, c.params.id],
+    )
+    if (!row) throw new NotFoundError('Order deposit', c.params.depositId ?? '')
+    const body = (c.body || {}) as {
+      reason?: unknown
+      cancelledOn?: unknown
+      asOf?: unknown
+      alreadyAppliedMinor?: unknown
+      policy?: Partial<DepositForfeiturePolicy>
+    }
+    const decision = decideDepositForfeiture(
+      {
+        depositAmountMinor: Number(row.amount_minor),
+        alreadyAppliedMinor: Number(body.alreadyAppliedMinor ?? 0),
+        cancelledOn: String(body.cancelledOn ?? ''),
+        asOf: String(body.asOf ?? new Date().toISOString().slice(0, 10)),
+        reason: typeof body.reason === 'string' ? body.reason : null,
+      },
+      { ...DEFAULT_DEPOSIT_FORFEITURE_POLICY, ...(body.policy ?? {}) },
+    )
+    return { __status: 200, __data: decision }
+  })
+
   // ─── The deposits of one order ───────────────────────────────
   router.get('/orders/:id/deposits', async (c: RouteHandlerContext) => {
     const { db, ctx, params } = c

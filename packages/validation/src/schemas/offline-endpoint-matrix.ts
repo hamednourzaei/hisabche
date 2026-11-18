@@ -58,6 +58,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'DELETE /invoices/:x/installments': ['invoice.installment', 'available'],
   'DELETE /market/listings/:x': ['marketplace.apps', 'online_required'],
   'DELETE /marketplace/apps/:x/review': ['marketplace.apps', 'online_required'],
+  // WP-05: lifting a recall is a stock decision the device can make too. The
+  // feature is the local batch items one — `expiry.batches` resolves on the
+  // server, and a server feature cannot be «available» on the device.
+  'DELETE /operations/batches/:x/recall': ['inventory.batch_items', 'available'],
   'DELETE /permissions/roles/:x': ['governance.permission_matrix', 'online_required'],
   'DELETE /pos/sessions/:x': ['till.open_close', 'available'],
   'DELETE /products/:x': ['product.upsert', 'available'],
@@ -150,7 +154,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /customers/:x/profile': ['customer.terms', 'online_required'],
   'GET /cycle-counts': ['stockcount.create', 'online_required'],
   'GET /cycle-counts/:x': ['stockcount.list', 'online_required'],
-  'GET /deliveries/courier': ['trade.courier', 'online_required'],
+  // WP-19: courier deliveries and fleet — available offline
+  'GET /deliveries/courier': ['logistics.parcel', 'available'],
+  'GET /deliveries/fleet': ['logistics.dispatch', 'available'],
+  'GET /inventory/layers/:x': ['inventory.costing_method', 'online_required'],
   'GET /deliveries/notes': ['trade.delivery_notes', 'online_required'],
   'GET /developer/apps': ['developer.keys', 'online_required'],
   'GET /developer/apps/:x/screenshots': ['developer.keys', 'online_required'],
@@ -516,8 +523,14 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /cycle-counts/:x/cancel': ['stockcount.cancel', 'online_required'],
   'POST /cycle-counts/:x/complete': ['stockcount.complete', 'online_required'],
   'POST /cycle-counts/:x/lines': ['stockcount.record_line', 'online_required'],
-  'POST /deliveries/courier': ['trade.courier', 'online_required'],
+  // WP-19: courier deliveries and fleet — available offline
+  'POST /deliveries/courier': ['logistics.parcel', 'available'],
+  'POST /deliveries/courier/:x/assign': ['logistics.parcel', 'available'],
+  'POST /deliveries/courier/:x/close': ['logistics.parcel', 'available'],
+  'POST /deliveries/fleet': ['logistics.dispatch', 'available'],
+  'POST /deliveries/fleet/:x/service': ['logistics.dispatch', 'available'],
   'POST /deliveries/courier/:x/progress-cod': ['trade.courier', 'online_required'],
+  'POST /inventory/layers/:x/variant': ['inventory.costing_method', 'online_required'],
   'POST /deliveries/notes': ['trade.delivery_notes', 'online_required'],
   'POST /developer/apps': ['developer.keys', 'online_required'],
   'POST /developer/apps/:x/images': ['developer.keys', 'online_required'],
@@ -575,6 +588,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /oauth/authorize': ['developer.keys', 'online_required'],
   // correcting a batch's dates stays the server's call.
   'POST /operations/batches': ['inventory.batch_items', 'available'],
+  // WP-05: blocking a recalled carton, offline as well — the same shared core
+  // refuses it on the shelf and on the device. `inventory.batch_items` is the
+  // local batch feature; `expiry.batches` is server-executed.
+  'POST /operations/batches/:x/recall': ['inventory.batch_items', 'available'],
   'POST /operations/budgets/:x/approve': ['budget.manage', 'available'],
   'POST /operations/budgets/:x/archive': ['budget.manage', 'available'],
   'POST /operations/budgets/:x/revise': ['budget.manage', 'available'],

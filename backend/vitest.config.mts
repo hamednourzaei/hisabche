@@ -32,7 +32,21 @@ export default defineConfig({
         // ~10 min). Each pg file starts its OWN embedded Postgres in its own temp
         // dir on its own random port, so two never share state; more than two
         // made start-up fight for CPU and ports.
-        test: { name: 'pg', include: ['src/**/*.pg.test.ts'], fileParallelism: true, maxWorkers: 2, sequence: { groupOrder: 1 } },
+        //
+        // The preflight runs after the shared placeholder setup and refuses the
+        // file in milliseconds when this machine cannot start Postgres — the
+        // executables are absent, the shell is elevated, or the logon token lacks
+        // SeCreateGlobalPrivilege — instead of letting it wait out the timeout
+        // (measured: 65.7 s per file, 166 files, every test skipped). See
+        // src/__tests__/pg-preflight.setup.ts.
+        test: {
+          name: 'pg',
+          include: ['src/**/*.pg.test.ts'],
+          setupFiles: ['./src/__tests__/setup.ts', './src/__tests__/pg-preflight.setup.ts'],
+          fileParallelism: true,
+          maxWorkers: 2,
+          sequence: { groupOrder: 1 },
+        },
       },
     ],
   },

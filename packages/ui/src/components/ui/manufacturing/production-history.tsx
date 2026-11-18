@@ -125,7 +125,30 @@ export function ProductionHistory({
             align: 'end',
             sortValue: (run) => run.quantity,
             render: (run) => (
-              <span className="tabular-nums">{formatNumber(run.quantity, locale, 4)}</span>
+              <span className="tabular-nums">
+                {formatNumber(run.quantity, locale, 4)}
+                {run.scrapQuantity + run.reworkQuantity > 0 ? (
+                  <span className="ms-1 text-xs text-[hsl(var(--fg-tertiary))]">
+                    ({t('manufacturing.history.good', 'سالم')}{' '}
+                    {formatNumber(run.goodQuantity ?? run.quantity, locale, 4)})
+                  </span>
+                ) : null}
+              </span>
+            ),
+          },
+          {
+            id: 'yield',
+            labelKey: 'manufacturing.history.yield',
+            labelFallback: 'بازده',
+            align: 'end',
+            showFrom: 'lg',
+            sortValue: (run) => run.yieldPercent ?? 0,
+            // Unknown is not zero: a run that predates output tracking has no
+            // yield, and a dash says that rather than «0%».
+            render: (run) => (
+              <span className="tabular-nums">
+                {run.yieldPercent === null ? '—' : `${formatNumber(run.yieldPercent, locale, 1)}%`}
+              </span>
             ),
           },
           {
@@ -134,12 +157,17 @@ export function ProductionHistory({
             labelFallback: 'بهای هر واحد',
             align: 'end',
             showFrom: 'md',
-            sortValue: (run) => (run.quantity > 0 ? run.totalCost / run.quantity : 0),
-            render: (run) => (
-              <span className="tabular-nums">
-                {money(run.quantity > 0 ? run.totalCost / run.quantity : 0)}
-              </span>
-            ),
+            // Per SELLABLE unit: the run's cost is carried by what came out.
+            sortValue: (run) => {
+              const good = run.goodQuantity ?? run.quantity
+              return good > 0 ? run.totalCost / good : 0
+            },
+            render: (run) => {
+              const good = run.goodQuantity ?? run.quantity
+              return (
+                <span className="tabular-nums">{money(good > 0 ? run.totalCost / good : 0)}</span>
+              )
+            },
           },
           {
             id: 'total',

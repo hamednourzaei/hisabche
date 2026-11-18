@@ -19,9 +19,9 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [نانوایی و قنادی](../bakery/README.md) (`bakery`) | `generic` | `GENERIC_BUSINESS` | — | `production_batch` |
-| [رستوران](../restaurant/README.md) (`restaurant`) | `generic` | `GENERIC_BUSINESS` | — | `table_service`، `production_batch` |
-| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`) | `generic` | `GENERIC_BUSINESS` | — | `table_service`، `production_batch` |
+| [نانوایی و قنادی](../bakery/README.md) (`bakery`) | `generic` | `GENERIC_BUSINESS` | — | — |
+| [رستوران](../restaurant/README.md) (`restaurant`) | `generic` | `GENERIC_BUSINESS` | — | `table_service` |
+| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`) | `generic` | `GENERIC_BUSINESS` | — | `table_service` |
 
 ## پنج گردش کار
 
@@ -91,7 +91,7 @@
 
 ## شکاف‌های خانواده
 
-قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `production_batch`، `table_service`.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `table_service`.
 
 ## بر اساس اندازه
 

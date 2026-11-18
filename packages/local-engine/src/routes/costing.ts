@@ -20,6 +20,7 @@ import {
   inventorySettingsInputSchema,
   lateCostKeyFromDigest,
   round2,
+  stockQuantityOfLine,
   uncoveredSoldUnits,
   type StockPosition,
 } from '@hisabche/validation'
@@ -196,8 +197,14 @@ export function registerCostingRoutes(router: Router): void {
     }
 
     return db.transaction(() => {
-      const items = db.all<{ id: string; product_id: string | null; quantity: number }>(
-        `SELECT id, product_id, quantity FROM invoice_item
+      const items = db.all<{
+        id: string
+        product_id: string | null
+        variant_id: string | null
+        quantity: number
+        cut_loss_quantity: number | null
+      }>(
+        `SELECT id, product_id, variant_id, quantity, cut_loss_quantity FROM invoice_item
           WHERE invoice_id = ? AND workspace_id = ? AND deleted_at IS NULL ORDER BY sort_order`,
         [id, ctx.workspaceId],
       )
@@ -221,39 +228,47 @@ export function registerCostingRoutes(router: Router): void {
       // COVERED — by layers the shelf does not need, or by a layer of its own at
       // the product's purchase price — and only a covered line is issued.
       const uncosted: string[] = []
-      const toIssue: Array<{ line: string; productId: string; quantity: number }> = []
+      const toIssue: Array<{
+        line: string
+        productId: string
+        variantId: string | null
+        quantity: number
+      }> = []
       for (const item of items) {
         if (!item.product_id || !(Number(item.quantity) > 0)) continue
         if (drawn.has(item.id)) continue
-        const position = stockPositions(db, ctx.workspaceId).find(
-          (row) => row.productId === item.product_id,
-        ) ?? {
-          // Not on the shelf (quantity 0) — still needs its units covered.
+        // WP-03 — the shelf lost the sold units AND the cut-away ones, so the
+        // layers are short by that figure too.
+        const issuedQuantity = stockQuantityOfLine({
+          quantity: Number(item.quantity),
+          cutLossQuantity: Number(item.cut_loss_quantity) || 0,
+        })
+        const productRow = db.get<{ name: string; quantity: number; buy_price: number }>(
+          `SELECT name, quantity, buy_price FROM product
+            WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+          [item.product_id, ctx.workspaceId],
+        )
+        // STRICT (WP-01): only layers of the line's own variant cover it.
+        const layered = db.get<{ q: number | null }>(
+          `SELECT sum(remaining_qty) AS q FROM cost_layer
+            WHERE workspace_id = ? AND product_id = ? AND variant_id IS ?
+              AND remaining_qty > 0 AND deleted_at IS NULL`,
+          [ctx.workspaceId, item.product_id, item.variant_id],
+        )?.q
+        const position = {
           productId: item.product_id,
-          name: '',
-          quantity: 0,
-          buyPrice:
-            Number(
-              db.get<{ buy_price: number }>(
-                'SELECT buy_price FROM product WHERE id = ? AND workspace_id = ?',
-                [item.product_id, ctx.workspaceId],
-              )?.buy_price,
-            ) || 0,
-          layeredQuantity:
-            Number(
-              db.get<{ q: number | null }>(
-                `SELECT sum(remaining_qty) AS q FROM cost_layer
-                WHERE workspace_id = ? AND product_id = ? AND remaining_qty > 0 AND deleted_at IS NULL`,
-                [ctx.workspaceId, item.product_id],
-              )?.q,
-            ) || 0,
+          name: String(productRow?.name ?? ''),
+          quantity: Number(productRow?.quantity) || 0,
+          buyPrice: Number(productRow?.buy_price) || 0,
+          layeredQuantity: Number(layered) || 0,
         }
-        const short = uncoveredSoldUnits(position, Number(item.quantity))
+        const short = uncoveredSoldUnits(position, issuedQuantity)
         let covered = short <= 0
         if (!covered && position.buyPrice > 0) {
           receiveLayer(db, {
             workspaceId: ctx.workspaceId,
             productId: item.product_id,
+            variantId: item.variant_id,
             warehouseId: null,
             quantity: short,
             unitCost: position.buyPrice,
@@ -270,7 +285,8 @@ export function registerCostingRoutes(router: Router): void {
           toIssue.push({
             line: item.id,
             productId: item.product_id,
-            quantity: Number(item.quantity),
+            variantId: item.variant_id,
+            quantity: issuedQuantity,
           })
         } else {
           uncosted.push(item.product_id)
@@ -281,6 +297,7 @@ export function registerCostingRoutes(router: Router): void {
         drawFromLayers(db, {
           workspaceId: ctx.workspaceId,
           productId: line.productId,
+          variantId: line.variantId,
           quantity: line.quantity,
           invoiceId: id,
           invoiceLine: line.line,

@@ -328,9 +328,13 @@ export function ManufacturingReportView({
                       labelFallback: 'بهای واحد، اولین تولید',
                       align: 'end',
                       showFrom: 'md',
-                      sortValue: (row) => row.firstUnitCost,
+                      // Unknown sorts last: a run with no sellable unit has no
+                      // per-unit cost, and that is not «the cheapest».
+                      sortValue: (row) => row.firstUnitCost ?? Number.POSITIVE_INFINITY,
                       render: (row) => (
-                        <span className="tabular-nums">{money(row.firstUnitCost)}</span>
+                        <span className="tabular-nums">
+                          {row.firstUnitCost === null ? '—' : money(row.firstUnitCost)}
+                        </span>
                       ),
                     },
                     {
@@ -338,9 +342,11 @@ export function ManufacturingReportView({
                       labelKey: 'manufacturing.report.lastUnit',
                       labelFallback: 'بهای واحد، آخرین تولید',
                       align: 'end',
-                      sortValue: (row) => row.lastUnitCost,
+                      sortValue: (row) => row.lastUnitCost ?? Number.POSITIVE_INFINITY,
                       render: (row) => (
-                        <span className="tabular-nums">{money(row.lastUnitCost)}</span>
+                        <span className="tabular-nums">
+                          {row.lastUnitCost === null ? '—' : money(row.lastUnitCost)}
+                        </span>
                       ),
                     },
                   ]}

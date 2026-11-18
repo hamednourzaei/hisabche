@@ -15,6 +15,8 @@ export type CostingSourceType = 'invoice' | 'purchase_order' | 'adjustment' | 'o
 
 export interface ReceiptRequest {
   productId: string
+  /** The variant the goods belong to. Omitted/null = stock with no variant. */
+  variantId?: string | null
   warehouseId?: string | null
   quantity: number
   unitCost: number
@@ -29,6 +31,11 @@ export interface ReceiptRequest {
 
 export interface IssueRequest {
   productId: string
+  /**
+   * The variant being issued. Strict: only layers of this same variant are
+   * consumed; null consumes only unassigned layers.
+   */
+  variantId?: string | null
   warehouseId?: string | null
   quantity: number
   entryDate: string

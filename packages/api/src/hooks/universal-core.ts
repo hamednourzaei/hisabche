@@ -49,6 +49,8 @@ export const universalCoreKeys = {
   crops: () => [...universalCoreKeys.all, 'crops'] as const,
   trips: () => [...universalCoreKeys.all, 'trips'] as const,
   courier: () => [...universalCoreKeys.all, 'courier'] as const,
+  deliveryFleet: (onDate?: string) =>
+    [...universalCoreKeys.all, 'delivery-fleet', onDate ?? 'today'] as const,
   deliveryNotes: (invoiceId?: string) =>
     [...universalCoreKeys.all, 'delivery-notes', invoiceId ?? 'all'] as const,
   packageCredits: (customerId?: string, productId?: string) =>
@@ -330,6 +332,31 @@ export interface CourierDeliveryRecord {
   codAmountMinor?: number | null
   status: string
   driverEmployeeId?: string | null
+  vehicleId?: string | null
+  plannedOn?: string | null
+  codStage?: string | null
+  codCollectedMinor?: number | null
+  codShortfallMinor?: number | null
+  podMethod?: string | null
+  podRecipientName?: string | null
+  podRecordedAt?: string | null
+  failureReason?: string | null
+  attemptCount?: number | null
+}
+
+export interface DeliveryVehicleRecord {
+  id: string
+  name: string
+  plateNumber?: string | null
+  assetId?: string | null
+  capacityParcels?: number | null
+  active: boolean
+  lastServiceOn?: string | null
+  nextServiceDueOn?: string | null
+  odometerKm?: number | null
+  notes?: string | null
+  serviceState?: 'ok' | 'due_soon' | 'overdue' | 'unknown'
+  assignedOnDate?: number
 }
 
 export interface DeliveryNoteRecord {
@@ -1116,6 +1143,133 @@ export function useProgressCourierCod() {
   })
 }
 
+// ─── 13b. Fleet, Dispatch & Closing (WP-19) ────────────────────
+
+export function useDeliveryFleet(onDate?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: universalCoreKeys.deliveryFleet(onDate),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data?: DeliveryVehicleRecord[] }>(
+        '/deliveries/fleet',
+        { params: onDate ? { onDate } : undefined },
+      )
+      return asList<DeliveryVehicleRecord>(data?.data, '/deliveries/fleet')
+    },
+    enabled: authReady,
+  })
+}
+
+export function useCreateDeliveryVehicle() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      name: string
+      plateNumber?: string | undefined
+      assetId?: string | undefined
+      capacityParcels?: number | undefined
+      nextServiceDueOn?: string | undefined
+      odometerKm?: number | undefined
+      notes?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: DeliveryVehicleRecord }>(
+        '/deliveries/fleet',
+        input,
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryFleet() })
+    },
+  })
+}
+
+export function useRecordVehicleService() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      vehicleId,
+      ...input
+    }: {
+      vehicleId: string
+      serviceOn: string
+      nextServiceDueOn?: string | undefined
+      odometerKm?: number | undefined
+      notes?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: DeliveryVehicleRecord }>(
+        `/deliveries/fleet/${vehicleId}/service`,
+        input,
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryFleet() })
+    },
+  })
+}
+
+export function useAssignCourierDelivery() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      deliveryId,
+      ...input
+    }: {
+      deliveryId: string
+      vehicleId?: string | undefined
+      driverEmployeeId?: string | undefined
+      plannedOn: string
+    }) => {
+      const { data } = await apiClient.post<{ data: CourierDeliveryRecord }>(
+        `/deliveries/courier/${deliveryId}/assign`,
+        input,
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.courier() })
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryFleet() })
+    },
+  })
+}
+
+export function useCloseCourierDelivery() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      deliveryId,
+      ...input
+    }: {
+      deliveryId: string
+    } & (
+      | {
+          outcome: 'delivered'
+          pod: {
+            method: 'signature' | 'photo' | 'code'
+            recipientName: string
+            code?: string | undefined
+            photoRef?: string | undefined
+            capturedAt?: string | undefined
+            notes?: string | undefined
+          }
+          collectedMinor?: number | undefined
+        }
+      | { outcome: 'failed'; failureReason: string }
+    )) => {
+      const { data } = await apiClient.post<{ data: CourierDeliveryRecord }>(
+        `/deliveries/courier/${deliveryId}/close`,
+        input,
+      )
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.courier() })
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.deliveryFleet() })
+    },
+  })
+}
+
 // ─── 14. Delivery Notes (G-14) ──────────────────────────────────
 
 export function useDeliveryNotes(invoiceId?: string) {
@@ -1160,18 +1314,27 @@ export function useRecordDeliveryPod() {
     mutationFn: async ({
       noteId,
       recipientName,
+      method,
+      code,
+      photoRef,
       deliveredAt,
       notes,
     }: {
       noteId: string
       recipientName: string
+      method?: 'signature' | 'photo' | 'code' | undefined
+      code?: string | undefined
+      photoRef?: string | undefined
       deliveredAt?: string | undefined
       notes?: string | undefined
     }) => {
       const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
         `/deliveries/notes/${noteId}/pod`,
         {
+          method: method ?? 'signature',
           recipientName,
+          ...(code ? { code } : {}),
+          ...(photoRef ? { photoRef } : {}),
           ...(deliveredAt ? { deliveredAt } : {}),
           ...(notes ? { notes } : {}),
         },

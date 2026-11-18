@@ -1807,8 +1807,14 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'quality.routes.ts',
     route: 'POST /api/warranty-claims',
-    mechanisms: ['last-write-wins'],
-    evidence: [{ file: `${SVC}/quality/quality.service.ts`, text: 'async submitWarrantyClaim' }],
+    mechanisms: ['idempotency-key', 'unique-constraint'],
+    evidence: [
+      { file: `${SVC}/quality/quality.service.ts`, text: 'async submitWarrantyClaim' },
+      {
+        file: 'docs/warranty-claim-idempotency-migration.sql',
+        text: 'warranty_claims_client_request_idx',
+      },
+    ],
   },
   {
     routeFile: 'accounting.routes.ts',
@@ -1928,6 +1934,91 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
         file: `${SVC}/crm/appointment.service.ts`,
         text: 'Check conflicts directly in SQL for the assigned staff member and time window',
       },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/transport/trips',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/transport/transport.service.ts`, text: 'async createFreightTrip' }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/courier',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/transport/transport.service.ts`, text: 'async createCourierDelivery' },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/courier/:id/progress-cod',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/transport/transport.service.ts`, text: 'progressCodStage' }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/courier/:id/settle-cod',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      { file: `${RT}/transport.routes.ts`, text: 'readClientRequestId' },
+      {
+        file: `${SVC}/transport/transport.service.ts`,
+        text: 'clientRequestId: input.clientRequestId',
+      },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/courier/:id/assign',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/transport/transport.service.ts`, text: 'dispatchIssues({' }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/courier/:id/close',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      { file: `${RT}/transport.routes.ts`, text: 'readClientRequestId' },
+      {
+        file: `${SVC}/transport/transport.service.ts`,
+        text: 'const requestKey = input.clientRequestId',
+      },
+      { file: 'docs/delivery-logistics-01-migration.sql', text: 'courier_deliveries_request_idx' },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/fleet',
+    mechanisms: ['unique-constraint'],
+    evidence: [
+      {
+        file: `${SVC}/transport/transport.service.ts`,
+        text: "throw new ConflictError('VEHICLE_PLATE_TAKEN')",
+      },
+      { file: 'docs/delivery-logistics-01-migration.sql', text: 'delivery_vehicles_plate_idx' },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/fleet/:id/service',
+    mechanisms: ['last-write-wins'],
+    evidence: [
+      { file: `${SVC}/transport/transport.service.ts`, text: 'async recordVehicleService' },
+    ],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/notes',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/transport/transport.service.ts`, text: 'async createDeliveryNote' }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/notes/:id/pod',
+    mechanisms: ['check-then-write'],
+    evidence: [
+      { file: `${SVC}/transport/transport.service.ts`, text: 'pod_recorded_at: recordedAt' },
     ],
   },
 ]

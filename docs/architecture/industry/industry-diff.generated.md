@@ -14,7 +14,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | Specialised profile | 52 |
 | General-purpose baseline | 15 |
 | Exact match with `JOURNEY_INDUSTRIES` | 14 |
-| Available capabilities | 3 |
+| Available capabilities | 4 |
 | Partial capabilities | 32 |
 
 ## Industry registry
@@ -37,8 +37,8 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | ساعت | `watches` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | صرافی | `currencyExchange` | بله | — | تخصصی | currency_exchange | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | پوشاک | `clothing` | بله | — | تخصصی | variants | `piece` | — | — | name، sellPrice | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing | — |
-| پارچه متری و خرازی | `fabric` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
-| رول پارچه (عمده) | `fabricRoll` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| پارچه متری و خرازی | `fabric` | بله | — | تخصصی | measurement، multi_unit، length_pricing | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| رول پارچه (عمده) | `fabricRoll` | بله | — | تخصصی | measurement، multi_unit، length_pricing | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | کفش | `shoes` | بله | — | تخصصی | variants | `piece` | — | — | name، sellPrice | lowStockVariants، kpis، workQueue، chart، insights، activities، manufacturing | — |
 | فرش و قالین | `carpet` | بله | — | تخصصی | measurement، multi_unit، variants | `meter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | خیاطی | `tailoring` | بله | — | تخصصی | measurement | `meter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
@@ -50,7 +50,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | آهن‌فروشی و ابزار | `hardware` | بله | بله | تخصصی | measurement، multi_unit | `kg` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | مواد ساختمانی | `buildingMaterials` | بله | — | تخصصی | measurement، multi_unit | `kg` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | رنگ و ابزار نقاشی | `paint` | بله | — | تخصصی | measurement، multi_unit، variants | `liter` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
-| چوب و الوار | `timber` | بله | — | تخصصی | measurement، multi_unit | `meter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
+| چوب و الوار | `timber` | بله | — | تخصصی | measurement، multi_unit، length_pricing | `meter` | — | — | unit، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | شیشه و آلومینیوم | `glass` | بله | — | تخصصی | measurement، multi_unit | `piece` | — | — | unit، sellPrice، quantity | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | ساخت‌وساز و پیمانکاری | `construction` | بله | بله | تخصصی | measurement، multi_unit | `piece` | — | — | name، sellPrice | kpis، workQueue، chart، insights، activities، manufacturing | — |
 | تولیدی و کارگاه | `manufacturing` | بله | بله | تخصصی | multi_unit | `piece` | — | — | unit، quantity | manufacturing، workQueue، kpis، chart، insights، activities | — |
@@ -98,7 +98,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | --- | --- | --- |
 | `measurement` | available | فعال |
 | `weight_pricing` | available | فعال |
-| `length_pricing` | partial | فعال (جزئی) |
+| `length_pricing` | available | فعال |
 | `volume_pricing` | partial | فعال (جزئی) |
 | `area_pricing` | partial | فعال (جزئی) |
 | `roll_cutting` | partial | فعال (جزئی) |
@@ -142,9 +142,13 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `optical_prescription` | planned | فعال نیست |
 | `lens_order` | planned | فعال نیست |
 | `laundry_item_tracking` | planned | فعال نیست |
-| `production_batch` | planned | فعال نیست |
+| `production_batch` | partial | فعال (جزئی) |
 | `fuel_tank_reconciliation` | planned | فعال نیست |
 | `print_job` | planned | فعال نیست |
+| `travel_booking` | planned | فعال نیست |
+| `supplier_settlement` | planned | فعال نیست |
+| `clinical_record` | planned | فعال نیست |
+| `health_data_access` | planned | فعال نیست |
 <!-- /industry-capability-table -->
 
 A capability is active when its status is `available` or `partial`; a `partial` one is real but

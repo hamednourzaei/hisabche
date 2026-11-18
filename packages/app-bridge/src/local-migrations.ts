@@ -20,6 +20,9 @@ import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
 import {
+  COURIER_DELIVERY_STATEMENTS,
+  SALES_ORDER_DRAFT_STATEMENTS,
+  DELIVERY_VEHICLE_STATEMENTS,
   ORDER_DEPOSIT_ALTERS,
   ORDER_DEPOSIT_MOVEMENT_STATEMENTS,
   PACKAGE_CREDIT_LEDGER_STATEMENTS,
@@ -796,6 +799,80 @@ const V26_PULL_IDENTITY: LocalMigration = {
   ],
 }
 
+/**
+ * v26 -> v27: cost layers know the variant they belong to (WP-01).
+ *
+ * The server marked a cost layer with the variant it was bought for
+ * (`docs/variant-cost-layers-migration.sql`). A device that kept costing every
+ * size from one pool would report a different profit for the same sale online
+ * and offline. The rule is strict on both: a variant sale consumes only layers
+ * of that variant; an unassigned (NULL) layer is not a shared pool.
+ */
+const V27_VARIANT_COST_LAYERS: LocalMigration = {
+  to: 27,
+  statements: [
+    `ALTER TABLE cost_layer ADD COLUMN variant_id TEXT`,
+    `ALTER TABLE cost_consumption ADD COLUMN variant_id TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_cost_layer_variant ON cost_layer(workspace_id, product_id, variant_id, entry_date, created_at)`,
+  ],
+}
+
+/**
+ * v27 -> v28: a recalled carton cannot be sold (WP-05).
+ *
+ * The server marked a batch as blocked (`docs/batch-recall-migration.sql`). A
+ * device that did not know the fact would sell a recalled carton offline while
+ * the same sale online was refused — one shelf, two answers. The columns are
+ * the server's, and the shared `planAllocation` core reads them on both sides.
+ */
+const V28_BATCH_RECALL: LocalMigration = {
+  to: 28,
+  statements: [
+    `ALTER TABLE stock_batches ADD COLUMN recalled_at TEXT`,
+    `ALTER TABLE stock_batches ADD COLUMN recalled_reason TEXT`,
+    `ALTER TABLE stock_batches ADD COLUMN recalled_by TEXT`,
+    `CREATE INDEX IF NOT EXISTS idx_stock_batches_recalled ON stock_batches(workspace_id, recalled_at) WHERE recalled_at IS NOT NULL`,
+  ],
+}
+
+/**
+ * v28 -> v29: a line can record «پرت برش» (WP-03).
+ *
+ * The server stores what left the shelf beside the sold quantity
+ * (`docs/line-cut-loss-01-migration.sql`). A device that dropped the figure
+ * would take only the sold metres off the shelf while the same invoice online
+ * took the offcut too — the two shelves disagree the moment someone syncs.
+ */
+const V29_LINE_CUT_LOSS: LocalMigration = {
+  to: 29,
+  statements: [`ALTER TABLE invoice_item ADD COLUMN cut_loss_quantity REAL DEFAULT 0`],
+}
+
+/**
+ * v29 -> v30: courier deliveries and the fleet register (WP-19).
+ *
+ * A device that closed a parcel offline stored the proof only in the outbox;
+ * it had no local row to show the driver or the cashier until the server
+ * answered. Both tables are created with IF NOT EXISTS: a fresh cache already
+ * has them from the base schema, an older cache gains them here.
+ */
+const V30_DELIVERY_LOGISTICS: LocalMigration = {
+  to: 30,
+  statements: [...COURIER_DELIVERY_STATEMENTS, ...DELIVERY_VEHICLE_STATEMENTS],
+}
+
+/**
+ * v30 -> v31: offline sales-order drafts (WP-13).
+ *
+ * Without local tables a rep cannot write an order without signal; the app
+ * either refuses it or invents one. The draft moves no stock and no money —
+ * the server still confirms both when it is submitted.
+ */
+const V31_SALES_ORDER_DRAFTS: LocalMigration = {
+  to: 31,
+  statements: [...SALES_ORDER_DRAFT_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -822,6 +899,11 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V24_SERVICE_STATUS_AUDIT,
   V25_REPAIR_TICKETS,
   V26_PULL_IDENTITY,
+  V27_VARIANT_COST_LAYERS,
+  V28_BATCH_RECALL,
+  V29_LINE_CUT_LOSS,
+  V30_DELIVERY_LOGISTICS,
+  V31_SALES_ORDER_DRAFTS,
 ]
 
 /**

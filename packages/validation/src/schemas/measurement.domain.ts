@@ -88,6 +88,66 @@ export function convertQuantity(
   return (quantity * fromRecord.conversionFactor) / toRecord.conversionFactor
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUT LOSS — «پرت برش»
+
+   A fabric roll is 50 m, the customer buys 12.5 m, and the shop cuts 12.5 m off
+   it — sometimes with a torn edge, a millimetre of frayed selvedge, a crooked
+   cut that has to be trimmed away. That trimmed piece left the shelf with this
+   sale and nobody paid for it. Before this rule the figure existed nowhere, so
+   the shelf read 12.5 m short and the cost of the offcut landed in no report.
+
+   THE MODEL, and nothing more than this:
+
+     quantity        what the customer bought and pays for
+     cutLossQuantity what left the shelf beside it and was not sold
+
+   So the STOCK a line moves is `quantity + cutLossQuantity` (`stockQuantityOfLine`),
+   while the MONEY stays on `quantity` alone — the same split the invoice already
+   makes for a line discount. The cost of the offcut is therefore part of what
+   this sale consumed, which is where a shopkeeper looks for it.
+
+   ⚠️ IT IS NEVER INFERRED. A roll's short end is not a percentage of the sale
+   and is not the difference between two numbers somebody typed; it is a figure
+   the person enters or leaves empty. An absent value means «no loss was
+   recorded», and the line moves exactly what it sells — every invoice written
+   before this field existed keeps its exact behaviour.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export type CutLossIssue = 'CUT_LOSS_NEGATIVE' | 'CUT_LOSS_ON_COUNT_UNIT' | 'CUT_LOSS_ON_PURCHASE'
+
+/**
+ * Why this cut loss cannot be recorded, or null when it can.
+ *
+ * `unit` is the LINE's unit, because that is the unit the loss was measured in.
+ * A count unit is refused: «2 pieces, 1 of them cut away» is not a cut, it is a
+ * stock adjustment with its own document — recording it here would take stock
+ * off the shelf through a sale that never mentioned it.
+ */
+export function cutLossIssue(
+  cutLoss: number | null | undefined,
+  unit: string | null | undefined,
+): CutLossIssue | null {
+  if (cutLoss === null || cutLoss === undefined) return null
+  if (!Number.isFinite(cutLoss) || cutLoss < 0) return 'CUT_LOSS_NEGATIVE'
+  if (cutLoss === 0) return null
+  if (unitDimension(unit) === 'count') return 'CUT_LOSS_ON_COUNT_UNIT'
+  return null
+}
+
+/**
+ * The quantity this line takes OFF THE SHELF: what was sold plus what was cut
+ * away. Money, cost of goods sold and stock all read the same figure from here.
+ */
+export function stockQuantityOfLine(line: {
+  quantity: number
+  cutLossQuantity?: number | null | undefined
+}): number {
+  const quantity = Number(line.quantity) || 0
+  const cutLoss = Number(line.cutLossQuantity) || 0
+  return quantity + cutLoss
+}
+
 export type LineUnitIssue = 'unit-mismatch'
 
 /**

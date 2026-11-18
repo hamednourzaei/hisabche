@@ -14,6 +14,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import { fetchAllPages, selectAllPages } from '../../utils/fetch-all-pages'
+import { logBusinessEvent } from '../event-log.service'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -29,7 +30,7 @@ import {
 } from './lot.domain'
 
 const BATCH_COLUMNS =
-  'id, product_id, batch_number, expiry_date, manufactured_date, received_qty, remaining_qty, cost_layer_id, warehouse_id, received_on'
+  'id, product_id, batch_number, expiry_date, manufactured_date, received_qty, remaining_qty, cost_layer_id, warehouse_id, received_on, recalled_at, recalled_reason'
 
 const LEGACY_SERIAL_COLUMNS =
   'id, product_id, serial_number, status, batch_id, cost_layer_id, unit_cost_minor, warehouse_id, received_on, invoice_id, sold_on'
@@ -48,6 +49,8 @@ interface BatchRow {
   cost_layer_id: string | null
   warehouse_id: string | null
   received_on: string | null
+  recalled_at?: string | null
+  recalled_reason?: string | null
 }
 
 /** A `stock_serials` row as PostgREST returns it. */
@@ -79,6 +82,9 @@ function mapBatch(raw: BatchRow): StockBatch {
     costLayerId: raw.cost_layer_id ?? null,
     warehouseId: raw.warehouse_id ?? null,
     receivedOn: String(raw.received_on ?? '').slice(0, 10),
+    // WP-05: a blocked batch keeps its quantity and loses its sellability.
+    recalledAt: raw.recalled_at ? String(raw.recalled_at) : null,
+    recalledReason: raw.recalled_reason ?? null,
   }
 }
 
@@ -254,6 +260,128 @@ export class TraceabilityService {
   }
 
   /**
+   * Block a batch (WP-05) — the supplier recalled it, or it failed inspection.
+   *
+   * The QUANTITY is deliberately untouched. The carton still exists and its
+   * value still belongs on the balance sheet; what changes is that no
+   * allocation may take it. The shared `planAllocation` core refuses it on the
+   * server AND on the device, and reports it as `blockedByRecall` so the count
+   * on the shelf still adds up.
+   *
+   * Idempotent on purpose: a second recall keeps the FIRST reason and
+   * timestamp instead of overwriting the record of why it was blocked.
+   */
+  async recallBatch(
+    ctx: TenancyContext,
+    batchId: string,
+    input: { reason: string },
+  ): Promise<StockBatch> {
+    const reason = input.reason.trim()
+    if (reason.length === 0) throw new ValidationError('BATCH_RECALL_REASON_REQUIRED')
+
+    const { data, error } = await supabase
+      .from('stock_batches')
+      .update({
+        recalled_at: new Date().toISOString(),
+        recalled_reason: reason,
+        recalled_by: ctx.userId,
+      })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', batchId)
+      // Only the FIRST recall writes. The condition is in the WHERE, so two
+      // simultaneous calls cannot both believe they blocked it.
+      .is('recalled_at', null)
+      .select(BATCH_COLUMNS)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to recall the batch', error)
+
+    if (!data) {
+      // Either the batch is not ours, or it is already blocked.
+      const { data: existing, error: readError } = await supabase
+        .from('stock_batches')
+        .select(BATCH_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', batchId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read the batch', readError)
+      if (!existing) throw new NotFoundError('Batch')
+      if (!existing.recalled_at) throw new ConflictError('BATCH_RECALL_FAILED')
+      return mapBatch(existing)
+    }
+
+    await this.invalidate(ctx.workspaceId)
+    await logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'batch',
+      entityId: batchId,
+      action: 'batch_recalled',
+      title: `Batch ${data.batch_number} blocked: ${reason}`,
+      metadata: {
+        batchNumber: data.batch_number,
+        productId: data.product_id,
+        reason,
+        remainingQty: data.remaining_qty ?? null,
+      },
+      notifyType: 'warning',
+      // The person who blocked it is looking at the screen; the activity feed
+      // carries the fact, the bell would only announce it back to them.
+      notify: false,
+    })
+    return mapBatch(data)
+  }
+
+  /**
+   * Lift a recall (WP-05): the supplier cleared the batch, or the block went
+   * on the wrong carton.
+   *
+   * Releasing a batch that is not blocked is a no-op that returns the row as
+   * it is — a retry must not fail, and a stale screen must not invent a state.
+   */
+  async releaseBatchRecall(ctx: TenancyContext, batchId: string): Promise<StockBatch> {
+    const { data, error } = await supabase
+      .from('stock_batches')
+      .update({ recalled_at: null, recalled_reason: null, recalled_by: null })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', batchId)
+      .not('recalled_at', 'is', null)
+      .select(BATCH_COLUMNS)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to release the batch recall', error)
+
+    if (!data) {
+      const { data: existing, error: readError } = await supabase
+        .from('stock_batches')
+        .select(BATCH_COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', batchId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read the batch', readError)
+      if (!existing) throw new NotFoundError('Batch')
+      return mapBatch(existing)
+    }
+
+    await this.invalidate(ctx.workspaceId)
+    await logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'batch',
+      entityId: batchId,
+      action: 'batch_recall_released',
+      title: `Batch ${data.batch_number} is sellable again`,
+      metadata: {
+        batchNumber: data.batch_number,
+        productId: data.product_id,
+        remainingQty: data.remaining_qty ?? null,
+      },
+      notify: false,
+    })
+    return mapBatch(data)
+  }
+
+  /**
    * Which batches an issue would take, without taking them.
    *
    * FEFO by default: goods received later can expire sooner, and FIFO would
@@ -311,9 +439,11 @@ export class TraceabilityService {
     const plan = await this.planIssue(ctx, input)
 
     if (plan.shortfall > 0) {
-      throw new ConflictError(
-        plan.blockedByExpiry.length > 0 ? 'BATCH_ONLY_EXPIRED_STOCK' : 'BATCH_INSUFFICIENT_STOCK',
-      )
+      // Name the refusal. A shop that blocked a carton and then reads «not
+      // enough stock» goes looking for stock that is already on the shelf.
+      if (plan.blockedByExpiry.length > 0) throw new ConflictError('BATCH_ONLY_EXPIRED_STOCK')
+      if (plan.blockedByRecall.length > 0) throw new ConflictError('BATCH_RECALLED')
+      throw new ConflictError('BATCH_INSUFFICIENT_STOCK')
     }
 
     const entryDate = (input.asOf ?? today()).slice(0, 10)
@@ -1118,6 +1248,67 @@ export class TraceabilityService {
   }
 
   /**
+   * The allocation rows that say which batches a sale took (V61 §2.5).
+   *
+   * One reader for the precheck and the restore: «is there history?» must have
+   * one answer, not two.
+   */
+  private async saleAllocations(
+    ctx: Pick<TenancyContext, 'workspaceId'>,
+    originalInvoiceId: string,
+    productId: string,
+  ): Promise<Array<{ id: string; batch_id: string | null; quantity: number | string | null }>> {
+    const { data, error } = await supabase
+      .from('lot_allocations')
+      .select('id, batch_id, quantity')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('consumer_type', 'invoice')
+      .eq('consumer_id', originalInvoiceId)
+      .eq('product_id', productId)
+      .not('batch_id', 'is', null)
+      .order('id', { ascending: true })
+    if (error) throw new DatabaseError('Failed to read lot_allocations for return', error)
+    return data ?? []
+  }
+
+  /**
+   * WP-05 precheck — can this return be put back into the batches it came from?
+   *
+   * Asked BEFORE the write, because `restoreBatchesForReturn` runs after the
+   * return has committed: a sale with no lot history used to be returned and
+   * then answered with an error, so the shop retried and was told the invoice
+   * was already returned. The same question, asked where «no» is still an
+   * answer the operator can act on.
+   */
+  async assertReturnRestorePossible(
+    ctx: Pick<TenancyContext, 'workspaceId'>,
+    input: { originalInvoiceId: string; lines: Array<{ productId: string; quantity: number }> },
+  ): Promise<void> {
+    const productIds = Array.from(
+      new Set(input.lines.map((line) => line.productId).filter(Boolean)),
+    )
+    if (productIds.length === 0) return
+
+    const { data: trackedProducts, error } = await supabase
+      .from('products')
+      .select('id, tracking_mode')
+      .eq('workspace_id', ctx.workspaceId)
+      .in('id', productIds)
+    if (error) throw new DatabaseError('Failed to inspect product tracking modes', error)
+
+    const batchTracked = new Set(
+      (trackedProducts ?? []).filter((p) => p.tracking_mode === 'batch').map((p) => p.id as string),
+    )
+
+    for (const line of input.lines) {
+      if (!batchTracked.has(line.productId) || line.quantity <= 0) continue
+      const allocations = await this.saleAllocations(ctx, input.originalInvoiceId, line.productId)
+      const total = allocations.reduce((sum, row) => sum + Number(row.quantity ?? 0), 0)
+      if (total < line.quantity) throw new ConflictError('BATCH_RETURN_RESTORE_UNAVAILABLE')
+    }
+  }
+
+  /**
    * V61 §2.5 — Restore exact batches consumed by an invoice when a sale return
    * restocks a batch-tracked product. Refuses with BATCH_ALLOCATION_HISTORY_MISSING
    * if allocation history is absent — never guesses a batch.
@@ -1169,17 +1360,8 @@ export class TraceabilityService {
 
     const restored: Array<{ batchId: string; productId: string; quantity: number }> = []
     for (const line of batchLines) {
-      const { data: allocations, error: allocErr } = await supabase
-        .from('lot_allocations')
-        .select('id, batch_id, quantity')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('consumer_type', 'invoice')
-        .eq('consumer_id', input.originalInvoiceId)
-        .eq('product_id', line.productId)
-        .not('batch_id', 'is', null)
-        .order('id', { ascending: true })
-      if (allocErr) throw new DatabaseError('Failed to read lot_allocations for return', allocErr)
-      if (!allocations || allocations.length === 0) {
+      const allocations = await this.saleAllocations(ctx, input.originalInvoiceId, line.productId)
+      if (allocations.length === 0) {
         throw new ConflictError('BATCH_ALLOCATION_HISTORY_MISSING')
       }
 

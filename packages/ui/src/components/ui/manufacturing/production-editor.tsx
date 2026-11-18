@@ -228,6 +228,21 @@ export function ProductionEditor({
       if (!(draft.quantityValue > 0)) {
         found.quantity = t('manufacturing.editor.errors.quantity', 'تعداد باید بیشتر از صفر باشد.')
       }
+      // WP-09: scrap and rework are output of the started units, so together
+      // they cannot exceed them — and with nothing good left there is nothing
+      // to receive into stock.
+      const losses = draft.scrapValue + draft.reworkValue
+      if (losses > draft.quantityValue) {
+        found.scrap = t(
+          'manufacturing.editor.errors.outputExceedsQuantity',
+          'ضایعات و بازکاری نمی‌تواند از تعداد شروع بیشتر باشد.',
+        )
+      } else if (addToInventory && losses >= draft.quantityValue) {
+        found.scrap = t(
+          'manufacturing.editor.errors.noGoodOutput',
+          'هیچ واحد سالمی نمانده؛ برای افزودن به انبار دست‌کم یک واحد سالم لازم است.',
+        )
+      }
       if (draft.overrideOn) {
         if (draft.overrideValue === null) {
           found.overrideTotal = t(
@@ -307,6 +322,8 @@ export function ProductionEditor({
       ...definitionPayload(),
       ...(workOrderId ? { workOrderId } : {}),
       quantity: draft.quantityValue,
+      scrapQuantity: draft.scrapValue,
+      reworkQuantity: draft.reworkValue,
       overrideTotal: draft.overrideValue,
       ...(draft.overrideValue !== null ? { overrideReason: draft.overrideReason.trim() } : {}),
       saveDefinition: true,
@@ -441,6 +458,42 @@ export function ProductionEditor({
             </div>
           ) : null}
         </div>
+
+        {mode === 'produce' ? (
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3" data-field="output">
+            <Input
+              name="scrapQuantity"
+              inputMode="decimal"
+              label={t('manufacturing.editor.scrap', 'ضایعات')}
+              value={draft.scrap}
+              onChange={(event) => draft.setScrap(event.target.value)}
+              aria-invalid={errors.scrap ? true : undefined}
+            />
+            <Input
+              name="reworkQuantity"
+              inputMode="decimal"
+              label={t('manufacturing.editor.rework', 'بازکاری')}
+              value={draft.rework}
+              onChange={(event) => draft.setRework(event.target.value)}
+            />
+            <div className="flex items-end pb-2">
+              <p className={hint}>
+                {t('manufacturing.editor.goodUnits', 'واحد سالم')}:{' '}
+                <span className="tabular-nums">{formatNumber(cost.goodQuantity, locale, 4)}</span>
+                {cost.yieldPercent !== null ? (
+                  <>
+                    {' '}
+                    — {t('manufacturing.editor.yield', 'بازده')}:{' '}
+                    <span className="tabular-nums">
+                      {formatNumber(cost.yieldPercent, locale, 1)}%
+                    </span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+            {errors.scrap ? <p className={cn(problem, 'md:col-span-3')}>{errors.scrap}</p> : null}
+          </div>
+        ) : null}
 
         {foreignCurrencies.length > 0 ? (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3" data-field="rates">
@@ -790,7 +843,7 @@ export function ProductionEditor({
                 </p>
                 <ul className="space-y-0.5">
                   <li>
-                    + {formatNumber(cost.quantity, locale, 4)} {target?.productName ?? ''} —{' '}
+                    + {formatNumber(cost.goodQuantity, locale, 4)} {target?.productName ?? ''} —{' '}
                     {t('manufacturing.editor.atCost', 'هر واحد به بهای')}{' '}
                     {money(cost.effectiveUnitCost)}
                   </li>
@@ -802,6 +855,18 @@ export function ProductionEditor({
                       ))
                     : null}
                 </ul>
+                {/* The material is issued for every STARTED unit; only the good
+                    ones reach the shelf. Said here so the number above is not
+                    read as «we started ten and got ten». */}
+                {cost.scrapQuantity + cost.reworkQuantity > 0 ? (
+                  <p className="mt-1">
+                    {t('manufacturing.editor.goodUnits', 'واحد سالم')}:{' '}
+                    <span className="tabular-nums">
+                      {formatNumber(cost.goodQuantity, locale, 4)}
+                    </span>{' '}
+                    / {formatNumber(cost.quantity, locale, 4)}
+                  </p>
+                ) : null}
                 {consumeComponents && consumed.length === 0 ? (
                   <p className="mt-1">
                     {t(

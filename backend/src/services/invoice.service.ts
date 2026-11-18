@@ -41,8 +41,10 @@ import {
   applyPrice,
   computeInvoiceMoney,
   computeItemTotalRounded,
+  cutLossIssue,
   movesStock,
   quoteGoldItemPrice,
+  stockQuantityOfLine,
   type AccountRole,
   type GoldLineSnapshot,
   type InvoiceItem,
@@ -124,7 +126,7 @@ const INVOICE_ITEM_DETAILS_COLUMNS = `
 `
 
 /** Item columns that `docs/unified-sale-purchase-migration.sql` adds. */
-const INVOICE_ITEM_UNIT_COLUMNS = 'unit, unit_label, weight_grams,'
+const INVOICE_ITEM_UNIT_COLUMNS = 'unit, unit_label, weight_grams, cut_loss_quantity,'
 
 /**
  * Does this error mean "the schema does not have that yet" rather than "the
@@ -262,6 +264,11 @@ interface InvoiceLine {
   unit?: string | undefined
   unitLabel?: string | null | undefined
   weightGrams?: number | null | undefined
+  /**
+   * «پرت برش» — what left the shelf with this line and was not sold (WP-03).
+   * In the line's unit. Stock and cost of goods sold read it; money never does.
+   */
+  cutLossQuantity?: number | null | undefined
   unitPrice?: number | undefined
   discount?: number | undefined
   totalPrice?: number | undefined
@@ -283,8 +290,12 @@ function storedLine(item: DbRow): InvoiceLine {
   return {
     ...(item.id === undefined || item.id === null ? {} : { id: String(item.id) }),
     productId: textOrNull(item.productId ?? item.product_id),
+    variantId: textOrNull(item.variantId ?? item.variant_id),
     warehouseId: textOrNull(item.warehouseId ?? item.warehouse_id),
     quantity: Number(item.quantity) || 0,
+    // A re-read line carries its cut loss so a late cost posting consumes the
+    // same units the sale did (WP-03).
+    cutLossQuantity: Number(item.cutLossQuantity ?? item.cut_loss_quantity) || 0,
     ...(item.unitPrice !== undefined || item.unit_price !== undefined
       ? { unitPrice: Number(item.unitPrice ?? item.unit_price) || 0 }
       : {}),
@@ -618,11 +629,15 @@ export class InvoiceService {
       return true
     }
 
-    if (schemaSupport.itemUnits && /unit_label|weight_grams|\bunit\b/.test(message)) {
+    if (
+      schemaSupport.itemUnits &&
+      /unit_label|weight_grams|cut_loss_quantity|\bunit\b/.test(message)
+    ) {
       schemaSupport.itemUnits = false
       console.warn(
-        '[InvoiceService] item unit columns missing — run unified-sale-purchase-migration.sql. ' +
-          'Units and weights will not be returned until it is applied.',
+        '[InvoiceService] item unit columns missing — run unified-sale-purchase-migration.sql ' +
+          'and docs/line-cut-loss-01-migration.sql. ' +
+          'Units, weights and cut losses will not be returned until they are applied.',
       )
       return true
     }
@@ -987,6 +1002,10 @@ export class InvoiceService {
     // movements and the cost layers cannot disagree about a cent.
     // ═══════════════════════════════════════════════════════════════════════
     const lines = this.withDerivedLineTotals(data.items ?? [], bookCurrency)
+    // WP-03 — «پرت برش» is a SALE-side measurement. A purchase's goods arrive
+    // intact and a piece is not cut; either one is refused before anything is
+    // written, with the reason, rather than stored as a number nobody can act on.
+    this.assertCutLoss(String(data.type ?? 'sale'), lines)
     const money = computeInvoiceMoney({
       items: lines,
       discountTotal: data.discountTotal,
@@ -2663,6 +2682,36 @@ export class InvoiceService {
    * `withDerivedLineTotals` is the single derivation, and the same array is what
    * this writes, what the stock plan reads and what the costing consumes.
    */
+  /**
+   * WP-03 — refuse a cut loss that cannot mean anything, before a row is written.
+   *
+   * The two refusals are not stylistic:
+   *
+   *   · On a PURCHASE, goods arrive intact. A loss at receiving is a damaged
+   *     delivery — a claim against the supplier with its own document — not a
+   *     quantity missing from the shelf on the day of the sale.
+   *   · On a COUNT unit («2 pieces, 1 cut away»), the piece that left is a stock
+   *     adjustment. Recording it on a sale that never mentioned it takes stock
+   *     off the shelf through a document whose money says otherwise.
+   *
+   * The rule itself lives in `measurement.domain.ts` (`cutLossIssue`), so the
+   * grid, the server and the offline engine give one answer.
+   */
+  private assertCutLoss(type: string, lines: readonly InvoiceLine[]): void {
+    for (const line of lines) {
+      const cutLoss = Number(line.cutLossQuantity) || 0
+      if (cutLoss <= 0) continue
+      const issue = cutLossIssue(cutLoss, line.unit ?? null)
+      if (issue)
+        throw new ValidationError(`${issue}: line ${line.productName ?? line.productId ?? ''}`)
+      if (type === 'purchase') {
+        throw new ValidationError(
+          `CUT_LOSS_ON_PURCHASE: line ${line.productName ?? line.productId ?? ''}`,
+        )
+      }
+    }
+  }
+
   private withDerivedLineTotals<T extends InvoiceLine>(items: T[], currency: string): T[] {
     const scale = Math.pow(10, fractionDigits(currency as Parameters<typeof fractionDigits>[0]))
     return items.map((raw) => {
@@ -2741,6 +2790,14 @@ export class InvoiceService {
       unit: item.unit || 'piece',
       unit_label: item.unitLabel ?? null,
       weight_grams: item.weightGrams ?? null,
+      // ⚠️ NAMED ONLY WHEN THERE IS ONE. A document with no cut loss must keep
+      // writing on a database that has not run the migration yet — and a column
+      // that is silently defaulted to 0 could not be told apart from «the
+      // migration dropped it». `writeInvoiceDocument` turns the resulting 42703
+      // into «apply docs/line-cut-loss-01-migration.sql».
+      ...(Number(item.cutLossQuantity) > 0
+        ? { cut_loss_quantity: Number(item.cutLossQuantity) }
+        : {}),
       unit_price: item.unitPrice,
       discount: item.discount || 0,
       total_price: item.totalPrice,
@@ -2849,6 +2906,21 @@ export class InvoiceService {
       ;({ error } = await call(InvoiceService.withoutDetailLabels(doc.detailRows)))
     }
     if (!error) return null
+
+    // WP-03 — a cut loss was recorded and the database has no column for it.
+    // The RPC names only the columns the rows carry, so this is a search_path
+    // error and not something to swallow: a dropped cut loss is a shelf that
+    // reads wrong forever. Nothing was written (the function is one call).
+    if (
+      (error.code === 'PGRST204' || error.code === '42703') &&
+      (error.message ?? '').includes('cut_loss_quantity')
+    ) {
+      throw new DatabaseError(
+        'CUT_LOSS_MIGRATION_REQUIRED: apply docs/line-cut-loss-01-migration.sql before ' +
+          'recording a cut loss. Nothing was written.',
+        error,
+      )
+    }
 
     // ⚠️ FAIL-CLOSED INTEGRITY GUARD (Target B / Rule 4)
     //
@@ -3057,6 +3129,8 @@ export class InvoiceService {
     // the one write path that took `total_price` from the request would still
     // be reachable — on the edit screen instead of the create screen.
     const lines = this.withDerivedLineTotals(items, currency)
+    // WP-03 — an edited line obeys the same cut-loss rule a created one does.
+    this.assertCutLoss(type, lines)
 
     const newPkgIds = await this.findPackageProductIds(
       ctx.workspaceId,
@@ -3505,7 +3579,9 @@ export class InvoiceService {
         // the product declares: storing a carton count as a piece count is a
         // wrong quantity in the source of truth that nothing would flag.
         const converted = toBaseQuantity(
-          Number(item.quantity) || 0,
+          // WP-03: the shelf loses what was sold AND what was cut away. The
+          // invoice total stays on `quantity` alone.
+          stockQuantityOfLine(item),
           item.unit ?? null,
           unitOptions.get(item.productId) ?? [],
         )
@@ -3888,6 +3964,7 @@ export class InvoiceService {
           const lineTotal = Number(item.totalPrice) || quantity * (Number(item.unitPrice) || 0)
           await costing.recordReceipt(ctx, {
             productId: item.productId,
+            variantId: item.variantId ?? null,
             warehouseId: item.warehouseId ?? null,
             quantity,
             // What was actually paid per unit, after the line discount. The
@@ -3902,8 +3979,13 @@ export class InvoiceService {
         } else {
           const result = await costing.recordIssue(ctx, {
             productId: item.productId,
+            variantId: item.variantId ?? null,
             warehouseId: item.warehouseId ?? null,
-            quantity,
+            // WP-03: the sale issued what was sold plus what was cut away, so
+            // the cost of the offcut is part of what this sale consumed. Money
+            // never counted it — revenue stays on `quantity` — which is exactly
+            // why the loss shows up as a lower margin instead of disappearing.
+            quantity: stockQuantityOfLine(item),
             entryDate,
             consumerType: 'invoice',
             consumerId: invoiceId,
@@ -4227,6 +4309,7 @@ export class InvoiceService {
     const items = rowsOf(invoice.items ?? invoice.invoice_items).map((item) => ({
       id: textOrNull(item.id) ?? undefined,
       productId: textOrNull(item.productId ?? item.product_id),
+      variantId: textOrNull(item.variantId ?? item.variant_id),
       warehouseId: textOrNull(item.warehouseId ?? item.warehouse_id),
       quantity: Number(item.quantity) || 0,
     }))
@@ -4264,6 +4347,7 @@ export class InvoiceService {
       if (drawn.has(line)) continue
       const { covered } = await costing.coverSoldUnits(ctx, {
         productId: item.productId,
+        variantId: item.variantId ?? null,
         quantity: item.quantity,
         entryDate,
         sourceLine: `sale:${id}:${line}`,

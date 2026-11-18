@@ -8,15 +8,25 @@
 // issue queue read. This panel lists this product's batches and lets a mistyped
 // date be corrected; quantities are not editable here, because they are what
 // the movements and the lot trail already say.
+//
+// WP-05 adds the other reason a carton must not be sold: a RECALL. Blocking a
+// batch keeps its quantity (the goods exist and their value is on the books)
+// and takes it out of every allocation, online and offline.
 // ============================================
 
 import { useState } from 'react'
-import { CalendarClock, Pencil } from 'lucide-react'
-import { useBatches, useUpdateBatchDates } from '@hisabche/api'
+import { Ban, CalendarClock, Pencil, ShieldCheck } from 'lucide-react'
+import {
+  useBatches,
+  useRecallBatch,
+  useReleaseBatchRecall,
+  useUpdateBatchDates,
+} from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
 import { JalaliDatePicker } from '../jalali-datepicker'
+import { Input } from '../input'
 import { useDateFormat } from '../../../hooks/use-date-format'
 
 type T = (key: string, fallback?: string) => string
@@ -54,8 +64,12 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
   const { date } = useDateFormat()
   const { data, isLoading, isError, refetch } = useBatches(productId)
   const update = useUpdateBatchDates()
+  const recall = useRecallBatch()
+  const release = useReleaseBatchRecall()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [recallId, setRecallId] = useState<string | null>(null)
+  const [recallReason, setRecallReason] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const batches = data ?? []
@@ -67,6 +81,32 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
       setError(null)
     } catch {
       setError(t('warehouse.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.'))
+    }
+  }
+
+  const block = async (batchId: string) => {
+    // A block nobody can explain is a block the next person undoes.
+    const reason = recallReason.trim()
+    if (reason.length === 0) {
+      setError(t('warehouse.recallReasonRequired', 'دلیل بلاک را بنویسید.'))
+      return
+    }
+    try {
+      await recall.mutateAsync({ batchId, reason })
+      setRecallId(null)
+      setRecallReason('')
+      setError(null)
+    } catch {
+      setError(t('warehouse.recallFailed', 'بلاک نشد. دوباره تلاش کنید.'))
+    }
+  }
+
+  const unblock = async (batchId: string) => {
+    try {
+      await release.mutateAsync(batchId)
+      setError(null)
+    } catch {
+      setError(t('warehouse.releaseRecallFailed', 'آزادسازی نشد. دوباره تلاش کنید.'))
     }
   }
 
@@ -109,9 +149,48 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
                   <span className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('warehouse.remaining', 'باقی‌مانده')}: {batch.remainingQty}
                   </span>
+                  {batch.recalledAt ? (
+                    <span className="text-xs font-medium text-[hsl(var(--color-destructive))]">
+                      {t('warehouse.recalled', 'بلاک‌شده')}
+                      {batch.recalledReason ? ` · ${batch.recalledReason}` : ''}
+                    </span>
+                  ) : null}
                 </span>
 
-                {editingId === batch.id ? (
+                {recallId === batch.id ? (
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Input
+                      value={recallReason}
+                      onChange={(event) => setRecallReason(event.target.value)}
+                      maxLength={500}
+                      placeholder={t(
+                        'warehouse.recallReason',
+                        'دلیل بلاک — مثلاً فراخوان تأمین‌کننده',
+                      )}
+                      aria-label={t('warehouse.recallReasonLabel', 'دلیل بلاک')}
+                      className="w-56"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void block(batch.id)}
+                      disabled={recall.isPending}
+                      className="text-xs font-medium text-[hsl(var(--color-destructive))]"
+                    >
+                      {t('warehouse.recallConfirm', 'بلاک کن')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecallId(null)
+                        setRecallReason('')
+                        setError(null)
+                      }}
+                      className="text-xs text-[hsl(var(--fg-secondary))]"
+                    >
+                      {t('common.cancel', 'انصراف')}
+                    </button>
+                  </span>
+                ) : editingId === batch.id ? (
                   <span className="flex items-center gap-2">
                     <span className="w-44">
                       <JalaliDatePicker
@@ -137,7 +216,7 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
                     </button>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-2">
+                  <span className="flex flex-wrap items-center gap-2">
                     <span className={cn('rounded-full px-2 py-0.5 text-xs', TONE_CLASS[tone])}>
                       {batch.expiryDate
                         ? `${date(batch.expiryDate)}${
@@ -152,6 +231,7 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
                     <button
                       type="button"
                       onClick={() => {
+                        setRecallId(null)
                         setEditingId(batch.id)
                         setDraft(batch.expiryDate ?? '')
                       }}
@@ -161,6 +241,31 @@ export function ProductExpiryPanel({ t, productId }: { t: T; productId: string }
                       <Pencil className="size-3.5" aria-hidden="true" />
                       {t('common.edit', 'ویرایش')}
                     </button>
+                    {batch.recalledAt ? (
+                      <button
+                        type="button"
+                        onClick={() => void unblock(batch.id)}
+                        disabled={release.isPending}
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-[hsl(var(--color-success))] hover:bg-[hsl(var(--surface-muted))]"
+                      >
+                        <ShieldCheck className="size-3.5" aria-hidden="true" />
+                        {t('warehouse.releaseRecall', 'آزادسازی')}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingId(null)
+                          setRecallId(batch.id)
+                          setRecallReason('')
+                          setError(null)
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--surface-muted))]"
+                      >
+                        <Ban className="size-3.5" aria-hidden="true" />
+                        {t('warehouse.recall', 'بلاک')}
+                      </button>
+                    )}
                   </span>
                 )}
               </li>

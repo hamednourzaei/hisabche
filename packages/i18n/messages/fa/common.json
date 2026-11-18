@@ -2170,6 +2170,18 @@
     "extAttrValue": "مقدار (مثلا: XL)",
     "extAddVariant": "افزودن تنوع",
     "extBarcodeLabel": "بارکد",
+    "extCostLayersTitle": "لایه‌های بهای تمام‌شده",
+    "extCostLayersHint": "هر فروش فقط از لایه‌های همان تنوع مصرف می‌کند. موجودی قدیمی که تنوع ندارد تا تخصیص داده نشود برای فروش تنوع‌دار قابل استفاده نیست.",
+    "extCostLoading": "در حال خواندن…",
+    "extCostLoadFailed": "خواندن لایه‌های بها انجام نشد",
+    "extUnassignedEmpty": "موجودی بدون تنوعی باقی نمانده است.",
+    "extLayerQty": "مقدار",
+    "extLayerUnitCost": "بهای واحد",
+    "extLayerValue": "ارزش",
+    "extLayerDate": "تاریخ ورود",
+    "extAssignTo": "تخصیص به تنوع",
+    "extAssignAction": "تخصیص",
+    "extAssignFailed": "تخصیص انجام نشد",
     "extFitmentsTitle": "سازگاری خودرو (قطعات و لوازم یدکی)",
     "extFitmentsCount": "خودرو",
     "extFitmentsEmpty": "هنوز خودرویی برای این قطعه ثبت نشده است.",
@@ -2302,6 +2314,15 @@
     "daysLeft": "روز",
     "remaining": "باقی‌مانده",
     "editExpiry": "ویرایش تاریخ انقضا",
+    "recall": "بلاک",
+    "recalled": "بلاک‌شده",
+    "releaseRecall": "آزادسازی",
+    "recallReason": "دلیل بلاک — مثلاً فراخوان تأمین‌کننده",
+    "recallReasonLabel": "دلیل بلاک",
+    "recallConfirm": "بلاک کن",
+    "recallReasonRequired": "دلیل بلاک را بنویسید.",
+    "recallFailed": "بلاک نشد. دوباره تلاش کنید.",
+    "releaseRecallFailed": "آزادسازی نشد. دوباره تلاش کنید.",
     "unitUnknown": "این واحد پشتیبانی نمی‌شود",
     "dimCount": "تعداد (پایه: عدد)",
     "dimWeight": "وزن (پایه: گرم)",
@@ -4763,6 +4784,8 @@
       "noMovers": "موردی نیست."
     },
     "history": {
+      "good": "سالم",
+      "yield": "بازده",
       "unnamed": "بدون نام",
       "product": "محصول",
       "productGone": "کالا حذف شده",
@@ -4798,6 +4821,10 @@
       "history": "تاریخچه‌ی تولید این کالا"
     },
     "editor": {
+      "scrap": "ضایعات",
+      "rework": "بازکاری",
+      "goodUnits": "واحد سالم",
+      "yield": "بازده",
       "columns": {
         "unitCost": "بهای واحد",
         "component": "قطعه / ماده",
@@ -4811,6 +4838,8 @@
       "workers": "تعداد نفر",
       "hours": "مدت ساخت (ساعت)",
       "errors": {
+        "outputExceedsQuantity": "ضایعات و بازکاری نمی‌تواند از تعداد شروع بیشتر باشد.",
+        "noGoodOutput": "هیچ واحد سالمی نمانده؛ برای افزودن به انبار دست‌کم یک واحد سالم لازم است.",
         "product": "محصول را انتخاب کنید.",
         "empty": "دست‌کم یک قطعه، دستمزد یا هزینه وارد کنید.",
         "rate": "برای ستونی که ارز دیگری دارد نرخ تبدیل وارد کنید.",
@@ -4869,9 +4898,13 @@
       "deleteColumn": "این ستون حذف شود؟"
     },
     "errors": {
+      "outputExceedsQuantity": "ضایعات و بازکاری از تعداد شروع بیشتر است.",
+      "noGoodOutput": "هیچ واحد سالمی نمانده؛ برای افزودن به انبار دست‌کم یک واحد سالم لازم است.",
+      "MANUFACTURING_OUTPUT_EXCEEDS_QUANTITY": "ضایعات و بازکاری از تعداد شروع بیشتر است.",
+      "MANUFACTURING_GOOD_QUANTITY_REQUIRED": "هیچ واحد سالمی نمانده؛ موجودی اضافه نشد.",
       "overrideReasonRequired": "دلیل تغییر جمع را بنویسید.",
       "range": "تاریخ شروع باید پیش از تاریخ پایان باشد.",
-      "MANUFACTURING_MIGRATION_PENDING": "بخش تولید هنوز روی پایگاه داده فعال نشده است. اسکریپت manufacturing-01 باید اجرا شود.",
+      "MANUFACTURING_MIGRATION_PENDING": "بخش تولید هنوز روی پایگاه داده فعال نشده است. اسکریپت‌های manufacturing-01 و production-batch-01 باید اجرا شوند.",
       "INVENTORY_INSUFFICIENT_STOCK": "موجودی یکی از مواد اولیه در این انبار کافی نیست. موجودی را اضافه کنید یا «کم‌شدن مواد اولیه» را خاموش کنید.",
       "PRODUCT_WAREHOUSE_REQUIRED": "چند انبار دارید؛ انبار را انتخاب کنید.",
       "PRODUCT_WAREHOUSE_NOT_FOUND": "این انبار پیدا نشد یا غیرفعال است.",
@@ -5328,6 +5361,7 @@
       "tax": "مالیات (٪)",
       "lineTotal": "مبلغ کل",
       "weight": "وزن (گرم)",
+      "cutLoss": "پرت برش",
       "notes": "توضیحات",
       "actions": "عملیات"
     },
@@ -5457,6 +5491,7 @@
       "priceRequired": "قیمت واحد باید بزرگ‌تر از صفر باشد",
       "multiplierRequired": "مقدار ستونِ ضرب‌شونده را وارد کنید",
       "unitMismatch": "واحد این سطر با واحد کالا یکی نیست و تبدیل ثبت‌شده‌ای ندارد",
+      "cutLossOnCountUnit": "برای واحد شمارشی پرت برش ثبت نمی‌شود",
       "totalRequired": "مبلغ ردیف باید بزرگ‌تر از صفر باشد",
       "noItems": "حداقل یک ردیف لازم است",
       "createFailed": "ثبت فاکتور ناموفق بود",
@@ -12089,7 +12124,33 @@
       "podRecipient": "نام تحویل‌گیرنده",
       "progressCod": "به‌روزرسانی وضعیت COD",
       "settleInvoiceId": "شناسه فاکتور برای تسویه COD",
-      "tracking": "شماره رهگیری"
+      "tracking": "شماره رهگیری",
+      "route": "مسیر",
+      "cod": "پرداخت در محل",
+      "fleetTitle": "ناوگان تحویل",
+      "assign": "تخصیص خودرو",
+      "close": "بستن تحویل",
+      "vehicleName": "نام خودرو",
+      "vehiclePlate": "پلاک",
+      "vehicleCapacity": "ظرفیت بسته در روز",
+      "addVehicle": "افزودن خودرو",
+      "serviceState": "وضعیت سرویس",
+      "assignedOnDate": "تخصیص امروز",
+      "assignTitle": "تخصیص خودرو",
+      "selectVehicle": "انتخاب خودرو",
+      "closeOutcome": "نتیجه تحویل",
+      "delivered": "تحویل شد",
+      "failed": "تحویل ناموفق",
+      "podMethod": "روش تایید",
+      "signature": "امضا",
+      "photo": "عکس",
+      "code": "کد",
+      "podCode": "کد تحویل",
+      "podPhotoRef": "مرجع عکس",
+      "collectedMinor": "مبلغ دریافت شده (جزء)",
+      "failureReason": "دلیل عدم تحویل",
+      "recordService": "ثبت سرویس",
+      "confirmClose": "ثبت نتیجه"
     }
   },
   "warehouseHub": {
@@ -14251,15 +14312,30 @@
     "print_job": {
       "label": "سفارش چاپ و تأیید طرح"
     },
+    "travel_booking": {
+      "label": "رزرو سفر و خدمات آژانس"
+    },
+    "supplier_settlement": {
+      "label": "تسویه با تأمین‌کننده"
+    },
+    "clinical_record": {
+      "label": "پرونده بالینی"
+    },
+    "health_data_access": {
+      "label": "دسترسی به داده سلامت"
+    },
     "limitations": {
+      "ORDER_CONFIRMATION_ONLINE_ONLY": "پیشنویش سفارش روی دستگاه نوشته میشود، ولی تأیید قیمت و موجودی و تبدیل آن به فاکتور فقط با اینترنت انجام میشود.",
+      "PRODUCTION_BATCH_ONLINE_ONLY": "ضایعات و بازده در هر اجرا ثبت می‌شوند، اما خودِ اجرای تولید روی دستگاه آفلاین انجام نمی‌شود.",
+      "LINEAR_CUT_LOSS_NOT_TRACKED": "ضایعات برش طولی ثبت نمی‌شود.",
+      "BATCH_RETURN_RESTORE_MISSING": "مرجوعی به بچ اصلی خود برگردانده نمی‌شود.",
       "FX_TRADES_ONLINE_ONLY": "معاملات ارزی فقط با اینترنت ثبت می‌شوند؛ نرخ و موجودی بین دستگاه‌های آفلاین همگام نمی‌شود.",
       "OLD_GOLD_TRADE_IN_NOT_ON_INVOICE": "محاسبه طلای دست‌دوم فقط در دامنه وجود دارد و در فاکتور اعمال نمی‌شود.",
-      "LINEAR_CUT_LOSS_NOT_TRACKED": "ضایعات برش طولی ثبت نمی‌شود.",
       "TANK_DIP_CALIBRATION_NOT_TRACKED": "کالیبراسیون اندازه‌گیری مخزن ثبت نمی‌شود.",
       "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "قاعده‌اش هست، ولی هنوز روی خط فاکتور انتخاب نمی‌شود.",
       "NO_SERVER_ROUTE_OR_UI_PICKER": "قاعده‌اش هست، ولی هنوز صفحه‌ای برای انتخابش نیست.",
       "QUANTITY_BREAK_UI_BASIC": "تعریف پله‌های قیمت ساده است.",
-      "BATCH_RETURN_RESTORE_MISSING": "مرجوعی به همان سری/بچ برنمی‌گردد.",
+      "EXPIRY_REPORT_AND_LOT_TRAIL_ONLINE_ONLY": "گزارش انقضا و رهگیری بچ فقط با اینترنت کار می‌کند.",
       "SERVER_ONLY_NO_OFFLINE_ENGINE": "فقط با اینترنت کار می‌کند.",
       "COST_LAYERS_ARE_PRODUCT_KEYED": "بهای تمام‌شده برای کل کالا حساب می‌شود، نه برای هر مدل.",
       "SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY": "رزرو یک کالای سریال‌دار و برگشت آن فقط با اینترنت انجام می‌شود.",

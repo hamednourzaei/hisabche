@@ -20,7 +20,9 @@ import {
   DASHBOARD_PART_IDS,
   GENERIC_DASHBOARD_PART_IDS,
   INDUSTRY_KEYS,
+  INDUSTRY_OPERATOR,
   LEGACY_INDUSTRY_KEYS,
+  OPERATOR_KEYS,
   PROFILES,
   canonicalIndustryTypes,
   primaryIndustryKeyOf,
@@ -105,7 +107,13 @@ describe('industry registry', () => {
 
     expect(PROFILES.bakery.capabilities).toEqual([])
     expect(PROFILES.bakery.requestedCapabilities).toContain('production_batch')
-    expect(unsupportedOf('bakery')).toContain('production_batch')
+    // WP-09 promoted `production_batch` to `partial` — a run now records scrap,
+    // rework and yield — so «needs it, not switched on» is no longer the same
+    // as «unusable». The trade that still asks for something nobody built is
+    // printing: `print_job` is planned, so it must stay unsupported.
+    expect(unsupportedOf('bakery')).not.toContain('production_batch')
+    expect(PROFILES.printing.requestedCapabilities).toContain('print_job')
+    expect(unsupportedOf('printing')).toContain('print_job')
 
     expect(PROFILES.pharmacy.capabilities).not.toContain('pharmacy_prescription')
     expect(unsupportedOf('pharmacy')).toEqual(
@@ -129,6 +137,64 @@ describe('industry registry', () => {
     expect(PROFILES.printing.requestedCapabilities).toContain('print_job')
     // The exchange engine is registered AND switched on for the trade it serves.
     expect(PROFILES.currencyExchange.capabilities).toContain('currency_exchange')
+  })
+})
+
+describe('operator tree (17 Nov 2026 review §4)', () => {
+  it('every canonical industry has exactly one operator, and no extra industry is mapped', () => {
+    expect(Object.keys(INDUSTRY_OPERATOR).sort()).toEqual([...INDUSTRY_KEYS].sort())
+    for (const key of INDUSTRY_KEYS) {
+      expect(OPERATOR_KEYS as readonly string[], key).toContain(INDUSTRY_OPERATOR[key])
+    }
+  })
+
+  it('the operator sizes are the ones the review published', () => {
+    const expected: Record<string, number> = {
+      everyday_sales: 10,
+      wholesale_measurement: 12,
+      sku_serial: 12,
+      value_trade: 2,
+      food_recipe: 5,
+      health: 3,
+      booking_services: 6,
+      repair_ticket: 3,
+      production_project_land: 8,
+      transport_travel: 5,
+      generic: 1,
+    }
+    expect(Object.keys(expected).sort()).toEqual([...OPERATOR_KEYS].sort())
+    const counted: Record<string, number> = {}
+    for (const key of INDUSTRY_KEYS) {
+      counted[INDUSTRY_OPERATOR[key]] = (counted[INDUSTRY_OPERATOR[key]] ?? 0) + 1
+    }
+    expect(counted).toEqual(expected)
+    expect(Object.values(counted).reduce((sum, n) => sum + n, 0)).toBe(INDUSTRY_KEYS.length)
+  })
+
+  it('`other` stays the generic escape hatch: no requirement, no specialised operator', () => {
+    expect(INDUSTRY_OPERATOR.other).toBe('generic')
+    expect(PROFILES.other.requestedCapabilities).toEqual([])
+    expect(PROFILES.other.capabilities).toEqual([])
+    // Only the escape hatch may sit on the generic operator.
+    for (const key of INDUSTRY_KEYS) {
+      if (key !== 'other') expect(INDUSTRY_OPERATOR[key], key).not.toBe('generic')
+    }
+  })
+
+  it('names the requirements the review found missing', () => {
+    expect(PROFILES.construction.requestedCapabilities).toEqual(
+      expect.arrayContaining(['project_costing', 'timesheet_billing', 'deposits_liability']),
+    )
+    expect(PROFILES.flowers.requestedCapabilities).toContain('batch_expiry')
+    expect(PROFILES.spices.requestedCapabilities).toContain('batch_expiry')
+    expect(PROFILES.travelAgency.requestedCapabilities).toEqual(
+      expect.arrayContaining(['travel_booking', 'supplier_settlement']),
+    )
+    expect(PROFILES.clinic.requestedCapabilities).toEqual(
+      expect.arrayContaining(['clinical_record', 'health_data_access']),
+    )
+    // A calendar is not a medical record: the booking flag alone cannot carry it.
+    expect(PROFILES.clinic.requestedCapabilities).toContain('resource_capacity')
   })
 })
 

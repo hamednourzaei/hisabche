@@ -149,6 +149,61 @@ export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_audit_session ON service_delivery_status_audit(workspace_id, session_id, changed_at DESC)`,
 ]
 
+export const COURIER_DELIVERY_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS courier_deliveries (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    tracking_number TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    destination_address TEXT NOT NULL,
+    driver_employee_id TEXT,
+    status TEXT NOT NULL,
+    cod_amount_minor INTEGER NOT NULL DEFAULT 0,
+    cod_stage TEXT NOT NULL,
+    planned_on TEXT,
+    vehicle_id TEXT,
+    pod_method TEXT,
+    pod_recipient_name TEXT,
+    pod_photo_ref TEXT,
+    pod_code TEXT,
+    pod_recorded_at TEXT,
+    pod_actor_user_id TEXT,
+    delivery_timestamp TEXT,
+    cod_collected_minor INTEGER,
+    cod_shortfall_minor INTEGER NOT NULL DEFAULT 0,
+    failure_reason TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT,
+    client_request_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_courier_deliveries_request ON courier_deliveries(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+]
+
+export const DELIVERY_VEHICLE_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS delivery_vehicles (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    plate_number TEXT,
+    asset_id TEXT,
+    capacity_parcels INTEGER,
+    active INTEGER NOT NULL DEFAULT 1,
+    last_service_on TEXT,
+    next_service_due_on TEXT,
+    odometer_km INTEGER,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_delivery_vehicles_plate ON delivery_vehicles(workspace_id, plate_number) WHERE plate_number IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_delivery_vehicles_workspace ON delivery_vehicles(workspace_id, active)`,
+]
+
 /** v15 on an existing v14 cache: the reason a free session was free, and the one-consume-per-session guard. */
 export const SERVICE_DELIVERY_AUDIT_ALTERS: readonly string[] = [
   `ALTER TABLE service_delivery_sessions ADD COLUMN settlement_reason TEXT`,
@@ -228,6 +283,52 @@ export const ORDER_DEPOSIT_MOVEMENT_STATEMENTS: readonly string[] = [
      ON order_deposit_refunds(workspace_id, deposit_id, idempotency_key)`,
   `CREATE INDEX IF NOT EXISTS idx_order_deposit_refunds_deposit
      ON order_deposit_refunds(workspace_id, deposit_id)`,
+]
+
+/**
+ * WP-13 gap A — offline sales-order drafts.
+ *
+ * A draft is NOT a committed sale: no stock and no money move on the device.
+ * It exists so a rep can write an order without signal; the server still
+ * confirms price and availability when the draft is submitted.
+ */
+export const SALES_ORDER_DRAFT_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS sales_order_drafts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    order_number TEXT,
+    customer_id TEXT,
+    customer_name TEXT,
+    status TEXT NOT NULL DEFAULT 'quoted',
+    currency TEXT NOT NULL,
+    notes TEXT,
+    total_minor INTEGER NOT NULL DEFAULT 0,
+    client_request_id TEXT,
+    submitted_at TEXT,
+    server_confirmed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_sales_order_drafts_request ON sales_order_drafts(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_sales_order_drafts_status ON sales_order_drafts(workspace_id, status)`,
+  `CREATE TABLE IF NOT EXISTS sales_order_draft_items (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    order_id TEXT NOT NULL,
+    product_id TEXT,
+    product_name TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    unit TEXT,
+    unit_price_minor INTEGER NOT NULL,
+    total_minor INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_sales_order_draft_items_order ON sales_order_draft_items(workspace_id, order_id)`,
 ]
 
 export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
@@ -403,8 +504,17 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
   // ─── 9. Service Delivery & Attendance (v14) ───────────────────
   ...SERVICE_DELIVERY_STATEMENTS,
 
-  // ─── 10. Package term, deferred revenue and allocation (v17) ───
+  // ─── 10. Courier Deliveries & Fleet (WP-19) ────────────────────
+  ...COURIER_DELIVERY_STATEMENTS,
+
+  // ─── 10b. Delivery Vehicles (WP-19 Fleet) ──────────────────────
+  ...DELIVERY_VEHICLE_STATEMENTS,
+
+  // ─── 11. Package term, deferred revenue and allocation (v17) ───
   ...PACKAGE_ALLOCATION_STATEMENTS,
+
+  // ─── 12. Offline sales-order drafts (WP-13) ───────────────────
+  ...SALES_ORDER_DRAFT_STATEMENTS,
 ]
 
 /** v10 on an existing v9 cache: the same columns a fresh cache is born with. */
@@ -511,6 +621,11 @@ export const BATCHES_STATEMENTS: readonly string[] = [
     cost_layer_id TEXT,
     warehouse_id TEXT,
     received_on TEXT NOT NULL,
+    -- WP-05: a recalled / failed carton keeps its quantity and loses its
+    -- sellability. The shared allocation core refuses it on both sides.
+    recalled_at TEXT,
+    recalled_reason TEXT,
+    recalled_by TEXT,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT '',
     deleted_at TEXT,

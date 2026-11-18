@@ -43,6 +43,9 @@ export const FINANCIAL_ENTITIES: readonly LocalTable[] = [
   'invoice_item',
   'transaction',
   'inventory_movement',
+  'courier_deliveries',
+  'sales_order_drafts',
+  'sales_order_draft_items',
 ]
 
 /**
@@ -74,7 +77,12 @@ export const FINANCIAL_FIELDS: readonly string[] = [
  * ⚠️ AN ALLOW-LIST. Everything not named here validates, so a table added
  * later is safe by default instead of safe only if somebody remembered.
  */
-export const DESCRIPTIVE_ENTITIES: readonly LocalTable[] = ['customer', 'product', 'employee']
+export const DESCRIPTIVE_ENTITIES: readonly LocalTable[] = [
+  'customer',
+  'product',
+  'employee',
+  'delivery_vehicles',
+]
 
 export type PushRoute = 'domain' | 'versioned'
 

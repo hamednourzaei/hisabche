@@ -15,7 +15,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PublishableKeyCreateInput, StorefrontSettings } from '@hisabche/validation'
 
-import { apiClient } from '../lib/client'
+import { apiClient, localRequest } from '../lib/client'
 import { asList } from '../lib/as-list'
 import { getActiveWorkspaceId } from '../lib/active-workspace'
 import { useAuthReady } from './useAuthReady'
@@ -202,6 +202,81 @@ export function useInvoiceSalesOrder() {
       qc.invalidateQueries({ queryKey: orderKeys.all })
       qc.invalidateQueries({ queryKey: ['invoices'] })
     },
+  })
+}
+
+// ─── WP-13: offline order drafts ─────────────────────────────────────
+// A draft moves no money and no stock. These hooks talk to the DEVICE routes,
+// not to the server; `useCreateSalesOrder` above is the server confirmation.
+
+export interface SalesOrderDraftRow {
+  id: string
+  workspace_id: string
+  order_number: string | null
+  customer_id: string | null
+  customer_name: string | null
+  status: string
+  currency: string
+  notes: string | null
+  total_minor: number
+  client_request_id: string | null
+  submitted_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export function useSalesOrderDrafts() {
+  return useQuery({
+    queryKey: [...orderKeys.all, ws(), 'drafts'],
+    queryFn: async () =>
+      asList<SalesOrderDraftRow>(
+        (await localRequest<{ data?: unknown }>('GET', '/orders/drafts'))?.data,
+        '/orders/drafts',
+      ),
+  })
+}
+
+export function useSalesOrderDraft(id: string | null) {
+  return useQuery({
+    queryKey: [...orderKeys.all, ws(), 'draft', id ?? ''],
+    queryFn: async () => (await localRequest<SalesOrderDraftRow>('GET', `/orders/drafts/${id}`))!,
+    enabled: Boolean(id),
+  })
+}
+
+export function useCreateSalesOrderDraft() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Record<string, unknown>) =>
+      (await localRequest<SalesOrderDraftRow>('POST', '/orders/drafts', input))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...orderKeys.all, ws(), 'drafts'] }),
+  })
+}
+
+export function useUpdateSalesOrderDraft() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...input }: { id: string } & Record<string, unknown>) =>
+      (await localRequest<SalesOrderDraftRow>('PATCH', `/orders/drafts/${id}`, input))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...orderKeys.all, ws(), 'drafts'] }),
+  })
+}
+
+export function useSubmitSalesOrderDraft() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await localRequest<SalesOrderDraftRow>('POST', `/orders/drafts/${id}/submit`, {}))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...orderKeys.all, ws(), 'drafts'] }),
+  })
+}
+
+export function useCancelSalesOrderDraft() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await localRequest<SalesOrderDraftRow>('POST', `/orders/drafts/${id}/cancel`, {}))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...orderKeys.all, ws(), 'drafts'] }),
   })
 }
 

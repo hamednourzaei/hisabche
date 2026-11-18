@@ -20,9 +20,9 @@
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
 | [عمده‌فروشی](../wholesale/README.md) (`wholesale`) | `generic` | `GENERIC_BUSINESS` | — | — |
-| [رول پارچه (عمده)](../fabricRoll/README.md) (`fabricRoll`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [رول پارچه (عمده)](../fabricRoll/README.md) (`fabricRoll`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `length_pricing`، `multi_unit` | — |
 | [مواد ساختمانی](../buildingMaterials/README.md) (`buildingMaterials`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
-| [چوب و الوار](../timber/README.md) (`timber`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [چوب و الوار](../timber/README.md) (`timber`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `length_pricing`، `multi_unit` | — |
 | [تیل‌فروشی و گاز](../fuel/README.md) (`fuel`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | `fuel_tank_reconciliation` |
 | [تخم و کود](../seedsFertilizer/README.md) (`seedsFertilizer`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `batch_expiry` | — |
 

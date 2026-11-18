@@ -29,7 +29,7 @@
 | [طلا و جواهر](../jewellery/README.md) (`jewellery`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `weight_pricing`، `multi_unit` | — |
 | [ساعت](../watches/README.md) (`watches`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
 | [پوشاک](../clothing/README.md) (`clothing`) | `specialized` | `GENERIC_BUSINESS` | `variants` | — |
-| [پارچه متری و خرازی](../fabric/README.md) (`fabric`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
+| [پارچه متری و خرازی](../fabric/README.md) (`fabric`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `length_pricing`، `multi_unit` | — |
 | [کفش](../shoes/README.md) (`shoes`) | `specialized` | `GENERIC_BUSINESS` | `variants` | — |
 | [فرش و قالین](../carpet/README.md) (`carpet`) | `specialized` | `RETAIL_STORE` | `measurement`، `multi_unit`، `variants` | — |
 | [موبایل و لوازم جانبی](../mobilePhones/README.md) (`mobilePhones`) | `specialized` | `GENERIC_BUSINESS` | `variants`، `serialized_items` | — |

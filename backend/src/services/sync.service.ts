@@ -485,7 +485,16 @@ export const INVOICE_ITEM_COLUMNS = [
   'total_price',
   'unit',
   'unit_label',
+  // WP-03 — «پرت برش». A device that did not hold it would take only the sold
+  // metres off the shelf when the same invoice is cancelled there, while the
+  // server took the offcut too: one invoice, two shelves.
+  'cut_loss_quantity',
 ] as const
+
+/** Every column above except the one WP-03 introduced, for an unmigrated database. */
+const INVOICE_ITEM_COLUMNS_BEFORE_CUT_LOSS = INVOICE_ITEM_COLUMNS.filter(
+  (column) => column !== 'cut_loss_quantity',
+)
 
 /**
  * Attach each invoice's lines as `items` (request: invoice lines in the
@@ -499,10 +508,27 @@ export const INVOICE_ITEM_COLUMNS = [
 async function attachInvoiceItems(invoices: Record<string, unknown>[]): Promise<void> {
   const ids = invoices.map((row) => row.id).filter((id): id is string => typeof id === 'string')
   if (ids.length === 0) return
-  const { data, error } = await supabase
-    .from('invoice_items')
-    .select(INVOICE_ITEM_COLUMNS.join(', '))
-    .in('invoice_id', ids)
+  const readItems = (columns: readonly string[]) =>
+    supabase.from('invoice_items').select(columns.join(', ')).in('invoice_id', ids)
+
+  let { data, error } = await readItems(INVOICE_ITEM_COLUMNS)
+  // WP-03 — a database that has not run `docs/line-cut-loss-01-migration.sql`
+  // yet. Without the column nobody can have recorded a loss (the write refuses
+  // with CUT_LOSS_MIGRATION_REQUIRED), so the pull carries on without it rather
+  // than turning every device's sync into a 500.
+  if (
+    error &&
+    (error.code === '42703' || error.code === 'PGRST204') &&
+    /cut_loss_quantity/.test(error.message ?? '')
+  ) {
+    console.warn(
+      '[SyncService] invoice_items.cut_loss_quantity is missing — run ' +
+        'docs/line-cut-loss-01-migration.sql. Pulled invoices carry no cut loss until then.',
+    )
+    const retry = await readItems(INVOICE_ITEM_COLUMNS_BEFORE_CUT_LOSS)
+    data = retry.data
+    error = retry.error
+  }
   if (error) throw new Error(`sync invoice items failed: ${error.message}`)
   const byInvoice = new Map<string, Record<string, unknown>[]>()
   for (const item of (data ?? []) as unknown as Record<string, unknown>[]) {

@@ -9,6 +9,10 @@
 //   · NOTHING ELSE MOVES: no stock, no cost layer, no journal entry, no money. The server applies the
 //     return when it syncs (stock, cost, ledger — one transaction there too). Until then the return is
 //     «pending sync»; a second engine of those rules on the device would be a second source of truth.
+//   · EXCEPT THE NAMED UNITS: the serials a line says came back are routed HERE, in the same
+//     transaction, by the shared `routeReturnedSerial` — the server does exactly this after its own
+//     return, so the phone is sellable again (or scrapped) without waiting for the sync. A unit the
+//     line does not name stays where it is.
 //   · `grand_total_minor` is the NET credit (goods − discount + tax − what the shop keeps), as on the server
 //   · cash refunds are not here: they stay online (the cap is read under a lock the device cannot hold)
 // ============================================
@@ -16,6 +20,7 @@
 import {
   buildReturnDocument,
   planReturnDisposition,
+  routeReturnedSerial,
   type BuiltReturnDocument,
   type ReturnDispositionPlan,
   type ReturnCondition,
@@ -23,6 +28,7 @@ import {
   type RestockChoice,
   type ReturnReason,
   type ReturnType,
+  type SerialRecord,
 } from '@hisabche/validation'
 import { fractionDigits, type KnownCurrency } from '@hisabche/formatting'
 import { buildEnqueue } from '@hisabche/app-bridge'
@@ -87,6 +93,8 @@ interface RequestBody {
     restockChoice?: RestockChoice
     reasonCode?: ReturnReason
     conditionCode?: ReturnCondition
+    /** The units (IMEI / serial) this line hands back — routed by the shared rule. */
+    serialNumbers?: string[]
   }>
 }
 
@@ -319,6 +327,54 @@ export function registerInvoiceReturnsRoutes(router: Router) {
             now,
           ],
         )
+      }
+
+      // The units the line SAYS came back are routed by the shared rule, in
+      // this transaction: restocked / returned / scrapped exactly as the
+      // server will route them when it applies the return.
+      const serialsByLine = new Map(
+        (payload.lines ?? []).map((line) => [line.originalLineId, line.serialNumbers ?? []]),
+      )
+      for (const line of document.lines) {
+        for (const serialNumber of serialsByLine.get(line.originalLineId) ?? []) {
+          const unit = db.get<{
+            id: string
+            product_id: string
+            serial_number: string
+            status: SerialRecord['status']
+            warehouse_id: string | null
+            invoice_id: string | null
+          }>(
+            `SELECT id, product_id, serial_number, status, warehouse_id, invoice_id
+               FROM stock_serials
+              WHERE workspace_id = ? AND invoice_id = ? AND serial_number = ? AND deleted_at IS NULL`,
+            [ctx.workspaceId, invoiceId, serialNumber],
+          )
+          // A number this invoice never sold is not this return's business —
+          // the server's own routing skips it the same way.
+          if (!unit) continue
+          const routed = routeReturnedSerial(
+            {
+              serialNumber: unit.serial_number,
+              productId: unit.product_id,
+              status: unit.status,
+              warehouseId: unit.warehouse_id,
+              soldInvoiceId: unit.invoice_id,
+            },
+            line.conditionCode ?? 'opened',
+          )
+          db.run(
+            `UPDATE stock_serials
+                SET status = ?, invoice_id = NULL, sold_on = NULL, updated_at = ?
+              WHERE workspace_id = ? AND id = ?`,
+            [
+              line.restockChoice === 'scrap' ? 'scrapped' : routed.status,
+              now,
+              ctx.workspaceId,
+              unit.id,
+            ],
+          )
+        }
       }
 
       document.deductions.forEach((deduction, index) => {

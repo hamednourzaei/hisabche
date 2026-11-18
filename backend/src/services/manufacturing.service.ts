@@ -167,7 +167,7 @@ export class ManufacturingNotConfiguredError extends BaseError {
 }
 
 const RUN_COLUMNS =
-  'id, product_id, quantity, status, bom_id, bom_version, currency, components_cost, labor_cost, other_cost, unit_cost, calculated_total, override_total, override_reason, total_cost, actual_material_cost, labor_workers, labor_minutes, add_to_inventory, consume_components, warehouse_id, notes, produced_on, completed_at, completed_by'
+  'id, product_id, quantity, good_quantity, scrap_quantity, rework_quantity, yield_percent, status, bom_id, bom_version, currency, components_cost, labor_cost, other_cost, unit_cost, calculated_total, override_total, override_reason, total_cost, actual_material_cost, labor_workers, labor_minutes, add_to_inventory, consume_components, warehouse_id, notes, produced_on, completed_at, completed_by'
 
 interface BomItemRow {
   id: string
@@ -185,6 +185,10 @@ interface RunRow {
   id: string
   product_id: string
   quantity: number | string
+  good_quantity: number | string | null
+  scrap_quantity: number | string | null
+  rework_quantity: number | string | null
+  yield_percent: number | string | null
   status: string
   bom_id: string | null
   bom_version: number | null
@@ -250,7 +254,14 @@ export interface ProductionRun {
   id: string
   productId: string
   productName: string | null
+  /** Units the material was issued for. */
   quantity: number
+  /** What came out sellable: quantity − scrap − rework. Null on legacy rows. */
+  goodQuantity: number | null
+  scrapQuantity: number
+  reworkQuantity: number
+  /** good ÷ quantity × 100. Null when the run predates output tracking. */
+  yieldPercent: number | null
   currency: string | null
   bomId: string | null
   bomVersion: number | null
@@ -310,8 +321,9 @@ export interface ProductionReport {
     runs: number
     quantity: number
     totalCost: number
-    firstUnitCost: number
-    lastUnitCost: number
+    /** Per SELLABLE unit, on that run. Null when the run had none to divide by. */
+    firstUnitCost: number | null
+    lastUnitCost: number | null
   }>
   materials: Array<{
     key: string
@@ -370,6 +382,10 @@ function mapRun(
     // null, not a placeholder: a product that is gone reads as absent.
     productName: products.get(row.product_id)?.name ?? null,
     quantity: Number(row.quantity) || 0,
+    goodQuantity: numberOrNull(row.good_quantity),
+    scrapQuantity: Number(row.scrap_quantity) || 0,
+    reworkQuantity: Number(row.rework_quantity) || 0,
+    yieldPercent: numberOrNull(row.yield_percent),
     currency: row.currency,
     bomId: row.bom_id,
     bomVersion: row.bom_version,
@@ -821,7 +837,7 @@ export class ManufacturingService {
 
     const { data: existing, error: existingError } = await supabase
       .from('work_orders')
-      .select('id, quantity, total_cost')
+      .select('id, quantity, good_quantity, yield_percent, total_cost')
       .eq('workspace_id', workspaceId)
       .eq('idempotency_key', input.idempotencyKey)
       .maybeSingle()
@@ -840,7 +856,13 @@ export class ManufacturingService {
         status: 'already_completed' as const,
         workOrderId: existing.id as string,
         quantity: Number(existing.quantity) || 0,
+        goodQuantity: numberOrNull(existing.good_quantity),
+        // What the first press recorded — never recomputed from today's data.
+        yieldPercent: numberOrNull(existing.yield_percent),
         totalCost: Number(existing.total_cost) || 0,
+        // The per-sellable-unit figure is not stored on the run; a replay
+        // reports «not returned» rather than an invented number.
+        unitCost: null,
       }
     }
 
@@ -852,8 +874,16 @@ export class ManufacturingService {
       otherCosts: input.otherCosts,
       labor: input.labor,
       quantity: input.quantity,
+      scrapQuantity: input.scrapQuantity,
+      reworkQuantity: input.reworkQuantity,
       overrideTotal: input.overrideTotal,
     })
+
+    // Nothing sellable means nothing to receive: the material has been issued
+    // (or is about to be), and stock cannot gain zero units at a real cost.
+    if (input.addToInventory && cost.goodQuantity <= 0) {
+      throw new ValidationError('MANUFACTURING_GOOD_QUANTITY_REQUIRED')
+    }
 
     // Where the goods land. The rule is the product page's own
     // (stockEditWarehouse): the named warehouse, the only one, or — with
@@ -901,6 +931,9 @@ export class ManufacturingService {
         bom_id: bomId,
         bom_version: bomVersion,
         quantity: cost.quantity,
+        good_quantity: cost.goodQuantity,
+        scrap_quantity: cost.scrapQuantity,
+        rework_quantity: cost.reworkQuantity,
         currency: input.currency,
         columns: input.columns,
         notes: input.notes ?? null,
@@ -984,6 +1017,10 @@ export class ManufacturingService {
       status: (result.status as 'completed' | 'already_completed') ?? 'completed',
       workOrderId,
       quantity: cost.quantity,
+      goodQuantity: cost.goodQuantity,
+      scrapQuantity: cost.scrapQuantity,
+      reworkQuantity: cost.reworkQuantity,
+      yieldPercent: cost.yieldPercent,
       totalCost: cost.total,
       unitCost: cost.effectiveUnitCost,
       actualMaterialCost: numberOrNull(result.actual_material_cost),
@@ -1295,8 +1332,8 @@ export class ManufacturingService {
           runs: Number(row.runs) || 0,
           quantity: Number(row.quantity) || 0,
           totalCost: Number(row.total_cost) || 0,
-          firstUnitCost: Number(row.first_unit_cost) || 0,
-          lastUnitCost: Number(row.last_unit_cost) || 0,
+          firstUnitCost: numberOrNull(row.first_unit_cost),
+          lastUnitCost: numberOrNull(row.last_unit_cost),
         }),
       ),
       materials: (Array.isArray(raw.materials) ? raw.materials : []).map(

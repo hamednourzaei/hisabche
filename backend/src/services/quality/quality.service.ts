@@ -115,8 +115,32 @@ export class QualityService {
     return data ?? []
   }
 
-  async submitWarrantyClaim(ctx: TenancyContext, raw: WarrantyClaimCreateInput) {
+  /**
+   * Submit a warranty claim. `clientRequestId` is the key the caller already
+   * sent (`Idempotency-Key`): the SAME key twice is the SAME claim, answered
+   * with the row that exists instead of a second one
+   * (docs/warranty-claim-idempotency-migration.sql).
+   */
+  async submitWarrantyClaim(
+    ctx: TenancyContext,
+    raw: WarrantyClaimCreateInput,
+    clientRequestId: string | null = null,
+  ) {
     const input = warrantyClaimCreateSchema.parse(raw)
+
+    // A replay already has its answer. Read first so the common retry costs
+    // one lookup and never reaches the insert; the unique index below is what
+    // makes the concurrent case safe.
+    if (clientRequestId) {
+      const { data: replay, error: rErr } = await supabase
+        .from('warranty_claims')
+        .select('*')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('client_request_id', clientRequestId)
+        .maybeSingle()
+      if (rErr) throw new DatabaseError('Failed to read the warranty claim', rErr)
+      if (replay) return replay
+    }
 
     const { data: warranty, error: wErr } = await supabase
       .from('warranties')
@@ -171,11 +195,26 @@ export class QualityService {
         repair_ticket_id: input.repairTicketId ?? null,
         resolution_notes: input.resolutionNotes ?? null,
         actor_id: ctx.userId,
+        client_request_id: clientRequestId,
       })
       .select('*')
       .single()
 
-    if (cErr) throw new DatabaseError('Failed to submit warranty claim', cErr)
+    if (cErr) {
+      // 23505 = the unique index met its twin: two requests with one key raced
+      // and the other one won. Its row is the answer to this request too.
+      const code = (cErr as { code?: string }).code
+      if (code === '23505' && clientRequestId) {
+        const { data: winner } = await supabase
+          .from('warranty_claims')
+          .select('*')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('client_request_id', clientRequestId)
+          .maybeSingle()
+        if (winner) return winner
+      }
+      throw new DatabaseError('Failed to submit warranty claim', cErr)
+    }
 
     logBusinessEvent({
       workspaceId: ctx.workspaceId,

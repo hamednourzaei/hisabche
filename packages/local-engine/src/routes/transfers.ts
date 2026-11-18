@@ -186,13 +186,14 @@ export function registerTransferRoutes(router: Router): void {
       //    this route only applies it. The arriving layer keeps the source layer's currency.
       const layers = db.all<{
         id: string
+        variant_id: string | null
         unit_cost: number
         remaining_qty: number
         entry_date: string
         created_at: string
         currency: string | null
       }>(
-        `SELECT id, unit_cost, remaining_qty, entry_date, created_at, currency FROM cost_layer
+        `SELECT id, variant_id, unit_cost, remaining_qty, entry_date, created_at, currency FROM cost_layer
           WHERE workspace_id = ? AND product_id = ? AND warehouse_id = ? AND remaining_qty > 0 AND deleted_at IS NULL`,
         [workspaceId, productId, fromWarehouseId],
       )
@@ -201,6 +202,7 @@ export function registerTransferRoutes(router: Router): void {
         layers.map((layer): CostLayer => ({
           id: layer.id,
           productId,
+          variantId: layer.variant_id,
           warehouseId: fromWarehouseId,
           remainingQty: layer.remaining_qty,
           unitCost: layer.unit_cost,
@@ -224,13 +226,14 @@ export function registerTransferRoutes(router: Router): void {
         )
         db.run(
           `INSERT INTO cost_layer (
-            id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
+            id, workspace_id, product_id, variant_id, warehouse_id, source_type, source_id, source_line,
             received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, 'transfer', ?, 1, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, ?, 'transfer', ?, 1, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             generateUuid(),
             workspaceId,
             productId,
+            layer.variant_id,
             toWarehouseId,
             transferId,
             step.quantity,

@@ -20,6 +20,7 @@ import { Plus, Tag } from 'lucide-react'
 import { Badge } from '../badge'
 import { Button } from '../button'
 import { Input } from '../input'
+import { VariantCostLayersPanel } from './variant-cost-layers-panel'
 
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5'
@@ -161,6 +162,8 @@ export const ProductVariantsSection = memo(function ProductVariantsSection({
           </div>
         ))}
       </div>
+
+      <VariantCostLayersPanel productId={productId} variants={list} t={t} />
     </section>
   )
 })

@@ -512,6 +512,7 @@ export class PurchasingService {
 
       await costing.recordReceipt(ctx, {
         productId: item.product_id,
+        variantId: item.variant_id ?? null,
         quantity,
         // What was actually paid per unit. The list price would overstate the
         // layer and every profit later drawn from it.

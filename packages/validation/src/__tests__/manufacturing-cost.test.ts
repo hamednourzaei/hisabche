@@ -284,6 +284,103 @@ describe('computeProductionCost', () => {
     })
     expect(cost.calculatedTotal).toBe(0)
     expect(cost.effectiveUnitCost).toBe(0)
+    // Nothing started has no yield — «0%» would be a claim about a run that
+    // never happened.
+    expect(cost.yieldPercent).toBeNull()
+  })
+
+  // ═══ WP-09 — what came out, not what was started ═══
+  // 3 × 10 = 30 of material + 6 of labour = 36 per STARTED unit. Ten started
+  // cost 360 whatever comes out of the oven.
+  it('scrap lowers the sellable units, not the run cost', () => {
+    const cost = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '3', '10')],
+      labor: { cost: 6 },
+      quantity: 10,
+      scrapQuantity: 1,
+    })
+    expect(cost.unitCost).toBe(36)
+    expect(cost.calculatedTotal).toBe(360)
+    expect(cost.total).toBe(360)
+    expect(cost.scrapQuantity).toBe(1)
+    expect(cost.goodQuantity).toBe(9)
+    expect(cost.yieldPercent).toBe(90)
+    expect(cost.effectiveUnitCost).toBe(40) // 360 ÷ 9
+  })
+
+  it('rework is produced-but-not-sellable, exactly like scrap', () => {
+    const cost = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '3', '10')],
+      labor: { cost: 6 },
+      quantity: 10,
+      scrapQuantity: 2,
+      reworkQuantity: 3,
+    })
+    expect(cost.goodQuantity).toBe(5)
+    expect(cost.yieldPercent).toBe(50)
+    expect(cost.effectiveUnitCost).toBe(72) // 360 ÷ 5
+  })
+
+  it('an override is spread over the good units too', () => {
+    const cost = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '3', '10')],
+      labor: { cost: 6 },
+      quantity: 10,
+      scrapQuantity: 1,
+      overrideTotal: 900,
+    })
+    expect(cost.calculatedTotal).toBe(360)
+    expect(cost.total).toBe(900)
+    expect(cost.effectiveUnitCost).toBe(100) // 900 ÷ 9
+  })
+
+  it('a stale screen cannot report more loss than it started', () => {
+    // 4 started, 99 typed as scrap: the loss is clamped to the run, not to 99.
+    const all = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '1', '10')],
+      quantity: 4,
+      scrapQuantity: 99,
+    })
+    expect(all.scrapQuantity).toBe(4)
+    expect(all.goodQuantity).toBe(0)
+    expect(all.yieldPercent).toBe(0)
+    expect(all.effectiveUnitCost).toBe(0)
+
+    // Rework is clamped to what scrap left, so the two can never overlap.
+    const split = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '1', '10')],
+      quantity: 10,
+      scrapQuantity: 4,
+      reworkQuantity: 10,
+    })
+    expect(split.scrapQuantity).toBe(4)
+    expect(split.reworkQuantity).toBe(6)
+    expect(split.goodQuantity).toBe(0)
+  })
+
+  it('no losses is exactly the old run: every unit sellable, 100% yield', () => {
+    const cost = computeProductionCost({
+      currency: 'AFN',
+      columns,
+      rows: [part('1', 'a', '3', '10')],
+      labor: { cost: 6 },
+      quantity: 10,
+    })
+    expect(cost.scrapQuantity).toBe(0)
+    expect(cost.reworkQuantity).toBe(0)
+    expect(cost.goodQuantity).toBe(10)
+    expect(cost.yieldPercent).toBe(100)
+    expect(cost.effectiveUnitCost).toBe(cost.unitCost)
   })
 })
 
@@ -332,6 +429,36 @@ describe('produceSchema', () => {
   it('refuses a non-positive quantity and a missing key', () => {
     expect(produceSchema.safeParse({ ...valid, quantity: 0 }).success).toBe(false)
     expect(produceSchema.safeParse({ ...valid, idempotencyKey: '' }).success).toBe(false)
+  })
+
+  // ═══ WP-09 ═══
+  it('no output losses is the default, so an old client keeps working', () => {
+    const parsed = produceSchema.parse(valid)
+    expect(parsed.scrapQuantity).toBe(0)
+    expect(parsed.reworkQuantity).toBe(0)
+  })
+
+  it('refuses more scrap and rework than the run started, and says which field', () => {
+    const result = produceSchema.safeParse({
+      ...valid,
+      quantity: 5,
+      scrapQuantity: 4,
+      reworkQuantity: 2,
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.errors[0]!.path).toEqual(['scrapQuantity'])
+    expect(
+      produceSchema.safeParse({ ...valid, quantity: 5, scrapQuantity: 4, reworkQuantity: 1 })
+        .success,
+    ).toBe(true)
+  })
+
+  it('a run that puts nothing sellable into stock is refused', () => {
+    const nothing = { ...valid, quantity: 3, scrapQuantity: 3, addToInventory: true }
+    const result = produceSchema.safeParse(nothing)
+    expect(result.success).toBe(false)
+    // The same run with nothing to receive IS a valid record of a failed batch.
+    expect(produceSchema.safeParse({ ...nothing, addToInventory: false }).success).toBe(true)
   })
 
   it('a column field the grid adds later is not stripped on the way in', () => {

@@ -30,6 +30,14 @@ export interface StockBatch {
   costLayerId: string | null
   warehouseId?: string | null
   receivedOn: string
+  /**
+   * WP-05 — when this batch was blocked (a supplier recall, a failed
+   * inspection). Null while it is sellable. The quantity is unchanged: the
+   * goods exist, the allocation just refuses them.
+   */
+  recalledAt?: string | null
+  /** Why it was blocked. Present exactly when `recalledAt` is. */
+  recalledReason?: string | null
 }
 
 export interface SerialUnit {
@@ -222,6 +230,39 @@ export function useUpdateBatchDates() {
       manufacturedDate?: string | null
     }) => {
       const { data } = await apiClient.patch(`/operations/batches/${batchId}`, body)
+      return data as StockBatch
+    },
+    retry: false,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: expiryKeys.all }),
+  })
+}
+
+/**
+ * Block a batch (WP-05) — the supplier recalled it, or it failed inspection.
+ *
+ * A reason is required: a block nobody can explain is a block the next person
+ * undoes. The goods stay on the shelf and on the books; FEFO stops taking them.
+ */
+export function useRecallBatch() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ batchId, reason }: { batchId: string; reason: string }) => {
+      const { data } = await apiClient.post(`/operations/batches/${batchId}/recall`, { reason })
+      return data as StockBatch
+    },
+    retry: false,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: expiryKeys.all }),
+  })
+}
+
+/** Make a blocked batch sellable again — the supplier cleared it. */
+export function useReleaseBatchRecall() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (batchId: string) => {
+      const { data } = await apiClient.delete(`/operations/batches/${batchId}/recall`)
       return data as StockBatch
     },
     retry: false,

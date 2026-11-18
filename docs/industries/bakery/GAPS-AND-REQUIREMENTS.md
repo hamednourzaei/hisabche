@@ -7,7 +7,6 @@
 | نیاز | وضعیت |
 | --- | --- |
 | تجربه‌ی اختصاصی صنف (پروفایل عمومی است) | `CONFIGURATION_REQUIRED` |
-| `production_batch` | `NEW_CAPABILITY_REQUIRED` |
 | سفر کامل روی Postgres واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | سفر کامل در مرورگر روی یک workspace واقعی اجرا نشده | `EXISTING_BUT_INCOMPLETE` |
 | ACCEPTANCE_EVIDENCE_STALE | `EXISTING_BUT_INCOMPLETE` |

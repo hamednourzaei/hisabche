@@ -63,13 +63,16 @@ describe('the real capability registry', () => {
   })
 
   it('keeps the capabilities whose chain is whole and enforces engine references', () => {
+    // WP-03 — `length_pricing` joins the whole chains: the line now records
+    // «پرت برش», so a metre sold and a metre trimmed away no longer read the
+    // same, on the server and on the device alike.
     expect(CAPABILITY_KEYS.filter((key) => CAPABILITIES[key].status === 'available')).toEqual([
       'measurement',
       'weight_pricing',
+      'length_pricing',
       'multi_unit',
     ])
     expect(CAPABILITIES.recipe_bom.status).toBe('partial')
-    expect(CAPABILITIES.length_pricing.status).toBe('partial')
     expect(CAPABILITIES.volume_pricing.status).toBe('partial')
     for (const key of CAPABILITY_KEYS) {
       const def = CAPABILITIES[key]

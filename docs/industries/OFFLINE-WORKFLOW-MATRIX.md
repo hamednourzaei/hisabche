@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-679 endpoint: 209 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
+688 endpoint: 218 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
 
 | قابلیت | در دسترس | فقط آنلاین | نیست |
 | --- | ---: | ---: | ---: |
@@ -80,9 +80,9 @@
 | `hr.payroll_rebook` | 0 | 1 | 0 |
 | `hr.payslip` | 0 | 1 | 0 |
 | `hr.shifts` | 6 | 0 | 0 |
-| `inventory.batch_items` | 2 | 0 | 0 |
+| `inventory.batch_items` | 4 | 0 | 0 |
 | `inventory.consignment` | 0 | 2 | 0 |
-| `inventory.costing_method` | 2 | 0 | 0 |
+| `inventory.costing_method` | 2 | 2 | 0 |
 | `inventory.insights` | 2 | 0 | 0 |
 | `inventory.reservations` | 0 | 5 | 0 |
 | `inventory.serial_holds` | 0 | 3 | 0 |
@@ -104,6 +104,8 @@
 | `invoice.related` | 1 | 0 | 0 |
 | `invoice.return_refund` | 0 | 1 | 0 |
 | `invoice.returns` | 2 | 0 | 0 |
+| `logistics.dispatch` | 3 | 0 | 0 |
+| `logistics.parcel` | 4 | 0 | 0 |
 | `manufacturing.bom` | 0 | 1 | 0 |
 | `manufacturing.definition` | 0 | 2 | 0 |
 | `manufacturing.produce` | 0 | 1 | 0 |
@@ -178,7 +180,7 @@
 | `timesheet.manage` | 0 | 5 | 0 |
 | `trade.agriculture` | 0 | 2 | 0 |
 | `trade.appointments` | 0 | 2 | 0 |
-| `trade.courier` | 0 | 4 | 0 |
+| `trade.courier` | 0 | 2 | 0 |
 | `trade.delivery_notes` | 0 | 3 | 0 |
 | `trade.freight` | 0 | 2 | 0 |
 | `trade.gold_ledger` | 0 | 6 | 0 |

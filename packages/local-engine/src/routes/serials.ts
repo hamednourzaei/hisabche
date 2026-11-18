@@ -16,6 +16,14 @@
 // The invoice is recorded first (stock and money move there); issuing then
 // marks the named units sold ON that invoice. Cancelling the invoice frees
 // them again — see the cancel handler in routes/invoices.ts.
+//
+// What is NOT here, on purpose: the HOLD of a unit for a customer. A hold is a
+// promise two tills share — the server takes it under `FOR UPDATE`
+// (`serial_hold_with_expiry`) and refuses a sale of somebody else's unit. The
+// device keeps no serial rows in the sync protocol, so a hold taken offline
+// would exist on this device alone and be invisible to every other till; the
+// offline matrix therefore keeps the hold routes `online_required`
+// (`inventory.serial_holds`).
 // ============================================
 
 import { validateSerialSale, type SerialRecord } from '@hisabche/validation'

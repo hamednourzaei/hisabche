@@ -8,7 +8,7 @@
 
 | موتور | قابلیت‌ها | آفلاین |
 | --- | --- | --- |
-| `sales_invoice` | `measurement`، `multi_unit` | روی دستگاه هم اجرا می‌شود · `available` |
+| `sales_invoice` | `measurement`، `length_pricing`، `multi_unit` | روی دستگاه هم اجرا می‌شود · `available` |
 
 ## مکان اجرای سه عمل قرارداد
 

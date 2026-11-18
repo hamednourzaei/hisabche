@@ -137,6 +137,12 @@ export const localTableSchema = z.enum([
   'promotion',
   'package_credit_ledger',
   'service_delivery_sessions',
+  // WP-19: courier deliveries with POD/COD/fleet data for offline dispatch
+  'sales_order_drafts',
+  'sales_order_draft_items',
+  'courier_deliveries',
+  // WP-19: fleet register for offline dispatch
+  'delivery_vehicles',
   // V70.2: the two tables the pull now carries that the bridge did not name.
   // Both SQLite tables already existed (local-universal-core-schema.ts); a
   // table the contract does not name cannot be written by a pull at all.

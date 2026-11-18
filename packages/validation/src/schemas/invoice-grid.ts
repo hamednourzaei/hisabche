@@ -34,7 +34,7 @@ import type { z } from 'zod'
 import { computeItemTotal, roundInvoiceMoney, sumInvoiceLines } from './invoice-math'
 import { unitSchema } from './common.schema'
 import type { currencyCodeSchema } from './common.schema'
-import { isMeasurementUnit, lineUnitIssue } from './measurement.domain'
+import { cutLossIssue, isMeasurementUnit, lineUnitIssue } from './measurement.domain'
 import { fractionDigits } from '@hisabche/formatting'
 import type { GoldLineSnapshot } from './universal-core/gold-jewellery.domain'
 
@@ -124,6 +124,13 @@ export const COLUMN = {
    * weight. A user who needs it enables it like any other column.
    */
   weight: 'weightGrams',
+  /**
+   * Optional built-in, hidden by default: «پرت برش» — what left the shelf with
+   * the line and was not sold (WP-03). It is a MEASUREMENT, so it moves stock
+   * without touching money; the server adds it to the line's stock movement and
+   * refuses it on a count unit. See `measurement.domain.ts`.
+   */
+  cutLoss: 'cutLossQuantity',
   notes: 'notes',
 } as const
 
@@ -352,6 +359,16 @@ export function defaultColumns(currency: CurrencyCode): InvoiceColumn[] {
       id: COLUMN.weight,
       labelKey: 'invoiceBuilder.columns.weight',
       label: 'وزن (گرم)',
+      type: 'decimal',
+      system: false,
+      visible: false,
+      aggregate: true,
+      precision: 3,
+    },
+    {
+      id: COLUMN.cutLoss,
+      labelKey: 'invoiceBuilder.columns.cutLoss',
+      label: 'پرت برش',
       type: 'decimal',
       system: false,
       visible: false,
@@ -915,6 +932,8 @@ export interface MappedInvoiceItem {
   unit: InvoiceUnit
   unitLabel?: string
   weightGrams?: number
+  /** «پرت برش» — stock leaves with it, money does not. See measurement.domain.ts. */
+  cutLossQuantity?: number
   goldSnapshot?: GoldLineSnapshot
   unitPrice: number
   discount: number
@@ -1024,6 +1043,9 @@ export function rowToInvoiceItem(
   const unit: InvoiceUnit = parsedUnit?.success ? parsedUnit.data : unitRaw ? 'custom' : 'piece'
 
   const weight = parseCellNumber(row.values[COLUMN.weight])
+  // «پرت برش»: a measurement column, so it is carried on its own field rather
+  // than as a nameless component. Zero and blank mean «no loss recorded».
+  const cutLoss = parseCellNumber(row.values[COLUMN.cutLoss])
   const rowNotes = (row.values[COLUMN.notes] ?? '').trim()
   if (rowNotes) noteParts.unshift(rowNotes)
   const notes = noteParts.join(' • ')
@@ -1036,6 +1058,7 @@ export function rowToInvoiceItem(
     unit,
     ...(unit === 'custom' && unitRaw ? { unitLabel: unitRaw.slice(0, 24) } : {}),
     ...(weight > 0 ? { weightGrams: weight } : {}),
+    ...(cutLoss > 0 ? { cutLossQuantity: cutLoss } : {}),
     ...(row.goldSnapshot ? { goldSnapshot: row.goldSnapshot } : {}),
     unitPrice: rowUnitPrice(row, columns, ctx),
     discount: rowDiscountPercent(row),
@@ -1108,6 +1131,19 @@ export function validateGrid(
         rowId: row.id,
         key: 'invoiceBuilder.errors.unitMismatch',
         fallback: 'واحد این سطر با واحد کالا یکی نیست و تبدیل ثبت‌شده‌ای ندارد',
+      })
+      continue
+    }
+    // «پرت برش» on a count unit would take a piece off the shelf through a sale
+    // that never mentioned it. The server refuses it; the person is told here,
+    // before confirming, with the same rule (`cutLossIssue`).
+    if (
+      cutLossIssue(parseCellNumber(row.values[COLUMN.cutLoss]), row.values[COLUMN.unit]) !== null
+    ) {
+      issues.push({
+        rowId: row.id,
+        key: 'invoiceBuilder.errors.cutLossOnCountUnit',
+        fallback: 'برای واحد شمارشی پرت برش ثبت نمی‌شود',
       })
       continue
     }

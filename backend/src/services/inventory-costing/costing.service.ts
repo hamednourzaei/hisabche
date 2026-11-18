@@ -239,9 +239,19 @@ export class CostingService implements CostingPort {
    */
   async coverSoldUnits(
     ctx: TenancyContext,
-    request: { productId: string; quantity: number; entryDate: string; sourceLine: string },
+    request: {
+      productId: string
+      variantId?: string | null | undefined
+      quantity: number
+      entryDate: string
+      sourceLine: string
+    },
   ): Promise<{ covered: boolean }> {
-    const position = await this.repo.stockPosition(ctx.workspaceId, request.productId)
+    const position = await this.repo.stockPosition(
+      ctx.workspaceId,
+      request.productId,
+      request.variantId,
+    )
     if (!position) return { covered: false }
 
     const short = uncoveredSoldUnits(position, request.quantity)
@@ -250,6 +260,7 @@ export class CostingService implements CostingPort {
 
     await this.recordReceipt(ctx, {
       productId: request.productId,
+      variantId: request.variantId ?? null,
       warehouseId: null,
       quantity: short,
       unitCost: position.buyPrice,
@@ -261,14 +272,47 @@ export class CostingService implements CostingPort {
     return { covered: true }
   }
 
+  /**
+   * Assign pre-migration stock to the variant it actually is (WP-01).
+   *
+   * The strict rule refuses to price a variant sale from an unassigned layer,
+   * so without this act old stock of a multi-variant product could never be
+   * sold. It changes no quantity and no total value — only which variant's
+   * layer the units sit in — and the database refuses a layer that is closed or
+   * already assigned to another variant.
+   */
+  async assignLayerVariant(
+    ctx: TenancyContext,
+    layerId: string,
+    variantId: string,
+  ): Promise<{
+    layerId: string
+    productId: string
+    variantId: string
+    quantity: number
+    value: number
+    moved: boolean
+  }> {
+    if (!variantId) throw new ValidationError('INVENTORY_VARIANT_REQUIRED')
+    try {
+      const result = await this.repo.assignLayerVariant(ctx, layerId, variantId)
+      await this.invalidate(ctx.workspaceId)
+      return result
+    } catch (error) {
+      this.rethrow(error)
+    }
+  }
+
   // ─── Queries ──────────────────────────────────────────────────────────────
 
   async getLayers(
     ctx: TenancyContext,
     productId: string,
     warehouseId?: string | null,
+    /** undefined = every variant, null = unassigned only, uuid = one variant. */
+    variantId?: string | null,
   ): Promise<{ layers: CostLayer[]; onHand: number; value: number; averageCost: number }> {
-    const layers = await this.repo.openLayers(ctx.workspaceId, productId, warehouseId)
+    const layers = await this.repo.openLayers(ctx.workspaceId, productId, warehouseId, variantId)
     return {
       layers,
       onHand: onHand(layers),
@@ -321,9 +365,10 @@ export class CostingService implements CostingPort {
     productId: string,
     quantity: number,
     warehouseId?: string | null,
+    variantId?: string | null,
   ): Promise<ConsumptionPlan> {
     const [layers, settings] = await Promise.all([
-      this.repo.openLayers(ctx.workspaceId, productId, warehouseId),
+      this.repo.openLayers(ctx.workspaceId, productId, warehouseId, variantId),
       this.repo.getSettings(ctx.workspaceId),
     ])
 

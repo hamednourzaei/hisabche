@@ -43,6 +43,11 @@ export function drawFromLayers(
   input: {
     workspaceId: string
     productId: string
+    /**
+     * STRICT (WP-01): only layers of this same variant. `null` consumes only
+     * layers never assigned to a variant; it is not a shared pool.
+     */
+    variantId: string | null
     quantity: number
     invoiceId: string
     invoiceLine: string
@@ -54,7 +59,7 @@ export function drawFromLayers(
     now: string
   },
 ): { totalCost: number; shortfall: number } {
-  const params: unknown[] = [input.workspaceId, input.productId]
+  const params: unknown[] = [input.workspaceId, input.productId, input.variantId]
   let warehouseFilter = ''
   if (input.warehouseId) {
     warehouseFilter = ' AND (warehouse_id = ? OR warehouse_id IS NULL)'
@@ -64,15 +69,17 @@ export function drawFromLayers(
   const layers = db.all<{
     id: string
     product_id: string
+    variant_id: string | null
     warehouse_id: string | null
     remaining_qty: number
     unit_cost: number
     entry_date: string
     created_at: string
   }>(
-    `SELECT id, product_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at
+    `SELECT id, product_id, variant_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at
        FROM cost_layer
-      WHERE workspace_id = ? AND product_id = ? AND remaining_qty > 0 AND deleted_at IS NULL${warehouseFilter}
+      WHERE workspace_id = ? AND product_id = ? AND variant_id IS ?
+        AND remaining_qty > 0 AND deleted_at IS NULL${warehouseFilter}
       ORDER BY entry_date ASC, created_at ASC`,
     params,
   )
@@ -81,6 +88,7 @@ export function drawFromLayers(
     layers.map((l) => ({
       id: l.id,
       productId: l.product_id,
+      variantId: l.variant_id,
       warehouseId: l.warehouse_id,
       remainingQty: Number(l.remaining_qty),
       unitCost: l.unit_cost,
@@ -99,15 +107,16 @@ export function drawFromLayers(
     )
     db.run(
       `INSERT INTO cost_consumption (
-        id, workspace_id, layer_id, product_id, warehouse_id, consumer_type,
+        id, workspace_id, layer_id, product_id, variant_id, warehouse_id, consumer_type,
         consumer_id, consumer_line, quantity, unit_cost, currency, entry_date,
         created_at, updated_at, origin, sync_state
-      ) VALUES (?, ?, ?, ?, ?, 'invoice', ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, 'invoice', ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
       [
         generateUuid(),
         input.workspaceId,
         step.layerId,
         input.productId,
+        input.variantId,
         input.warehouseId,
         input.invoiceId,
         input.invoiceLine,
@@ -129,6 +138,8 @@ export function receiveLayer(
   input: {
     workspaceId: string
     productId: string
+    /** The variant these units belong to; null = never assigned (WP-01). */
+    variantId?: string | null
     warehouseId: string | null
     quantity: number
     unitCost: number
@@ -152,14 +163,15 @@ export function receiveLayer(
   const id = generateUuid()
   db.run(
     `INSERT INTO cost_layer (
-      id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
+      id, workspace_id, product_id, variant_id, warehouse_id, source_type, source_id, source_line,
       received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at,
       origin, sync_state
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
     [
       id,
       input.workspaceId,
       input.productId,
+      input.variantId ?? null,
       input.warehouseId,
       input.sourceType,
       input.sourceId,

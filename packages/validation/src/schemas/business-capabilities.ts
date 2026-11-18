@@ -107,12 +107,13 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
   sales_orders: {
     key: 'sales_orders',
     service: 'backend/src/services/orders/orders.service.ts',
-    localEngine: null,
-    localEngineRoute: null,
+    // WP-13: the DRAFT is written offline; confirmation still needs the server.
+    localEngine: 'packages/local-engine/src/routes/sales-orders.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/sales-orders.ts',
     clientHook: 'packages/api/src/hooks/orders.ts',
     uiHost: 'packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx',
     matrixFeature: 'sales.orders',
-    offlineStatus: 'online_required',
+    offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('sales.orders'),
     structure: 'service_owned',
     pack: 'operations',
@@ -421,6 +422,12 @@ export const CAPABILITY_KEYS = [
   'production_batch',
   'fuel_tank_reconciliation',
   'print_job',
+  // Domains the 17 Nov 2026 review found missing from the requirement model.
+  // Planned: no engine, no evidence; WP-28/WP-29 own them.
+  'travel_booking',
+  'supplier_settlement',
+  'clinical_record',
+  'health_data_access',
 ] as const
 
 export type CapabilityKey = (typeof CAPABILITY_KEYS)[number]
@@ -500,20 +507,29 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
   },
   length_pricing: {
     key: 'length_pricing',
-    status: 'partial',
+    status: 'available',
     engine: 'sales_invoice',
+    // V67 / WP-03: the line now records «پرت برش» — the material that left the
+    // shelf with it and was not sold. Stock and cost of goods sold include it,
+    // the invoice total does not, and the device applies the same rule
+    // (`stockQuantityOfLine` in measurement.domain.ts). A 50 m roll sold as
+    // 12.5 + 1.25 loss leaves 36.25 m on the shelf on both sides.
     labelKey: 'capability.lengthPricing',
     evidence: {
       sources: [
         'packages/validation/src/schemas/measurement.domain.ts',
+        'backend/src/services/invoice.service.ts',
         'packages/local-engine/src/routes/invoices.ts',
         'packages/ui/src/components/ui/invoice-builder/grid/grid-cell.tsx',
       ],
-      tests: ['packages/validation/src/__tests__/measurement.test.ts'],
+      tests: [
+        'packages/validation/src/__tests__/measurement.test.ts',
+        'packages/local-engine/src/__tests__/invoice-unit-parity.test.ts',
+        'backend/src/__tests__/line-cut-loss.pg.test.ts',
+      ],
     },
     ...STANDALONE,
     requires: [needs('measurement')],
-    limitations: ['LINEAR_CUT_LOSS_NOT_TRACKED'],
   },
   volume_pricing: {
     key: 'volume_pricing',
@@ -604,6 +620,9 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     // migration v22: stock_batches + lot_allocations) and runs the SAME shared
     // FEFO core (`planAllocation`) offline — receive, list, plan and issue are
     // local routes; a cancelled offline sale gives back exactly what it took.
+    // WP-05: a recalled / failed carton is BLOCKED, not sold — server and device
+    // refuse it through that same core — and a return puts the goods back into
+    // the batch they came from, with the refusal moved before the commit.
     labelKey: 'capability.batchExpiry',
     evidence: {
       sources: [
@@ -611,24 +630,29 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
         'backend/src/services/traceability/lot.domain.ts',
         'backend/src/services/traceability/traceability.service.ts',
         'backend/src/routes/operations.routes.ts',
+        'docs/batch-recall-migration.sql',
         'packages/local-engine/src/routes/batches.ts',
         'packages/app-bridge/src/local-universal-core-schema.ts',
         'packages/api/src/hooks/expiry.ts',
         'packages/ui/src/components/ui/warehouse/add-to-warehouse-modal.tsx',
+        'packages/ui/src/components/ui/warehouse-detail/product-expiry-panel.tsx',
       ],
       tests: [
         'backend/src/__tests__/traceability-rules.test.ts',
+        'backend/src/__tests__/batch-recall.test.ts',
+        'backend/src/__tests__/batch-recall.pg.test.ts',
+        'backend/src/__tests__/batch-return-restore.test.ts',
         'packages/validation/src/__tests__/lot-allocation.test.ts',
         'packages/local-engine/src/__tests__/migration-v22.test.ts',
         'packages/local-engine/src/__tests__/offline-batch-identity.test.ts',
+        'packages/local-engine/src/__tests__/offline-batch-recall.test.ts',
       ],
     },
     ...STANDALONE,
-    // What remains: correcting a batch's dates, the expiry report and the lot
-    // trail still run on the server only (their matrix rows stay
-    // online_required), and a RETURN does not restore the batch it came from —
-    // on the server either, so no policy was invented.
-    limitations: ['BATCH_RETURN_RESTORE_MISSING'],
+    // What remains: the expiry report and the lot trail still run on the server
+    // only (their matrix rows stay online_required). The return restore and the
+    // recall are now on both sides, so they are no longer limitations.
+    limitations: ['EXPIRY_REPORT_AND_LOT_TRAIL_ONLINE_ONLY'],
   },
   recipe_bom: {
     key: 'recipe_bom',
@@ -857,7 +881,8 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['backend/src/__tests__/storefront-orders.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE'],
+    // WP-13: drafts are offline; price, stock and confirmation stay with the server.
+    limitations: ['ORDER_CONFIRMATION_ONLINE_ONLY'],
   },
   procurement_planning: {
     key: 'procurement_planning',
@@ -1250,12 +1275,32 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     ...STANDALONE,
   },
   production_batch: {
+    // WP-09: a run records what it STARTED and what came out SELLABLE — scrap,
+    // rework, good quantity and yield — and the shelf receives the good units
+    // only, at (the run's whole cost ÷ those units). `partial`, not
+    // `available`: the run is entered on the server; the device has no
+    // manufacturing engine (engine `production_bom` is online_required).
     key: 'production_batch',
-    status: 'planned',
-    engine: null,
+    status: 'partial',
+    engine: 'production_bom',
     labelKey: 'capabilities.production_batch.label',
-    evidence: NO_EVIDENCE,
+    evidence: {
+      sources: [
+        'packages/validation/src/schemas/manufacturing-cost.ts',
+        'backend/src/services/manufacturing.service.ts',
+        'backend/src/routes/manufacturing.routes.ts',
+        'docs/production-batch-01-migration.sql',
+        'packages/api/src/hooks/manufacturing.ts',
+        'packages/ui/src/components/ui/manufacturing/production-editor.tsx',
+        'packages/ui/src/components/ui/manufacturing/production-history.tsx',
+      ],
+      tests: [
+        'packages/validation/src/__tests__/manufacturing-cost.test.ts',
+        'backend/src/__tests__/production-batch.pg.test.ts',
+      ],
+    },
     ...STANDALONE,
+    limitations: ['PRODUCTION_BATCH_ONLINE_ONLY'],
   },
   fuel_tank_reconciliation: {
     key: 'fuel_tank_reconciliation',
@@ -1270,6 +1315,38 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     status: 'planned',
     engine: null,
     labelKey: 'capabilities.print_job.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  travel_booking: {
+    key: 'travel_booking',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.travel_booking.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  supplier_settlement: {
+    key: 'supplier_settlement',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.supplier_settlement.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  clinical_record: {
+    key: 'clinical_record',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.clinical_record.label',
+    evidence: NO_EVIDENCE,
+    ...STANDALONE,
+  },
+  health_data_access: {
+    key: 'health_data_access',
+    status: 'planned',
+    engine: null,
+    labelKey: 'capabilities.health_data_access.label',
     evidence: NO_EVIDENCE,
     ...STANDALONE,
   },

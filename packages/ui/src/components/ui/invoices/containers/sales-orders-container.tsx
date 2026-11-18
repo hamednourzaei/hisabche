@@ -17,21 +17,27 @@ import {
   useCancelSalesOrder,
   useConfirmSalesOrder,
   useCourierDeliveries,
+  useAssignCourierDelivery,
+  useCloseCourierDelivery,
   useCreateCourierDelivery,
   useCreateDeliveryNote,
+  useCreateDeliveryVehicle,
   useCreateFreightTrip,
   useCreateSalesOrder,
   useDeliverSalesOrder,
+  useDeliveryFleet,
   useDeliveryNotes,
   useFreightTrips,
   useFulfillSalesOrder,
   useInvoiceSalesOrder,
   useProgressCourierCod,
   useRecordDeliveryPod,
+  useRecordVehicleService,
   useSalesOrders,
   useSettleCourierCod,
   type CourierDeliveryRecord,
   type DeliveryNoteRecord,
+  type DeliveryVehicleRecord,
   type FreightTripRecord,
   type SalesOrderRow,
 } from '@hisabche/api'
@@ -78,6 +84,24 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
   const [courierCodMinor, setCourierCodMinor] = useState('')
   const [podNoteId, setPodNoteId] = useState('')
   const [podRecipient, setPodRecipient] = useState('')
+  const [podMethod, setPodMethod] = useState<'signature' | 'photo' | 'code'>('signature')
+  const [podCode, setPodCode] = useState('')
+  const [podPhotoRef, setPodPhotoRef] = useState('')
+  // WP-19 dispatch & closing state
+  const [dispatchDay, setDispatchDay] = useState(() => toIsoDay(new Date()))
+  const [vehicleName, setVehicleName] = useState('')
+  const [vehiclePlate, setVehiclePlate] = useState('')
+  const [vehicleCapacity, setVehicleCapacity] = useState('')
+  const [closeDeliveryId, setCloseDeliveryId] = useState('')
+  const [closeOutcome, setCloseOutcome] = useState<'delivered' | 'failed'>('delivered')
+  const [closeRecipient, setCloseRecipient] = useState('')
+  const [closeMethod, setCloseMethod] = useState<'signature' | 'photo' | 'code'>('signature')
+  const [closeCode, setCloseCode] = useState('')
+  const [closePhotoRef, setClosePhotoRef] = useState('')
+  const [closeCollected, setCloseCollected] = useState('')
+  const [closeReason, setCloseReason] = useState('')
+  const [assignVehicleId, setAssignVehicleId] = useState('')
+  const [assignSelectedVehicle, setAssignSelectedVehicle] = useState('')
   const [settleInvoiceId, setSettleInvoiceId] = useState('')
 
   const ordersQuery = useSalesOrders(statusFilter ? { status: statusFilter } : undefined)
@@ -95,6 +119,11 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
   const createCourier = useCreateCourierDelivery()
   const progressCod = useProgressCourierCod()
   const settleCod = useSettleCourierCod()
+  const fleetQuery = useDeliveryFleet(dispatchDay)
+  const createVehicle = useCreateDeliveryVehicle()
+  const recordService = useRecordVehicleService()
+  const assignDelivery = useAssignCourierDelivery()
+  const closeDelivery = useCloseCourierDelivery()
   const notesQuery = useDeliveryNotes()
   const createNote = useCreateDeliveryNote()
   const recordPod = useRecordDeliveryPod()
@@ -300,12 +329,19 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
       render: (item) => <span>{item.customerName}</span>,
     },
     {
+      id: 'status',
+      labelKey: 'common.status',
+      labelFallback: 'وضعیت',
+      render: (item) => <span>{item.status}</span>,
+    },
+    {
       id: 'cod',
       labelKey: 'salesHub.delivery.cod',
       labelFallback: 'پرداخت در محل',
       render: (item) => (
         <span dir="ltr" className="tabular-nums">
           {item.codAmountMinor ?? 0}
+          {item.codShortfallMinor ? ` (−${item.codShortfallMinor})` : ''}
         </span>
       ),
     },
@@ -339,6 +375,33 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
               }
             >
               {t('salesHub.delivery.settleCod', 'تسویه COD')}
+            </Button>
+          ) : null}
+          {(item.status === 'unassigned' || item.status === 'assigned') &&
+          (fleetQuery.data?.length ?? 0) > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setAssignVehicleId(item.id)
+                setCloseDeliveryId('')
+              }}
+            >
+              {t('salesHub.delivery.assign', 'تخصیص خودرو')}
+            </Button>
+          ) : null}
+          {item.status !== 'delivered' && item.status !== 'failed' && item.status !== 'returned' ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setCloseDeliveryId(item.id)
+                setAssignVehicleId('')
+              }}
+            >
+              {t('salesHub.delivery.close', 'بستن تحویل')}
             </Button>
           ) : null}
         </div>
@@ -544,6 +607,130 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
             }
           />
 
+          {/* WP-19 — Fleet & dispatch */}
+          <div className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3">
+            <h3 className="text-sm font-medium">
+              {t('salesHub.delivery.fleetTitle', 'ناوگان تحویل')}
+            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                value={dispatchDay}
+                onChange={(e) => setDispatchDay(e.target.value)}
+              />
+            </div>
+            <form
+              className="grid gap-2 sm:grid-cols-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (!vehicleName.trim()) return
+                const capacity = vehicleCapacity.trim() ? Number(vehicleCapacity) : undefined
+                createVehicle.mutate(
+                  {
+                    name: vehicleName.trim(),
+                    ...(vehiclePlate.trim() ? { plateNumber: vehiclePlate.trim() } : {}),
+                    ...(capacity !== undefined && Number.isFinite(capacity)
+                      ? { capacityParcels: Math.trunc(capacity) }
+                      : {}),
+                  },
+                  {
+                    onSuccess: () => {
+                      setVehicleName('')
+                      setVehiclePlate('')
+                      setVehicleCapacity('')
+                    },
+                    onError: onActionError,
+                  },
+                )
+              }}
+            >
+              <Input
+                value={vehicleName}
+                onChange={(e) => setVehicleName(e.target.value)}
+                placeholder={t('salesHub.delivery.vehicleName', 'نام خودرو')}
+              />
+              <Input
+                value={vehiclePlate}
+                onChange={(e) => setVehiclePlate(e.target.value)}
+                placeholder={t('salesHub.delivery.vehiclePlate', 'پلاک')}
+              />
+              <Input
+                inputMode="numeric"
+                value={vehicleCapacity}
+                onChange={(e) => setVehicleCapacity(e.target.value)}
+                placeholder={t('salesHub.delivery.vehicleCapacity', 'ظرفیت بسته در روز')}
+              />
+              <Button type="submit" size="sm" disabled={createVehicle.isPending}>
+                {t('salesHub.delivery.addVehicle', 'افزودن خودرو')}
+              </Button>
+            </form>
+            <DataTable<DeliveryVehicleRecord>
+              tableId="delivery-fleet"
+              t={t}
+              rows={fleetQuery.data ?? []}
+              rowKey={(r) => r.id}
+              columns={[
+                {
+                  id: 'name',
+                  labelKey: 'salesHub.delivery.vehicleName',
+                  labelFallback: 'نام خودرو',
+                  locked: true,
+                  render: (v) => <span>{v.name}</span>,
+                },
+                {
+                  id: 'plate',
+                  labelKey: 'salesHub.delivery.vehiclePlate',
+                  labelFallback: 'پلاک',
+                  render: (v) => <span dir="ltr">{v.plateNumber ?? '—'}</span>,
+                },
+                {
+                  id: 'service',
+                  labelKey: 'salesHub.delivery.serviceState',
+                  labelFallback: 'وضعیت سرویس',
+                  render: (v) => <span>{v.serviceState ?? 'unknown'}</span>,
+                },
+                {
+                  id: 'assigned',
+                  labelKey: 'salesHub.delivery.assignedOnDate',
+                  labelFallback: 'تخصیص امروز',
+                  render: (v) => (
+                    <span dir="ltr" className="tabular-nums">
+                      {v.assignedOnDate ?? 0}
+                      {v.capacityParcels ? ` / ${v.capacityParcels}` : ''}
+                    </span>
+                  ),
+                },
+                {
+                  id: 'serviceAction',
+                  labelKey: 'common.actions',
+                  labelFallback: 'عملیات',
+                  align: 'end',
+                  render: (v) => (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={recordService.isPending}
+                      onClick={() =>
+                        recordService.mutate(
+                          { vehicleId: v.id, serviceOn: dispatchDay },
+                          { onError: onActionError },
+                        )
+                      }
+                    >
+                      {t('salesHub.delivery.recordService', 'ثبت سرویس')}
+                    </Button>
+                  ),
+                },
+              ]}
+              emptyState={
+                <p className="p-4 text-xs text-[hsl(var(--fg-tertiary))]">
+                  {t('common.noData', 'موردی ثبت نشده است')}
+                </p>
+              }
+            />
+          </div>
+
           <form
             className="grid gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:grid-cols-5"
             onSubmit={(e) => {
@@ -618,6 +805,155 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
             }
           />
 
+          {assignVehicleId ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3">
+              <span className="text-xs">{t('salesHub.delivery.assignTitle', 'تخصیص خودرو')}</span>
+              <div className="w-48">
+                <SelectField
+                  value={assignSelectedVehicle}
+                  onChange={setAssignSelectedVehicle}
+                  placeholder={t('salesHub.delivery.selectVehicle', 'انتخاب خودرو')}
+                  options={(fleetQuery.data ?? []).map((v) => ({
+                    value: v.id,
+                    label: v.plateNumber ? `${v.name} (${v.plateNumber})` : v.name,
+                  }))}
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!assignSelectedVehicle || assignDelivery.isPending}
+                onClick={() =>
+                  assignDelivery.mutate(
+                    {
+                      deliveryId: assignVehicleId,
+                      vehicleId: assignSelectedVehicle,
+                      plannedOn: dispatchDay,
+                    },
+                    {
+                      onSuccess: () => {
+                        setAssignVehicleId('')
+                        setAssignSelectedVehicle('')
+                      },
+                      onError: onActionError,
+                    },
+                  )
+                }
+              >
+                {t('common.save', 'ذخیره')}
+              </Button>
+            </div>
+          ) : null}
+
+          {closeDeliveryId ? (
+            <form
+              className="grid gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:grid-cols-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (closeOutcome === 'delivered') {
+                  if (!closeRecipient.trim()) return
+                  closeDelivery.mutate(
+                    {
+                      deliveryId: closeDeliveryId,
+                      outcome: 'delivered',
+                      pod: {
+                        method: closeMethod,
+                        recipientName: closeRecipient.trim(),
+                        ...(closeCode.trim() ? { code: closeCode.trim() } : {}),
+                        ...(closePhotoRef.trim() ? { photoRef: closePhotoRef.trim() } : {}),
+                      },
+                      ...(closeCollected.trim()
+                        ? { collectedMinor: Math.trunc(Number(closeCollected)) }
+                        : {}),
+                    },
+                    {
+                      onSuccess: () => {
+                        setCloseDeliveryId('')
+                        setCloseRecipient('')
+                        setCloseCode('')
+                        setClosePhotoRef('')
+                        setCloseCollected('')
+                      },
+                      onError: onActionError,
+                    },
+                  )
+                } else {
+                  if (!closeReason.trim()) return
+                  closeDelivery.mutate(
+                    {
+                      deliveryId: closeDeliveryId,
+                      outcome: 'failed',
+                      failureReason: closeReason.trim(),
+                    },
+                    {
+                      onSuccess: () => {
+                        setCloseDeliveryId('')
+                        setCloseReason('')
+                      },
+                      onError: onActionError,
+                    },
+                  )
+                }
+              }}
+            >
+              <SelectField
+                value={closeOutcome}
+                onChange={(value) => setCloseOutcome(value as 'delivered' | 'failed')}
+                options={[
+                  { value: 'delivered', label: t('salesHub.delivery.delivered', 'تحویل شد') },
+                  { value: 'failed', label: t('salesHub.delivery.failed', 'تحویل ناموفق') },
+                ]}
+              />
+              {closeOutcome === 'delivered' ? (
+                <>
+                  <Input
+                    value={closeRecipient}
+                    onChange={(e) => setCloseRecipient(e.target.value)}
+                    placeholder={t('salesHub.delivery.podRecipient', 'نام تحویلگیرنده')}
+                  />
+                  <SelectField
+                    value={closeMethod}
+                    onChange={(value) => setCloseMethod(value as 'signature' | 'photo' | 'code')}
+                    options={[
+                      { value: 'signature', label: t('salesHub.delivery.signature', 'امضا') },
+                      { value: 'photo', label: t('salesHub.delivery.photo', 'عکس') },
+                      { value: 'code', label: t('salesHub.delivery.code', 'کد') },
+                    ]}
+                  />
+                  {closeMethod === 'code' ? (
+                    <Input
+                      value={closeCode}
+                      onChange={(e) => setCloseCode(e.target.value)}
+                      placeholder={t('salesHub.delivery.podCode', 'کد تحویل')}
+                    />
+                  ) : null}
+                  {closeMethod === 'photo' ? (
+                    <Input
+                      value={closePhotoRef}
+                      onChange={(e) => setClosePhotoRef(e.target.value)}
+                      placeholder={t('salesHub.delivery.podPhotoRef', 'مرجع عکس')}
+                    />
+                  ) : null}
+                  <Input
+                    inputMode="numeric"
+                    value={closeCollected}
+                    onChange={(e) => setCloseCollected(e.target.value)}
+                    placeholder={t('salesHub.delivery.collectedMinor', 'مبلغ دریافت شده (جزء)')}
+                  />
+                </>
+              ) : (
+                <Input
+                  value={closeReason}
+                  onChange={(e) => setCloseReason(e.target.value)}
+                  placeholder={t('salesHub.delivery.failureReason', 'دلیل عدم تحویل')}
+                />
+              )}
+              <Button type="submit" size="sm" disabled={closeDelivery.isPending}>
+                {t('salesHub.delivery.confirmClose', 'ثبت نتیجه')}
+              </Button>
+            </form>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -646,7 +982,13 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
                   e.preventDefault()
                   if (!podRecipient.trim()) return
                   recordPod.mutate(
-                    { noteId: podNoteId, recipientName: podRecipient.trim() },
+                    {
+                      noteId: podNoteId,
+                      recipientName: podRecipient.trim(),
+                      method: podMethod,
+                      ...(podCode.trim() ? { code: podCode.trim() } : {}),
+                      ...(podPhotoRef.trim() ? { photoRef: podPhotoRef.trim() } : {}),
+                    },
                     {
                       onSuccess: () => {
                         setPodNoteId('')
@@ -657,10 +999,35 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
                   )
                 }}
               >
+                <div className="w-36">
+                  <SelectField
+                    value={podMethod}
+                    onChange={(value) => setPodMethod(value as 'signature' | 'photo' | 'code')}
+                    options={[
+                      { value: 'signature', label: t('salesHub.delivery.signature', 'امضا') },
+                      { value: 'photo', label: t('salesHub.delivery.photo', 'عکس') },
+                      { value: 'code', label: t('salesHub.delivery.code', 'کد') },
+                    ]}
+                  />
+                </div>
+                {podMethod === 'code' ? (
+                  <Input
+                    value={podCode}
+                    onChange={(e) => setPodCode(e.target.value)}
+                    placeholder={t('salesHub.delivery.podCode', 'کد تحویل')}
+                  />
+                ) : null}
+                {podMethod === 'photo' ? (
+                  <Input
+                    value={podPhotoRef}
+                    onChange={(e) => setPodPhotoRef(e.target.value)}
+                    placeholder={t('salesHub.delivery.podPhotoRef', 'مرجع عکس')}
+                  />
+                ) : null}
                 <Input
                   value={podRecipient}
                   onChange={(e) => setPodRecipient(e.target.value)}
-                  placeholder={t('salesHub.delivery.podRecipient', 'نام تحویل‌گیرنده')}
+                  placeholder={t('salesHub.delivery.podRecipient', 'نام تحویلگیرنده')}
                 />
                 <Button type="submit" size="sm" disabled={recordPod.isPending}>
                   {t('salesHub.delivery.confirmPod', 'ثبت تایید تحویل')}

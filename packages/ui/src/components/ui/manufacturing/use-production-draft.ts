@@ -68,6 +68,10 @@ export function useProductionDraft(initialCurrency: CurrencyCode) {
   const [otherCosts, setOtherCosts] = useState<OtherCostDraft[]>([])
   const [labor, setLabor] = useState<LaborDraft>(EMPTY_LABOR)
   const [quantity, setQuantity] = useState('1')
+  // Output losses (WP-09): units started that came out unsellable, typed by
+  // the person who ran the batch. Empty means none.
+  const [scrap, setScrap] = useState('')
+  const [rework, setRework] = useState('')
   const [overrideOn, setOverrideOn] = useState(false)
   const [overrideTotal, setOverrideTotal] = useState('')
   const [overrideReason, setOverrideReason] = useState('')
@@ -294,6 +298,8 @@ export function useProductionDraft(initialCurrency: CurrencyCode) {
   )
 
   const quantityValue = parseCellNumber(quantity)
+  const scrapValue = Math.max(0, parseCellNumber(scrap))
+  const reworkValue = Math.max(0, parseCellNumber(rework))
   const overrideValue =
     overrideOn && overrideTotal.trim() !== '' ? Math.max(0, parseCellNumber(overrideTotal)) : null
 
@@ -307,6 +313,8 @@ export function useProductionDraft(initialCurrency: CurrencyCode) {
         otherCosts: otherCostInput,
         labor: laborInput,
         quantity: quantityValue,
+        scrapQuantity: scrapValue,
+        reworkQuantity: reworkValue,
         overrideTotal: overrideValue,
       }),
     [
@@ -317,6 +325,8 @@ export function useProductionDraft(initialCurrency: CurrencyCode) {
       otherCostInput,
       laborInput,
       quantityValue,
+      scrapValue,
+      reworkValue,
       overrideValue,
     ],
   )
@@ -352,6 +362,12 @@ export function useProductionDraft(initialCurrency: CurrencyCode) {
     quantity,
     setQuantity,
     quantityValue,
+    scrap,
+    setScrap,
+    scrapValue,
+    rework,
+    setRework,
+    reworkValue,
     overrideOn,
     setOverrideOn,
     overrideTotal,

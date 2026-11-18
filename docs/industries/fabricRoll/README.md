@@ -45,13 +45,14 @@
 | قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
 | --- | --- | --- | --- |
 | `measurement` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
+| `length_pricing` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/validation/src/__tests__/measurement.test.ts` |
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 
 ## تفاوت با خانواده‌ی «عمده‌فروشی»
 
 ### هویت و مدل کسب‌وکار
 
-پروفایل اختصاصی دارد (2 قابلیت روشن).
+پروفایل اختصاصی دارد (3 قابلیت روشن).
 
 ### گردش کار روزانه
 

@@ -378,6 +378,32 @@ export class InvoiceReturnService {
       }
     }
 
+    // V61 §2.5 + WP-05: a restocked batch-tracked line must be able to go back
+    // into the batch it came from BEFORE anything moves. The restore itself runs
+    // after the return commits, so its refusal used to arrive too late: the shop
+    // saw an error for a return that had already happened, retried, and was told
+    // the invoice was already returned.
+    const productIdByLine = new Map<string, string>(
+      (invItems ?? [])
+        .filter((row: { id: string; product_id: string | null }) => Boolean(row.product_id))
+        .map((row: { id: string; product_id: string }) => [row.id, row.product_id]),
+    )
+    const restockLines = input.lines
+      .filter((line) => (line.restockChoice ?? 'restock') === 'restock' && line.returnQuantity > 0)
+      .map((line) => ({
+        productId: productIdByLine.get(line.originalLineId),
+        quantity: line.returnQuantity,
+      }))
+      .filter((line): line is { productId: string; quantity: number } => Boolean(line.productId))
+
+    if (restockLines.length > 0) {
+      const { traceabilityService } = await import('../traceability/traceability.service')
+      await traceabilityService.assertReturnRestorePossible(
+        { workspaceId },
+        { originalInvoiceId: input.originalInvoiceId, lines: restockLines },
+      )
+    }
+
     const deductions = (input.deductions ?? []).map((entry) => ({
       reason: entry.reason,
       mode: entry.mode,
@@ -465,45 +491,21 @@ export class InvoiceReturnService {
     // Invalidate financial and dashboard caches
     await invalidateMoneyCaches(workspaceId)
 
-    // V61 §2.5: Restore exact batches for restocked batch-tracked lines
-    if (data && typeof data === 'object' && 'id' in data) {
-      const restocked = input.lines.filter(
-        (l) => (l.restockChoice ?? 'restock') === 'restock' && l.returnQuantity > 0,
+    // V61 §2.5 + WP-05: put the goods back into the batches they came from.
+    // Whether that is possible was decided BEFORE the return committed
+    // (`assertReturnRestorePossible`), so this cannot fail on a return that has
+    // already happened.
+    if (data && typeof data === 'object' && 'id' in data && restockLines.length > 0) {
+      const { traceabilityService } = await import('../traceability/traceability.service')
+      await traceabilityService.restoreBatchesForReturn(
+        { workspaceId },
+        {
+          originalInvoiceId: input.originalInvoiceId,
+          returnId: String((data as { id: string }).id),
+          entryDate: input.returnDate,
+          lines: restockLines,
+        },
       )
-      if (restocked.length > 0) {
-        const { data: itemRows } = await this.db
-          .from('invoice_items')
-          .select('id, product_id')
-          .eq('workspace_id', workspaceId)
-          .in(
-            'id',
-            restocked.map((l) => l.originalLineId),
-          )
-        const productByLine = new Map<string, string>(
-          (itemRows ?? [])
-            .filter((r: { id: string; product_id: string | null }) => Boolean(r.product_id))
-            .map((r: { id: string; product_id: string }) => [r.id, r.product_id]),
-        )
-        const linesWithProduct = restocked
-          .map((l) => ({
-            productId: productByLine.get(l.originalLineId),
-            quantity: l.returnQuantity,
-          }))
-          .filter((l): l is { productId: string; quantity: number } => Boolean(l.productId))
-
-        if (linesWithProduct.length > 0) {
-          const { traceabilityService } = await import('../traceability/traceability.service')
-          await traceabilityService.restoreBatchesForReturn(
-            { workspaceId },
-            {
-              originalInvoiceId: input.originalInvoiceId,
-              returnId: String((data as { id: string }).id),
-              entryDate: input.returnDate,
-              lines: linesWithProduct,
-            },
-          )
-        }
-      }
     }
 
     // The invoice's own history is where a person looks for «who returned this, and why».

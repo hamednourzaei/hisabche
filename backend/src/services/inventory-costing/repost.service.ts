@@ -143,7 +143,7 @@ async function readCostTrail(ctx: TenancyContext, fromDate: string): Promise<Cos
     supabase
       .from('cost_consumptions')
       .select(
-        'consumer_type, consumer_id, consumer_line, product_id, quantity, amount, entry_date, is_estimated',
+        'consumer_type, consumer_id, consumer_line, product_id, variant_id, quantity, amount, entry_date, is_estimated',
       )
       .eq('workspace_id', ctx.workspaceId)
       .gte('entry_date', fromDate)
@@ -165,6 +165,7 @@ async function readCostTrail(ctx: TenancyContext, fromDate: string): Promise<Cos
     consumerId: row.consumer_id as string,
     consumerLine: row.consumer_line ?? '',
     productId: row.product_id as string,
+    variantId: (row.variant_id as string | null) ?? null,
     quantity: Number(row.quantity) || 0,
     // ⚠️ The trail stores MAJOR units; `planRepost` compares in minor.
     recordedCostMinor: Math.round((Number(row.amount) || 0) * 100),
@@ -180,7 +181,9 @@ async function readLayers(workspaceId: string, productId: string): Promise<CostL
   const { data, error } = await selectAllPages((lo, hi) =>
     supabase
       .from('cost_layers')
-      .select('id, product_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at')
+      .select(
+        'id, product_id, variant_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at',
+      )
       .eq('workspace_id', workspaceId)
       .eq('product_id', productId)
       .order('entry_date', { ascending: true })
@@ -194,6 +197,7 @@ async function readLayers(workspaceId: string, productId: string): Promise<CostL
   return (data ?? []).map((row) => ({
     id: row.id as string,
     productId: row.product_id as string,
+    variantId: (row.variant_id as string | null) ?? null,
     warehouseId: (row.warehouse_id as string | null) ?? null,
     remainingQty: Number(row.remaining_qty) || 0,
     unitCost: Number(row.unit_cost) || 0,
@@ -229,7 +233,7 @@ async function postAdjustment(ctx: TenancyContext, adjustment: RepostAdjustment,
   return accounting.postDocument(ctx, {
     sourceType: SOURCE_TYPE,
     // ⚠️ Stable per adjustment, so a re-run replays the same idempotency key.
-    sourceId: `${adjustment.consumerType}:${adjustment.consumerId}:${adjustment.consumerLine}:${adjustment.productId}`,
+    sourceId: `${adjustment.consumerType}:${adjustment.consumerId}:${adjustment.consumerLine}:${adjustment.productId}:${adjustment.variantId ?? ''}`,
     date: asOf,
     description: 'اصلاح بهای تمام‌شده',
     reference: adjustment.consumerId,

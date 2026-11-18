@@ -494,6 +494,10 @@ async function storeInvoiceItems(invoices: Array<Record<string, unknown>>): Prom
       product_id: str(item.product_id),
       product_name: str(item.product_name) ?? '',
       quantity: num(item.quantity),
+      // WP-03 — «پرت برش». A pulled invoice that dropped it would cancel on the
+      // device by putting back only the sold metres, while the server put back
+      // the offcut too: the same invoice, two different shelves.
+      cut_loss_quantity: num(item.cut_loss_quantity),
       unit_price: num(item.unit_price),
       discount: num(item.discount),
       total_price: num(item.total_price),
@@ -938,6 +942,8 @@ export const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
   journal_entry: '/accounting/journal',
   package_credit_ledger: '/package-credits/consume',
   service_delivery_sessions: '/service-delivery/sessions',
+  courier_deliveries: '/deliveries/courier',
+  delivery_vehicles: '/deliveries/fleet',
 }
 
 function isPermanent(status: number): boolean {
@@ -1062,6 +1068,25 @@ async function pushEntry(entry: QueueEntry): Promise<unknown> {
     } else {
       await apiClient.post('/service-delivery/sessions', entry.payload, { headers })
     }
+    return
+  }
+
+  // WP-19: Courier deliveries with POD/COD/fleet
+  if (entry.entity === 'courier_deliveries') {
+    const payload = entry.payload as Record<string, unknown>
+    const deliveryId = String(payload.id ?? '')
+    // A delivery that was closed offline (delivered or failed) goes to /close
+    if (payload.status === 'delivered' || payload.status === 'failed') {
+      await apiClient.post(`/deliveries/courier/${deliveryId}/close`, entry.payload, { headers })
+      return
+    }
+    // A delivery that was assigned to a vehicle goes to /assign
+    if (payload.vehicle_id || payload.planned_on) {
+      await apiClient.post(`/deliveries/courier/${deliveryId}/assign`, entry.payload, { headers })
+      return
+    }
+    // Otherwise it's a new courier delivery
+    await apiClient.post('/deliveries/courier', entry.payload, { headers })
     return
   }
 

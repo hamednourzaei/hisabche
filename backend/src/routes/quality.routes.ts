@@ -93,7 +93,11 @@ export async function qualityRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = warrantyClaimCreateSchema.parse(request.body)
-        const claim = await qualityService.submitWarrantyClaim(request.tenancy, body)
+        const claim = await qualityService.submitWarrantyClaim(
+          request.tenancy,
+          body,
+          readClientRequestId(request),
+        )
         return reply.code(201).send(claim)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to submit warranty claim')

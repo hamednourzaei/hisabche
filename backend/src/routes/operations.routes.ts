@@ -357,6 +357,53 @@ export async function operationsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── WP-05 — block / unblock a batch ───────────────────────────────────────
+  // A supplier recall or a delivery that failed inspection is a fact about a
+  // CARTON. The goods stay on the shelf and their value stays on the books;
+  // what changes is that FEFO refuses them (the shared `planAllocation` core,
+  // on the server and on the device). Writing them off is a separate act.
+  const batchRecallBodySchema = z.object({ reason: z.string().trim().min(1).max(500) }).strict()
+  // Blocking stock is a stock decision, not a catalogue edit: the device asks
+  // for the same capability (`stock.adjust`), so one person can do it in both
+  // places offline and online.
+  const batchRecall = [authenticate, requireWorkspaceContext, requireCapability('stock.adjust')]
+
+  fastify.post(
+    '/batches/:id/recall',
+    {
+      preHandler: batchRecall,
+      schema: {
+        body: toJsonSchema(batchRecallBodySchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = batchRecallBodySchema.parse(request.body)
+        return reply.send(await traceabilityService.recallBatch(request.tenancy, id, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to block the batch')
+      }
+    },
+  )
+
+  fastify.delete(
+    '/batches/:id/recall',
+    {
+      preHandler: batchRecall,
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await traceabilityService.releaseBatchRecall(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to release the batch recall')
+      }
+    },
+  )
+
   fastify.post(
     '/batches/plan-issue',
     {

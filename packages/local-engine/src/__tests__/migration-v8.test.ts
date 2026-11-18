@@ -58,6 +58,11 @@ function v7Synthetic(): DatabaseSync {
     -- from refusing a table missing only in this test, never on a device.
     CREATE TABLE invoice_item (id TEXT PRIMARY KEY, invoice_id TEXT NOT NULL);
     CREATE TABLE purchase_order_item (id TEXT PRIMARY KEY, product_id TEXT NOT NULL);
+    -- v27 (WP-01) adds variant_id to the cost layers. A real v7 cache has
+    -- both tables (they are in the base schema); the minimal stand-in says so,
+    -- instead of pretending the migration alters a table the device lacks.
+    CREATE TABLE cost_layer (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, product_id TEXT NOT NULL, entry_date TEXT, created_at TEXT);
+    CREATE TABLE cost_consumption (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);
     INSERT INTO local_workspace (id, name, base_currency) VALUES ('w1', 'Existing shop', 'AFN');
     INSERT INTO product (id, name) VALUES ('p1', 'Existing product');
     INSERT INTO invoice (id) VALUES ('i1');

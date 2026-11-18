@@ -19,7 +19,7 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [آژانس مسافرتی](../travelAgency/README.md) (`travelAgency`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
+| [آژانس مسافرتی](../travelAgency/README.md) (`travelAgency`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | `travel_booking`، `supplier_settlement` |
 
 ## پنج گردش کار
 
@@ -88,7 +88,7 @@
 
 ## شکاف‌های خانواده
 
-هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
+قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `supplier_settlement`، `travel_booking`.
 
 ## بر اساس اندازه
 

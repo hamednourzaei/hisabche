@@ -364,6 +364,11 @@ export const FEATURE_REGISTRY = {
   'trade.freight': { execution: 'server', plans: CLOUD },
   'trade.courier': { execution: 'server', plans: CLOUD },
   'trade.delivery_notes': { execution: 'server', plans: CLOUD },
+  // WP-19: the device closes parcels at the door with no signal, so courier
+  // delivery and the fleet register have their OWN local features (the server
+  // features above stay `online_required` for the route family they own).
+  'logistics.parcel': { execution: 'local', plans: ALL },
+  'logistics.dispatch': { execution: 'local', plans: ALL },
   // V60 Slice 6 — split-feature fixes + wired sales orders + package grants (no offline engine yet).
   'sales.orders': { execution: 'server', plans: ALL },
   'operations.package_grants': { execution: 'server', plans: ALL },

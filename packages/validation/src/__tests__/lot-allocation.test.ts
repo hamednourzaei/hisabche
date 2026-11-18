@@ -158,4 +158,72 @@ describe('the shared FEFO allocation core', () => {
     ])
     expect(plan.shortfall).toBe(0)
   })
+
+  // ─── WP-05: a recalled batch is refused exactly like an expired one ───────
+
+  it('a recalled batch is never allocated, and is reported with what it holds', () => {
+    const recalled = batch({
+      id: 'recalled',
+      expiryDate: '2026-12-01',
+      remainingQty: 7,
+      recalledAt: '2026-11-17T09:00:00.000Z',
+      recalledReason: 'supplier recall',
+    })
+    const good = batch({ id: 'good', expiryDate: '2027-01-31', remainingQty: 5 })
+
+    const plan = planAllocation([recalled, good], 3, { asOf: AS_OF })
+
+    // FEFO would have picked the recalled batch first (sooner expiry).
+    expect(plan.allocations).toEqual([
+      {
+        batchId: 'good',
+        batchNumber: 'good',
+        quantity: 3,
+        expiryDate: '2027-01-31',
+        costLayerId: null,
+      },
+    ])
+    expect(plan.shortfall).toBe(0)
+    expect(plan.blockedByRecall).toEqual([
+      { batchId: 'recalled', batchNumber: 'recalled', quantity: 7 },
+    ])
+    expect(isIssuable(recalled, AS_OF)).toBe(false)
+  })
+
+  it('a manual pick of a recalled batch is refused too — and the shortfall says so', () => {
+    const recalled = batch({
+      id: 'recalled',
+      expiryDate: '2027-06-30',
+      remainingQty: 4,
+      recalledAt: '2026-11-17T09:00:00.000Z',
+      recalledReason: 'failed inspection',
+    })
+
+    const plan = planAllocation([recalled], 4, {
+      asOf: AS_OF,
+      strategy: 'manual',
+      manual: [
+        {
+          batchId: 'recalled',
+          batchNumber: 'recalled',
+          quantity: 4,
+          expiryDate: null,
+          costLayerId: null,
+        },
+      ],
+    })
+
+    expect(plan.allocations).toEqual([])
+    expect(plan.shortfall).toBe(4)
+    expect(plan.blockedByRecall).toEqual([
+      { batchId: 'recalled', batchNumber: 'recalled', quantity: 4 },
+    ])
+  })
+
+  it('a recalled batch with nothing left is not worth reporting as blocked stock', () => {
+    const empty = batch({ id: 'empty', remainingQty: 0, recalledAt: '2026-11-17T09:00:00.000Z' })
+    const plan = planAllocation([empty], 1, { asOf: AS_OF })
+    expect(plan.blockedByRecall).toEqual([])
+    expect(plan.shortfall).toBe(1)
+  })
 })

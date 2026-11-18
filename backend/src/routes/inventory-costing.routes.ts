@@ -30,7 +30,22 @@ const previewQuerySchema = z.object({
   productId: z.string().uuid(),
   quantity: z.coerce.number().positive(),
   warehouseId: z.string().uuid().optional(),
+  /** Strict: preview the cost of THIS variant only. */
+  variantId: z.string().uuid().optional(),
 })
+
+const layersQuerySchema = z.object({
+  warehouseId: z.string().uuid().optional(),
+  /** One variant's layers. Omitted = every variant of the product. */
+  variantId: z.string().uuid().optional(),
+  /**
+   * Only layers never assigned to a variant (`variant_id IS NULL`). This is the
+   * list the manual assignment speaks about under the strict rule.
+   */
+  unassigned: z.enum(['true', 'false']).optional(),
+})
+
+const assignVariantSchema = z.object({ variantId: z.string().uuid() })
 
 export async function inventoryCostingRoutes(fastify: FastifyInstance) {
   const costingService = new CostingService()
@@ -81,15 +96,73 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
     '/layers/:productId',
     {
       preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.cost.read')],
-      schema: { response: { 200: toJsonSchema(z.any()) } },
+      schema: {
+        querystring: toJsonSchema(layersQuerySchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { productId } = request.params as { productId: string }
-        const { warehouseId } = request.query as { warehouseId?: string }
-        return reply.send(await costingService.getLayers(request.tenancy, productId, warehouseId))
+        const { warehouseId, variantId, unassigned } = layersQuerySchema.parse(request.query)
+        // Three-valued on purpose: omitted = the whole pool; `unassigned=true`
+        // = only NULL; a variantId = only that variant.
+        const variant =
+          unassigned === 'true' ? null : variantId === undefined ? undefined : variantId
+        return reply.send(
+          await costingService.getLayers(request.tenancy, productId, warehouseId, variant),
+        )
       } catch (err) {
         return fail(reply, err, 'Failed to fetch cost layers')
+      }
+    },
+  )
+
+  // ─── POST /layers/:layerId/variant ─────────────────────
+  // The manual bridge the strict rule needs: say which variant a legacy,
+  // unassigned layer actually is. It changes no quantity and no total value,
+  // and it is refused for a layer that is closed or already assigned to
+  // another variant. Audited, because it changes what later sales cost.
+  fastify.post(
+    '/layers/:layerId/variant',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
+      schema: {
+        body: toJsonSchema(assignVariantSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { layerId } = request.params as { layerId: string }
+        const body = assignVariantSchema.parse(request.body)
+        const result = await costingService.assignLayerVariant(
+          request.tenancy,
+          layerId,
+          body.variantId,
+        )
+        await new AuditService()
+          .log({
+            userId: request.tenancy.userId,
+            workspaceId: request.tenancy.workspaceId,
+            action: 'update',
+            entityType: 'cost_layer',
+            entityId: result.layerId,
+            oldData: { variantId: null },
+            newData: {
+              variantId: result.variantId,
+              productId: result.productId,
+              quantity: result.quantity,
+              value: result.value,
+            },
+            ipAddress: request.ip,
+            userAgent: request.headers['user-agent'],
+          })
+          .catch((err: unknown) => request.log.error(err, 'cost layer assignment audit failed'))
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
+        return reply.send(result)
+      } catch (err) {
+        return fail(reply, err, 'Failed to assign the cost layer')
       }
     },
   )
@@ -138,9 +211,17 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { productId, quantity, warehouseId } = previewQuerySchema.parse(request.query)
+        const { productId, quantity, warehouseId, variantId } = previewQuerySchema.parse(
+          request.query,
+        )
         return reply.send(
-          await costingService.previewIssueCost(request.tenancy, productId, quantity, warehouseId),
+          await costingService.previewIssueCost(
+            request.tenancy,
+            productId,
+            quantity,
+            warehouseId,
+            variantId,
+          ),
         )
       } catch (err) {
         return fail(reply, err, 'Failed to preview cost')

@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 26
+export const SCHEMA_VERSION = 31
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -143,6 +143,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
     unit TEXT,
     unit_label TEXT,
     weight_grams REAL DEFAULT 0,
+    /** WP-03 — «پرت برش»: shelf loss beside the sold quantity, in the line's unit. */
+    cut_loss_quantity REAL DEFAULT 0,
     unit_price INTEGER NOT NULL DEFAULT 0,
     buy_price INTEGER NOT NULL DEFAULT 0,
     discount INTEGER NOT NULL DEFAULT 0,
@@ -518,6 +520,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
     product_id TEXT NOT NULL,
+    variant_id TEXT,
     warehouse_id TEXT,
     source_type TEXT NOT NULL,
     source_id TEXT,
@@ -534,12 +537,14 @@ export const CREATE_STATEMENTS: readonly string[] = [
     sync_state TEXT NOT NULL DEFAULT 'local_only'
   )`,
   `CREATE INDEX IF NOT EXISTS idx_cost_layer_fifo ON cost_layer(workspace_id, product_id, entry_date, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_cost_layer_variant ON cost_layer(workspace_id, product_id, variant_id, entry_date, created_at)`,
 
   `CREATE TABLE IF NOT EXISTS cost_consumption (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
     layer_id TEXT,
     product_id TEXT NOT NULL,
+    variant_id TEXT,
     warehouse_id TEXT,
     consumer_type TEXT NOT NULL,
     consumer_id TEXT,
@@ -830,6 +835,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'unit',
     'unit_label',
     'weight_grams',
+    'cut_loss_quantity',
     'unit_price',
     'buy_price',
     'discount',
@@ -1175,6 +1181,86 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'origin',
     'sync_state',
   ],
+  // WP-13: offline sales-order drafts (not a committed sale until the server confirms)
+  sales_order_drafts: [
+    'id',
+    'workspace_id',
+    'order_number',
+    'customer_id',
+    'customer_name',
+    'status',
+    'currency',
+    'notes',
+    'total_minor',
+    'client_request_id',
+    'submitted_at',
+    'server_confirmed_at',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+  ],
+  sales_order_draft_items: [
+    'id',
+    'workspace_id',
+    'order_id',
+    'product_id',
+    'product_name',
+    'quantity',
+    'unit',
+    'unit_price_minor',
+    'total_minor',
+    'sort_order',
+    'created_at',
+    'updated_at',
+  ],
+  // WP-19: courier deliveries with POD/COD/fleet data for offline dispatch
+  courier_deliveries: [
+    'id',
+    'workspace_id',
+    'tracking_number',
+    'customer_name',
+    'destination_address',
+    'driver_employee_id',
+    'status',
+    'cod_amount_minor',
+    'cod_stage',
+    'planned_on',
+    'vehicle_id',
+    'pod_method',
+    'pod_recipient_name',
+    'pod_photo_ref',
+    'pod_code',
+    'pod_recorded_at',
+    'pod_actor_user_id',
+    'delivery_timestamp',
+    'cod_collected_minor',
+    'cod_shortfall_minor',
+    'failure_reason',
+    'attempt_count',
+    'last_attempt_at',
+    'client_request_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  // WP-19: fleet register for offline dispatch
+  delivery_vehicles: [
+    'id',
+    'workspace_id',
+    'name',
+    'plate_number',
+    'asset_id',
+    'capacity_parcels',
+    'active',
+    'last_service_on',
+    'next_service_due_on',
+    'odometer_km',
+    'notes',
+    'created_at',
+    'updated_at',
+  ],
   // V70.2. Both tables exist in SQLite (local-universal-core-schema.ts) and were
   // written by the local engines, but a pull could not land a row in them: a
   // table with no entry here drops every column of the payload silently.
@@ -1316,6 +1402,9 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'cost_layer_id',
     'warehouse_id',
     'received_on',
+    'recalled_at',
+    'recalled_reason',
+    'recalled_by',
     'created_at',
     'updated_at',
     'deleted_at',
@@ -1364,4 +1453,7 @@ export const SEARCHABLE_COLUMNS: Record<string, readonly string[]> = {
   payment: ['payment_number', 'reference', 'notes'],
   package_credit_ledger: ['notes', 'idempotency_key'],
   service_delivery_sessions: ['client_notes', 'internal_notes'],
+  sales_order_drafts: ['order_number', 'customer_name'],
+  courier_deliveries: ['tracking_number', 'customer_name', 'pod_recipient_name'],
+  delivery_vehicles: ['name', 'plate_number'],
 }

@@ -220,3 +220,87 @@ export function useValueUnvaluedStock() {
     },
   })
 }
+
+// ─── Cost layers (WP-01) ─────────────────────────────────────────────────────
+
+export interface ProductCostLayer {
+  id: string
+  productId: string
+  /** The variant these units belong to; null = never assigned (strict rule). */
+  variantId: string | null
+  warehouseId: string | null
+  remainingQty: number
+  unitCost: number
+  entryDate: string
+  createdAt: string
+}
+
+export interface CostLayersResult {
+  layers: ProductCostLayer[]
+  onHand: number
+  value: number
+  averageCost: number
+}
+
+export const costLayersKey = (
+  productId: string,
+  /** undefined = every variant, null = only unassigned, uuid = one variant. */
+  variantId?: string | null,
+) => ['inventory', 'cost-layers', productId, variantId ?? 'unassigned'] as const
+
+/**
+ * The open cost layers of one product, optionally narrowed to one variant or to
+ * the unassigned pool. Read fresh: it is what the assignment act speaks about.
+ */
+export function useCostLayers(productId: string, variantId?: string | null, requested = true) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: costLayersKey(productId, variantId),
+    queryFn: async () => {
+      const params: Record<string, string> = {}
+      if (variantId === null) params.unassigned = 'true'
+      else if (variantId !== undefined) params.variantId = variantId
+      const body = (await apiClient.get(`/inventory/layers/${productId}`, { params }))
+        .data as CostLayersResult
+      return {
+        ...body,
+        layers: asList<ProductCostLayer>(body?.layers),
+      }
+    },
+    enabled: ready && requested && !!productId,
+    staleTime: 0,
+    retry: false,
+    meta: { persist: false },
+  })
+}
+
+/**
+ * Say which variant a legacy, unassigned layer actually is. The strict costing
+ * rule makes it unsellable by a variant until this act; the server refuses a
+ * closed layer or one already assigned elsewhere.
+ */
+export function useAssignLayerVariant(productId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { layerId: string; variantId: string }) =>
+      (
+        await apiClient.post(`/inventory/layers/${input.layerId}/variant`, {
+          variantId: input.variantId,
+        })
+      ).data as {
+        layerId: string
+        productId: string
+        variantId: string
+        quantity: number
+        value: number
+        moved: boolean
+      },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['inventory', 'cost-layers', productId] }),
+        queryClient.invalidateQueries({ queryKey: unvaluedStockKey }),
+        queryClient.invalidateQueries({ queryKey: ['accounting'] }),
+      ])
+    },
+  })
+}

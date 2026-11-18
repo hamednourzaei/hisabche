@@ -46,7 +46,9 @@ import { registerMetalRatesRoutes } from './routes/metal-rates'
 import { registerFitmentsRoutes } from './routes/fitments'
 import { registerWarrantiesRoutes } from './routes/warranties'
 import { registerOrderDepositsRoutes } from './routes/order-deposits'
+import { registerSalesOrderRoutes } from './routes/sales-orders'
 import { registerPackageCreditsRoutes } from './routes/package-credits'
+import { registerCourierDeliveryRoutes } from './routes/courier-deliveries'
 import { registerServiceDeliveryRoutes } from './routes/service-delivery'
 import { registerBookingsRoutes } from './routes/bookings'
 import { registerTaxRoutes } from './routes/tax'
@@ -119,7 +121,9 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerFitmentsRoutes(router)
   registerWarrantiesRoutes(router)
   registerOrderDepositsRoutes(router)
+  registerSalesOrderRoutes(router)
   registerPackageCreditsRoutes(router)
+  registerCourierDeliveryRoutes(router)
   registerServiceDeliveryRoutes(router)
   registerBookingsRoutes(router)
   registerTaxRoutes(router)

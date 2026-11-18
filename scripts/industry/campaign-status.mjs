@@ -10,7 +10,7 @@
 //
 // Sources, read only:
 //   docs/architecture/universal-core/ENGINE-WIRING.csv   engine/capability → wiring → limitation
-//   docs/industries/SHARED-CAPABILITY-MATRIX.md           the 38 product capabilities
+//   docs/industries/SHARED-CAPABILITY-MATRIX.md           53 product capabilities
 //   docs/industries/INDUSTRY-REGISTRY.md                 67 industries and their capabilities
 //   docs/architecture/industry/sellable-industries.json   measured 10-criteria state
 //   scripts/industry/coverage-data.mjs                   capability → code anchor + tests
@@ -262,6 +262,20 @@ const WORK_PACKAGES = [
     phase: 'C2',
     title: 'خدمات آیتم‌محور: رهگیری تک‌به‌تک لباس (خشکشویی)',
     capabilities: ['laundry_item_tracking'],
+    coverage: [],
+  },
+  {
+    id: 'WP-28',
+    phase: 'C3',
+    title: 'پرونده بالینی و دسترسی به داده سلامت (کلینیک)',
+    capabilities: ['clinical_record', 'health_data_access'],
+    coverage: [],
+  },
+  {
+    id: 'WP-29',
+    phase: 'C3',
+    title: 'رزرو سفر و تسویه تأمین‌کننده (آژانس مسافرتی)',
+    capabilities: ['travel_booking', 'supplier_settlement'],
     coverage: [],
   },
 ]

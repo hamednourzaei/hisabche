@@ -69,6 +69,21 @@ export const invoiceItemSchema = z.object({
    * Collapsing the two would make one of the numbers wrong.
    */
   weightGrams: nonNegativeNumberSchema.optional(),
+  /**
+   * CUT LOSS — «پرت برش»: material that left the shelf with this line and was
+   * not sold (a frayed end, a crooked cut, a damaged piece trimmed away).
+   *
+   * ⚠️ IT IS IN THE LINE'S UNIT, AND IT MOVES STOCK ONLY.
+   *
+   * `quantity` is what the customer pays for; this is what the shelf loses
+   * beside it. The service adds it to the stock movement and to the cost of
+   * goods sold, and never to the invoice total — the rules are in
+   * `measurement.domain.ts` (`stockQuantityOfLine`, `cutLossIssue`).
+   *
+   * Absent means «no loss was recorded», which is every invoice written before
+   * this field existed. A count unit refuses it: a piece is not cut.
+   */
+  cutLossQuantity: nonNegativeNumberSchema.optional(),
   unitPrice: positiveNumberSchema,
   discount: percentageSchema.default(0),
   totalPrice: positiveNumberSchema.optional(),

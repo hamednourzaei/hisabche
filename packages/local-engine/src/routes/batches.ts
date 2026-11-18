@@ -13,6 +13,12 @@
 //   POST /operations/batches            receive a delivery as a batch
 //   POST /operations/batches/plan-issue which batches an issue WOULD take
 //   POST /operations/batches/issue      record which batches a sale took
+//   POST /operations/batches/:id/recall block a recalled / failed carton (WP-05)
+//   DELETE /operations/batches/:id/recall  make it sellable again
+//
+// A recalled batch keeps its quantity — the goods exist and their value is
+// still on the books — and loses its sellability: the same shared core refuses
+// it, so an offline till and the server refuse the same carton.
 //
 // The invoice is recorded first (stock and money move there); issuing then
 // takes the planned quantity FROM the named batches and writes the
@@ -46,6 +52,8 @@ interface BatchRow {
   cost_layer_id: string | null
   warehouse_id: string | null
   received_on: string
+  recalled_at: string | null
+  recalled_reason: string | null
 }
 
 function mapBatch(row: BatchRow): StockBatch {
@@ -60,6 +68,10 @@ function mapBatch(row: BatchRow): StockBatch {
     costLayerId: row.cost_layer_id,
     warehouseId: row.warehouse_id,
     receivedOn: row.received_on,
+    // WP-05: blocked at the source (a recall, a failed inspection). The shared
+    // core refuses it; nothing else on this path has to know.
+    recalledAt: row.recalled_at ?? null,
+    recalledReason: row.recalled_reason ?? null,
   }
 }
 
@@ -176,6 +188,63 @@ export function registerBatchesRoutes(router: Router): void {
     })
   })
 
+  // ─── POST /operations/batches/:id/recall (block) ────────────
+  // WP-05. The carton stays on the shelf and its quantity stays where it is;
+  // the shared allocation core simply refuses it from now on. Written with the
+  // same three columns the server writes, so sync carries one fact.
+  router.post('/operations/batches/:id/recall', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'stock.adjust')
+    const { db, ctx, params, body } = c
+    const reason = asString((body as Record<string, unknown> | null | undefined)?.reason)?.trim()
+    if (!reason) throw new ValidationError('BATCH_RECALL_REASON_REQUIRED')
+    const id = params.id ?? ''
+    const now = new Date().toISOString()
+
+    return db.transaction(() => {
+      const batch = db.get<BatchRow>(
+        'SELECT * FROM stock_batches WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+        [id, ctx.workspaceId],
+      )
+      if (!batch) throw new NotFoundError('Batch')
+      // The FIRST reason stands: a retry must not rewrite why it was blocked.
+      if (batch.recalled_at) return mapBatch(batch)
+
+      db.run(
+        `UPDATE stock_batches
+            SET recalled_at = ?, recalled_reason = ?, recalled_by = ?, updated_at = ?
+          WHERE workspace_id = ? AND id = ? AND recalled_at IS NULL`,
+        [now, reason, ctx.userId, now, ctx.workspaceId, id],
+      )
+      return mapBatch(db.get<BatchRow>('SELECT * FROM stock_batches WHERE id = ?', [id])!)
+    })
+  })
+
+  // ─── DELETE /operations/batches/:id/recall (unblock) ────────
+  // Releasing a batch that is not blocked is a no-op returning the row as it
+  // is — a retry must not fail, and a stale screen must not invent a state.
+  router.delete('/operations/batches/:id/recall', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'stock.adjust')
+    const { db, ctx, params } = c
+    const id = params.id ?? ''
+    const now = new Date().toISOString()
+
+    return db.transaction(() => {
+      const batch = db.get<BatchRow>(
+        'SELECT * FROM stock_batches WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+        [id, ctx.workspaceId],
+      )
+      if (!batch) throw new NotFoundError('Batch')
+
+      db.run(
+        `UPDATE stock_batches
+            SET recalled_at = NULL, recalled_reason = NULL, recalled_by = NULL, updated_at = ?
+          WHERE workspace_id = ? AND id = ?`,
+        [now, ctx.workspaceId, id],
+      )
+      return mapBatch(db.get<BatchRow>('SELECT * FROM stock_batches WHERE id = ?', [id])!)
+    })
+  })
+
   // ─── POST /operations/batches/plan-issue (plan only) ────────
   router.post('/operations/batches/plan-issue', (c: RouteHandlerContext) => {
     const { db, ctx, body } = c
@@ -254,9 +323,11 @@ export function registerBatchesRoutes(router: Router): void {
         ...(manual ? { manual } : {}),
       })
       if (plan.shortfall > 0) {
-        throw new ConflictError(
-          plan.blockedByExpiry.length > 0 ? 'BATCH_ONLY_EXPIRED_STOCK' : 'BATCH_INSUFFICIENT_STOCK',
-        )
+        // Name the refusal — «not enough stock» sends someone looking for
+        // stock that is already on the shelf, blocked.
+        if (plan.blockedByExpiry.length > 0) throw new ConflictError('BATCH_ONLY_EXPIRED_STOCK')
+        if (plan.blockedByRecall.length > 0) throw new ConflictError('BATCH_RECALLED')
+        throw new ConflictError('BATCH_INSUFFICIENT_STOCK')
       }
 
       const entryDate = (asString(raw.asOf) ?? today()).slice(0, 10)

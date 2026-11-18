@@ -45,6 +45,7 @@ type RawInvoiceItem = Partial<Omit<CreateItem, 'details'>> & {
   product_name?: CreateItem['productName']
   unit_label?: CreateItem['unitLabel']
   weight_grams?: CreateItem['weightGrams']
+  cut_loss_quantity?: CreateItem['cutLossQuantity']
   unit_price?: CreateItem['unitPrice']
   total_price?: CreateItem['totalPrice']
   details?: RawInvoiceDetail[]
@@ -299,6 +300,10 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
               unit: item.unit ?? 'piece',
               unitLabel: item.unitLabel ?? item.unit_label,
               weightGrams: item.weightGrams ?? item.weight_grams,
+              // WP-03 — «پرت برش». A field this mapping does not name never
+              // reaches the service: the column would exist, the service would
+              // write it, and the request's figure would vanish here.
+              cutLossQuantity: item.cutLossQuantity ?? item.cut_loss_quantity,
               unitPrice: item.unitPrice ?? item.unit_price ?? 0,
               discount: item.discount ?? 0,
               totalPrice: item.totalPrice ?? item.total_price ?? 0,

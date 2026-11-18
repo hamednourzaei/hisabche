@@ -100,6 +100,7 @@ export function useWarrantyClaims() {
 
 export function useSubmitWarrantyClaim() {
   const queryClient = useQueryClient()
+  const intent = useIntentKey('warranty-claim')
   return useMutation({
     mutationFn: async (input: {
       warrantyId: string
@@ -109,10 +110,16 @@ export function useSubmitWarrantyClaim() {
       repairTicketId?: string | undefined
       resolutionNotes?: string | undefined
     }) => {
-      const { data } = await apiClient.post('/warranty-claims', input)
+      // The key survives a lost response: the retry is the SAME claim, not a
+      // second one (docs/warranty-claim-idempotency-migration.sql).
+      const { data } = await apiClient.post('/warranty-claims', input, {
+        headers: { 'Idempotency-Key': intent.current() },
+      })
       return data
     },
+    onError: (err) => intent.settle(err),
     onSuccess: () => {
+      intent.settle()
       queryClient.invalidateQueries({ queryKey: qualityKeys.claims() })
     },
   })

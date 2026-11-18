@@ -142,8 +142,19 @@ export interface ProductionCostInput {
   rates?: GridMoneyContext['rates'] | undefined
   otherCosts?: readonly ProductionOtherCost[] | undefined
   labor?: ProductionLabor | undefined
-  /** Finished units made in this run. A definition (BOM) is quantity 1. */
+  /**
+   * Units the material was ISSUED for. Every component row is multiplied by
+   * this figure; with no losses it is also the number of sellable units.
+   */
   quantity: number
+  /**
+   * Of those units, the ones that came out unsellable (spoiled, burnt,
+   * broken). They still consumed material, so the whole run's cost is carried
+   * by what is left.
+   */
+  scrapQuantity?: number | undefined
+  /** Units set aside for rework — produced, but not sellable yet. */
+  reworkQuantity?: number | undefined
   /** The run total a person set by hand. Null/absent = none. */
   overrideTotal?: number | null | undefined
 }
@@ -168,15 +179,23 @@ export interface ProductionCost {
   componentsCost: number
   laborCost: number
   otherCost: number
-  /** components + labour + other, for one unit. */
+  /** components + labour + other, for one unit of INPUT. */
   unitCost: number
+  /** Units the material was issued for. */
   quantity: number
+  /** Output losses, clamped to what the run started. */
+  scrapQuantity: number
+  reworkQuantity: number
+  /** quantity − scrap − rework: what can be sold and received into stock. */
+  goodQuantity: number
+  /** good ÷ quantity × 100, or null when nothing was started. */
+  yieldPercent: number | null
   /** unitCost × quantity — never overwritten by an override. */
   calculatedTotal: number
   overrideTotal: number | null
   /** What the run is recorded at: the override when there is one. */
   total: number
-  /** total ÷ quantity, at cost-layer precision — what a finished unit is received at. */
+  /** total ÷ goodQuantity — what a SELLABLE unit is received at. */
   effectiveUnitCost: number
 }
 
@@ -248,6 +267,21 @@ export function computeProductionCost(input: ProductionCostInput): ProductionCos
   const quantity = Number(input.quantity) > 0 ? Number(input.quantity) : 0
   const calculatedTotal = roundTo(unitCost * quantity, precision)
 
+  // Output losses never change what the run cost: they change how many
+  // sellable units that cost is divided over — the figure a person prices
+  // from. Clamped so a stale screen cannot report more scrap than it started.
+  const scrapQuantity = roundTo(
+    Math.min(Math.max(0, Number(input.scrapQuantity) || 0), quantity),
+    UNIT_COST_DECIMALS,
+  )
+  const reworkQuantity = roundTo(
+    Math.min(Math.max(0, Number(input.reworkQuantity) || 0), quantity - scrapQuantity),
+    UNIT_COST_DECIMALS,
+  )
+  const goodQuantity = roundTo(quantity - scrapQuantity - reworkQuantity, UNIT_COST_DECIMALS)
+  const yieldPercent =
+    quantity > 0 ? roundTo((goodQuantity / quantity) * 100, UNIT_COST_DECIMALS) : null
+
   // ⚠️ «No override» is its own state, not an override of zero: `0` is a real
   // figure a person can set (a unit made from scrap), and treating it as
   // «none» would quietly restore the calculated total.
@@ -265,10 +299,14 @@ export function computeProductionCost(input: ProductionCostInput): ProductionCos
     otherCost,
     unitCost,
     quantity,
+    scrapQuantity,
+    reworkQuantity,
+    goodQuantity,
+    yieldPercent,
     calculatedTotal,
     overrideTotal,
     total,
-    effectiveUnitCost: quantity > 0 ? roundTo(total / quantity, UNIT_COST_DECIMALS) : 0,
+    effectiveUnitCost: goodQuantity > 0 ? roundTo(total / goodQuantity, UNIT_COST_DECIMALS) : 0,
   }
 }
 
@@ -338,6 +376,13 @@ export const produceSchema = z
     /** An existing planned order this run completes. */
     workOrderId: uuidSchema.optional(),
     quantity: z.number().positive().max(1_000_000_000),
+    /**
+     * Output losses, in finished units. `quantity` is what the material was
+     * issued for; scrap and rework are units of it that cannot be sold, so the
+     * run's cost is carried by the good ones.
+     */
+    scrapQuantity: z.number().min(0).max(1_000_000_000).default(0),
+    reworkQuantity: z.number().min(0).max(1_000_000_000).default(0),
     overrideTotal: z.number().min(0).nullable().optional(),
     overrideReason: z.string().trim().max(500).optional(),
     /** Keep these rows as the product's definition for next time. */
@@ -365,6 +410,22 @@ export const produceSchema = z
         code: z.ZodIssueCode.custom,
         path: ['overrideReason'],
         message: 'manufacturing.errors.overrideReasonRequired',
+      })
+    }
+    // Scrap and rework are OUTPUT of the quantity started: together they can
+    // never exceed it, and with nothing good left there is nothing to receive.
+    const losses = value.scrapQuantity + value.reworkQuantity
+    if (losses > value.quantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['scrapQuantity'],
+        message: 'manufacturing.errors.outputExceedsQuantity',
+      })
+    } else if (value.addToInventory && losses >= value.quantity) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['scrapQuantity'],
+        message: 'manufacturing.errors.noGoodOutput',
       })
     }
   })

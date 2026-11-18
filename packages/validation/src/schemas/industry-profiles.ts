@@ -116,6 +116,101 @@ export const INDUSTRY_KEYS = [
 
 export type IndustryKey = (typeof INDUSTRY_KEYS)[number]
 
+/**
+ * The primary operator of every trade (17 Nov 2026 review §4). An operator is
+ * the product surface a trade is sold through — sales, booking, repair, … —
+ * NOT a separate engine. The shared cores (stock, ledger, sync, approvals) are
+ * used by several operators at once and are therefore not modelled here.
+ *
+ * Record<IndustryKey, OperatorKey> makes the compiler refuse a new industry
+ * that has no operator, so the tree can never silently lose a trade.
+ */
+export const OPERATOR_KEYS = [
+  'everyday_sales',
+  'wholesale_measurement',
+  'sku_serial',
+  'value_trade',
+  'food_recipe',
+  'health',
+  'booking_services',
+  'repair_ticket',
+  'production_project_land',
+  'transport_travel',
+  'generic',
+] as const
+
+export type OperatorKey = (typeof OPERATOR_KEYS)[number]
+
+export const INDUSTRY_OPERATOR: Record<IndustryKey, OperatorKey> = {
+  retail: 'everyday_sales',
+  wholesale: 'wholesale_measurement',
+  grocery: 'everyday_sales',
+  bakery: 'food_recipe',
+  butcher: 'food_recipe',
+  restaurant: 'food_recipe',
+  cafe: 'food_recipe',
+  fruitVegetable: 'everyday_sales',
+  dairy: 'food_recipe',
+  nuts: 'everyday_sales',
+  spices: 'everyday_sales',
+  jewellery: 'value_trade',
+  watches: 'sku_serial',
+  currencyExchange: 'value_trade',
+  clothing: 'sku_serial',
+  fabric: 'wholesale_measurement',
+  fabricRoll: 'wholesale_measurement',
+  shoes: 'sku_serial',
+  carpet: 'wholesale_measurement',
+  tailoring: 'wholesale_measurement',
+  mobilePhones: 'sku_serial',
+  computers: 'sku_serial',
+  computerComponents: 'sku_serial',
+  electronics: 'sku_serial',
+  itServices: 'repair_ticket',
+  hardware: 'wholesale_measurement',
+  buildingMaterials: 'wholesale_measurement',
+  paint: 'wholesale_measurement',
+  timber: 'wholesale_measurement',
+  glass: 'wholesale_measurement',
+  construction: 'production_project_land',
+  manufacturing: 'production_project_land',
+  autoParts: 'sku_serial',
+  carDealer: 'sku_serial',
+  mechanic: 'repair_ticket',
+  fuel: 'wholesale_measurement',
+  furniture: 'sku_serial',
+  kitchenware: 'everyday_sales',
+  homeAppliances: 'sku_serial',
+  stationery: 'everyday_sales',
+  toys: 'sku_serial',
+  giftShop: 'everyday_sales',
+  pharmacy: 'health',
+  cosmetics: 'everyday_sales',
+  clinic: 'health',
+  barber: 'booking_services',
+  beautySalon: 'booking_services',
+  optician: 'health',
+  agriculture: 'production_project_land',
+  livestock: 'production_project_land',
+  seedsFertilizer: 'wholesale_measurement',
+  flowers: 'everyday_sales',
+  transport: 'transport_travel',
+  freightTransport: 'transport_travel',
+  passengerTransport: 'transport_travel',
+  courier: 'transport_travel',
+  travelAgency: 'transport_travel',
+  realEstate: 'production_project_land',
+  printing: 'production_project_land',
+  photography: 'booking_services',
+  education: 'booking_services',
+  laundry: 'booking_services',
+  repairs: 'repair_ticket',
+  wedding: 'booking_services',
+  security: 'production_project_land',
+  consulting: 'production_project_land',
+  other: 'generic',
+}
+
 /** The two onboarding cards that describe HOW a business sells. */
 export const SALES_MODEL_KEYS: readonly IndustryKey[] = ['retail', 'wholesale']
 
@@ -246,7 +341,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     emphasizedFields: ['unit', 'sellPrice'],
   },
   fabric: {
-    capabilities: ['measurement', 'multi_unit'],
+    capabilities: ['measurement', 'multi_unit', 'length_pricing'],
     requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
@@ -264,7 +359,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     emphasizedFields: ['unit', 'quantity'],
   },
   timber: {
-    capabilities: ['measurement', 'multi_unit'],
+    capabilities: ['measurement', 'multi_unit', 'length_pricing'],
     requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'quantity'],
@@ -277,6 +372,10 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   spices: {
     capabilities: ['measurement', 'multi_unit'],
+    // Sold by weight AND tracked by batch: the review named the missing
+    // requirement; whether expiry is promised is a product decision, but the
+    // trade genuinely needs lot tracking once it is.
+    requested: ['batch_expiry'],
     unit: 'gram',
     emphasizedFields: ['unit', 'quantity'],
   },
@@ -486,7 +585,7 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     vocabulary: { productKey: 'industry.vocabulary.drink' },
   },
   fabricRoll: {
-    capabilities: ['measurement', 'multi_unit'],
+    capabilities: ['measurement', 'multi_unit', 'length_pricing'],
     requested: ['length_pricing', 'roll_cutting'],
     unit: 'meter',
     emphasizedFields: ['unit', 'sellPrice', 'quantity'],
@@ -545,6 +644,9 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   construction: {
     capabilities: ['measurement', 'multi_unit'],
+    // A contractor is not a shop that sells by the piece: the project cost,
+    // the hours and the client deposit are the trade, not an add-on.
+    requested: ['project_costing', 'timesheet_billing', 'deposits_liability'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
@@ -609,6 +711,9 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   flowers: {
     capabilities: ['multi_unit'],
+    // Cut flowers are perishable stock. Until the promised scope says otherwise,
+    // the honest requirement list carries the batch engine.
+    requested: ['batch_expiry'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
@@ -632,7 +737,9 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   travelAgency: {
     capabilities: ['multi_unit'],
-    requested: ['deposits_liability', 'installments'],
+    // A booking is not an instalment: the agency reserves from a supplier and
+    // settles with that supplier. Neither domain exists yet.
+    requested: ['deposits_liability', 'installments', 'travel_booking', 'supplier_settlement'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },
@@ -679,7 +786,9 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   clinic: {
     capabilities: [],
-    requested: ['resource_capacity'],
+    // A calendar is not a medical record. The clinical file and the access
+    // rules around health data are their own domains, never a slot feature.
+    requested: ['resource_capacity', 'clinical_record', 'health_data_access'],
   },
   courier: {
     capabilities: [],
@@ -694,7 +803,10 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
     requested: ['project_costing', 'timesheet_billing', 'contracts_recurring'],
   },
   other: {
+    // The escape hatch: selectable, but it may never claim a specialised
+    // operator. A guard test pins this — no requirements, no capabilities.
     capabilities: [],
+    requested: [],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
   },

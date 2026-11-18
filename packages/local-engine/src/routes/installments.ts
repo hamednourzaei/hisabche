@@ -24,6 +24,8 @@ import {
   buildInstallmentPlan,
   buildLateFeePreview,
   createInvoiceSchema,
+  decideDunning,
+  DEFAULT_DUNNING_POLICY,
   FEE_LINE,
   fromHundredths,
   lateFeePolicySchema,
@@ -159,6 +161,28 @@ export function registerInstallmentRoutes(router: Router): void {
   // ─── Installments ──────────────────────────────────────────
   router.get('/invoices/:id/installments', (c: RouteHandlerContext) => {
     return planOf(c.db, c.ctx, invoiceOf(c.db, c.ctx, c.params.id ?? ''))
+  })
+
+  // ─── WP-13: overdue status and optional reminders on the device ──
+  // Reminders are OFF by default. Overdue STATUS is still shown — a shop that
+  // never enabled dunning must not be told an unpaid installment is not late.
+  router.get('/invoices/:id/dunning', (c: RouteHandlerContext) => {
+    const invoice = invoiceOf(c.db, c.ctx, c.params.id ?? '')
+    const plan = planOf(c.db, c.ctx, invoice)
+    const policyRow = policyOf(c.db, c.ctx)
+    const policy = {
+      ...DEFAULT_DUNNING_POLICY,
+      graceDays: policyRow?.graceDays ?? DEFAULT_DUNNING_POLICY.graceDays,
+    }
+    const schedule = plan.lines.map((line) => ({
+      id: `${invoice.id}:${line.seq}`,
+      invoiceId: invoice.id,
+      seq: line.seq,
+      dueDate: line.dueDate,
+      amountMinor: minor(line.amount),
+      paidMinor: minor(line.paid),
+    }))
+    return { __status: 200, __data: decideDunning(schedule, today(), policy) }
   })
 
   router.put('/invoices/:id/installments', (c: RouteHandlerContext) => {

@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `measurement` | available | `EXISTING_AND_VERIFIED` | `sales_invoice` | available | 23 |
 | `weight_pricing` | available | `EXISTING_AND_VERIFIED` | `sales_invoice` | available | 1 |
-| `length_pricing` | partial | `EXISTING_BUT_INCOMPLETE` | `sales_invoice` | available | ۰ |
+| `length_pricing` | available | `EXISTING_AND_VERIFIED` | `sales_invoice` | available | 3 |
 | `volume_pricing` | partial | `EXISTING_BUT_INCOMPLETE` | `sales_invoice` | available | ۰ |
 | `area_pricing` | partial | `EXISTING_BUT_INCOMPLETE` | `sales_invoice` | available | ۰ |
 | `roll_cutting` | partial | `EXISTING_BUT_INCOMPLETE` | — | — | ۰ |
@@ -22,7 +22,7 @@
 | `making_charges` | partial | `EXISTING_BUT_INCOMPLETE` | `pricing_rates` | available | ۰ |
 | `resource_capacity` | partial | `EXISTING_BUT_INCOMPLETE` | `appointments_resources` | partial | ۰ |
 | `work_queue_sla` | partial | `EXISTING_BUT_INCOMPLETE` | `work_orders_repair` | partial | 1 |
-| `sales_orders` | partial | `EXISTING_BUT_INCOMPLETE` | `sales_orders` | online_required | ۰ |
+| `sales_orders` | partial | `EXISTING_BUT_INCOMPLETE` | `sales_orders` | partial | ۰ |
 | `procurement_planning` | partial | `EXISTING_BUT_INCOMPLETE` | `procurement` | available | ۰ |
 | `three_way_match` | partial | `EXISTING_BUT_INCOMPLETE` | `procurement` | available | ۰ |
 | `project_costing` | partial | `EXISTING_BUT_INCOMPLETE` | `projects_time` | online_required | ۰ |
@@ -50,8 +50,12 @@
 | `optical_prescription` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 | `lens_order` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 | `laundry_item_tracking` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
-| `production_batch` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `production_batch` | partial | `EXISTING_BUT_INCOMPLETE` | `production_bom` | online_required | ۰ |
 | `fuel_tank_reconciliation` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 | `print_job` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `travel_booking` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `supplier_settlement` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `clinical_record` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
+| `health_data_access` | planned | `NEW_CAPABILITY_REQUIRED` | — | — | ۰ |
 
 `EXISTING_AND_VERIFIED` فقط وقتی است که رجیستری یک فایل تست نام برده و آن فایل واقعاً هست.

@@ -21,7 +21,7 @@ Companion documents, so this is not a third list of the same thing:
 | ID   | Decision                                                                                                                                                     | Status                 | Measured today | Blocks | Reversible default in force                                                                | Revisit when                                                                          |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- | -------------- | ------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | D-01 | Business size: the code stores four bands (`solo` / `small` / `medium` / `large`); V64 §5.1 asks for four headcount bands (`solo` / `2-5` / `6-20` / `more`) | `NEEDS_OWNER_DECISION` | 4 bands        | none   | `solo` accepted (owner, 15 Nov 2026); the other three unchanged; no migration, no backfill | the owner maps today's rows onto V64's four headcount bands                           |
-| D-02 | The 52 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                                                      | `NEEDS_OWNER_DECISION` | 52 hooks       | none   | kept, unwired, undeleted                                                                   | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
+| D-02 | The 58 hooks `packages/api` exports that no application calls: wire, keep as library surface, or delete                                                      | `NEEDS_OWNER_DECISION` | 58 hooks       | none   | kept, unwired, undeleted                                                                   | the owner has reviewed `docs/architecture/universal-core/UNUSED-HOOKS.csv` row by row |
 
 No agent adds a row here for a decision nobody asked for: an invented decision is worse than a
 visible open one.
@@ -85,11 +85,11 @@ before any code changes; it is not needed for a test run.
 
 ---
 
-## 3. D-02 — the 52 hooks with no consumer
+## 3. D-02 — the 58 hooks with no consumer
 
 ### Measured
 
-- **685** exported hooks in `packages/api/src/hooks` (`scripts/api/unused-hooks.mjs`).
+- **705** exported hooks in `packages/api/src/hooks` (`scripts/api/unused-hooks.mjs`).
 - **52** of them are called by no application, package or sibling hook (53 until 13 Nov 2026, when the return dialog's exchange began calling `useExchangeInvoice`). They are the 52 data rows
   of `docs/architecture/universal-core/UNUSED-HOOKS.csv`.
 - **36** of the 52 name a request path that matches a registered route, quoted as `file:line`; the

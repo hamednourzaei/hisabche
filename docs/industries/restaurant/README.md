@@ -42,7 +42,7 @@
 
 **قابلیت‌های روشن:** هیچ قابلیت اختصاصی — فقط هسته‌ی مشترک.
 
-**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `table_service`، `production_batch`
+**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `table_service`
 
 ## تفاوت با خانواده‌ی «غذا و پذیرایی»
 
@@ -76,4 +76,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-ساخته‌نشده: `table_service`، `production_batch`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+ساخته‌نشده: `table_service`. سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

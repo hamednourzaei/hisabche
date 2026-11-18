@@ -97,17 +97,22 @@ describe('the device has somewhere to put what the pull sends', () => {
 })
 
 describe('v26 gives the pulled rows their identity', () => {
-  it('is the migration that brings an old cache to this build', () => {
+  // ⚠️ PINNED BY VERSION, NOT «the latest». v27 and v28 landed later; a test
+  // that read `SCHEMA_VERSION - 1` stopped describing v26 the day v27 shipped
+  // and then failed for a reason that had nothing to do with its own columns.
+  const v26 = LOCAL_MIGRATIONS.filter((migration) => migration.to === 26)[0]!
+
+  it('is one step of the chain, and the chain ends at this build', () => {
+    expect(v26, 'the v26 migration is missing').toBeDefined()
     const pending = migrationsFrom(SCHEMA_VERSION - 1)
     expect(pending.map((migration) => migration.to)).toEqual([SCHEMA_VERSION])
-    expect(SCHEMA_VERSION).toBe(26)
+    expect(v26.to).toBeLessThanOrEqual(SCHEMA_VERSION)
   })
 
   it.each(['product_variants', 'repair_tickets'] as const)(
     'adds `version` to %s, the token the next offline edit sends back',
     (table) => {
-      const migration = migrationsFrom(SCHEMA_VERSION - 1)[0]!
-      expect(migration.statements).toContain(
+      expect(v26.statements).toContain(
         `ALTER TABLE ${table} ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
       )
       expect(WRITABLE_COLUMNS[table]).toContain('version')
@@ -115,9 +120,8 @@ describe('v26 gives the pulled rows their identity', () => {
   )
 
   it('gives repair_tickets the sync bookkeeping the other pulled tables have', () => {
-    const migration = migrationsFrom(SCHEMA_VERSION - 1)[0]!
     for (const column of ['origin', 'sync_state']) {
-      expect(migration.statements).toContain(
+      expect(v26.statements).toContain(
         `ALTER TABLE repair_tickets ADD COLUMN ${column} TEXT NOT NULL DEFAULT '${
           column === 'origin' ? 'local' : 'local_only'
         }'`,
@@ -127,10 +131,9 @@ describe('v26 gives the pulled rows their identity', () => {
   })
 
   it('leaves the tables that already had a version alone', () => {
-    const migration = migrationsFrom(SCHEMA_VERSION - 1)[0]!
     for (const table of ['service_delivery_sessions', 'package_credit_ledger']) {
       expect(
-        migration.statements.filter((statement) => statement.includes(table)),
+        v26.statements.filter((statement) => statement.includes(table)),
         `${table} is not this migration's business`,
       ).toEqual([])
     }

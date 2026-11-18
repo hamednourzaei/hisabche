@@ -14,12 +14,14 @@ import {
   computeItemTotal,
   createInvoiceSchema,
   computePackageDeferrals,
+  cutLossIssue,
   invoiceLedgerLines,
   isPackageOffering,
   movesStock,
   planPackageGrant,
   round2,
   roundInvoiceMoney,
+  stockQuantityOfLine,
   sumInvoiceLines,
   temporaryInvoiceNumber,
   toBaseQuantity,
@@ -81,6 +83,8 @@ export interface InvoiceItemRow {
   unit: string | null
   unit_label: string | null
   weight_grams: number | null
+  /** WP-03 — «پرت برش»: shelf loss beside the sold quantity, in the line's unit. */
+  cut_loss_quantity: number | null
   unit_price: number
   buy_price: number
   discount: number
@@ -184,6 +188,10 @@ export function mapInvoiceItem(row: InvoiceItemRow) {
     productName: row.product_name,
     product_name: row.product_name,
     quantity: Number(row.quantity),
+    // WP-03 — a cut loss travels with the line so a device screenshot and the
+    // server's response show the same figure.
+    cutLossQuantity: Number(row.cut_loss_quantity) || 0,
+    cut_loss_quantity: Number(row.cut_loss_quantity) || 0,
     unit: row.unit,
     unitPrice: row.unit_price,
     unit_price: row.unit_price,
@@ -606,11 +614,32 @@ export function registerInvoiceRoutes(router: Router): void {
             )
           : undefined
         const itemMovesStock = movesStock(prod?.offering_type)
+        // WP-03 — «پرت برش»: what left the shelf beside the sold quantity.
+        // The same shared rule the server applies, so a device and the server
+        // refuse the same two lines (a count unit, a purchase).
+        const cutLoss = Number(item.cutLossQuantity) || 0
+        if (cutLoss > 0) {
+          const issue = cutLossIssue(cutLoss, item.unit ?? null)
+          if (issue) throw new ValidationError(`${issue}: line ${String(item.productName ?? '')}`)
+          if (type === 'purchase') {
+            throw new ValidationError(
+              `CUT_LOSS_ON_PURCHASE: line ${String(item.productName ?? '')}`,
+            )
+          }
+        }
         // The document keeps the quantity the person typed («2 cartons»);
         // INVENTORY is always the product's base unit («48 pieces»). The
         // conversion is the shared function, not a local copy.
         const baseQuantity =
-          productId && qty > 0 ? baseQuantityOf(db, workspaceId, productId, qty, item.unit) : qty
+          productId && qty > 0
+            ? baseQuantityOf(
+                db,
+                workspaceId,
+                productId,
+                stockQuantityOfLine({ quantity: qty, cutLossQuantity: cutLoss }),
+                item.unit,
+              )
+            : qty
 
         return {
           id: item.id || generateUuid(),
@@ -618,6 +647,7 @@ export function registerInvoiceRoutes(router: Router): void {
           variantId: item.variantId ?? null,
           productName: String(item.productName || 'کالا').trim(),
           quantity: qty,
+          cutLoss,
           baseQuantity,
           movesStock: itemMovesStock,
           offeringType: prod?.offering_type || 'goods',
@@ -695,9 +725,10 @@ export function registerInvoiceRoutes(router: Router): void {
         db.run(
           `INSERT INTO invoice_item (
             id, workspace_id, invoice_id, product_id, variant_id, product_name, quantity, unit,
+            cut_loss_quantity,
             unit_price, buy_price, discount, total_price, notes, sort_order,
             created_at, updated_at, origin, sync_state
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
           [
             item.id,
             workspaceId,
@@ -707,6 +738,7 @@ export function registerInvoiceRoutes(router: Router): void {
             item.productName,
             item.quantity,
             item.unit,
+            item.cutLoss,
             item.unitPrice,
             item.buyPrice,
             item.discount,
@@ -851,14 +883,15 @@ export function registerInvoiceRoutes(router: Router): void {
             const layerUnitCost = round2((item.unitPrice * exchangeRate) / perBase)
             db.run(
               `INSERT INTO cost_layer (
-                id, workspace_id, product_id, warehouse_id, source_type, source_id, source_line,
+                id, workspace_id, product_id, variant_id, warehouse_id, source_type, source_id, source_line,
                 received_qty, remaining_qty, unit_cost, currency, entry_date, created_at, updated_at,
                 origin, sync_state
-              ) VALUES (?, ?, ?, ?, 'invoice', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+              ) VALUES (?, ?, ?, ?, ?, 'invoice', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
               [
                 layerId,
                 workspaceId,
                 item.productId,
+                item.variantId,
                 data.warehouseId || null,
                 invoiceId,
                 item.id,
@@ -880,6 +913,7 @@ export function registerInvoiceRoutes(router: Router): void {
             const drawn = drawFromLayers(db, {
               workspaceId,
               productId: item.productId,
+              variantId: item.variantId,
               quantity: item.baseQuantity,
               invoiceId,
               invoiceLine: item.id,
@@ -1094,12 +1128,17 @@ export function registerInvoiceRoutes(router: Router): void {
           : undefined
         if (item.product_id && item.quantity > 0 && movesStock(prod?.offering_type)) {
           // The stored line quantity is in the line's unit; the stock it moved
-          // was the base quantity. Reversing must undo the base figure.
+          // was the base quantity. Reversing must undo the base figure —
+          // including the cut loss that left the shelf with it (WP-03), or a
+          // cancelled document would leave the shelf short by the offcut.
           const baseQuantity = baseQuantityOf(
             db,
             workspaceId,
             item.product_id,
-            Number(item.quantity),
+            stockQuantityOfLine({
+              quantity: Number(item.quantity),
+              cutLossQuantity: Number(item.cut_loss_quantity) || 0,
+            }),
             item.unit,
           )
           const qtyDelta = baseQuantity

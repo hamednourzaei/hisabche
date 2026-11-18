@@ -26,6 +26,12 @@ export type NegativeStockPolicy = 'block' | 'allow'
 export interface CostLayer {
   id: string
   productId: string
+  /**
+   * The variant this layer belongs to, or null for stock that was never
+   * assigned to one (WP-01). A sale of a variant consumes ONLY layers of the
+   * same variant; null is not a shared pool.
+   */
+  variantId?: string | null
   warehouseId: string | null
   remainingQty: number
   unitCost: number

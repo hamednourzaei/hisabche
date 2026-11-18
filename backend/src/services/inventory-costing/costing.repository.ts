@@ -28,6 +28,7 @@ export interface ConsumptionRow {
   id: string
   layerId: string | null
   productId: string
+  variantId: string | null
   quantity: number
   unitCost: number
   amount: number
@@ -56,6 +57,7 @@ function mapLayer(raw: DbRow): CostLayer {
   return {
     id: String(raw.id),
     productId: String(raw.product_id),
+    variantId: rowText(raw.variant_id),
     warehouseId: rowText(raw.warehouse_id),
     remainingQty: Number(raw.remaining_qty) || 0,
     unitCost: Number(raw.unit_cost) || 0,
@@ -113,15 +115,28 @@ export class CostingRepository {
     return next
   }
 
-  /** The open layers for one product, oldest arrival first. */
+  /**
+   * The open layers for one product, oldest arrival first.
+   *
+   * `variantId` is three-valued on purpose:
+   *   * `undefined` — every variant (the product's layers as a whole);
+   *   * `null`      — only layers never assigned to a variant;
+   *   * a uuid      — only that variant's layers.
+   *
+   * The consumption itself is strict anyway (the Postgres function filters), so
+   * this distinction only decides what a READ shows.
+   */
   async openLayers(
     workspaceId: string,
     productId: string,
     warehouseId?: string | null,
+    variantId?: string | null,
   ): Promise<CostLayer[]> {
     let query = supabase
       .from('cost_layers')
-      .select('id, product_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at')
+      .select(
+        'id, product_id, variant_id, warehouse_id, remaining_qty, unit_cost, entry_date, created_at',
+      )
       .eq('workspace_id', workspaceId)
       .eq('product_id', productId)
       .gt('remaining_qty', 0)
@@ -129,6 +144,10 @@ export class CostingRepository {
       .order('created_at', { ascending: true })
 
     if (warehouseId) query = query.eq('warehouse_id', warehouseId)
+    // `variantId === undefined` means "do not filter". `.is(null)` matches only
+    // unassigned layers — `.eq('variant_id', null)` would match nothing at all.
+    if (variantId === null) query = query.is('variant_id', null)
+    else if (variantId !== undefined) query = query.eq('variant_id', variantId)
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to read cost layers', error)
@@ -141,6 +160,7 @@ export class CostingRepository {
       p_user_id: ctx.userId,
       p_payload: {
         product_id: request.productId,
+        variant_id: request.variantId ?? null,
         warehouse_id: request.warehouseId ?? null,
         quantity: request.quantity,
         unit_cost: request.unitCost,
@@ -162,6 +182,7 @@ export class CostingRepository {
       p_user_id: ctx.userId,
       p_payload: {
         product_id: request.productId,
+        variant_id: request.variantId ?? null,
         warehouse_id: request.warehouseId ?? null,
         quantity: request.quantity,
         entry_date: request.entryDate,
@@ -198,6 +219,43 @@ export class CostingRepository {
 
     const result = (data ?? {}) as Record<string, unknown>
     return { quantity: Number(result.quantity) || 0, totalCost: Number(result.total_cost) || 0 }
+  }
+
+  /**
+   * Assign an open, unassigned layer to a variant (WP-01). The strict costing
+   * rule makes pre-migration stock unusable by a variant sale; this is the
+   * explicit act that says which variant it is. Atomic and re-checked in the
+   * database — the UI's decision is never trusted.
+   */
+  async assignLayerVariant(
+    ctx: TenancyContext,
+    layerId: string,
+    variantId: string,
+  ): Promise<{
+    layerId: string
+    productId: string
+    variantId: string
+    quantity: number
+    value: number
+    moved: boolean
+  }> {
+    const { data, error } = await supabase.rpc('inventory_assign_layer_variant', {
+      p_workspace_id: ctx.workspaceId,
+      p_user_id: ctx.userId,
+      p_layer_id: layerId,
+      p_variant_id: variantId,
+    })
+    if (error) throw error
+
+    const result = (data ?? {}) as Record<string, unknown>
+    return {
+      layerId: String(result.layer_id ?? layerId),
+      productId: String(result.product_id ?? ''),
+      variantId: String(result.variant_id ?? variantId),
+      quantity: Number(result.quantity) || 0,
+      value: Number(result.value) || 0,
+      moved: result.moved === true,
+    }
   }
 
   /**
@@ -305,7 +363,11 @@ export class CostingRepository {
   }
 
   /** One product's stock beside its open layers; null when it is not this business's. */
-  async stockPosition(workspaceId: string, productId: string): Promise<StockPosition | null> {
+  async stockPosition(
+    workspaceId: string,
+    productId: string,
+    variantId?: string | null,
+  ): Promise<StockPosition | null> {
     const { data, error } = await supabase
       .from('products')
       .select('id, name, quantity, buy_price')
@@ -315,7 +377,9 @@ export class CostingRepository {
     if (error) throw new DatabaseError('Failed to read product stock', error)
     if (!data) return null
 
-    const layers = await this.openLayers(workspaceId, productId)
+    // `undefined` = the product's whole pool; null = unassigned; uuid = one
+    // variant. Covering a variant sale must count only that variant's layers.
+    const layers = await this.openLayers(workspaceId, productId, null, variantId)
     const row = data as Record<string, unknown>
     return {
       productId: String(row.id),
@@ -335,7 +399,7 @@ export class CostingRepository {
     const { data, error } = await supabase
       .from('cost_consumptions')
       .select(
-        'id, layer_id, product_id, quantity, unit_cost, amount, is_estimated, consumer_type, consumer_id, consumer_line, entry_date',
+        'id, layer_id, product_id, variant_id, quantity, unit_cost, amount, is_estimated, consumer_type, consumer_id, consumer_line, entry_date',
       )
       .eq('workspace_id', workspaceId)
       .eq('consumer_type', consumerType)
@@ -348,6 +412,7 @@ export class CostingRepository {
       id: row.id,
       layerId: row.layer_id ?? null,
       productId: row.product_id,
+      variantId: row.variant_id ?? null,
       quantity: Number(row.quantity) || 0,
       unitCost: Number(row.unit_cost) || 0,
       amount: Number(row.amount) || 0,

@@ -38,6 +38,16 @@ function getNested(obj, dotPath) {
     .reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj)
 }
 
+/** The operator order is canonical: the document follows it, not alphabetic order. */
+function readOperatorKeys() {
+  const profSrc = fs.readFileSync(
+    path.join(ROOT, 'packages/validation/src/schemas/industry-profiles.ts'),
+    'utf8',
+  )
+  const block = profSrc.match(/export const OPERATOR_KEYS = \[([\s\S]*?)\] as const/)?.[1] ?? ''
+  return [...block.matchAll(/'([^']+)'/g)].map((x) => x[1])
+}
+
 export function buildRegistryData() {
   const fa = JSON.parse(
     fs.readFileSync(path.join(ROOT, 'packages/i18n/messages/fa/common.json'), 'utf8'),
@@ -70,6 +80,19 @@ export function buildRegistryData() {
   const indKeysBlock =
     profSrc.match(/export const INDUSTRY_KEYS = \[([\s\S]*?)\] as const/)?.[1] ?? ''
   const industryKeys = [...indKeysBlock.matchAll(/'([^']+)'/g)].map((x) => x[1])
+
+  // The operator tree (17 Nov 2026 review §4): every trade is sold through ONE
+  // primary operator. The shared cores are reused by several operators, so they
+  // are prose in the document, not a partition of the industries.
+  const operatorKeys = readOperatorKeys()
+  const operatorMapBlock =
+    profSrc.match(
+      /export const INDUSTRY_OPERATOR: Record<IndustryKey, OperatorKey> = \{([\s\S]*?)\n\}/,
+    )?.[1] ?? ''
+  const operatorByIndustry = new Map()
+  for (const om of operatorMapBlock.matchAll(/(\w+):\s*'(\w+)'/g)) {
+    operatorByIndustry.set(om[1], om[2])
+  }
 
   // Extract OVERRIDES block
   const overrides = {}
@@ -226,6 +249,19 @@ export function buildRegistryData() {
     }
     const packs = [...packsSet].join(', ')
 
+    const operator = operatorByIndustry.get(id)
+    if (!operator || !operatorKeys.includes(operator)) {
+      throw new Error(`Industry '${id}' has no operator in INDUSTRY_OPERATOR`)
+    }
+
+    // Engines the trade touches through the capabilities and requirements it
+    // records — derived from the registry, never typed by hand.
+    const engineSet = new Set()
+    for (const c of [...caps, ...required]) {
+      const engine = capEngineMap.get(c)
+      if (engine) engineSet.add(engine)
+    }
+
     rows.push({
       id,
       labels: `${faLabel} / ${afLabel} / ${enLabel}`,
@@ -235,11 +271,48 @@ export function buildRegistryData() {
       capabilities: capsSummary,
       requirements: reqSummary,
       packs,
+      operator,
+      engines: [...engineSet].sort(),
+      // A trade has a recorded gap when any capability it switched on or any
+      // requirement it lists is not fully available. This is the same union the
+      // campaign reporter uses, so the two documents can never disagree.
+      hasGap: [...new Set([...caps, ...required])].some((c) => capStatusMap.get(c) !== 'available'),
     })
   }
 
   return rows
 }
+
+const OPERATOR_TITLES = {
+  everyday_sales: { fa: 'فروش روزمره و پیشخوان', en: 'Daily counter sales' },
+  wholesale_measurement: { fa: 'عمده‌فروشی و فروش اندازه‌ای', en: 'Wholesale and measurement' },
+  sku_serial: { fa: 'SKU، سایز و سریال', en: 'SKU, size and serial' },
+  value_trade: { fa: 'معاملات ارزش‌محور', en: 'Value-based trade' },
+  food_recipe: { fa: 'غذا و دستور تهیه', en: 'Food and recipe' },
+  health: { fa: 'سلامت', en: 'Health' },
+  booking_services: { fa: 'نوبت و خدمات', en: 'Booking and services' },
+  repair_ticket: { fa: 'تعمیر و تیکت', en: 'Repair and ticket' },
+  production_project_land: { fa: 'تولید، پروژه و زمین', en: 'Production, project and land' },
+  transport_travel: { fa: 'حمل‌ونقل و سفر', en: 'Transport and travel' },
+  generic: { fa: 'مدل عمومی', en: 'Generic model' },
+}
+
+/**
+ * The eight shared cores (17 Nov 2026 review §3). They are NOT a partition: one
+ * core is used by several operators at once, which is exactly why they are
+ * implemented once and reused. Kept as prose because a table would suggest each
+ * industry owns its own copy.
+ */
+const SHARED_CORES = [
+  'هسته فروش، فاکتور و دریافت پول',
+  'هسته موجودی، انبار و رهگیری',
+  'هسته حسابداری، دفتر و بهای تمام‌شده',
+  'هسته قیمت‌گذاری و واحد اندازه‌گیری',
+  'هسته طرف حساب، پرداخت و تسویه',
+  'هسته مجوز، تأیید و Audit',
+  'هسته آفلاین، همگام‌سازی و حل تعارض',
+  'هسته گزارش، داشبورد و پیش‌بینی',
+]
 
 export function generateIndustryRegistryMarkdown() {
   const rows = buildRegistryData()
@@ -264,13 +337,53 @@ export function generateIndustryRegistryMarkdown() {
 
 ## جدول جامع اصناف (۶۷ صنف)
 
-| # | id | برچسب (fa / af / en) | طبقه‌بندی | Archetype | Preset DNA | قابلیت‌ها (available / partial / planned) | نیازمندی‌ها (available / partial / planned) | Feature Packs |
-| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- |
+| # | id | برچسب (fa / af / en) | طبقه‌بندی | Archetype | Preset DNA | قابلیت‌ها (available / partial / planned) | نیازمندی‌ها (available / partial / planned) | Feature Packs | عمل‌گرای اصلی |
+| :---: | :--- | :--- | :---: | :--- | :--- | :--- | :--- | :--- | :--- |
 `
 
   rows.forEach((row, idx) => {
-    md += `| ${idx + 1} | \`${row.id}\` | ${row.labels} | ${row.classification} | \`${row.archetype}\` | \`${row.presetDna}\` | ${row.capabilities} | ${row.requirements} | \`${row.packs}\` |\n`
+    md += `| ${idx + 1} | \`${row.id}\` | ${row.labels} | ${row.classification} | \`${row.archetype}\` | \`${row.presetDna}\` | ${row.capabilities} | ${row.requirements} | \`${row.packs}\` | \`${row.operator}\` |\n`
   })
+
+  const operatorKeys = readOperatorKeys()
+  const byOperator = new Map(operatorKeys.map((key) => [key, []]))
+  for (const row of rows) byOperator.get(row.operator)?.push(row)
+
+  md += `
+
+---
+
+## ساختار هسته، عمل‌گرا و صنف
+
+«هسته» مالک قواعد مشترک است، «عمل‌گرا» یک گردش عملیاتی مشخص، و «صنف» کسب‌وکاری است که از آن گردش استفاده می‌کند. یک صنف از چند هسته استفاده می‌کند؛ ستون «عمل‌گرای اصلی» فقط گردش اصلی هر صنف را نشان می‌دهد، نه همه وابستگی‌هایش.
+
+### هشت هسته مشترک
+
+${SHARED_CORES.map((core, i) => `${i + 1}. ${core}`).join('\n')}
+
+هسته‌ها یک بار پیاده‌سازی می‌شوند و چند عمل‌گرا و چند صنف از آن‌ها استفاده می‌کنند. هیچ صنفی هسته اختصاصی ندارد؛ تفاوت اصناف در عمل‌گرا و نیازمندی‌های ثبت‌شده است.
+
+### عمل‌گراها و موتورهای درگیر
+
+«موتورهای درگیر» از قابلیت‌های فعال و نیازمندی‌های ثبت‌شده‌ی اصناف همان عمل‌گرا استخراج شده است، نه دستی. «صنف با نیاز برآورده‌نشده» یعنی صنفی که دست‌کم یکی از قابلیت‌ها یا نیازمندی‌های ثبت‌شده‌اش در وضعیت \`available\` نیست؛ این عدد با وضعیت رسمی \`SELLABLE\` یکی نیست.
+
+| عمل‌گرا | عنوان | تعداد صنف | اصناف | موتورهای درگیر (از رجیستری) | صنف با نیاز برآورده‌نشده |
+| :--- | :--- | ---: | :--- | :--- | ---: |
+`
+
+  for (const key of operatorKeys) {
+    const members = byOperator.get(key) ?? []
+    const engines = [...new Set(members.flatMap((row) => row.engines))].sort()
+    const engineCell = engines.length > 0 ? engines.map((e) => `\`${e}\``).join(', ') : '—'
+    const gapCount = members.filter((row) => row.hasGap).length
+    const ids = members.map((row) => `\`${row.id}\``).join('، ')
+    const title = OPERATOR_TITLES[key]?.fa ?? key
+    md += `| \`${key}\` | ${title} | ${members.length} | ${ids || '—'} | ${engineCell} | ${gapCount} از ${members.length} |\n`
+  }
+
+  md += `
+\`other\` فقط پروفایل عمومی است: نه نیازمندی تخصصی دارد و نه ادعای آمادگی صنفی. \`retail\` و \`wholesale\` مدل فروش‌اند، نه صنف؛ حضورشان در این جدول فقط برای کامل بودن فهرست است.
+`
 
   return md
 }

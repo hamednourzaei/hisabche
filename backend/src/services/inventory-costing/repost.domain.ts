@@ -31,6 +31,8 @@ export interface CostedIssue {
   consumerId: string
   consumerLine: string
   productId: string
+  /** The variant consumed, or null when the line named none (WP-01). */
+  variantId?: string | null
   quantity: number
   entryDate: string
   /** What it was recorded as costing at the time. */
@@ -42,6 +44,7 @@ export interface RepostAdjustment {
   consumerId: string
   consumerLine: string
   productId: string
+  variantId?: string | null
   entryDate: string
   recordedCostMinor: number
   recomputedCostMinor: number
@@ -89,16 +92,22 @@ export function planRepost(
           : 1,
     )
 
-  // A working copy: replaying must not mutate the caller's layers.
+  // A working copy: replaying must not mutate the caller's layers. Layers and
+  // issues are grouped by product AND variant: a repost must never let one
+  // variant's layer pay for another variant's sale (WP-01 strict rule).
+  const pool = (productId: string, variantId: string | null | undefined) =>
+    `${productId}|${variantId ?? ''}`
+
   const working = new Map<string, CostLayer[]>()
   for (const layer of layers) {
-    working.set(layer.productId, [...(working.get(layer.productId) ?? []), { ...layer }])
+    const key = pool(layer.productId, layer.variantId)
+    working.set(key, [...(working.get(key) ?? []), { ...layer }])
   }
 
   const adjustments: RepostAdjustment[] = []
 
   for (const issue of affected) {
-    const productLayers = working.get(issue.productId) ?? []
+    const productLayers = working.get(pool(issue.productId, issue.variantId)) ?? []
 
     const plan = planConsumption(productLayers, issue.quantity, {
       ...(options.method ? { method: options.method } : {}),
@@ -121,6 +130,7 @@ export function planRepost(
         consumerId: issue.consumerId,
         consumerLine: issue.consumerLine,
         productId: issue.productId,
+        variantId: issue.variantId ?? null,
         entryDate: issue.entryDate,
         recordedCostMinor: issue.recordedCostMinor,
         recomputedCostMinor,

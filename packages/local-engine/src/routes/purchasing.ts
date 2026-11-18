@@ -315,6 +315,7 @@ export function registerPurchasingRoutes(router: Router): void {
         receiveLayer(db, {
           workspaceId: ctx.workspaceId,
           productId: line.product_id,
+          variantId: line.variant_id,
           warehouseId: null,
           quantity: Number(line.quantity),
           unitCost,

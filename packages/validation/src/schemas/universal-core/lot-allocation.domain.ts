@@ -38,6 +38,15 @@
 // An expired batch cannot be issued. Not "flagged", not "warned about" —
 // refused, because the downstream cost of selling expired medicine is not
 // something a dismissible banner can carry.
+//
+// ---------------------------------------------------------------------------
+// A RECALL IS THE SAME KIND OF REFUSAL (WP-05)
+//
+// A batch the supplier recalled, or that failed inspection, is still on the
+// shelf and still worth money — so its quantity stays where it is. What it is
+// not is sellable. `recalledAt` is that fact, and the allocation core excludes
+// such a batch exactly as it excludes an expired one: reported, never silently
+// skipped, never taken by a manual pick either.
 // ============================================
 
 export type AllocationStrategy =
@@ -62,6 +71,14 @@ export interface StockBatch {
   warehouseId?: string | null
   /** When the goods arrived. The FIFO tiebreak. */
   receivedOn: string
+  /**
+   * When the batch was recalled / blocked (WP-05). Set means «do not sell»,
+   * everywhere: the quantity stays on the shelf, its value stays on the books,
+   * and every allocation refuses it.
+   */
+  recalledAt?: string | null
+  /** Why it was blocked. Required when `recalledAt` is set. */
+  recalledReason?: string | null
 }
 
 // ─── Expiry ──────────────────────────────────────────────────────────────────
@@ -99,7 +116,9 @@ export function expiryState(
 }
 
 export function isIssuable(batch: StockBatch, asOf: string): boolean {
-  return batch.remainingQty > 0 && expiryState(batch.expiryDate, asOf) !== 'expired'
+  return (
+    batch.remainingQty > 0 && !batch.recalledAt && expiryState(batch.expiryDate, asOf) !== 'expired'
+  )
 }
 
 // ─── Allocation ──────────────────────────────────────────────────────────────
@@ -119,6 +138,8 @@ export interface AllocationPlan {
   strategy: AllocationStrategy
   /** Batches skipped because they had expired, and how much they held. */
   blockedByExpiry: Array<{ batchId: string; batchNumber: string; quantity: number }>
+  /** Batches skipped because they were recalled / blocked, and how much they held. */
+  blockedByRecall: Array<{ batchId: string; batchNumber: string; quantity: number }>
 }
 
 /**
@@ -172,16 +193,28 @@ export function planAllocation(
 ): AllocationPlan {
   const strategy = options.strategy ?? 'fefo'
 
+  // A recalled batch is REPORTED, not silently dropped: the stock is still on
+  // the shelf and still worth money, and an operator who cannot see it would
+  // wonder why the count does not add up.
+  const blockedByRecall: AllocationPlan['blockedByRecall'] = batches
+    .filter((b) => b.recalledAt && b.remainingQty > 0)
+    .map((b) => ({ batchId: b.id, batchNumber: b.batchNumber, quantity: b.remainingQty }))
+
+  // Nothing below may draw from a recalled batch — not FEFO, not FIFO, not a
+  // manual pick. The pick is refused by simply not being in this list.
+  const usable = batches.filter((b) => !b.recalledAt)
+
   if (strategy === 'manual' && options.manual) {
     // The operator chose. Their choice stands — but an expired batch is still
     // refused, because that refusal is not a preference.
-    const byId = new Map(batches.map((b) => [b.id, b]))
+    const byId = new Map(usable.map((b) => [b.id, b]))
     const allocations: BatchAllocation[] = []
     const blocked: AllocationPlan['blockedByExpiry'] = []
     let covered = 0
 
     for (const choice of options.manual) {
       const batch = byId.get(choice.batchId)
+      // A recalled (or unknown) id is already in `blockedByRecall`.
       if (!batch) continue
 
       if (expiryState(batch.expiryDate, options.asOf) === 'expired') {
@@ -211,10 +244,11 @@ export function planAllocation(
       shortfall: Math.max(0, quantity - covered),
       strategy,
       blockedByExpiry: blocked,
+      blockedByRecall,
     }
   }
 
-  const ordered = orderBatches(batches, strategy)
+  const ordered = orderBatches(usable, strategy)
   const allocations: BatchAllocation[] = []
   const blockedByExpiry: AllocationPlan['blockedByExpiry'] = []
 
@@ -245,5 +279,11 @@ export function planAllocation(
     remaining -= take
   }
 
-  return { allocations, shortfall: Math.max(0, remaining), strategy, blockedByExpiry }
+  return {
+    allocations,
+    shortfall: Math.max(0, remaining),
+    strategy,
+    blockedByExpiry,
+    blockedByRecall,
+  }
 }

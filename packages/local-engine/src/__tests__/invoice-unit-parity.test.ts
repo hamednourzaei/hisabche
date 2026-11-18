@@ -190,4 +190,139 @@ describe('invoice unit conversion parity', () => {
       movementsBefore,
     )
   })
+
+  /* ─── WP-03 — «پرت برش» ────────────────────────────────────────────────────
+     A 50 m roll, 12.5 m sold, 1.25 m trimmed away and thrown out. The customer
+     pays for 12.5 m (2,500,000) and the shelf loses 13.75 m. Offline must give
+     the same two numbers as the server, and cancelling must give the shelf back
+     exactly what it took. */
+
+  it('12.5 m sold + 1.25 m cut loss moves 13.75 m off the shelf, and the money stays on 12.5', async () => {
+    const created = await engine.request<{ id: string }>({
+      method: 'POST',
+      path: '/products',
+      body: { name: 'Fabric roll', unit: 'meter', quantity: 50, warehouseId: TEST_WAREHOUSE_ID },
+    })
+    expect(created.status).toBe(201)
+    const productId = created.data.id
+
+    const invoice = await engine.request<{ id: string; total: number }>({
+      method: 'POST',
+      path: '/invoices',
+      body: {
+        type: 'sale',
+        currency: 'AFN',
+        warehouseId: TEST_WAREHOUSE_ID,
+        items: [
+          {
+            productId,
+            productName: 'Fabric roll',
+            quantity: 12.5,
+            unit: 'meter',
+            unitPrice: 200000,
+            discount: 0,
+            cutLossQuantity: 1.25,
+          },
+        ],
+      },
+    })
+    expect(invoice.status).toBe(201)
+    // 12.5 × 200,000 — the offcut is not billed.
+    expect(invoice.data.total).toBe(2_500_000)
+
+    const line = db.get<{ quantity: number; cut_loss_quantity: number }>(
+      'SELECT quantity, cut_loss_quantity FROM invoice_item WHERE invoice_id = ?',
+      [invoice.data.id],
+    )
+    expect(Number(line?.quantity)).toBe(12.5)
+    expect(Number(line?.cut_loss_quantity)).toBe(1.25)
+
+    const movement = db.get<{ quantity: number }>(
+      "SELECT quantity FROM inventory_movement WHERE product_id = ? AND type = 'sale'",
+      [productId],
+    )
+    expect(Number(movement?.quantity)).toBe(13.75)
+
+    // 50 on the shelf - 13.75 = 36.25 left.
+    const product = db.get<{ quantity: number }>('SELECT quantity FROM product WHERE id = ?', [
+      productId,
+    ])
+    expect(Number(product?.quantity)).toBe(36.25)
+
+    // Cancelling undoes the document: the whole 13.75 m comes back.
+    const cancelled = await engine.request({
+      method: 'POST',
+      path: `/invoices/${invoice.data.id}/cancel`,
+      body: { reason: 'mistake' },
+    })
+    expect(cancelled.status).toBe(200)
+    const after = db.get<{ quantity: number }>('SELECT quantity FROM product WHERE id = ?', [
+      productId,
+    ])
+    expect(Number(after?.quantity)).toBe(50)
+  })
+
+  it('refuses a cut loss on a count unit, and writes nothing', async () => {
+    const created = await engine.request<{ id: string }>({
+      method: 'POST',
+      path: '/products',
+      body: { name: 'Only pieces', unit: 'piece', quantity: 10, warehouseId: TEST_WAREHOUSE_ID },
+    })
+    const productId = created.data.id
+    const invoicesBefore = db.get<{ n: number }>('SELECT COUNT(*) AS n FROM invoice')?.n ?? 0
+
+    const refused = await engine.request<{ error: string }>({
+      method: 'POST',
+      path: '/invoices',
+      body: {
+        type: 'sale',
+        currency: 'AFN',
+        warehouseId: TEST_WAREHOUSE_ID,
+        items: [
+          {
+            productId,
+            productName: 'Only pieces',
+            quantity: 2,
+            unit: 'piece',
+            unitPrice: 100,
+            discount: 0,
+            cutLossQuantity: 1,
+          },
+        ],
+      },
+    })
+    expect(refused.status).toBe(400)
+    expect(refused.data.error).toMatch(/CUT_LOSS_ON_COUNT_UNIT/)
+    expect(db.get<{ n: number }>('SELECT COUNT(*) AS n FROM invoice')?.n).toBe(invoicesBefore)
+  })
+
+  it('refuses a cut loss on a purchase — goods arrive intact', async () => {
+    const created = await engine.request<{ id: string }>({
+      method: 'POST',
+      path: '/products',
+      body: { name: 'Fabric roll', unit: 'meter', quantity: 0, warehouseId: TEST_WAREHOUSE_ID },
+    })
+    const refused = await engine.request<{ error: string }>({
+      method: 'POST',
+      path: '/invoices',
+      body: {
+        type: 'purchase',
+        currency: 'AFN',
+        warehouseId: TEST_WAREHOUSE_ID,
+        items: [
+          {
+            productId: created.data.id,
+            productName: 'Fabric roll',
+            quantity: 50,
+            unit: 'meter',
+            unitPrice: 100000,
+            discount: 0,
+            cutLossQuantity: 0.5,
+          },
+        ],
+      },
+    })
+    expect(refused.status).toBe(400)
+    expect(refused.data.error).toMatch(/CUT_LOSS_ON_PURCHASE/)
+  })
 })

@@ -2170,6 +2170,18 @@
     "extAttrValue": "Value (e.g. XL)",
     "extAddVariant": "Add variant",
     "extBarcodeLabel": "Barcode",
+    "extCostLayersTitle": "Cost layers",
+    "extCostLayersHint": "A sale consumes only the cost layers of its own variant. Older stock with no variant cannot pay for a variant sale until it is assigned.",
+    "extCostLoading": "Reading…",
+    "extCostLoadFailed": "Could not read the cost layers",
+    "extUnassignedEmpty": "No unassigned stock is left.",
+    "extLayerQty": "Quantity",
+    "extLayerUnitCost": "Unit cost",
+    "extLayerValue": "Value",
+    "extLayerDate": "Received",
+    "extAssignTo": "Assign to variant",
+    "extAssignAction": "Assign",
+    "extAssignFailed": "Could not assign the stock",
     "extFitmentsTitle": "Vehicle fitment (parts and accessories)",
     "extFitmentsCount": "vehicles",
     "extFitmentsEmpty": "No vehicle recorded for this part yet.",
@@ -2302,6 +2314,15 @@
     "daysLeft": "days",
     "remaining": "Remaining",
     "editExpiry": "Edit expiry date",
+    "recall": "Block",
+    "recalled": "Blocked",
+    "releaseRecall": "Unblock",
+    "recallReason": "Why it is blocked — e.g. a supplier recall",
+    "recallReasonLabel": "Reason for the block",
+    "recallConfirm": "Block it",
+    "recallReasonRequired": "Write why this batch is blocked.",
+    "recallFailed": "Couldn't block it. Try again.",
+    "releaseRecallFailed": "Couldn't unblock it. Try again.",
     "unitUnknown": "This unit is not supported",
     "dimCount": "Count (base: piece)",
     "dimWeight": "Weight (base: gram)",
@@ -4811,6 +4832,8 @@
       "noMovers": "None."
     },
     "history": {
+      "good": "Good",
+      "yield": "Yield",
       "unnamed": "Unnamed",
       "product": "Product",
       "productGone": "Product deleted",
@@ -4844,6 +4867,10 @@
       "history": "Production history of this product"
     },
     "editor": {
+      "scrap": "Scrap",
+      "rework": "Rework",
+      "goodUnits": "Good units",
+      "yield": "Yield",
       "columns": {
         "unitCost": "Unit cost",
         "component": "Component / material",
@@ -4857,6 +4884,8 @@
       "workers": "Workers",
       "hours": "Time to make (hours)",
       "errors": {
+        "outputExceedsQuantity": "Scrap and rework cannot exceed the quantity started.",
+        "noGoodOutput": "Nothing sellable is left; adding to stock needs at least one good unit.",
         "product": "Choose the product.",
         "empty": "Enter at least one component, labour or a cost.",
         "rate": "Enter an exchange rate for the column kept in another currency.",
@@ -4915,9 +4944,13 @@
       "deleteColumn": "Delete this column?"
     },
     "errors": {
+      "outputExceedsQuantity": "Scrap and rework exceed the quantity started.",
+      "noGoodOutput": "Nothing sellable is left; adding to stock needs at least one good unit.",
+      "MANUFACTURING_OUTPUT_EXCEEDS_QUANTITY": "Scrap and rework exceed the quantity started.",
+      "MANUFACTURING_GOOD_QUANTITY_REQUIRED": "Nothing sellable came out, so no stock was added.",
       "overrideReasonRequired": "Say why the total was changed.",
       "range": "The start date must be before the end date.",
-      "MANUFACTURING_MIGRATION_PENDING": "Manufacturing is not enabled on the database yet. The manufacturing-01 script has to be run.",
+      "MANUFACTURING_MIGRATION_PENDING": "Manufacturing is not enabled on the database yet. The manufacturing-01 and production-batch-01 scripts have to be run.",
       "INVENTORY_INSUFFICIENT_STOCK": "One of the materials is short in this warehouse. Add stock, or turn off “take materials from stock”.",
       "PRODUCT_WAREHOUSE_REQUIRED": "You have several warehouses; choose one.",
       "PRODUCT_WAREHOUSE_NOT_FOUND": "That warehouse was not found or is inactive.",
@@ -5328,6 +5361,7 @@
       "tax": "Tax (%)",
       "lineTotal": "Line total",
       "weight": "Weight (g)",
+      "cutLoss": "Cut loss",
       "notes": "Notes",
       "actions": "Actions"
     },
@@ -5457,6 +5491,7 @@
       "priceRequired": "Unit price must be greater than zero",
       "multiplierRequired": "Enter a value in the column this price is multiplied by",
       "unitMismatch": "This line's unit does not match the product's unit and no conversion is defined",
+      "cutLossOnCountUnit": "Cut loss does not apply to a count unit",
       "totalRequired": "The line total must be greater than zero",
       "noItems": "At least one line is required",
       "createFailed": "Could not create the invoice",
@@ -12089,7 +12124,33 @@
       "podRecipient": "Recipient name",
       "progressCod": "Advance COD status",
       "settleInvoiceId": "Invoice ID for COD settlement",
-      "tracking": "Tracking #"
+      "tracking": "Tracking #",
+      "route": "Route",
+      "cod": "Cash on delivery",
+      "fleetTitle": "Delivery fleet",
+      "assign": "Assign vehicle",
+      "close": "Close delivery",
+      "vehicleName": "Vehicle name",
+      "vehiclePlate": "Plate",
+      "vehicleCapacity": "Parcels per day",
+      "addVehicle": "Add vehicle",
+      "serviceState": "Service state",
+      "assignedOnDate": "Assigned today",
+      "assignTitle": "Assign vehicle",
+      "selectVehicle": "Select vehicle",
+      "closeOutcome": "Delivery outcome",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "podMethod": "POD method",
+      "signature": "Signature",
+      "photo": "Photo",
+      "code": "Code",
+      "podCode": "Delivery code",
+      "podPhotoRef": "Photo reference",
+      "collectedMinor": "Amount collected",
+      "failureReason": "Failure reason",
+      "recordService": "Record service",
+      "confirmClose": "Record outcome"
     }
   },
   "warehouseHub": {
@@ -14251,15 +14312,30 @@
     "print_job": {
       "label": "Print job and artwork approval"
     },
+    "travel_booking": {
+      "label": "Travel booking"
+    },
+    "supplier_settlement": {
+      "label": "Supplier settlement"
+    },
+    "clinical_record": {
+      "label": "Clinical record"
+    },
+    "health_data_access": {
+      "label": "Health data access"
+    },
     "limitations": {
+      "ORDER_CONFIRMATION_ONLINE_ONLY": "An order draft is written on the device, but confirming price and stock and turning it into an invoice require an internet connection.",
+      "PRODUCTION_BATCH_ONLINE_ONLY": "Scrap and yield are recorded on every run, but a production run itself is entered online only.",
+      "LINEAR_CUT_LOSS_NOT_TRACKED": "Waste from cutting by length is not tracked.",
       "FX_TRADES_ONLINE_ONLY": "FX trades are recorded online only; rates and positions are not synced between offline devices.",
       "OLD_GOLD_TRADE_IN_NOT_ON_INVOICE": "The old-gold trade-in calculation exists in the domain but is not applied on an invoice line.",
-      "LINEAR_CUT_LOSS_NOT_TRACKED": "Waste from cutting by length is not tracked.",
+      "BATCH_RETURN_RESTORE_MISSING": "A return does not go back to its own batch.",
       "TANK_DIP_CALIBRATION_NOT_TRACKED": "Tank dip calibration is not tracked.",
       "NO_SERVER_ROUTE_OR_INVOICE_LINE_PICKER": "The rule exists but cannot be picked on an invoice line yet.",
       "NO_SERVER_ROUTE_OR_UI_PICKER": "The rule exists but there is no screen to pick it yet.",
       "QUANTITY_BREAK_UI_BASIC": "Quantity price breaks have a basic editor only.",
-      "BATCH_RETURN_RESTORE_MISSING": "A return does not go back to its own batch.",
+      "EXPIRY_REPORT_AND_LOT_TRAIL_ONLINE_ONLY": "The expiry report and lot trail work online only.",
       "SERVER_ONLY_NO_OFFLINE_ENGINE": "Works online only.",
       "COST_LAYERS_ARE_PRODUCT_KEYED": "Cost is kept per product, not per variant.",
       "SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY": "Holding a serialized unit, and returning it, work online only.",

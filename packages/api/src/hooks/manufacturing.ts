@@ -85,6 +85,11 @@ export interface ProductionRun {
   productId: string
   productName: string | null
   quantity: number
+  /** Units that came out sellable; null on rows that predate output tracking. */
+  goodQuantity: number | null
+  scrapQuantity: number
+  reworkQuantity: number
+  yieldPercent: number | null
   currency: string | null
   bomId: string | null
   bomVersion: number | null
@@ -131,7 +136,12 @@ export interface ProduceResult {
   status: 'completed' | 'already_completed'
   workOrderId: string
   quantity: number
+  /** What the run put on the shelf; null on a run that predates output tracking. */
+  goodQuantity: number | null
+  yieldPercent: number | null
   totalCost: number
+  /** Per SELLABLE unit; null when a replay does not return it. */
+  unitCost: number | null
 }
 
 export interface ManufacturingReport {
@@ -152,8 +162,9 @@ export interface ManufacturingReport {
     runs: number
     quantity: number
     totalCost: number
-    firstUnitCost: number
-    lastUnitCost: number
+    /** Per SELLABLE unit; null when that run had nothing to divide by. */
+    firstUnitCost: number | null
+    lastUnitCost: number | null
   }>
   materials: Array<{
     key: string
