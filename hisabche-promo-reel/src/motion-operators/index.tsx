@@ -1,18 +1,17 @@
-/**
- * 30 SaaS Motion Operators & Transitions Catalog
- * Implements purpose-bound motion operators for Hisabche product films.
- * Zero Math.random, 100% deterministic, HarfBuzz-safe RTL typography.
- */
+// ============================================
+// SaaS Motion Operators — rebuilt on the 100 motion rules.
+// 8 exports, signatures frozen. The old catalog painted frosted glass cards,
+// gradient bars, blur filters and CSS transitions (website footprint). Now:
+// single-source tokens, stroked geometry, transform/opacity only, no zoom.
+// Rules: 21-29, 33, 41-43, 51-57, 66, 98.
+// ============================================
 
 import React from 'react'
 import { clamp, ease, mix, progress, pulse, spring } from '../engine/anim'
-import { faNumber } from '../ui/motion-primitives'
+import { ACCENT, MATERIAL, faNumber } from '../ui/art-direction'
 
-// ─── 1. Time & Progression Operators ────────────────────────────────────────
+// ─── 1. Time & progression ─────────────────────────────────────────────────
 
-/**
- * 1. Radial Clock Dial & Progress Ring
- */
 export function RadialClockDial({
   t,
   cx = 270,
@@ -20,7 +19,7 @@ export function RadialClockDial({
   r = 100,
   currentHour = 9,
   progressPct = 0,
-  glowColor = '#22d3ee',
+  glowColor = ACCENT.cyan.solid,
 }: {
   t: number
   cx?: number
@@ -31,115 +30,80 @@ export function RadialClockDial({
   glowColor?: string
 }) {
   const circ = 2 * Math.PI * r
-  const strokeOffset = circ * (1 - clamp(progressPct))
+  const offset = circ * (1 - clamp(progressPct))
   const hourAngle = currentHour * 30
   const minuteAngle = hourAngle * 12
-
-  // Hour hand
-  const hRad = ((hourAngle - 90) * Math.PI) / 180
-  const hx = cx + 42 * Math.cos(hRad)
-  const hy = cy + 42 * Math.sin(hRad)
-
-  // Minute hand
-  const mRad = ((minuteAngle - 90) * Math.PI) / 180
-  const mx = cx + 68 * Math.cos(mRad)
-  const my = cy + 68 * Math.sin(mRad)
-
+  const hand = (angle: number, len: number) => {
+    const rad = ((angle - 90) * Math.PI) / 180
+    return { x: cx + len * Math.cos(rad), y: cy + len * Math.sin(rad) }
+  }
+  const h = hand(hourAngle, 42)
+  const m = hand(minuteAngle, 68)
+  const beat = pulse(t, 0, 1e9, 2.4)
   return (
-    <svg viewBox="0 0 540 540" width="540" height="540" style={{ overflow: 'visible' }}>
-      <defs>
-        <filter id="dial-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="8" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-        <radialGradient id="dial-interior" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#1e2438" />
-          <stop offset="100%" stopColor="#0a0d16" />
-        </radialGradient>
-      </defs>
-
-      {/* Outer ambient glow */}
-      <circle cx={cx} cy={cy} r={r + 14} fill={glowColor} opacity={0.15 + 0.1 * pulse(t, 0, 1e9)} />
-
-      {/* Base track */}
+    <svg viewBox="0 0 540 540" width={540} height={540} style={{ overflow: 'visible' }} aria-hidden>
+      <circle cx={cx} cy={cy} r={r + 14} fill={glowColor} opacity={0.06 + 0.05 * beat} />
       <circle
         cx={cx}
         cy={cy}
         r={r}
-        fill="url(#dial-interior)"
-        stroke="rgba(255,255,255,0.12)"
-        strokeWidth={3}
+        fill={MATERIAL.panel}
+        stroke={MATERIAL.panelEdge}
+        strokeWidth={2}
       />
-
-      {/* Progress ring arc */}
       <circle
         cx={cx}
         cy={cy}
         r={r}
         fill="none"
         stroke={glowColor}
-        strokeWidth={5}
+        strokeWidth={4}
         strokeLinecap="round"
         strokeDasharray={circ}
-        strokeDashoffset={strokeOffset}
+        strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cy})`}
-        filter="url(#dial-glow)"
       />
-
-      {/* 12 Hour Ticks */}
       {Array.from({ length: 12 }).map((_, i) => {
         const ang = ((i * 30 - 90) * Math.PI) / 180
-        const isCardinal = i % 3 === 0
-        const x1 = cx + (isCardinal ? 80 : 86) * Math.cos(ang)
-        const y1 = cy + (isCardinal ? 80 : 86) * Math.sin(ang)
-        const x2 = cx + 94 * Math.cos(ang)
-        const y2 = cy + 94 * Math.sin(ang)
+        const major = i % 3 === 0
         return (
           <line
             key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke={isCardinal ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'}
-            strokeWidth={isCardinal ? 2.5 : 1.5}
+            x1={cx + (major ? 80 : 86) * Math.cos(ang)}
+            y1={cy + (major ? 80 : 86) * Math.sin(ang)}
+            x2={cx + 94 * Math.cos(ang)}
+            y2={cy + 94 * Math.sin(ang)}
+            stroke={major ? MATERIAL.ink : MATERIAL.muted}
+            strokeOpacity={major ? 0.8 : 0.35}
+            strokeWidth={major ? 2 : 1}
             strokeLinecap="round"
           />
         )
       })}
-
-      {/* Hour Hand */}
       <line
         x1={cx}
         y1={cy}
-        x2={hx}
-        y2={hy}
-        stroke="#ffffff"
+        x2={h.x}
+        y2={h.y}
+        stroke={MATERIAL.ink}
         strokeWidth={4}
         strokeLinecap="round"
       />
-
-      {/* Minute Hand */}
       <line
         x1={cx}
         y1={cy}
-        x2={mx}
-        y2={my}
+        x2={m.x}
+        y2={m.y}
         stroke={glowColor}
         strokeWidth={2.5}
         strokeLinecap="round"
       />
-
-      {/* Pinion */}
-      <circle cx={cx} cy={cy} r={7} fill="#0d111d" stroke="#ffffff" strokeWidth={2} />
-      <circle cx={cx} cy={cy} r={3} fill={glowColor} />
+      <circle cx={cx} cy={cy} r={6} fill={MATERIAL.void} stroke={MATERIAL.ink} strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={2.5} fill={glowColor} />
     </svg>
   )
 }
 
-/**
- * 5. Odometer Slot Machine Roll for numbers
- */
 export function OdometerRoll({
   value,
   duration = 1.2,
@@ -152,25 +116,15 @@ export function OdometerRoll({
   startAt?: number
 }) {
   const p = ease(progress(t, startAt, duration))
-  const displayVal = Math.round(mix(0, value, p))
   return (
-    <span
-      style={{
-        fontVariantNumeric: 'tabular-nums',
-        display: 'inline-block',
-        transition: 'transform 0.1s ease',
-      }}
-    >
-      {faNumber(displayVal)}
+    <span style={{ fontVariantNumeric: 'tabular-nums', display: 'inline-block', opacity: 1 }}>
+      {faNumber(Math.round(mix(0, value, p)))}
     </span>
   )
 }
 
-// ─── 2. Spatial 2.5D & Camera Operators ─────────────────────────────────────
+// ─── 2. Spatial 2.5D ──────────────────────────────────────────────────────
 
-/**
- * 8. Isometric UI Layer Explosion
- */
 export function IsometricLayerExplosion({
   t,
   startAt = 0.5,
@@ -181,14 +135,12 @@ export function IsometricLayerExplosion({
   layers: { title: string; tone: string; value: string; icon: string }[]
 }) {
   const p = ease(progress(t, startAt, 1.2))
-
   return (
     <div
       style={{
         perspective: 1200,
         transformStyle: 'preserve-3d',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         width: '100%',
@@ -197,57 +149,46 @@ export function IsometricLayerExplosion({
     >
       <div
         style={{
-          transform: `rotateX(${mix(0, 42, p)}deg) rotateY(${mix(0, -18, p)}deg) rotateZ(${mix(0, 8, p)}deg)`,
+          transform: `rotateX(${mix(0, 38, p)}deg) rotateY(${mix(0, -16, p)}deg) rotateZ(${mix(0, 6, p)}deg)`,
           transformStyle: 'preserve-3d',
           position: 'relative',
           width: 360,
-          height: 220,
+          height: 200,
         }}
       >
-        {layers.map((layer, i) => {
-          const zOffset = i * mix(0, 65, p)
-          return (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                transform: `translateZ(${zOffset}px)`,
-                borderRadius: 16,
-                background: 'rgba(15, 23, 42, 0.88)',
-                border: `1.5px solid ${layer.tone}`,
-                boxShadow: `0 16px 36px rgba(0, 0, 0, 0.6), 0 0 20px ${layer.tone}33`,
-                padding: '16px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#f8fafc',
-                backdropFilter: 'blur(12px)',
-                opacity: mix(0.7, 1, p),
-              }}
+        {layers.map((layer, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              transform: `translate3d(0, 0, ${i * mix(0, 48, p)}px)`,
+              background: MATERIAL.panel,
+              border: `1px solid ${MATERIAL.panelEdge}`,
+              borderInlineStart: `2px solid ${layer.tone}`,
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: MATERIAL.ink,
+              opacity: mix(0.72, 1, p),
+            }}
+          >
+            <span style={{ fontWeight: 800, fontSize: 16 }}>{layer.title}</span>
+            <span
+              style={{ fontWeight: 900, color: layer.tone, fontVariantNumeric: 'tabular-nums' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 22 }}>{layer.icon}</span>
-                <span style={{ fontWeight: 800, fontSize: 16 }}>{layer.title}</span>
-              </div>
-              <span
-                style={{ fontWeight: 900, color: layer.tone, fontVariantNumeric: 'tabular-nums' }}
-              >
-                {layer.value}
-              </span>
-            </div>
-          )
-        })}
+              {layer.value}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
-// ─── 3. Morphing & Liquid Transitions ───────────────────────────────────────
+// ─── 3. Transitions ───────────────────────────────────────────────────────
 
-/**
- * 15. Iris Reveal Mask
- */
 export function IrisReveal({
   t,
   startAt = 0,
@@ -260,30 +201,20 @@ export function IrisReveal({
   children: React.ReactNode
 }) {
   const p = ease(progress(t, startAt, duration))
-  const radius = p * 150
   return (
-    <div
-      style={{
-        clipPath: `circle(${radius}% at 50% 50%)`,
-        width: '100%',
-        height: '100%',
-      }}
-    >
+    <div style={{ clipPath: `circle(${p * 150}% at 50% 50%)`, width: '100%', height: '100%' }}>
       {children}
     </div>
   )
 }
 
-// ─── 4. Kinetic Typography Operators ────────────────────────────────────────
+// ─── 4. Kinetic typography ────────────────────────────────────────────────
 
-/**
- * 20. Baseline Curtain Rise (HarfBuzz-safe word-by-word)
- */
 export function BaselineCurtainRise({
   text,
   t,
   startAt = 0.2,
-  tone = '#38bdf8',
+  tone = ACCENT.cyan.solid,
 }: {
   text: string
   t: number
@@ -291,35 +222,21 @@ export function BaselineCurtainRise({
   tone?: string
 }) {
   const words = text.split(' ')
-
   return (
     <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '6px 12px',
-        direction: 'rtl',
-        justifyContent: 'center',
-      }}
+      dir="rtl"
+      style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', justifyContent: 'center' }}
     >
       {words.map((word, i) => {
-        const wordT = startAt + i * 0.08
-        const s = spring(t - wordT)
+        const s = spring(t - (startAt + i * 0.06))
         return (
-          <span
-            key={i}
-            style={{
-              overflow: 'hidden',
-              display: 'inline-block',
-              lineHeight: 1.3,
-            }}
-          >
+          <span key={i} style={{ overflow: 'hidden', display: 'inline-block', lineHeight: 1.4 }}>
             <span
               style={{
                 display: 'inline-block',
-                transform: `translateY(${mix(100, 0, s)}%)`,
+                transform: `translate3d(0, ${mix(100, 0, s)}%, 0)`,
                 opacity: clamp(s * 2),
-                color: i === 0 || i === words.length - 1 ? tone : '#f8fafc',
+                color: i === 0 || i === words.length - 1 ? tone : MATERIAL.ink,
                 fontWeight: 900,
                 fontSize: 26,
               }}
@@ -333,14 +250,11 @@ export function BaselineCurtainRise({
   )
 }
 
-/**
- * 21. Animated Highlighter Sweep
- */
 export function HighlighterSweep({
   text,
   t,
   startAt = 0.5,
-  color = 'rgba(56, 189, 248, 0.35)',
+  color = ACCENT.cyan.soft,
 }: {
   text: string
   t: number
@@ -348,31 +262,27 @@ export function HighlighterSweep({
   color?: string
 }) {
   const p = ease(progress(t, startAt, 0.6))
-
   return (
     <span style={{ position: 'relative', display: 'inline-block', paddingInline: 4 }}>
       <span
+        aria-hidden
         style={{
           position: 'absolute',
           insetInlineStart: 0,
           bottom: 2,
-          height: '42%',
+          height: 2,
           width: `${p * 100}%`,
           background: color,
-          borderRadius: 4,
-          zIndex: 0,
+          transform: 'none',
         }}
       />
-      <span style={{ position: 'relative', zIndex: 1 }}>{text}</span>
+      <span style={{ position: 'relative' }}>{text}</span>
     </span>
   )
 }
 
-// ─── 5. Financial & Optical FX ──────────────────────────────────────────────
+// ─── 5. Financial marks ───────────────────────────────────────────────────
 
-/**
- * 26. Profit Waterfall Drain
- */
 export function ProfitWaterfallDrain({
   t,
   grossRevenue = 50000000,
@@ -387,140 +297,54 @@ export function ProfitWaterfallDrain({
   const pGross = ease(progress(t, 0.2, 0.8))
   const pCogs = ease(progress(t, 0.9, 0.8))
   const pExp = ease(progress(t, 1.6, 0.8))
-
   const netProfit = grossRevenue - cogs - expenses
-
+  const row = (label: string, value: number, color: string, p: number) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color }}>
+        <span>{label}</span>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {faNumber(Math.round(value * p))}
+        </span>
+      </div>
+      <div style={{ height: 2, background: MATERIAL.panelEdge }}>
+        <div
+          style={{ height: '100%', width: `${p * 100}%`, background: color, transform: 'none' }}
+        />
+      </div>
+    </div>
+  )
   return (
     <div
+      dir="rtl"
       style={{
         width: '100%',
         maxWidth: 440,
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
-        direction: 'rtl',
+        gap: 18,
       }}
     >
-      {/* Gross Revenue */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 15,
-            fontWeight: 700,
-          }}
-        >
-          <span>فروش ناخالص (دخل روز)</span>
-          <span style={{ color: '#38bdf8', fontVariantNumeric: 'tabular-nums' }}>
-            {faNumber(Math.round(grossRevenue * pGross))}
-          </span>
-        </div>
-        <div
-          style={{
-            height: 12,
-            background: 'rgba(255,255,255,0.08)',
-            borderRadius: 6,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${pGross * 100}%`,
-              background: 'linear-gradient(90deg, #38bdf8, #22d3ee)',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* COGS Deduction */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 14,
-            color: '#f87171',
-          }}
-        >
-          <span>- بهای تمام شده خرید (FIFO)</span>
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {faNumber(Math.round(cogs * pCogs))}
-          </span>
-        </div>
-        <div
-          style={{
-            height: 8,
-            background: 'rgba(255,255,255,0.06)',
-            borderRadius: 4,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${(cogs / grossRevenue) * 100 * pCogs}%`,
-              background: '#ef4444',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Expenses Deduction */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 14,
-            color: '#fbbf24',
-          }}
-        >
-          <span>- هزینه‌های جاری و تخفیف‌ها</span>
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {faNumber(Math.round(expenses * pExp))}
-          </span>
-        </div>
-        <div
-          style={{
-            height: 8,
-            background: 'rgba(255,255,255,0.06)',
-            borderRadius: 4,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              width: `${(expenses / grossRevenue) * 100 * pExp}%`,
-              background: '#f59e0b',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* True Net Profit */}
+      {row('فروش ناخالص (دخل روز)', grossRevenue, ACCENT.cyan.solid, pGross)}
+      {row('− بهای تمامشده خرید (FIFO)', cogs, ACCENT.red.solid, pCogs)}
+      {row('− هزینههای جاری و تخفیفها', expenses, ACCENT.amber.solid, pExp)}
       <div
         style={{
-          marginTop: 10,
-          padding: '16px 20px',
-          borderRadius: 14,
-          background: 'rgba(16, 185, 129, 0.12)',
-          border: '1.5px solid #10b981',
+          marginTop: 8,
+          padding: '14px 18px',
+          border: `1px solid ${ACCENT.green.solid}`,
+          borderInlineStart: `3px solid ${ACCENT.green.solid}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 0 25px rgba(16, 185, 129, 0.25)',
         }}
       >
-        <span style={{ fontSize: 17, fontWeight: 900, color: '#ecfdf5' }}>سود خالص واقعی:</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: MATERIAL.ink }}>سود خالص واقعی:</span>
         <span
           style={{
-            fontSize: 24,
+            fontSize: 23,
             fontWeight: 900,
-            color: '#10b981',
+            color: ACCENT.green.solid,
             fontVariantNumeric: 'tabular-nums',
           }}
         >
@@ -531,9 +355,6 @@ export function ProfitWaterfallDrain({
   )
 }
 
-/**
- * 27. X-Ray Profit Scanner
- */
 export function XRayProfitScanner({
   t,
   startAt = 0.4,
@@ -544,27 +365,19 @@ export function XRayProfitScanner({
   duration?: number
 }) {
   const p = ease(progress(t, startAt, duration))
-  const beamY = mix(0, 100, p)
-
   return (
     <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        pointerEvents: 'none',
-        overflow: 'hidden',
-      }}
+      aria-hidden
+      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}
     >
-      {/* Moving Laser Beam */}
       <div
         style={{
           position: 'absolute',
           insetInline: 0,
-          top: `${beamY}%`,
-          height: 3,
-          background: 'linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent)',
-          boxShadow: '0 0 16px #38bdf8, 0 0 32px #22d3ee',
-          opacity: p > 0 && p < 1 ? 1 : 0,
+          top: `${mix(0, 100, p)}%`,
+          height: 2,
+          background: ACCENT.cyan.solid,
+          opacity: p > 0 && p < 1 ? 0.7 : 0,
         }}
       />
     </div>

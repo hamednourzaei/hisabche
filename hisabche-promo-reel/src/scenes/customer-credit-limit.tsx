@@ -650,7 +650,6 @@ export function SettlementGateReleaseScene({ scene, t }: { scene: Scene; t: numb
           borderRadius: 20,
           padding: 22,
           opacity: intro,
-          transition: 'border-color 0.3s ease',
         }}
       >
         <div

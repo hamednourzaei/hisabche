@@ -428,7 +428,6 @@ export function ManualInspectionScene({ t, scene }: { t: number; scene: Scene })
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   boxShadow: isScanned ? '0 0 16px rgba(245, 158, 11, 0.25)' : 'none',
-                  transition: 'all 0.2s ease',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

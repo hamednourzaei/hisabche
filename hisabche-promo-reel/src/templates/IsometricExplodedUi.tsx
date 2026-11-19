@@ -66,7 +66,6 @@ export const IsometricExplodedUiTemplate: React.FC<IsometricExplodedUiProps> = (
           margin: 'auto 0',
           transformStyle: 'preserve-3d',
           transform: 'rotateX(55deg) rotateZ(-35deg)',
-          transition: 'none',
         }}
       >
         {layers.map((layer, idx) => {
@@ -86,8 +85,6 @@ export const IsometricExplodedUiTemplate: React.FC<IsometricExplodedUiProps> = (
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 transform: `translateZ(${zOffset}px)`,
-                backdropFilter: 'blur(12px)',
-                transition: 'none',
               }}
             >
               <div

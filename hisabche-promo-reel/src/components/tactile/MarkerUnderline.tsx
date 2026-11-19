@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT } from '../../ui/art-direction'
 
 export interface MarkerUnderlineProps {
   children?: React.ReactNode
@@ -18,7 +19,7 @@ export interface MarkerUnderlineProps {
  */
 export const MarkerUnderline: React.FC<MarkerUnderlineProps> = ({
   children,
-  color = '#F6B91E',
+  color = ACCENT.amber.solid,
   height = 10,
   t = 1,
   startAt = 0,

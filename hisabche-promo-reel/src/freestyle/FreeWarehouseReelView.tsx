@@ -37,7 +37,6 @@ export function FreeWarehouseReelView({ t }: FreeWarehouseReelViewProps) {
         flexDirection: 'column',
         justifyContent: 'space-between',
         direction: 'rtl',
-        transition: 'background 0.8s ease',
       }}
     >
       {/* Top Header Bar */}

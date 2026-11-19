@@ -64,6 +64,59 @@ const RT = 'backend/src/routes'
 const SQL = 'docs/SETUP-COMPLETE.sql'
 
 export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
+  // ─── Rolls / cutting (WP-04) ─────────────────────────────────────────────
+  {
+    routeFile: 'roll-cutting.routes.ts',
+    route: 'POST /api/rolls',
+    mechanisms: ['idempotency-key'],
+    evidence: [
+      { file: `${SVC}/inventory/roll-cutting.service.ts`, text: "rpc('roll_create'" },
+      {
+        file: 'docs/roll-cutting-01-migration.sql',
+        text: 'CREATE UNIQUE INDEX IF NOT EXISTS idx_rolls_request',
+      },
+    ],
+  },
+  {
+    routeFile: 'roll-cutting.routes.ts',
+    route: 'POST /api/rolls/:id/consume',
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      { file: `${SVC}/inventory/roll-cutting.service.ts`, text: "rpc('roll_apply_movement'" },
+      {
+        file: 'docs/roll-cutting-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.roll_apply_movement(',
+      },
+      {
+        file: 'docs/roll-cutting-01-migration.sql',
+        text: 'CREATE UNIQUE INDEX IF NOT EXISTS idx_roll_movements_request',
+      },
+    ],
+  },
+  {
+    routeFile: 'roll-cutting.routes.ts',
+    route: 'POST /api/rolls/:id/cut',
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      { file: `${SVC}/inventory/roll-cutting.service.ts`, text: "rpc('roll_apply_movement'" },
+      {
+        file: 'docs/roll-cutting-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.roll_apply_movement(',
+      },
+    ],
+  },
+  {
+    routeFile: 'roll-cutting.routes.ts',
+    route: 'POST /api/rolls/:id/return',
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      { file: `${SVC}/inventory/roll-cutting.service.ts`, text: "rpc('roll_apply_movement'" },
+      {
+        file: 'docs/roll-cutting-01-migration.sql',
+        text: 'CREATE OR REPLACE FUNCTION public.roll_apply_movement(',
+      },
+    ],
+  },
   // ─── Invoices ────────────────────────────────────────────────────────────
   {
     routeFile: 'invoice.routes.ts',

@@ -46,7 +46,6 @@ export function DialogueScene({ spec, t, dur }: { spec: DialogueSpec; t: number;
           flex: 1,
           opacity: (spoke || active ? 1 : 0.55) * appear,
           transform: `translateY(${(1 - appear) * 14}px) scale(${active ? 1.05 : 0.96})`,
-          transition: 'none',
         }}
       >
         <Avatar role={role} size={122} t={t} speaking={active} />

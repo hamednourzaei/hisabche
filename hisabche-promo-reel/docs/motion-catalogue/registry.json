@@ -1,8 +1,8 @@
 {
   "summary": {
-    "assets": 764,
-    "types": 123,
-    "reels": 111,
+    "assets": 781,
+    "types": 125,
+    "reels": 112,
     "specKinds": 34,
     "reelsWithoutSource": [],
     "reelsWithIdCollision": ["75"],
@@ -7722,6 +7722,361 @@
       }
     },
     {
+      "id": "scenes/flashback-rewind#SceneProps",
+      "name": "SceneProps",
+      "type": "type",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 41
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "scenes/flashback-rewind#FlashbackHookScene",
+      "name": "FlashbackHookScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 286
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "─── Scene 1: The Hook — a tap in the present rewinds into paper ─────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 52
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 52
+      }
+    },
+    {
+      "id": "scenes/flashback-rewind#PaperMemoryScene",
+      "name": "PaperMemoryScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 371
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "─── Scene 2: The Paper Memory Hold ────────────────────────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 55
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 55
+      }
+    },
+    {
+      "id": "scenes/flashback-rewind#FourCopyRewindScene",
+      "name": "FourCopyRewindScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 439
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 53
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 53
+      }
+    },
+    {
+      "id": "scenes/flashback-rewind#ForwardResolutionScene",
+      "name": "ForwardResolutionScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 509
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 54
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 54
+      }
+    },
+    {
+      "id": "scenes/flashback-rewind#FlashbackEndCardScene",
+      "name": "FlashbackEndCardScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-rewind.tsx",
+        "line": 622
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "unknown",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+        },
+        {
+          "module": "../components/Reel112FlashbackActors",
+          "names": ["FlashbackEventSparks"]
+        },
+        {
+          "module": "./flashback-timing",
+          "names": ["S112"]
+        }
+      ],
+      "doc": "─── Scene 5: The end card — the paper past shrinks away ────────────────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 51
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 51
+      }
+    },
+    {
+      "id": "scenes/flashback-timing#S112",
+      "name": "S112",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/flashback-timing.ts",
+        "line": 6
+      },
+      "params": [],
+      "dependencies": [],
+      "doc": "the same factor — hence picture and sound stay locked to one timeline.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 42
+        }
+      ],
+      "themes": ["cinematic-obsidian"],
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 42
+      }
+    },
+    {
       "id": "scenes/full-cycle#DARK",
       "name": "DARK",
       "type": "scene-component",
@@ -15412,46 +15767,11 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
-        }
-      ],
-      "doc": "",
-      "provenance": [],
-      "licence": "project source (Hisabche)",
-      "usedBy": [],
-      "themes": [],
-      "example": null
-    },
-    {
-      "id": "scenes/one-map#FIVE_DOMAINS",
-      "name": "FIVE_DOMAINS",
-      "type": "scene-component",
-      "tags": [],
-      "source": {
-        "path": "src/scenes/one-map.tsx",
-        "line": 206
-      },
-      "params": [],
-      "dependencies": [
-        {
-          "module": "react",
-          "names": ["CSSProperties", "ReactNode"]
-        },
-        {
-          "module": "../engine/types",
-          "names": ["Scene"]
-        },
-        {
-          "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
-        },
-        {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
       "doc": "",
@@ -15468,7 +15788,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 226
+        "line": 268
       },
       "params": [
         {
@@ -15488,11 +15808,11 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
       "doc": "",
@@ -15504,7 +15824,7 @@
           "line": 23
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 23
@@ -15517,7 +15837,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 400
+        "line": 324
       },
       "params": [
         {
@@ -15537,14 +15857,14 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
-      "doc": "─── Scene 2: Four Answers Fold Into One (5.50–12.00s) ──────────────────────",
+      "doc": "─── Scene 2: The four answers are cast into one (5.50–12.00s) ──────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15553,11 +15873,46 @@
           "line": 25
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 25
       }
+    },
+    {
+      "id": "scenes/one-map#FIVE_DOMAINS",
+      "name": "FIVE_DOMAINS",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/one-map.tsx",
+        "line": 409
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
+        },
+        {
+          "module": "../ui/motion-primitives",
+          "names": ["faNumber"]
+        }
+      ],
+      "doc": "─── Scene 3: One invoice plate stamps five records (12.00–19.00s) ──────────",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
     },
     {
       "id": "scenes/one-map#InvoiceFanoutScene",
@@ -15566,7 +15921,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 570
+        "line": 411
       },
       "params": [
         {
@@ -15586,11 +15941,11 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
       "doc": "",
@@ -15602,7 +15957,7 @@
           "line": 24
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 24
@@ -15615,7 +15970,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 757
+        "line": 507
       },
       "params": [
         {
@@ -15635,14 +15990,14 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
-      "doc": "",
+      "doc": "─── Scene 4: Five records interlock into one bar (19.00–26.00s) ────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15651,7 +16006,7 @@
           "line": 27
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 27
@@ -15664,7 +16019,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 906
+        "line": 592
       },
       "params": [
         {
@@ -15684,14 +16039,14 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
-      "doc": "",
+      "doc": "─── Scene 5: Everything locks into one line of type (26.00–33.00s) ─────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15700,7 +16055,7 @@
           "line": 26
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 26
@@ -15713,7 +16068,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 1073
+        "line": 673
       },
       "params": [
         {
@@ -15733,14 +16088,14 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["clamp", "ease", "enter", "mix", "progress", "spring", "strokeDraw"]
+          "names": ["clamp", "ease", "enter", "mix", "progress", "spring"]
         },
         {
           "module": "../ui/motion-primitives",
-          "names": ["faNumber", "InteractiveCursor"]
+          "names": ["faNumber"]
         }
       ],
-      "doc": "─── Scene 6: Brand Curtain (33.00–42.00s) — «از جامع، به حسابچه» ────────────",
+      "doc": "─── Scene 6: The brand curtain — one engraved name (33.00–42.00s) ──────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [
@@ -15749,7 +16104,7 @@
           "line": 22
         }
       ],
-      "themes": ["financial-intelligence"],
+      "themes": ["obsidian-cinematic"],
       "example": {
         "file": "src/reels/reel-109-one-map.ts",
         "line": 22
@@ -19939,7 +20294,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 154
+        "line": 152
       },
       "params": [
         {
@@ -19988,7 +20343,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 379
+        "line": 375
       },
       "params": [
         {
@@ -20037,7 +20392,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 498
+        "line": 499
       },
       "params": [
         {
@@ -20086,7 +20441,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 717
+        "line": 718
       },
       "params": [
         {
@@ -20135,7 +20490,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 881
+        "line": 882
       },
       "params": [
         {
@@ -20184,7 +20539,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/shallow-software.tsx",
-        "line": 973
+        "line": 974
       },
       "params": [
         {
@@ -26716,7 +27071,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 16
+        "line": 15
       },
       "params": [
         {
@@ -26765,11 +27120,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "1. Radial Clock Dial & Progress Ring",
+      "doc": "─── 1. Time & progression ─────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -26783,7 +27138,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 143
+        "line": 84
       },
       "params": [
         {
@@ -26817,11 +27172,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "5. Odometer Slot Machine Roll for numbers",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -26835,7 +27190,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 174
+        "line": 105
       },
       "params": [
         {
@@ -26864,11 +27219,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "8. Isometric UI Layer Explosion",
+      "doc": "─── 2. Spatial 2.5D ──────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -26882,7 +27237,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 251
+        "line": 147
       },
       "params": [
         {
@@ -26916,11 +27271,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "15. Iris Reveal Mask",
+      "doc": "─── 3. Transitions ───────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -26934,7 +27289,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 282
+        "line": 168
       },
       "params": [
         {
@@ -26968,11 +27323,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "20. Baseline Curtain Rise (HarfBuzz-safe word-by-word)",
+      "doc": "─── 4. Kinetic typography ────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -26986,7 +27341,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 339
+        "line": 196
       },
       "params": [
         {
@@ -27020,11 +27375,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "21. Animated Highlighter Sweep",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -27038,7 +27393,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 376
+        "line": 218
       },
       "params": [
         {
@@ -27072,11 +27427,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "26. Profit Waterfall Drain",
+      "doc": "─── 5. Financial marks ───────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -27090,7 +27445,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 537
+        "line": 259
       },
       "params": [
         {
@@ -27119,11 +27474,11 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
-          "module": "../ui/motion-primitives",
-          "names": ["faNumber"]
+          "module": "../ui/art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "27. X-Ray Profit Scanner",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28299,7 +28654,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/StudioOdometer.tsx",
-        "line": 6
+        "line": 7
       },
       "params": [],
       "dependencies": [
@@ -28310,6 +28665,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "mix", "studioSpring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         }
       ],
       "doc": "",
@@ -28326,7 +28685,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/StudioOdometer.tsx",
-        "line": 66
+        "line": 67
       },
       "params": [
         {
@@ -28393,6 +28752,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "mix", "studioSpring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         }
       ],
       "doc": "Studio-grade mechanical odometer slot-roll with spring physics.\nPure function of time (t), deterministic, scrub-safe, and zero layout shift.\nGuaranteed zero flicker: no modulo wrapping, no binary mask pops, no opacity strobing.",
@@ -28444,6 +28807,266 @@
         }
       ],
       "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#ACCENT",
+      "name": "ACCENT",
+      "type": "ui-primitive",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 15
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "The only accent family. No component may introduce its own hex literals.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#AccentName",
+      "name": "AccentName",
+      "type": "type",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 23
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#MATERIAL",
+      "name": "MATERIAL",
+      "type": "ui-primitive",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 26
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Stage / paper materials. Everything else is an accent on top of these.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#faNumber",
+      "name": "faNumber",
+      "type": "ui-helper",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 44
+      },
+      "params": [
+        {
+          "name": "n",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Deterministic Persian-Indic digits. Intl.NumberFormat('fa-IR') emits Latin\ndigits with Western commas on hosts without full-ICU data; this char-map\nnever does. Rule 16/66 / layout-defect-laws band 6.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#grain",
+      "name": "grain",
+      "type": "ui-helper",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 52
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Static grain tile. Animated filters are banned; ≤0.35 keeps type legible.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#stage",
+      "name": "stage",
+      "type": "ui-helper",
+      "tags": ["background"],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 66
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "The LTR-pinned stage root. Persian clusters opt into dir=\"rtl\" themselves.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#reveal",
+      "name": "reveal",
+      "type": "ui-helper",
+      "tags": ["transition"],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 78
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Transform/opacity-only entrance. Rule 33.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#draw",
+      "name": "draw",
+      "type": "ui-helper",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 89
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Deterministic stroke draw. Rule 33 / 40.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#fragment",
+      "name": "fragment",
+      "type": "ui-helper",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 100
+      },
+      "params": [
+        {
+          "name": "tone",
+          "type": "AccentName",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "A cropped product fragment — never full browser chrome. Rule 51-57.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "ui/art-direction#plate",
+      "name": "plate",
+      "type": "ui-helper",
+      "tags": [],
+      "source": {
+        "path": "src/ui/art-direction.ts",
+        "line": 115
+      },
+      "params": [
+        {
+          "name": "tone",
+          "type": "AccentName",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "One-line caption plate. Not a glass card, not a bento tile.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28674,7 +29297,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/card.tsx",
-        "line": 6
+        "line": 14
       },
       "params": [],
       "dependencies": [
@@ -28687,11 +29310,15 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         }
       ],
-      "doc": "",
+      "doc": "Back-compat palette name. Values come from the single art-direction source.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28705,7 +29332,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/card.tsx",
-        "line": 14
+        "line": 26
       },
       "params": [
         {
@@ -28744,11 +29371,15 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         }
       ],
-      "doc": "The glass bento card. `glow` 0..1 scales the neon.",
+      "doc": "A plate: the product fragment sits on an obsidian field with one accent\nrule on the leading edge. No backdrop-blur, no 24px glass radius, no\nomnidirectional neon — those read as a website card, not a film frame.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28762,7 +29393,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/card.tsx",
-        "line": 47
+        "line": 78
       },
       "params": [
         {
@@ -28791,11 +29422,15 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         }
       ],
-      "doc": "A round glowing badge with an icon.",
+      "doc": "A role marker: square, hairline ring, one glyph. Not a glowing pill.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28809,7 +29444,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 25
+        "line": 18
       },
       "params": [
         {
@@ -28866,6 +29501,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -28874,7 +29513,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 1. Perspective 3D Stage & Parallax Layer ────────────────────────────",
+      "doc": "─── 1. Perspective stage & parallax ─────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -28888,7 +29527,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 59
+        "line": 49
       },
       "params": [
         {
@@ -28945,6 +29584,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -28967,7 +29610,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 90
+        "line": 73
       },
       "params": [
         {
@@ -29009,6 +29652,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29017,7 +29664,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 2. Procedural Spatial Vector Network ─────────────────────────────────",
+      "doc": "─── 2. Procedural vector network ────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29031,7 +29678,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 173
+        "line": 121
       },
       "params": [
         {
@@ -29068,6 +29715,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29076,7 +29727,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 3. Precision Geometric Blueprint ────────────────────────────────────",
+      "doc": "─── 3. Blueprint apparatus ──────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29090,7 +29741,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 255
+        "line": 155
       },
       "params": [
         {
@@ -29147,6 +29798,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29155,7 +29810,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 4. High-End Kinetic Typography Mask ──────────────────────────────────",
+      "doc": "─── 4. Kinetic typography mask ──────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29169,7 +29824,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 299
+        "line": 189
       },
       "params": [
         {
@@ -29211,6 +29866,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29219,7 +29878,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 5. Continuous Morph Shape ───────────────────────────────────────────",
+      "doc": "─── 5. Continuous morph object ──────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29233,7 +29892,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 440
+        "line": 233
       },
       "params": [
         {
@@ -29280,6 +29939,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29288,7 +29951,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 6. Living Financial Flow Diagram ────────────────────────────────────",
+      "doc": "─── 6. Financial flow — numbers, not dashboard chrome ───────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29302,7 +29965,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 532
+        "line": 281
       },
       "params": [
         {
@@ -29349,6 +30012,10 @@
           "names": ["Tone"]
         },
         {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber", "grain"]
+        },
+        {
           "module": "./card",
           "names": ["TONE"]
         },
@@ -29357,7 +30024,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── 7. Daylight Editorial Paper Canvas ───────────────────────────────────",
+      "doc": "─── 7. Editorial paper plate ────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29371,15 +30038,9 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 19
+        "line": 21
       },
-      "params": [
-        {
-          "name": "n",
-          "type": "number",
-          "optional": false
-        }
-      ],
+      "params": [],
       "dependencies": [
         {
           "module": "react",
@@ -29390,6 +30051,10 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
+          "module": "./art-direction",
+          "names": ["faNumber"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         },
@@ -29398,7 +30063,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "",
+      "doc": "Back-compat export: deterministic char-map, never Intl (Rule 16/66).",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -29412,7 +30077,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 25
+        "line": 27
       },
       "params": [],
       "dependencies": [
@@ -29423,6 +30088,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -29447,7 +30116,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 34
+        "line": 36
       },
       "params": [
         {
@@ -29491,6 +30160,10 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
+          "module": "./art-direction",
+          "names": ["faNumber"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         },
@@ -29513,7 +30186,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 436
+        "line": 438
       },
       "params": [],
       "dependencies": [
@@ -29524,6 +30197,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -29548,7 +30225,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 444
+        "line": 446
       },
       "params": [
         {
@@ -29587,6 +30264,10 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
+          "module": "./art-direction",
+          "names": ["faNumber"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         },
@@ -29609,7 +30290,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 794
+        "line": 796
       },
       "params": [],
       "dependencies": [
@@ -29620,6 +30301,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -29644,7 +30329,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 805
+        "line": 807
       },
       "params": [
         {
@@ -29698,6 +30383,10 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
+          "module": "./art-direction",
+          "names": ["faNumber"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         },
@@ -29720,7 +30409,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1104
+        "line": 1106
       },
       "params": [],
       "dependencies": [
@@ -29731,6 +30420,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -29755,7 +30448,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1118
+        "line": 1120
       },
       "params": [
         {
@@ -29824,6 +30517,10 @@
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
         },
         {
+          "module": "./art-direction",
+          "names": ["faNumber"]
+        },
+        {
           "module": "./icons",
           "names": ["Icon"]
         },
@@ -29846,7 +30543,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1482
+        "line": 1484
       },
       "params": [],
       "dependencies": [
@@ -29857,6 +30554,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -29881,7 +30582,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1494
+        "line": 1496
       },
       "params": [
         {
@@ -29938,6 +30639,10 @@
         {
           "module": "../engine/anim",
           "names": ["clamp", "ease", "mix", "progress", "pulse", "spring"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["faNumber"]
         },
         {
           "module": "./icons",
@@ -30042,7 +30747,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 11
+        "line": 14
       },
       "params": [],
       "dependencies": [
@@ -30057,6 +30762,10 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
       "doc": "",
@@ -30073,7 +30782,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 19
+        "line": 22
       },
       "params": [
         {
@@ -30109,9 +30818,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Rising Chart ──────────────────────────────────────────────────────────────",
+      "doc": "── Rising chart: stroked bars, no gradient pill ─────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30125,7 +30838,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 49
+        "line": 37
       },
       "params": [
         {
@@ -30161,9 +30874,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Shaking Question Mark ─────────────────────────────────────────────────────",
+      "doc": "── Question: drawn mark, never a sticker ────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30177,7 +30894,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 72
+        "line": 50
       },
       "params": [
         {
@@ -30213,9 +30930,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Flipping Calendar Pages ───────────────────────────────────────────────────",
+      "doc": "── Calendar flip: stepped cadence ───────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30229,7 +30950,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 111
+        "line": 68
       },
       "params": [
         {
@@ -30265,9 +30986,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Warning Icon with Impact ──────────────────────────────────────────────────",
+      "doc": "── Warning: drawn triangle, no emoji ────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30281,7 +31006,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 137
+        "line": 83
       },
       "params": [
         {
@@ -30317,9 +31042,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Opposing Cards ────────────────────────────────────────────────────────────",
+      "doc": "── Opposing plates ──────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30333,7 +31062,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 191
+        "line": 95
       },
       "params": [
         {
@@ -30379,9 +31108,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Transforming Number ───────────────────────────────────────────────────────",
+      "doc": "── Transformation: unknown → known, never a made-up figure ──────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30395,7 +31128,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 221
+        "line": 115
       },
       "params": [
         {
@@ -30436,9 +31169,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Animated Arrow ────────────────────────────────────────────────────────────",
+      "doc": "── Directional stroke ───────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30452,7 +31189,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 249
+        "line": 132
       },
       "params": [
         {
@@ -30478,9 +31215,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Motion Background (subtle floating particles) ────────────────────────────",
+      "doc": "── Ambient field ────────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30494,7 +31235,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 289
+        "line": 148
       },
       "params": [
         {
@@ -30520,9 +31261,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Silent Leak (profit dripping away — no words, pure motion) ────────────────",
+      "doc": "── Silent leak ──────────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30536,7 +31281,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 318
+        "line": 162
       },
       "params": [
         {
@@ -30562,9 +31307,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Opposition Field (two sides pushing apart — no words) ─────────────────────",
+      "doc": "── Opposition field ─────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30578,7 +31327,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 354
+        "line": 174
       },
       "params": [
         {
@@ -30604,9 +31353,13 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
-      "doc": "── Ripple Pulse (attention rings — no words) ─────────────────────────────────",
+      "doc": "── Attention rings ──────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30620,7 +31373,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 434
+        "line": 212
       },
       "params": [
         {
@@ -30646,55 +31399,10 @@
         {
           "module": "../engine/motion-plan",
           "names": ["MotionMetaphorName", "MotionPlan"]
-        }
-      ],
-      "doc": "",
-      "provenance": [],
-      "licence": "project source (Hisabche)",
-      "usedBy": [],
-      "themes": [],
-      "example": null
-    },
-    {
-      "id": "ui/motion-primitives#faNumber",
-      "name": "faNumber",
-      "type": "ui-helper",
-      "tags": [],
-      "source": {
-        "path": "src/ui/motion-primitives.tsx",
-        "line": 17
-      },
-      "params": [
-        {
-          "name": "n",
-          "type": "number",
-          "optional": false
-        }
-      ],
-      "dependencies": [
-        {
-          "module": "react",
-          "names": ["CSSProperties"]
         },
         {
-          "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
-        },
-        {
-          "module": "../engine/types",
-          "names": ["Tone"]
-        },
-        {
-          "module": "./card",
-          "names": ["Badge", "TONE"]
-        },
-        {
-          "module": "./icons",
-          "names": ["Icon"]
-        },
-        {
-          "module": "./rich",
-          "names": ["Rich"]
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         }
       ],
       "doc": "",
@@ -30727,11 +31435,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -30746,7 +31458,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "never silently treated as a number.",
+      "doc": "An unknown value is rendered as text, never silently coerced to a number.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -30760,7 +31472,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 34
+        "line": 31
       },
       "params": [
         {
@@ -30796,11 +31508,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -30829,7 +31545,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 82
+        "line": 81
       },
       "params": [
         {
@@ -30880,11 +31596,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -30913,7 +31633,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 115
+        "line": 116
       },
       "params": [
         {
@@ -30974,11 +31694,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -30993,7 +31717,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "Hard Rule 1: Numeric Continuity Primitive.\nOnce introduced, displays continuously with zero opacity flicker.\nSmoothly morphs from `fromVal` to `toVal` at `transformAt` without disappearing.",
+      "doc": "Numeric Continuity Primitive. Once introduced, the number never blinks;\nit morphs from one value to the next on a single continuous timeline.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31007,7 +31731,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 169
+        "line": 162
       },
       "params": [
         {
@@ -31058,11 +31782,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31077,7 +31805,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── Desktop Application Window Mockup ───────────────────────────────────",
+      "doc": "─── Cropped product evidence (no browser chrome) ────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31091,7 +31819,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 268
+        "line": 290
       },
       "params": [
         {
@@ -31137,11 +31865,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31156,7 +31888,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── Mobile Smartphone Mockup ────────────────────────────────────────────",
+      "doc": "A cropped receipt panel — not a full phone with notch and status bar.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31170,7 +31902,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 349
+        "line": 365
       },
       "params": [
         {
@@ -31206,11 +31938,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31225,7 +31961,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── SVG Area Chart (Smooth Bezier Financial Trend) ───────────────────────",
+      "doc": "─── Data as stroke, not a dashboard chart ───────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31239,7 +31975,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 445
+        "line": 415
       },
       "params": [
         {
@@ -31275,11 +32011,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31294,7 +32034,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── SVG Bar Chart ────────────────────────────────────────────────────────",
+      "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31308,7 +32048,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 491
+        "line": 452
       },
       "params": [
         {
@@ -31344,11 +32084,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31363,7 +32107,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── Floating Toast Notification ──────────────────────────────────────────",
+      "doc": "─── Supporting marks ────────────────────────────────────────────────────",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31377,7 +32121,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 515
+        "line": 490
       },
       "params": [
         {
@@ -31408,11 +32152,15 @@
         },
         {
           "module": "../engine/anim",
-          "names": ["ease", "enter", "mix", "progress", "pulse", "spring", "strokeDraw"]
+          "names": ["ease", "enter", "progress", "pulse", "strokeDraw"]
         },
         {
           "module": "../engine/types",
           "names": ["Tone"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL", "faNumber"]
         },
         {
           "module": "./card",
@@ -31427,7 +32175,7 @@
           "names": ["Rich"]
         }
       ],
-      "doc": "─── Interactive Touch/Mouse Cursor ───────────────────────────────────────",
+      "doc": "A focus reticle — a motion-graphic attention mark, not a mouse pointer.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -31441,7 +32189,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/rich.tsx",
-        "line": 17
+        "line": 31
       },
       "params": [
         {
@@ -31453,7 +32201,11 @@
       "dependencies": [
         {
           "module": "react",
-          "names": ["ReactNode"]
+          "names": ["CSSProperties", "ReactNode"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
         }
       ],
       "doc": "",
@@ -31578,20 +32330,22 @@
       "tags": [],
       "source": {
         "path": "src/ui/tech-pipeline.tsx",
-        "line": 6
+        "line": 10
       },
       "params": [],
       "dependencies": [
         {
           "module": "react",
-          "names": ["React", "CSSProperties"]
+          "names": ["CSSProperties"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
         }
       ],
       "doc": "",
-      "provenance": [
-        "High-tech pipeline stepper header & kinetic word-emphasis box inspired by test.mp4 reference"
-      ],
-      "licence": "see provenance notes",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
       "usedBy": [],
       "themes": [],
       "example": null
@@ -31603,7 +32357,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/tech-pipeline.tsx",
-        "line": 20
+        "line": 24
       },
       "params": [
         {
@@ -31625,14 +32379,16 @@
       "dependencies": [
         {
           "module": "react",
-          "names": ["React", "CSSProperties"]
+          "names": ["CSSProperties"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
         }
       ],
       "doc": "",
-      "provenance": [
-        "High-tech pipeline stepper header & kinetic word-emphasis box inspired by test.mp4 reference"
-      ],
-      "licence": "see provenance notes",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
       "usedBy": [],
       "themes": [],
       "example": null
@@ -31644,7 +32400,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/tech-pipeline.tsx",
-        "line": 110
+        "line": 68
       },
       "params": [
         {
@@ -31666,14 +32422,16 @@
       "dependencies": [
         {
           "module": "react",
-          "names": ["React", "CSSProperties"]
+          "names": ["CSSProperties"]
+        },
+        {
+          "module": "./art-direction",
+          "names": ["ACCENT", "MATERIAL"]
         }
       ],
-      "doc": "Word emphasis box with 4 corner anchor dots (just like Firecracker / Vercel video reference).",
-      "provenance": [
-        "High-tech pipeline stepper header & kinetic word-emphasis box inspired by test.mp4 reference"
-      ],
-      "licence": "see provenance notes",
+      "doc": "Word emphasis with four corner registration ticks — a film mark, not a UI chip.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
       "usedBy": [],
       "themes": [],
       "example": null
@@ -32494,6 +33252,85 @@
       "params": [],
       "dependencies": [],
       "doc": "",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "components/Reel112FlashbackActors#cueAt",
+      "name": "cueAt",
+      "type": "component-helper",
+      "tags": ["sound"],
+      "source": {
+        "path": "src/components/Reel112FlashbackActors.tsx",
+        "line": 16
+      },
+      "params": [
+        {
+          "name": "plan",
+          "type": "SentencePlan | undefined",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/speech-model",
+          "names": ["SentencePlan"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "progress"]
+        }
+      ],
+      "doc": "The local second at which an action fires, straight from the word cue.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "components/Reel112FlashbackActors#FlashbackEventSparks",
+      "name": "FlashbackEventSparks",
+      "type": "component-component",
+      "tags": [],
+      "source": {
+        "path": "src/components/Reel112FlashbackActors.tsx",
+        "line": 58
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/speech-model",
+          "names": ["SentencePlan"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["clamp", "progress"]
+        }
+      ],
+      "doc": "Draws one short, smooth spark for every sounded action in this scene.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33416,7 +34253,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 12
+        "line": 17
       },
       "params": [
         {
@@ -33445,7 +34282,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 15
+        "line": 20
       },
       "params": [
         {
@@ -33474,7 +34311,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 18
+        "line": 23
       },
       "params": [
         {
@@ -33489,7 +34326,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "cubic-bezier(0.22, 1, 0.36, 1) — solved for x, then y.",
+      "doc": "The single studio ease: cubic-bezier(0.16, 1, 0.3, 1), solved for x then y.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33503,7 +34340,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 44
+        "line": 49
       },
       "params": [
         {
@@ -33532,7 +34369,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 51
+        "line": 56
       },
       "params": [
         {
@@ -33561,7 +34398,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 70
+        "line": 75
       },
       "params": [
         {
@@ -33590,7 +34427,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 80
+        "line": 82
       },
       "params": [
         {
@@ -33605,7 +34442,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Premium studio entrance: combines stiffness:140/damping:18 spring physics\nwith a soft Y-axis rise (+25px -> 0px) and scale entrance (0.94 -> 1.0).",
+      "doc": "Studio entrance: 140/18 spring + a soft rise and a restrained scale.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33619,7 +34456,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 96
+        "line": 97
       },
       "params": [
         {
@@ -33648,7 +34485,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 99
+        "line": 100
       },
       "params": [
         {
@@ -33677,7 +34514,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 102
+        "line": 103
       },
       "params": [
         {
@@ -33706,7 +34543,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 108
+        "line": 109
       },
       "params": [
         {
@@ -33735,7 +34572,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 121
+        "line": 122
       },
       "params": [
         {
@@ -33758,13 +34595,13 @@
       "example": null
     },
     {
-      "id": "engine/anim#cinematicZoom",
-      "name": "cinematicZoom",
+      "id": "engine/anim#stepsCadence",
+      "name": "stepsCadence",
       "type": "animation-math",
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 130
+        "line": 134
       },
       "params": [
         {
@@ -33779,7 +34616,36 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Subtle cinematic camera zoom & pan.",
+      "doc": "Stepped flipbook cadence for paper / stop-motion materials (Rule 40).\nReturns a 0..1 value that advances in `steps` discrete increments.",
+      "provenance": [],
+      "licence": "project source (Hisabche)",
+      "usedBy": [],
+      "themes": [],
+      "example": null
+    },
+    {
+      "id": "engine/anim#cinematicZoom",
+      "name": "cinematicZoom",
+      "type": "animation-math",
+      "tags": [],
+      "source": {
+        "path": "src/engine/anim.ts",
+        "line": 144
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["CSSProperties"]
+        }
+      ],
+      "doc": "Cinematic camera move — pan only. The old push-in zoom is banned\n(Rule 9 / layout-defect-laws 11.9); `zoomFrom`/`zoomTo` are kept in the\nsignature for source compatibility but the stage scale stays 1.0.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33793,7 +34659,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 148
+        "line": 163
       },
       "params": [
         {
@@ -33808,7 +34674,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Pure deterministic pseudo-random hash (0..1) for procedural particle and geometry animation.",
+      "doc": "Pure deterministic pseudo-random hash (0..1) for procedural geometry.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33822,7 +34688,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 155
+        "line": 170
       },
       "params": [
         {
@@ -33851,7 +34717,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 175
+        "line": 190
       },
       "params": [
         {
@@ -33880,7 +34746,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 199
+        "line": 217
       },
       "params": [
         {
@@ -33895,7 +34761,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Camera motion operator for 3D perspective stages.",
+      "doc": "Camera operator for perspective stages. Rotation and pan are allowed;\ntranslateZ is clamped out so no shot ever zooms (Rule 9).",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33909,7 +34775,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 221
+        "line": 237
       },
       "params": [
         {
@@ -33938,7 +34804,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 238
+        "line": 254
       },
       "params": [],
       "dependencies": [
@@ -33961,7 +34827,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 245
+        "line": 261
       },
       "params": [],
       "dependencies": [
@@ -33970,7 +34836,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Standard spring configuration for smooth SaaS motion",
+      "doc": "Standard studio spring configuration.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -33984,7 +34850,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 252
+        "line": 268
       },
       "params": [
         {
@@ -33999,7 +34865,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Linear interpolation: lerp(start, end, t) — identical to mix",
+      "doc": "Linear interpolation — identical to mix.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34013,7 +34879,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 257
+        "line": 271
       },
       "params": [
         {
@@ -34028,7 +34894,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Exponential Out easing for ultra-smooth entry without jank",
+      "doc": "Exponential Out easing for ultra-smooth entry without jank.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34042,7 +34908,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/anim.ts",
-        "line": 262
+        "line": 274
       },
       "params": [
         {
@@ -34057,7 +34923,7 @@
           "names": ["CSSProperties"]
         }
       ],
-      "doc": "Frame-based deterministic progress calculation",
+      "doc": "Frame-based deterministic progress calculation.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34329,7 +35195,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-config.ts",
-        "line": 189
+        "line": 190
       },
       "params": [
         {
@@ -34353,7 +35219,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-config.ts",
-        "line": 200
+        "line": 201
       },
       "params": [
         {
@@ -34612,7 +35478,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 10
+        "line": 11
       },
       "params": [],
       "dependencies": [
@@ -34639,7 +35505,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 20
+        "line": 19
       },
       "params": [
         {
@@ -34658,7 +35524,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Standard upward card/dialog entrance with stiffness:140/damping:18 spring physics.",
+      "doc": "Standard upward entrance with studio spring physics.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34672,7 +35538,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 34
+        "line": 30
       },
       "params": [
         {
@@ -34691,7 +35557,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Downward entrance for top banners, status badges, and headlines.",
+      "doc": "Downward entrance for banners and headlines.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34705,7 +35571,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 41
+        "line": 35
       },
       "params": [
         {
@@ -34724,7 +35590,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Scale-centered reveal with subtle depth pop.",
+      "doc": "Scale-centered reveal with a restrained depth pop.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34738,7 +35604,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 59
+        "line": 50
       },
       "params": [
         {
@@ -34757,7 +35623,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Directional CSS clip-path wipe reveal (e.g. for charts, barcodes, invoices).",
+      "doc": "Directional clip-path wipe reveal.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34771,7 +35637,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 90
+        "line": 76
       },
       "params": [
         {
@@ -34790,7 +35656,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Staggered element entrance inside a list or grid.",
+      "doc": "Staggered entrance inside a list — 50–120ms default step.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -34804,7 +35670,7 @@
       "tags": [],
       "source": {
         "path": "src/engine/motion-presets.ts",
-        "line": 104
+        "line": 91
       },
       "params": [
         {
@@ -34823,7 +35689,7 @@
           "names": ["clamp", "ease", "mix", "progress", "studioSpring"]
         }
       ],
-      "doc": "Highlight sweep gradient overlay over [at, at + duration].",
+      "doc": "Highlight sweep. The old version painted a moving linear-gradient (a\nwebsite effect). Now it is a translate + opacity pass of a thin rule —\ntransform/opacity only, fully scrub-safe.",
       "provenance": [],
       "licence": "project source (Hisabche)",
       "usedBy": [],
@@ -37277,6 +38143,10 @@
       "licence": "project source (Hisabche)",
       "usedBy": [
         {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 65
+        },
+        {
           "file": "src/reels/reel-53-word-synchronized-cashflow.ts",
           "line": 18
         },
@@ -37319,8 +38189,8 @@
       ],
       "themes": [],
       "example": {
-        "file": "src/reels/reel-53-word-synchronized-cashflow.ts",
-        "line": 18
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 65
       }
     },
     {
@@ -37373,9 +38243,17 @@
       "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
-      "usedBy": [],
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 69
+        }
+      ],
       "themes": [],
-      "example": null
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 69
+      }
     },
     {
       "id": "engine/speech-model#estimatePersianCadence",
@@ -38151,9 +39029,17 @@
       "doc": "",
       "provenance": [],
       "licence": "project source (Hisabche)",
-      "usedBy": [],
+      "usedBy": [
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 85
+        }
+      ],
       "themes": [],
-      "example": null
+      "example": {
+        "file": "src/reels/reel-112-flashback-rewind.ts",
+        "line": 85
+      }
     },
     {
       "id": "engine/types#SaaSStoryMatrix",
@@ -38291,6 +39177,10 @@
         },
         {
           "file": "src/reels/reel-111-shallow-software.ts",
+          "line": 2
+        },
+        {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
           "line": 2
         },
         {
@@ -38621,6 +39511,10 @@
           "line": 44
         },
         {
+          "file": "src/reels/reel-112-flashback-rewind.ts",
+          "line": 22
+        },
+        {
           "file": "src/reels/reel-71-full-cycle.ts",
           "line": 32
         },
@@ -38842,6 +39736,7 @@
         "109",
         "110",
         "111",
+        "112",
         "71",
         "72",
         "73",
@@ -38872,7 +39767,7 @@
         "98",
         "99"
       ],
-      "scenes": 240
+      "scenes": 245
     },
     {
       "id": "spec-kind:branch",
@@ -47115,10 +48010,10 @@
       "id": "109",
       "title": "نقشه‌ی یکپارچه‌ی کسب‌وکار — از جامع به حسابچه",
       "seconds": 42,
-      "theme": "financial-intelligence",
+      "theme": "obsidian-cinematic",
       "artDirection": "cinematic-obsidian",
-      "layoutTopology": "data-flow-matrix",
-      "viralTemplate": "infinite-spatial-board",
+      "layoutTopology": "spatial-2.5d-portal",
+      "viralTemplate": "premium-motion-graphics",
       "aspectRatio": "9:16 (1080x1920)",
       "source": "src/reels/reel-109-one-map.ts",
       "sourceNote": null,
@@ -47127,7 +48022,7 @@
           "kind": "bespoke",
           "start": 0,
           "end": 5.5,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "FourAnswersScene",
           "actor": null
         },
@@ -47135,7 +48030,7 @@
           "kind": "bespoke",
           "start": 5.5,
           "end": 12,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "MergeToOneScene",
           "actor": null
         },
@@ -47143,7 +48038,7 @@
           "kind": "bespoke",
           "start": 12,
           "end": 19,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "InvoiceFanoutScene",
           "actor": null
         },
@@ -47151,7 +48046,7 @@
           "kind": "bespoke",
           "start": 19,
           "end": 26,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "SystemMapScene",
           "actor": null
         },
@@ -47159,7 +48054,7 @@
           "kind": "bespoke",
           "start": 26,
           "end": 33,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "OneScreenScene",
           "actor": null
         },
@@ -47167,7 +48062,7 @@
           "kind": "bespoke",
           "start": 33,
           "end": 42,
-          "theme": "financial-intelligence",
+          "theme": "obsidian-cinematic",
           "component": "BrandCurtainScene",
           "actor": null
         }
@@ -47374,6 +48269,93 @@
         "scenes/shallow-software#CureCurtainScene"
       ],
       "importsFrom": ["../engine/types", "./shared", "../scenes/shallow-software"]
+    },
+    {
+      "id": "112",
+      "title": "فلشبک — از دفتر کاغذی تا حسابچه",
+      "seconds": 42,
+      "theme": "cinematic-obsidian",
+      "artDirection": "cinematic-obsidian",
+      "layoutTopology": "asymmetrical-swiss-grid",
+      "viralTemplate": "tactile-train-scroll",
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-112-flashback-rewind.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 6,
+          "theme": "cinematic-obsidian",
+          "component": "FlashbackHookScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 6,
+          "end": 15,
+          "theme": "cinematic-obsidian",
+          "component": "PaperMemoryScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 15,
+          "end": 26,
+          "theme": "cinematic-obsidian",
+          "component": "FourCopyRewindScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 26,
+          "end": 37,
+          "theme": "cinematic-obsidian",
+          "component": "ForwardResolutionScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 37,
+          "end": 42,
+          "theme": "cinematic-obsidian",
+          "component": "FlashbackEndCardScene",
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "cameraSwish",
+        "cardEnter",
+        "chime",
+        "ctaResolution",
+        "dataFlow",
+        "impact",
+        "majorReveal",
+        "markerScribble",
+        "paperRustle",
+        "paperTear",
+        "scan",
+        "softTransition",
+        "successResolution",
+        "tick",
+        "titleHit",
+        "whoosh"
+      ],
+      "assetsUsed": [
+        "scenes/flashback-rewind#FlashbackHookScene",
+        "scenes/flashback-rewind#PaperMemoryScene",
+        "scenes/flashback-rewind#FourCopyRewindScene",
+        "scenes/flashback-rewind#ForwardResolutionScene",
+        "scenes/flashback-rewind#FlashbackEndCardScene",
+        "scenes/flashback-timing#S112"
+      ],
+      "importsFrom": [
+        "../engine/types",
+        "../engine/speech-model",
+        "../scenes/flashback-timing",
+        "../scenes/flashback-rewind"
+      ]
     }
   ],
   "sounds": {

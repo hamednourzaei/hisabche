@@ -44,7 +44,7 @@
 
 | قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
 | --- | --- | --- | --- |
-| `currency_exchange` | `EXISTING_BUT_INCOMPLETE` | `exchange` · online_required | `FX_TRADES_ONLINE_ONLY` |
+| `currency_exchange` | `EXISTING_BUT_INCOMPLETE` | `exchange` · online_required | `FX_TRADE_CONFIRMATION_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «مالی و بازرگانی»
 
@@ -78,4 +78,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-نیمه‌کاره: `currency_exchange` (`FX_TRADES_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+نیمه‌کاره: `currency_exchange` (`FX_TRADE_CONFIRMATION_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

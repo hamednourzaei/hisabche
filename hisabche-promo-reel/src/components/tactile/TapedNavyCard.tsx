@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 export interface TapedNavyCardProps {
   children?: React.ReactNode
@@ -56,7 +57,6 @@ export const TapedNavyCard: React.FC<TapedNavyCardProps> = ({
           borderRight: '2px dashed rgba(20, 25, 38, 0.12)',
           zIndex: 4,
           pointerEvents: 'none',
-          backdropFilter: 'blur(3px)',
         }}
       />
 
@@ -64,10 +64,10 @@ export const TapedNavyCard: React.FC<TapedNavyCardProps> = ({
       <div
         style={{
           position: 'relative',
-          background: '#121D35',
+          background: MATERIAL.paperInk,
           borderRadius: 20,
           padding: '28px 24px 24px',
-          color: '#ffffff',
+          color: MATERIAL.ink,
           border: '1px solid rgba(255, 255, 255, 0.12)',
           direction: 'rtl',
           zIndex: 2,
@@ -77,8 +77,8 @@ export const TapedNavyCard: React.FC<TapedNavyCardProps> = ({
           <div
             style={{
               display: 'inline-block',
-              background: '#F6B91E',
-              color: '#121D35',
+              background: ACCENT.amber.solid,
+              color: MATERIAL.paperInk,
               padding: '4px 12px',
               borderRadius: 6,
               fontSize: 12,

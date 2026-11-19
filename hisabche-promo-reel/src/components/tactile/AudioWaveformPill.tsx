@@ -81,7 +81,6 @@ export const AudioWaveformPill: React.FC<AudioWaveformPillProps> = ({
               borderRadius: 2,
               background: b.color,
               opacity: b.opacity,
-              transition: 'height 0.05s linear',
             }}
           />
         ))}

@@ -96,6 +96,7 @@ import { reel108 } from './reel-108-cashflow-radar'
 import { reel109 } from './reel-109-one-map'
 import { reel110 } from './reel-110-part-of-life'
 import { reel111 } from './reel-111-shallow-software'
+import { reel112 } from './reel-112-flashback-rewind'
 export const REELS: Reel[] = [
   reel01,
   reel02,
@@ -208,6 +209,7 @@ export const REELS: Reel[] = [
   reel109,
   reel110,
   reel111,
+  reel112,
 ]
 
 export { film01, film02, film03, film04, film05 }
@@ -287,4 +289,5 @@ export {
   reel109,
   reel110,
   reel111,
+  reel112,
 }

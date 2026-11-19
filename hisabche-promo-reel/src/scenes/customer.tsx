@@ -292,11 +292,9 @@ export function WarehouseMovementDemoScene({
                   ? 'rgba(245, 158, 11, 0.35)'
                   : 'rgba(255, 255, 255, 0.08)'
             }`,
-            backdropFilter: 'blur(16px)',
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
             opacity: auditEnter,
             transform: `translateY(${mix(15, 0, auditEnter)}px)`,
-            transition: 'border-color 0.3s ease',
           }}
         >
           <div

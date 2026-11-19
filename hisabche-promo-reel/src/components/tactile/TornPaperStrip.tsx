@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { MATERIAL } from '../../ui/art-direction'
 
 export interface TornPaperStripProps {
   children?: React.ReactNode
@@ -44,7 +45,7 @@ export const TornPaperStrip: React.FC<TornPaperStripProps> = ({
         style={{
           position: 'relative',
           background: 'rgba(24, 33, 49, 0.96)',
-          color: '#f8fafc',
+          color: MATERIAL.ink,
           padding: '16px 28px',
           direction: 'rtl',
           borderTop: '1px solid rgba(255, 255, 255, 0.12)',

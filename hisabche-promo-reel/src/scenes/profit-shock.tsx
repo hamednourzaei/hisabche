@@ -410,7 +410,6 @@ export function ShockHookScene({ t }: SceneProps) {
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: 13,
-            transition: 'all 0.3s ease',
           }}
         >
           <span style={{ color: alertFlash ? '#fda4af' : TEXT_SLATE }}>
@@ -624,7 +623,6 @@ export function CostSwarmScene({ t }: SceneProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            transition: 'all 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -650,7 +648,6 @@ export function CostSwarmScene({ t }: SceneProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            transition: 'all 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -676,7 +673,6 @@ export function CostSwarmScene({ t }: SceneProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            transition: 'all 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -824,7 +820,6 @@ export function WaterfallSiphonScene({ t }: SceneProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            transition: 'all 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

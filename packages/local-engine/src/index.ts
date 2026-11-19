@@ -21,6 +21,9 @@ import { registerCustomerRoutes } from './routes/customers'
 import { registerDashboardRoutes } from './routes/dashboard'
 import { registerEmployeeRoutes } from './routes/employees'
 import { registerExchangeRateRoutes } from './routes/exchange-rates'
+import { registerFxTradeDraftRoutes } from './routes/fx-trade-drafts'
+import { registerContractRoutes } from './routes/contracts'
+import { registerTableServiceRoutes } from './routes/table-service'
 import { registerFeedRoutes } from './routes/feed'
 import { registerImportRoutes } from './routes/import'
 import { registerInsightRoutes } from './routes/insights'
@@ -47,6 +50,8 @@ import { registerFitmentsRoutes } from './routes/fitments'
 import { registerWarrantiesRoutes } from './routes/warranties'
 import { registerOrderDepositsRoutes } from './routes/order-deposits'
 import { registerSalesOrderRoutes } from './routes/sales-orders'
+import { registerProjectRoutes } from './routes/projects'
+import { registerRollRoutes } from './routes/rolls'
 import { registerPackageCreditsRoutes } from './routes/package-credits'
 import { registerCourierDeliveryRoutes } from './routes/courier-deliveries'
 import { registerServiceDeliveryRoutes } from './routes/service-delivery'
@@ -97,6 +102,9 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerPurchasingRoutes(router)
   registerStockInsightRoutes(router)
   registerExchangeRateRoutes(router)
+  registerFxTradeDraftRoutes(router)
+  registerContractRoutes(router)
+  registerTableServiceRoutes(router)
   registerBackupRoutes(router)
   registerWorkspaceRoutes(router)
   registerWorkspaceProfileRoutes(router)
@@ -122,6 +130,8 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerWarrantiesRoutes(router)
   registerOrderDepositsRoutes(router)
   registerSalesOrderRoutes(router)
+  registerProjectRoutes(router)
+  registerRollRoutes(router)
   registerPackageCreditsRoutes(router)
   registerCourierDeliveryRoutes(router)
   registerServiceDeliveryRoutes(router)

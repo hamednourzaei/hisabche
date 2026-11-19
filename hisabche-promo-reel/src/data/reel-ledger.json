@@ -398,6 +398,21 @@
         "DeepCustomScene",
         "CureCurtainScene"
       ]
+    },
+    {
+      "id": "112",
+      "title": "فلشبک — از دفتر کاغذی تا حسابچه",
+      "theme": "cinematic-obsidian",
+      "hookFormula": "uncomfortable-discovery",
+      "dominantLayout": "asymmetrical-swiss-grid",
+      "cardQuotaPercent": 0,
+      "components": [
+        "FlashbackHookScene",
+        "PaperMemoryScene",
+        "FourCopyRewindScene",
+        "ForwardResolutionScene",
+        "FlashbackEndCardScene"
+      ]
     }
   ]
 }

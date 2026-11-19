@@ -408,7 +408,6 @@ export function Versus({ spec, t }: { spec: Spec<'versus'>; t: number }) {
             borderRadius: 16,
             background: 'rgba(15, 12, 28, 0.88)',
             border: '1px solid rgba(255, 255, 255, 0.12)',
-            backdropFilter: 'blur(16px)',
             boxShadow: '0 12px 36px rgba(0, 0, 0, 0.55)',
             display: 'flex',
             alignItems: 'center',

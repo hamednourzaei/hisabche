@@ -79,3 +79,36 @@ export function buildCoreDepositLine(
     accountRole: 'core_deposit',
   }
 }
+
+/**
+ * WP-16 — the promise to refund a core when the old part comes back.
+ * The deposit LINE is a liability (`core_deposit`), not revenue; returning the
+ * core clears that liability. This rule only decides the refund amount — it
+ * never posts money. An unknown/zero deposit stays unknown, never invented.
+ */
+export function planCoreRefund(input: {
+  readonly depositPerUnitMinor: number
+  readonly returnedQuantity: number
+  readonly alreadyRefundedQuantity: number
+}): { refundMinor: number | null; doubleRefundBlocked: boolean } {
+  const { depositPerUnitMinor, returnedQuantity, alreadyRefundedQuantity } = input
+  if (
+    !Number.isSafeInteger(depositPerUnitMinor) ||
+    depositPerUnitMinor < 0 ||
+    !Number.isSafeInteger(returnedQuantity) ||
+    returnedQuantity < 0 ||
+    !Number.isSafeInteger(alreadyRefundedQuantity) ||
+    alreadyRefundedQuantity < 0
+  ) {
+    return { refundMinor: null, doubleRefundBlocked: false }
+  }
+  // Refunding the same core twice is refused by returning zero, never a
+  // negative (which would silently write a payment the shop cannot explain).
+  if (alreadyRefundedQuantity >= returnedQuantity) {
+    return { refundMinor: 0, doubleRefundBlocked: true }
+  }
+  return {
+    refundMinor: Math.round((returnedQuantity - alreadyRefundedQuantity) * depositPerUnitMinor),
+    doubleRefundBlocked: false,
+  }
+}

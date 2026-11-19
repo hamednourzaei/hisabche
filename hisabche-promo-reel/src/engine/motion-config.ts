@@ -100,7 +100,7 @@ export const MOTION_PRESETS: Record<string, MotionPreset> = {
     easing: 'ease',
     direction: 'center',
     distance: 0,
-    scale: 1.05,
+    scale: 1.02,
     staggerInterval: 0,
     intensity: 0.5,
     reducedMotionFallback: 'fade',
@@ -111,7 +111,7 @@ export const MOTION_PRESETS: Record<string, MotionPreset> = {
     easing: 'easeOutExpo',
     direction: 'center',
     distance: 0,
-    scale: 1.15,
+    scale: 1.05,
     staggerInterval: 0,
     intensity: 0.8,
     reducedMotionFallback: 'fade',
@@ -177,7 +177,8 @@ export interface MotionConfig {
 export const DEFAULT_MOTION_CONFIG: MotionConfig = {
   motionIntensity: 'dynamic',
   typographyMotion: true,
-  cameraMotion: true,
+  // Camera zoom/push-in is banned (Rule 9); operators may pan but never scale.
+  cameraMotion: false,
   backgroundMotion: true,
   uiMotion: true,
   sfxEnabled: true,

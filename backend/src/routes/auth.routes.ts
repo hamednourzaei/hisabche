@@ -20,6 +20,10 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { writeProfile } from '../services/profile-write'
+import {
+  evaluateOnboardingGateForUser,
+  gateAllowsActivation,
+} from '../services/onboarding/activation-gate.service'
 import { WorkspaceService } from '../services/workspace.service'
 import { AdminSecurityService } from '../services/admin/admin-security.service'
 import { LOGIN_FAILED_EVENT, accountFingerprint } from '../services/admin/admin-insights.domain'
@@ -903,7 +907,26 @@ export async function authRoutes(fastify: FastifyInstance) {
         // Written once and never cleared: `onboardingCompleted: false` is not a
         // request to replay the wizard, and treating it as one would undo the
         // whole point of moving this off localStorage.
+        //
+        // ⚠️ SERVER-AUTHORITATIVE (PART 7). The browser no longer declares that
+        // onboarding finished by reaching the last screen. When it sends
+        // `onboardingCompleted: true` the server gathers its OWN facts (identity,
+        // workspace, workspace business name, books currency) and asks the shared
+        // predicate. Missing prerequisites => 422 with the exact list, and NO
+        // timestamp is written. A read failure throws => no timestamp either.
         if (body.onboardingCompleted === true) {
+          const gate = await evaluateOnboardingGateForUser(userId, {
+            fullName: body.fullName,
+            businessName: body.businessName,
+          })
+          if (!gateAllowsActivation(gate)) {
+            return reply.code(422).send({
+              error: 'ONBOARDING_PREREQUISITES_MISSING',
+              missing: gate.missing,
+              state: gate.state,
+              unreadable: gate.unreadable,
+            })
+          }
           profileUpdate.onboarding_completed_at = new Date().toISOString()
         }
         if (body.businessTypes !== undefined) profileUpdate.business_types = body.businessTypes

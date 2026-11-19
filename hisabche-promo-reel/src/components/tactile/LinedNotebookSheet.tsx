@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 export interface NotebookLineItem {
   text: string
@@ -61,7 +62,6 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
           boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
           zIndex: 4,
           transform: 'rotate(-2deg)',
-          backdropFilter: 'blur(2px)',
         }}
       />
 
@@ -69,10 +69,10 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
       <div
         style={{
           position: 'relative',
-          background: '#0d131f',
+          background: MATERIAL.panel,
           borderRadius: 12,
           padding: '24px 28px 24px 20px',
-          color: '#f8fafc',
+          color: MATERIAL.ink,
           direction: 'rtl',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           backgroundImage:
@@ -101,7 +101,7 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
               fontSize: 18,
               fontWeight: 900,
               marginBottom: 16,
-              color: '#f8fafc',
+              color: MATERIAL.ink,
               paddingRight: 32,
               position: 'relative',
               zIndex: 2,
@@ -141,7 +141,7 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
                     width: 20,
                     height: 20,
                     borderRadius: 6,
-                    background: line.checked ? '#F6B91E' : 'rgba(255, 255, 255, 0.08)',
+                    background: line.checked ? ACCENT.amber.solid : 'rgba(255, 255, 255, 0.08)',
                     border: line.checked
                       ? '1.5px solid #F6B91E'
                       : '1.5px solid rgba(255, 255, 255, 0.25)',
@@ -150,7 +150,7 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
                     justifyContent: 'center',
                     fontSize: 12,
                     fontWeight: 900,
-                    color: line.checked ? '#121D35' : '#f8fafc',
+                    color: line.checked ? MATERIAL.paperInk : MATERIAL.ink,
                     flexShrink: 0,
                   }}
                 >
@@ -162,7 +162,7 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
                     style={{
                       fontSize: 15,
                       fontWeight: line.highlight ? 800 : 600,
-                      color: line.highlight ? '#f8fafc' : '#cbd5e1',
+                      color: line.highlight ? MATERIAL.ink : MATERIAL.muted,
                       background: line.highlight ? 'rgba(246, 185, 30, 0.22)' : 'transparent',
                       padding: line.highlight ? '2px 6px' : 0,
                       borderRadius: 4,
@@ -171,7 +171,7 @@ export const LinedNotebookSheet: React.FC<LinedNotebookSheetProps> = ({
                     {line.text}
                   </span>
                   {line.sub && (
-                    <span style={{ fontSize: 12, color: '#94a3b8', marginRight: 8 }}>
+                    <span style={{ fontSize: 12, color: MATERIAL.muted, marginRight: 8 }}>
                       ({line.sub})
                     </span>
                   )}

@@ -20,10 +20,19 @@ export interface ExportSection<T = Record<string, unknown>> {
   checksum: string
 }
 
+export interface ExportCoverage {
+  readonly expectedRequired: number
+  readonly exportedRequired: number
+  readonly missingRequired: readonly string[]
+  readonly missingOptional: readonly string[]
+}
+
 export interface ExportPackage {
   metadata: ExportMetadata
   sections: Record<string, ExportSection>
   packageChecksum: string
+  /** Optional for v1 packages created before coverage tracking existed. */
+  coverage?: ExportCoverage | undefined
 }
 
 export interface CurrencyTotal {

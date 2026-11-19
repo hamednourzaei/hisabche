@@ -331,6 +331,169 @@ export const SALES_ORDER_DRAFT_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_sales_order_draft_items_order ON sales_order_draft_items(workspace_id, order_id)`,
 ]
 
+export const FX_TRADE_DRAFT_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS fx_trade_drafts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    trade_number TEXT,
+    side TEXT NOT NULL CHECK (side IN ('buy','sell')),
+    currency TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL,
+    rate TEXT NOT NULL,
+    rate_micro TEXT NOT NULL,
+    book_currency TEXT NOT NULL,
+    book_amount_minor INTEGER NOT NULL,
+    customer_id TEXT,
+    identity_name TEXT,
+    note TEXT,
+    status TEXT NOT NULL DEFAULT 'quoted',
+    needs_review INTEGER NOT NULL DEFAULT 0,
+    client_request_id TEXT,
+    submitted_at TEXT,
+    server_confirmed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_fx_trade_drafts_request ON fx_trade_drafts(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_fx_trade_drafts_status ON fx_trade_drafts(workspace_id, status)`,
+]
+
+/**
+ * WP-17 — OFFLINE recurring contracts and billing periods.
+ *
+ * The device records the contract and proposes a billable period with an
+ * idempotency key; the SERVER still issues the invoice. No money moves here.
+ */
+export const CONTRACT_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_contracts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    customer_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    contract_type TEXT NOT NULL,
+    cadence TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    amount_minor INTEGER NOT NULL DEFAULT 0,
+    currency TEXT NOT NULL,
+    kyc_note TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_contracts_ws ON local_contracts(workspace_id, status)`,
+  `CREATE TABLE IF NOT EXISTS local_contract_bills (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    contract_id TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'proposed',
+    invoice_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    UNIQUE(workspace_id, idempotency_key)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_contract_bills_contract ON local_contract_bills(workspace_id, contract_id)`,
+]
+
+/**
+ * WP-15 — OFFLINE project/work packages.
+ *
+ * A project manager records time and a milestone on the device without signal.
+ * An APPROVED entry is the only one that may be billed; the server still issues
+ * the invoice through the existing /api/projects/:id/bill route.
+ */
+export const PROJECT_TIME_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_projects (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    customer_id TEXT,
+    currency TEXT NOT NULL,
+    budget_minor INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    client_request_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_projects_request ON local_projects(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS project_time_entries (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    project_id TEXT NOT NULL,
+    hours REAL NOT NULL,
+    rate_minor INTEGER NOT NULL,
+    billable INTEGER NOT NULL DEFAULT 1,
+    approved INTEGER NOT NULL DEFAULT 0,
+    work_date TEXT NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_project_time_entries_project ON project_time_entries(workspace_id, project_id)`,
+  `CREATE TABLE IF NOT EXISTS project_milestones (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    project_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    required_hours REAL NOT NULL DEFAULT 0,
+    amount_minor INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'planned',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_project_milestones_project ON project_milestones(workspace_id, project_id)`,
+]
+
+/**
+ * WP-04 — OFFLINE roll identity, cutting, waste and return.
+ *
+ * A roll is a stock batch measured in meters. The device records every cut and
+ * return against the SAME roll; the shared rule decides the split into
+ * sellable length and waste. Writes carry a client_request_id so a repeated
+ * sync cannot consume the same length twice.
+ */
+export const ROLL_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_rolls (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    roll_number TEXT NOT NULL,
+    initial_length REAL NOT NULL,
+    remaining_length REAL NOT NULL,
+    unit TEXT NOT NULL DEFAULT 'm',
+    location TEXT,
+    cost_minor INTEGER NOT NULL DEFAULT 0,
+    custom_conversion_factor REAL,
+    client_request_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_local_rolls_request ON local_rolls(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_local_rolls_workspace ON local_rolls(workspace_id)`,
+  `CREATE TABLE IF NOT EXISTS roll_movements (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    roll_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    length REAL NOT NULL,
+    waste_length REAL NOT NULL DEFAULT 0,
+    client_request_id TEXT,
+    created_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_roll_movements_request ON roll_movements(workspace_id, client_request_id) WHERE client_request_id IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_roll_movements_roll ON roll_movements(workspace_id, roll_id)`,
+]
+
 export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
   // ─── 1. Product Variants (v9) ─────────────────────────────────
   `CREATE TABLE IF NOT EXISTS product_variants (
@@ -515,6 +678,18 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
 
   // ─── 12. Offline sales-order drafts (WP-13) ───────────────────
   ...SALES_ORDER_DRAFT_STATEMENTS,
+
+  // ─── 13. Offline project time and milestones (WP-15) ───────────
+  ...PROJECT_TIME_STATEMENTS,
+
+  // ─── 14. Offline roll cutting (WP-04) ───────────────────────────
+  ...ROLL_STATEMENTS,
+
+  // ─── 15. Offline FX trade drafts (WP-07) ────────────────────────
+  ...FX_TRADE_DRAFT_STATEMENTS,
+
+  // ─── 16. Offline recurring contracts (WP-17) ────────────────────
+  ...CONTRACT_STATEMENTS,
 ]
 
 /** v10 on an existing v9 cache: the same columns a fresh cache is born with. */

@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT } from '../../ui/art-direction'
 
 export interface HandDrawnLoopProps {
   children?: React.ReactNode
@@ -18,7 +19,7 @@ export interface HandDrawnLoopProps {
  */
 export const HandDrawnLoop: React.FC<HandDrawnLoopProps> = ({
   children,
-  color = '#F6B91E',
+  color = ACCENT.amber.solid,
   strokeWidth = 3,
   t = 1,
   startAt = 0,

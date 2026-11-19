@@ -7,6 +7,11 @@
 
 import { createHash } from 'node:crypto'
 import type { MigrationPreview } from '@hisabche/local-engine'
+import {
+  evaluateArchivePreflight,
+  evaluateHybridActivation,
+  type ArchiveManifestFacts,
+} from '@hisabche/validation'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -51,9 +56,25 @@ export class CloudMigrationService {
       packageChecksum: string
       chunksTotal: number
       previewMetrics: MigrationPreview
+      /** Source workspace from the archive manifest, when the client sends one. */
+      sourceWorkspaceId?: string | undefined
+      manifest?: ArchiveManifestFacts | undefined
     },
   ): Promise<CloudMigrationJob> {
     const { workspaceId, userId } = ctx
+
+    // PART 5 / Slice 4: validate the archive BEFORE creating a job. Older
+    // clients send no manifest and keep the previous behaviour; a client that
+    // sends one cannot get a job for an unsupported or incomplete archive.
+    if (input.manifest) {
+      const decision = evaluateArchivePreflight(input.manifest, {
+        sourceWorkspaceId: input.sourceWorkspaceId ?? workspaceId,
+        packageChecksum: input.packageChecksum,
+      })
+      if (!decision.ready) {
+        throw new ValidationError(`ARCHIVE_PREFLIGHT_FAILED:${decision.blockers.join(',')}`)
+      }
+    }
 
     // Ensure target workspace is not already loaded with business invoices
     const { count: existingInvoices, error: countErr } = await supabase
@@ -480,10 +501,33 @@ export class CloudMigrationService {
   }
 
   // ─── 8. Confirm Migration (Switch to Cloud) ────────────────────────────────
-  async confirmJob(ctx: TenancyContext, jobId: string): Promise<CloudMigrationJob> {
+  async confirmJob(
+    ctx: TenancyContext,
+    jobId: string,
+    activation?: {
+      deviceRegistered: boolean
+      baselineCursorEstablished: boolean
+      pendingMutationsReconciled: boolean
+      localDatabasePreserved: boolean
+    },
+  ): Promise<CloudMigrationJob> {
     const job = await this.getJob(ctx, jobId)
     if (job.status !== 'AWAITING_CONFIRMATION') {
       throw new ValidationError(`CANNOT_CONFIRM_JOB_IN_STATUS_${job.status}`)
+    }
+
+    // PART 5 / Slice 5: activation is SERVER-authoritative. When the client
+    // supplies its activation facts they are checked against the shared
+    // predicate; a workspace cannot be switched to cloud on a failed reconcile
+    // or an unregistered device. Older clients keep the legacy path.
+    if (activation) {
+      const decision = evaluateHybridActivation({
+        importReconciled: job.reconciliationResult !== null,
+        ...activation,
+      })
+      if (!decision.mayActivate) {
+        throw new ValidationError(`HYBRID_ACTIVATION_BLOCKED:${decision.blockers.join(',')}`)
+      }
     }
 
     const now = new Date().toISOString()

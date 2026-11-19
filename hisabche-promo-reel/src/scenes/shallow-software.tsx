@@ -1077,7 +1077,6 @@ export function CureCurtainScene({ t }: SceneProps) {
             borderRadius: 999,
             border: `1.5px solid ${HAIRLINE_HI}`,
             background: 'rgba(20, 29, 48, 0.8)',
-            backdropFilter: 'blur(16px)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
           }}
         >

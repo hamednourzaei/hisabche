@@ -68,7 +68,6 @@ export const SafeSaaSCard: React.FC<SafeSaaSCardProps> = ({
         background: 'rgba(17, 15, 32, 0.85)',
         border: `1.5px solid ${borderColors[variant]}`,
         boxShadow: glowShadows[variant],
-        backdropFilter: 'blur(16px)',
         position: 'relative',
         ...style,
       }}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { MATERIAL } from '../../ui/art-direction'
 
 export interface DashedConnectorArrowProps {
   x1: number
@@ -25,7 +26,7 @@ export const DashedConnectorArrow: React.FC<DashedConnectorArrowProps> = ({
   x2,
   y2,
   curveOffset = 60,
-  strokeColor = '#121D35',
+  strokeColor = MATERIAL.paperInk,
   t = 1,
   startAt = 0,
   dur = 0.8,

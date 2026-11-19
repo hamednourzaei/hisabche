@@ -1,11 +1,12 @@
 // ============================================
-// Hisabche Motion Design Studio — Layer A Creative Primitives
-// High-expressive, modular visual primitives for cinematic 3D,
-// Swiss editorial, kinetic manifesto, and procedural spatial design.
-// Zero reliance on fixed card templates.
+// Creative primitives — rebuilt as film apparatus, not web decoration.
+// All 8 exports and signatures are frozen; the drawing language changed:
+// static grain, single accents, stroked geometry, deterministic numerals.
+// Rules: 21-30, 33, 51-57, 66, 98.
 // ============================================
 
 import type { CSSProperties, ReactNode } from 'react'
+
 import {
   clamp,
   deterministicHash,
@@ -17,10 +18,11 @@ import {
   strokeDraw,
 } from '../engine/anim'
 import type { Tone } from '../engine/types'
+import { ACCENT, MATERIAL, faNumber, grain } from './art-direction'
 import { TONE } from './card'
 import { Rich } from './rich'
 
-// ─── 1. Perspective 3D Stage & Parallax Layer ────────────────────────────
+// ─── 1. Perspective stage & parallax ─────────────────────────────────────
 
 export function PerspectiveStage({
   t,
@@ -41,7 +43,6 @@ export function PerspectiveStage({
   const rx = mix(camera.rx, target.rx, p)
   const ry = mix(camera.ry, target.ry, p)
   const z = mix(camera.z, target.z, p)
-
   return (
     <div className="perspective-viewport" style={style}>
       <div
@@ -74,18 +75,14 @@ export function ParallaxLayer({
   return (
     <div
       className={`parallax-layer ${className}`}
-      style={{
-        transform: `translateZ(${z}px) scale(${scale})`,
-        opacity,
-        ...style,
-      }}
+      style={{ transform: `translateZ(${z}px) scale(${scale})`, opacity, ...style }}
     >
       {children}
     </div>
   )
 }
 
-// ─── 2. Procedural Spatial Vector Network ─────────────────────────────────
+// ─── 2. Procedural vector network ────────────────────────────────────────
 
 export function ProceduralNetwork({
   t,
@@ -97,69 +94,51 @@ export function ProceduralNetwork({
   tone?: Tone
 }) {
   const c = TONE[tone]
-  const nodes: { id: number; x: number; y: number; r: number }[] = []
-
-  for (let i = 0; i < nodeCount; i++) {
-    const x = deterministicHash(i, 1) * 480 + 30
-    const y = deterministicHash(i, 2) * 560 + 100
-    const r = deterministicHash(i, 3) * 3 + 2.5
-    nodes.push({ id: i, x, y, r })
-  }
-
+  const nodes = Array.from({ length: nodeCount }, (_, i) => ({
+    id: i,
+    x: deterministicHash(i, 1) * 480 + 30,
+    y: deterministicHash(i, 2) * 560 + 100,
+    r: deterministicHash(i, 3) * 3 + 2.5,
+  }))
   return (
-    <svg className="procedural-network-svg" viewBox="0 0 540 800" aria-hidden="true">
-      <defs>
-        <radialGradient id={`net-glow-${tone}`} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor={c.solid} stopOpacity="0.8" />
-          <stop offset="100%" stopColor={c.solid} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-
-      {/* Interconnecting dynamic lines */}
-      {nodes.map((n1, idx) => {
+    <svg className="procedural-network-svg" viewBox="0 0 540 800" aria-hidden>
+      {nodes.map((n, idx) => {
         const n2 = nodes[(idx + 1) % nodes.length]!
         const n3 = nodes[(idx + 3) % nodes.length]!
-        const strokeP1 = clamp((t - idx * 0.15) / 1.2)
-        const strokeP2 = clamp((t - idx * 0.18) / 1.2)
-
+        const a = clamp((t - idx * 0.15) / 1.2)
+        const b = clamp((t - idx * 0.18) / 1.2)
         return (
-          <g key={n1.id}>
+          <g key={n.id}>
             <line
-              x1={n1.x}
-              y1={n1.y}
-              x2={mix(n1.x, n2.x, strokeP1)}
-              y2={mix(n1.y, n2.y, strokeP1)}
+              x1={n.x}
+              y1={n.y}
+              x2={mix(n.x, n2.x, a)}
+              y2={mix(n.y, n2.y, a)}
               stroke={c.solid}
-              strokeOpacity={0.25}
-              strokeWidth={1.2}
+              strokeOpacity={0.22}
+              strokeWidth={1.1}
             />
             {idx % 2 === 0 && (
               <line
-                x1={n1.x}
-                y1={n1.y}
-                x2={mix(n1.x, n3.x, strokeP2)}
-                y2={mix(n1.y, n3.y, strokeP2)}
+                x1={n.x}
+                y1={n.y}
+                x2={mix(n.x, n3.x, b)}
+                y2={mix(n.y, n3.y, b)}
                 stroke={c.solid}
-                strokeOpacity={0.15}
+                strokeOpacity={0.12}
                 strokeWidth={0.8}
-                strokeDasharray="4 4"
+                strokeDasharray="3 5"
               />
             )}
           </g>
         )
       })}
-
-      {/* Nodes and pulse beacons */}
       {nodes.map((node) => {
-        const pulseVal = pulse(t, 0.5 + node.id * 0.2, 10, 2.0)
+        const beat = pulse(t, 0.5 + node.id * 0.2, 10, 2.0)
         const op = clamp(progress(t, node.id * 0.12, 0.4))
         return (
           <g key={node.id} transform={`translate(${node.x}, ${node.y})`} opacity={op}>
-            <circle
-              r={node.r * (1 + pulseVal * 1.8)}
-              fill={`url(#net-glow-${tone})`}
-              opacity={0.6}
-            />
+            <circle r={node.r * (1 + beat * 1.6)} fill={c.soft} />
             <circle r={node.r} fill={c.solid} />
           </g>
         )
@@ -168,79 +147,59 @@ export function ProceduralNetwork({
   )
 }
 
-// ─── 3. Precision Geometric Blueprint ────────────────────────────────────
+// ─── 3. Blueprint apparatus ──────────────────────────────────────────────
 
 export function GeometricBlueprint({
   t,
-  accentColor = '#22d3ee',
+  accentColor = ACCENT.cyan.solid,
 }: {
   t: number
   accentColor?: string
 }) {
   const draw1 = strokeDraw(t, 0.2, 1.8, 1200)
   const draw2 = strokeDraw(t, 0.6, 2.0, 900)
-  const rot = (t * 8) % 360
-
+  const rot = (t * 6) % 360
   return (
-    <div className="blueprint-container" aria-hidden="true">
+    <div className="blueprint-container" aria-hidden style={grain(0.16)}>
       <svg className="blueprint-svg" viewBox="0 0 540 960">
-        <defs>
-          <pattern id="grid-pattern-fine" width="30" height="30" patternUnits="userSpaceOnUse">
-            <path
-              d="M 30 0 L 0 0 0 30"
-              fill="none"
-              stroke="rgba(255,255,255,0.04)"
-              strokeWidth="0.8"
-            />
-          </pattern>
-        </defs>
-
-        <rect width="540" height="960" fill="url(#grid-pattern-fine)" />
-
-        {/* Framing & Measurement Markers */}
         <path
           d="M 40 80 L 500 80 L 500 880 L 40 880 Z"
           fill="none"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth="1"
+          stroke={MATERIAL.panelEdge}
+          strokeWidth={1}
           style={draw1}
         />
-
-        {/* Technical crosshairs at corners */}
-        <g stroke={accentColor} strokeWidth="1.5" opacity={0.7}>
+        <g stroke={accentColor} strokeWidth={1.4} opacity={0.65}>
           <path d="M 32 80 L 48 80 M 40 72 L 40 88" />
           <path d="M 492 80 L 508 80 M 500 72 L 500 88" />
           <path d="M 32 880 L 48 880 M 40 872 L 40 888" />
           <path d="M 492 880 L 508 880 M 500 872 L 500 888" />
         </g>
-
-        {/* Central rotating compass ring */}
         <g transform={`translate(270, 480) rotate(${rot})`}>
           <circle
-            r="160"
+            r={160}
             fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="1.5"
-            strokeDasharray="6 8"
+            stroke={MATERIAL.panelEdge}
+            strokeWidth={1.2}
+            strokeDasharray="4 10"
           />
           <circle
-            r="130"
+            r={130}
             fill="none"
             stroke={accentColor}
-            strokeWidth="1.2"
-            strokeOpacity={0.4}
+            strokeWidth={1.2}
+            strokeOpacity={0.5}
             style={draw2}
           />
-          {/* Degree ticks */}
           {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
             <line
               key={deg}
-              x1="0"
-              y1="-165"
-              x2="0"
-              y2="-155"
+              x1={0}
+              y1={-165}
+              x2={0}
+              y2={-155}
               stroke={accentColor}
-              strokeWidth="1.5"
+              strokeWidth={1.4}
               transform={`rotate(${deg})`}
             />
           ))}
@@ -250,7 +209,7 @@ export function GeometricBlueprint({
   )
 }
 
-// ─── 4. High-End Kinetic Typography Mask ──────────────────────────────────
+// ─── 4. Kinetic typography mask ──────────────────────────────────────────
 
 export function KineticMaskHeadline({
   lines,
@@ -268,21 +227,19 @@ export function KineticMaskHeadline({
   className?: string
 }) {
   return (
-    <div className={`kinetic-mask-headline ${className}`}>
+    <div className={`kinetic-mask-headline ${className}`} style={{ direction: 'rtl' }}>
       {lines.map((line, idx) => {
         const at = startAt + idx * interval
-        const p = ease(progress(t, at, 0.6))
-        const clip = maskWipe(p, direction)
-        const y = mix(45, 0, p)
-
+        const p = ease(progress(t, at, 0.55))
         return (
           <div key={idx} className="mask-line-wrapper" style={{ overflow: 'hidden' }}>
             <div
               className="mask-line-content"
               style={{
-                clipPath: clip,
-                transform: `translateY(${y}px)`,
+                clipPath: maskWipe(p, direction),
+                transform: `translate3d(0, ${mix(30, 0, p)}px, 0)`,
                 opacity: p,
+                color: MATERIAL.ink,
               }}
             >
               <Rich text={line} />
@@ -294,7 +251,7 @@ export function KineticMaskHeadline({
   )
 }
 
-// ─── 5. Continuous Morph Shape ───────────────────────────────────────────
+// ─── 5. Continuous morph object ──────────────────────────────────────────
 
 export function ContinuousMorphShape({
   t,
@@ -306,19 +263,12 @@ export function ContinuousMorphShape({
   tone?: Tone
 }) {
   const c = TONE[tone]
-  // Phase 1 (0..3s): Core Ring & Concentric Orbit
-  // Phase 2 (3..7s): Security Vault & Shield
-  // Phase 3 (7..11s): Cloud Infrastructure
-  // Phase 4 (11..15s): Certified Ledger & Check
-
   const p1 = ease(progress(t, 0.4, 1.2))
   const p2 = ease(progress(t, 3.5, 1.2))
   const p3 = ease(progress(t, 7.5, 1.2))
   const p4 = ease(progress(t, 11.5, 1.2))
-
-  const rot = (t * 24) % 360
-  const pulseVal = pulse(t, 0, 15, 1.6)
-
+  const rot = (t * 20) % 360
+  const beat = pulse(t, 0, 15, 1.6)
   return (
     <div
       className="continuous-morph-container"
@@ -332,102 +282,77 @@ export function ContinuousMorphShape({
       }}
     >
       <svg width={size} height={size} viewBox="0 0 200 200" style={{ overflow: 'visible' }}>
-        <defs>
-          <linearGradient id={`morph-grad-${tone}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={c.solid} />
-            <stop offset="100%" stopColor="#c084fc" />
-          </linearGradient>
-          <filter id="morph-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="8" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
-
-        {/* State 1: Geometric Concentric Energy Ring */}
         <g opacity={1 - p2}>
           <circle
-            cx="100"
-            cy="100"
+            cx={100}
+            cy={100}
             r={mix(20, 75, p1)}
             fill="none"
-            stroke={`url(#morph-grad-${tone})`}
-            strokeWidth="3.5"
-            strokeDasharray="6 8"
+            stroke={c.solid}
+            strokeWidth={3}
+            strokeDasharray="5 9"
             transform={`rotate(${rot} 100 100)`}
-            filter="url(#morph-glow)"
           />
           <circle
-            cx="100"
-            cy="100"
-            r={mix(10, 50, p1) * (1 + pulseVal * 0.08)}
+            cx={100}
+            cy={100}
+            r={mix(10, 50, p1) * (1 + beat * 0.06)}
             fill="none"
             stroke={c.solid}
-            strokeWidth="2"
+            strokeWidth={2}
             opacity={0.6}
           />
-          <circle cx="100" cy="100" r={mix(4, 16, p1)} fill={c.solid} />
+          <circle cx={100} cy={100} r={mix(4, 16, p1)} fill={c.solid} />
         </g>
-
-        {/* State 2: Security Vault Shield */}
         <g opacity={p2 * (1 - p3)}>
           <path
             d="M 100 35 L 155 60 L 155 110 C 155 145 100 170 100 170 C 100 170 45 145 45 110 L 45 60 Z"
-            fill="rgba(6, 182, 212, 0.08)"
+            fill={c.soft}
             stroke={c.solid}
-            strokeWidth="3"
-            filter="url(#morph-glow)"
+            strokeWidth={2.5}
             style={strokeDraw(t, 3.5, 1.2, 450)}
           />
-          {/* Keyhole / Lock Core */}
-          <circle cx="100" cy="95" r="14" fill={c.solid} opacity={p2} />
+          <circle cx={100} cy={95} r={14} fill={c.solid} opacity={p2} />
           <path d="M 94 95 L 106 95 L 109 125 L 91 125 Z" fill={c.solid} opacity={p2} />
         </g>
-
-        {/* State 3: Cloud Infrastructure */}
         <g opacity={p3 * (1 - p4)}>
           <path
             d="M 65 130 C 50 130 40 120 40 105 C 40 92 50 82 62 80 C 66 62 82 50 100 50 C 122 50 139 65 142 85 C 153 87 160 96 160 108 C 160 120 150 130 138 130 Z"
-            fill="rgba(192, 132, 252, 0.12)"
-            stroke="#c084fc"
-            strokeWidth="3"
-            filter="url(#morph-glow)"
+            fill={c.soft}
+            stroke={ACCENT.purple.solid}
+            strokeWidth={2.5}
             style={strokeDraw(t, 7.5, 1.2, 500)}
           />
-          {/* Flowing sync arrows inside cloud */}
           <path
             d="M 85 100 L 100 85 L 115 100 M 100 85 L 100 115"
-            stroke="#fff"
-            strokeWidth="3"
+            stroke={MATERIAL.ink}
+            strokeWidth={3}
             strokeLinecap="round"
             strokeLinejoin="round"
             fill="none"
             opacity={p3}
           />
         </g>
-
-        {/* State 4: Verified Double Ledger & Certified Seal */}
         <g opacity={p4}>
           <rect
-            x="45"
-            y="45"
-            width="110"
-            height="110"
-            rx="20"
-            fill="rgba(34, 197, 94, 0.1)"
-            stroke="#4ade80"
-            strokeWidth="3"
-            filter="url(#morph-glow)"
+            x={45}
+            y={45}
+            width={110}
+            height={110}
+            rx={2}
+            fill={ACCENT.green.soft}
+            stroke={ACCENT.green.solid}
+            strokeWidth={2.5}
             style={strokeDraw(t, 11.5, 1.2, 440)}
           />
-          {/* Big Checkmark */}
           <path
             d="M 72 100 L 92 120 L 132 75"
             fill="none"
-            stroke="#4ade80"
-            strokeWidth="6"
+            stroke={ACCENT.green.solid}
+            strokeWidth={5}
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={strokeDraw(t, 12.0, 0.8, 150)}
+            style={strokeDraw(t, 12, 0.8, 150)}
           />
         </g>
       </svg>
@@ -435,7 +360,7 @@ export function ContinuousMorphShape({
   )
 }
 
-// ─── 6. Living Financial Flow Diagram ────────────────────────────────────
+// ─── 6. Financial flow — numbers, not dashboard chrome ───────────────────
 
 export function FinancialIntelligenceFlow({
   revenue = 100,
@@ -451,83 +376,68 @@ export function FinancialIntelligenceFlow({
   const p1 = ease(progress(t, 0.3, 1.0))
   const p2 = ease(progress(t, 1.2, 1.0))
   const p3 = ease(progress(t, 2.2, 1.0))
-
+  const node = (progressValue: number, color: string): CSSProperties => ({
+    opacity: progressValue,
+    transform: `translate3d(0, ${((1 - progressValue) * 14).toFixed(2)}px, 0)`,
+    borderBottom: `2px solid ${color}`,
+    paddingBottom: 6,
+    color,
+  })
   return (
-    <div className="financial-flow-wrap">
-      {/* Node 1: Gross Sales */}
-      <div
-        className="flow-node flow-node-revenue"
-        style={{
-          transform: `scale(${mix(0.85, 1, p1)})`,
-          opacity: p1,
-        }}
-      >
-        <span className="flow-node-title">کل فروش فاکتورها</span>
-        <span className="flow-node-amount cyan">
-          {new Intl.NumberFormat('fa-IR').format(Math.round(revenue * 1000))}
+    <div
+      className="financial-flow-wrap"
+      style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: 22 }}
+    >
+      <div className="flow-node flow-node-revenue" style={node(p1, ACCENT.cyan.solid)}>
+        <span className="flow-node-title" style={{ color: MATERIAL.muted, fontSize: 13 }}>
+          کل فروش فاکتورها
         </span>
-        <span className="flow-node-pct">۱۰۰٪ جریان ورودی</span>
+        <span className="flow-node-amount" style={{ fontSize: 30, fontWeight: 900 }}>
+          {faNumber(revenue * 1000)}
+        </span>
       </div>
-
-      {/* SVG Connecting Flow Pipe with Animated Current */}
-      <svg className="flow-pipe-svg" viewBox="0 0 400 90">
-        <defs>
-          <linearGradient id="pipe-split-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="60%" stopColor="#fb7185" />
-            <stop offset="100%" stopColor="#4ade80" />
-          </linearGradient>
-        </defs>
-        {/* Main trunk */}
-        <line x1="200" y1="0" x2="200" y2="40" stroke="#22d3ee" strokeWidth="4" />
-        {/* Split to left (cost) and right (net profit) */}
+      <svg className="flow-pipe-svg" viewBox="0 0 400 90" aria-hidden>
+        <line x1={200} y1={0} x2={200} y2={40} stroke={ACCENT.cyan.solid} strokeWidth={3} />
         <path
           d="M 200 40 C 200 65 100 60 100 90"
           fill="none"
-          stroke="#fb7185"
-          strokeWidth="3.5"
-          strokeDasharray="6 4"
+          stroke={ACCENT.red.solid}
+          strokeWidth={3}
+          strokeDasharray="5 5"
         />
-        <path d="M 200 40 C 200 65 300 60 300 90" fill="none" stroke="#4ade80" strokeWidth="4" />
+        <path
+          d="M 200 40 C 200 65 300 60 300 90"
+          fill="none"
+          stroke={ACCENT.green.solid}
+          strokeWidth={3}
+        />
       </svg>
-
-      {/* Branching Nodes: COGS vs Net Profit */}
-      <div className="flow-branch-row">
-        {/* Cost Node */}
-        <div
-          className="flow-node flow-node-cogs"
-          style={{
-            transform: `scale(${mix(0.85, 1, p2)})`,
-            opacity: p2,
-          }}
-        >
-          <span className="flow-node-title">بهای تمام‌شده (خرید)</span>
-          <span className="flow-node-amount red">
-            {new Intl.NumberFormat('fa-IR').format(Math.round(cogs * 1000))}
+      <div
+        className="flow-branch-row"
+        style={{ display: 'flex', justifyContent: 'space-between', gap: 18 }}
+      >
+        <div className="flow-node flow-node-cogs" style={node(p2, ACCENT.red.solid)}>
+          <span className="flow-node-title" style={{ color: MATERIAL.muted, fontSize: 12 }}>
+            بهای تمامشده
           </span>
-          <span className="flow-node-pct">۶۰٪ هزینه بار</span>
+          <span className="flow-node-amount" style={{ fontSize: 24, fontWeight: 900 }}>
+            {faNumber(cogs * 1000)}
+          </span>
         </div>
-
-        {/* Real Net Profit Node */}
-        <div
-          className="flow-node flow-node-profit"
-          style={{
-            transform: `scale(${mix(0.85, 1, p3)})`,
-            opacity: p3,
-          }}
-        >
-          <span className="flow-node-title">سود ناخالص خالص</span>
-          <span className="flow-node-amount green">
-            {new Intl.NumberFormat('fa-IR').format(Math.round(grossProfit * 1000))}
+        <div className="flow-node flow-node-profit" style={node(p3, ACCENT.green.solid)}>
+          <span className="flow-node-title" style={{ color: MATERIAL.muted, fontSize: 12 }}>
+            سود ناخالص خالص
           </span>
-          <span className="flow-node-pct">۴۰٪ مارجین واقعی</span>
+          <span className="flow-node-amount" style={{ fontSize: 24, fontWeight: 900 }}>
+            {faNumber(grossProfit * 1000)}
+          </span>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── 7. Daylight Editorial Paper Canvas ───────────────────────────────────
+// ─── 7. Editorial paper plate ────────────────────────────────────────────
 
 export function DaylightEditorialCanvas({
   headline,
@@ -540,46 +450,82 @@ export function DaylightEditorialCanvas({
   points: { label: string; value: string }[]
   t: number
 }) {
-  const pHead = ease(progress(t, 0.2, 0.7))
-
+  const head = ease(progress(t, 0.2, 0.7))
   return (
-    <div className="daylight-editorial-box">
-      <div className="daylight-rule-top" />
-      <div className="daylight-category-tag">
-        <span className="tag-dot" /> {category}
+    <div
+      className="daylight-editorial-box"
+      style={{
+        position: 'relative',
+        background: MATERIAL.paper,
+        color: MATERIAL.paperInk,
+        padding: 28,
+        direction: 'rtl',
+      }}
+    >
+      <span aria-hidden style={grain(0.18)} />
+      <div
+        className="daylight-category-tag"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 12,
+          borderBottom: `1px solid ${MATERIAL.paperInk}`,
+          paddingBottom: 4,
+        }}
+      >
+        <span
+          className="tag-dot"
+          style={{ width: 6, height: 6, background: MATERIAL.paperInk, display: 'inline-block' }}
+        />{' '}
+        {category}
       </div>
-
       <div
         className="daylight-headline"
         style={{
-          transform: `translateY(${mix(20, 0, pHead)}px)`,
-          opacity: pHead,
+          transform: `translate3d(0, ${mix(18, 0, head)}px, 0)`,
+          opacity: head,
+          fontSize: 30,
+          fontWeight: 900,
+          marginTop: 18,
         }}
       >
         <Rich text={headline} />
       </div>
-
-      <div className="daylight-rule-mid" />
-
-      <div className="daylight-stats-grid">
+      <div
+        className="daylight-stats-grid"
+        style={{
+          display: 'flex',
+          gap: 24,
+          marginTop: 24,
+          borderTop: `2px solid ${MATERIAL.paperInk}`,
+          paddingTop: 16,
+        }}
+      >
         {points.map((pt, i) => {
-          const p = ease(progress(t, 0.8 + i * 0.35, 0.6))
+          const p = ease(progress(t, 0.8 + i * 0.35, 0.55))
           return (
             <div
               key={i}
               className="daylight-stat-col"
-              style={{
-                transform: `translateY(${mix(15, 0, p)}px)`,
-                opacity: p,
-              }}
+              style={{ transform: `translate3d(0, ${mix(14, 0, p)}px, 0)`, opacity: p, flex: 1 }}
             >
-              <div className="daylight-stat-val">{pt.value}</div>
-              <div className="daylight-stat-lbl">{pt.label}</div>
+              <div className="daylight-stat-val" style={{ fontSize: 26, fontWeight: 900 }}>
+                {pt.value}
+              </div>
+              <div className="daylight-stat-lbl" style={{ fontSize: 12, opacity: 0.75 }}>
+                {pt.label}
+              </div>
             </div>
           )
         })}
       </div>
-      <div className="daylight-watermark">H I S A B C H E</div>
+      <div
+        className="daylight-watermark"
+        style={{ marginTop: 18, fontSize: 11, letterSpacing: '0.32em', opacity: 0.5 }}
+      >
+        H I S A B C H E
+      </div>
     </div>
   )
 }

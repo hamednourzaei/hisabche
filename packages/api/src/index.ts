@@ -1491,6 +1491,30 @@ export {
 } from './hooks/evidence'
 
 export { useCmsRemoteContent, type CmsGlobals } from './hooks/cms/remote-content'
+// ─── WP-04 — offline roll register ─────────────────────────
+export {
+  rollKeys,
+  useLocalRolls,
+  useLocalRoll,
+  useRollReport,
+  useConsumeRoll,
+  useCutRoll,
+  useReturnRoll,
+  type LocalRoll,
+  type RollCost,
+  type RollReportRow,
+} from './hooks/rolls'
+// WP-07 — offline FX trade drafts (device-only routes).
+export {
+  fxDraftKeys,
+  useFxTradeDrafts,
+  useFxTradeDraft,
+  useCreateFxTradeDraft,
+  useSubmitFxTradeDraft,
+  useCancelFxTradeDraft,
+  type FxTradeDraftRow,
+} from './hooks/fx-trade-drafts'
+
 export * from './hooks/universal-core'
 export * from './hooks/contracts'
 export * from './hooks/quality'

@@ -1490,6 +1490,7 @@ export {
 export * from './schemas/sync-identity'
 export * from './schemas/subscription-order.schema'
 export * from './schemas/operational-dna'
+export * from './schemas/onboarding-gate.domain'
 export * from './schemas/first-value'
 export * from './schemas/capability-claims.domain'
 export * from './schemas/business-problems'

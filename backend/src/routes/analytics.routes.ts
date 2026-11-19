@@ -6,11 +6,11 @@
 import { resolveTimeZone } from '../utils/local-day'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
-import { supabase } from '../db'
 import { AnalyticsService } from '../services/analytics.service'
 import { OrderDepositService } from '../services/sales/order-deposit.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireOnboardingComplete } from '../middleware/onboarding.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { holds } from '../services/authorization'
@@ -141,6 +141,10 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        // PART 7: a signed-in but not-yet-onboarded account cannot read the
+        // dashboard through the API, by refresh, or by a direct URL. Must run
+        // BEFORE the cache so an incomplete user is never served a cached KPI.
+        requireOnboardingComplete,
         // Per MEMBER, not per workspace: the answer now depends on what the
         // person may see, and a shared entry would hand one member's figures
         // to the next.
@@ -357,6 +361,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireOnboardingComplete,
         cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'low-stock-variants' }),
       ],
     },
@@ -381,6 +386,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireOnboardingComplete,
         cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'today-sessions' }),
       ],
     },
@@ -408,6 +414,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireOnboardingComplete,
         cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'package-credits-low' }),
       ],
     },
@@ -432,6 +439,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireOnboardingComplete,
         cacheMiddleware({ scope: 'member', ttl: 30, keyPrefix: 'open-repair-tickets' }),
       ],
     },

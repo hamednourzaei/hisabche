@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { MATERIAL } from '../../ui/art-direction'
 
 export interface KineticSwitchTextProps {
   words: {
@@ -65,13 +66,12 @@ export const KineticSwitchText: React.FC<KineticSwitchTextProps> = ({
               position: 'relative',
               display: 'inline-block',
               fontWeight: item.bold || isHighlighted ? 900 : 700,
-              color: isHighlighted ? '#121D35' : '#121D35',
+              color: MATERIAL.paperInk,
               background: isHighlighted ? 'rgba(246, 185, 30, 0.35)' : 'transparent',
               padding: isHighlighted ? '2px 8px' : '0 2px',
               borderRadius: 6,
               transform: `scale(${0.7 + 0.3 * enterP + (isHighlighted ? 0.06 : 0)})`,
               opacity: enterP,
-              transition: 'background 0.2s ease, transform 0.2s ease',
             }}
           >
             {activeText}

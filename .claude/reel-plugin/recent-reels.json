@@ -182,5 +182,13 @@
     "primaryTemplate": "bespoke",
     "visualLanguage": "midnight-gold",
     "hookMechanism": "immediate-consequence"
+  },
+  {
+    "id": 112,
+    "topic": "make a motion graphy with flash back trnsision and write persian with hisabche",
+    "creativeMechanism": "flashback-rewind",
+    "primaryTemplate": "bespoke",
+    "visualLanguage": "cinematic-obsidian",
+    "hookMechanism": "uncomfortable-discovery"
   }
 ]

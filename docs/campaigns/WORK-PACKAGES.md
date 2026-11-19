@@ -143,17 +143,15 @@
 
 **صنوف:** `fabric`, `fabricRoll`, `timber`, `glass`, `carpet`, `buildingMaterials`, `grocery`, `fuel`, `butcher`, `dairy`, `agriculture`.
 
-### WP-04 — رول: برش، باقی‌مانده، ضایعات و مسیر سرور
+### WP-04 — رول: برش، باقیمانده، ضایعات و مسیر سرور — IMPLEMENTED_NOT_LIVE_VERIFIED
 
-| قابلیت         | ماتریس  | موتور                     | لایه غایب                       | محدودیت                        | لنگر |
-| -------------- | ------- | ------------------------- | ------------------------------- | ------------------------------ | ---: |
-| `roll_cutting` | partial | — (ردیف موتور وجود ندارد) | service, route, local, hook, ui | `NO_SERVER_ROUTE_OR_UI_PICKER` |    ۲ |
+| قابلیت         | ماتریس  | موتور                     | لایه غایب | محدودیت                            | لنگر |
+| -------------- | ------- | ------------------------- | --------- | ---------------------------------- | ---: |
+| `roll_cutting` | partial | — (ردیف موتور وجود ندارد) | —         | `ROLL_INVOICE_LINE_PICKER_MISSING` |    ۲ |
 
-**چرا `NO_ENGINE`:** `roll-batch.domain.ts` هست، اما هیچ ردیف موتوری و هیچ لایه‌ی محصولی به آن وصل نیست.
+**کارهای انجامشده:** قواعد مشترک `splitRollCut`/`returnToRoll`/`rollCostOf` · موتور محلی `routes/rolls.ts` (جداول `local_rolls`/`roll_movements` + مهاجرت `V33`) · مصرف/برش/برگشت اتمیک با conditional update · مسیر سرور `roll-cutting.routes.ts` + سرویس + migration اتمیک `roll_apply_movement` + VERIFY + تست PG · ۶ Hook محلی · پنل UI `rolls-panel` · اسناد `WP-04-SPEC.md`.
 
-**کارها:** هویت هر رول (شماره، طول اولیه، طول باقی‌مانده، محل) · مصرف همان رول در فروش جزئی · ثبت برش/ضایعات/باقی‌مانده‌ی قابل فروش · برگشت با همان مرجع رول · تبدیل بر اساس ضریب رول · گزارش رول‌محور با بهای تمام‌شده · مسیر سرور + Hook + UI.
-
-**معیار خروج:** فروش ۱۲٫۵ متر از رول ۵۰ متری → ۳۷٫۵ · برگشت همان رول را برمی‌گرداند · دو دستگاه هم‌زمان، فروش مضاعف صفر · گزارش «موجودی بر حسب رول» با متر و بهای تمام‌شده.
+**معیار خروج:** فروش ۱۲٫۵ متر از رول ۵۰ متری → ۳۷٫۵ · برگشت همان رول · دو دستگاه همزمان، فروش مضاعف صفر · گزارش «موجودی بر حسب رول» با متر و بهای تمامشده · بهای ناشناخته صفر نمیشود.
 
 **صنوف:** `fabricRoll`, `fabric`, `carpet`.
 
@@ -187,6 +185,18 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 **صنوف پس از WP-26:** `jewellery`, `watches`.
 
 ### WP-07 — صرافی: موقعیت ارزی و کنترل صندوق
+
+**وضعیت نهایی: IMPLEMENTED_NOT_LIVE_VERIFIED** — پیشنویش معامله ارز آفلاین (جدول `fx_trade_drafts` +
+مهاجرت `V34` + مسیر `/local-fx/trade-drafts` + ۴ Hook + قواعد خالص `fx-drafts.domain.ts`)؛
+پول، موقعیت ارزی و سند حسابداری فقط توسط سرور `/api/exchange/trades` جابهجا میشوند.
+محدودیت «Online only» به `FX_TRADE_CONFIRMATION_ONLINE_ONLY` اصلاح شد (تأیید آنلاین است، نه نوشتن پیشنویس).
+جزئیات: `docs/campaigns/WP-07-SPEC.md`.
+
+**وضعیت نهایی: IMPLEMENTED_NOT_LIVE_VERIFIED** — پیشنویش معامله ارز آفلاین (جدول `fx_trade_drafts` +
+مهاجرت `V34` + مسیر `/local-fx/trade-drafts` + ۴ Hook + قواعد خالص `fx-drafts.domain.ts`)؛
+پول، موقعیت ارزی و سند حسابداری فقط توسط سرور `/api/exchange/trades` جابهجا میشوند.
+محدودیت «Online only» به `FX_TRADE_CONFIRMATION_ONLINE_ONLY` اصلاح شد (تأیید آنلاین است، نه نوشتن پیشنویس).
+جزئیات: `docs/campaigns/WP-07-SPEC.md`.
 
 **وضعیت اندازه‌گیری‌شده:** موتور `exchange` و قابلیت `currency_exchange` اکنون در رجیستری
 ثبت‌اند: ردیف موتور با `service_owned`، مسیر `exchangeRoutes`، شاهد ۷ از ۷ فایل و محدودیت
@@ -230,6 +240,8 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 **صنوف:** `manufacturing`, `bakery`, `restaurant`, `cafe`, `printing`, `tailoring`.
 
 ### WP-10 — میز، سالن و KDS روی سفارش مشترک
+
+**IMPLEMENTED_NOT_LIVE_VERIFIED** — میز/KDS روی هستهٔ مشترک سفارش (`WP-10-SPEC.md`).
 
 | قابلیت          | ماتریس  | موتور | لایه غایب                       | محدودیت | لنگر |
 | --------------- | ------- | ----- | ------------------------------- | ------- | ---: |
@@ -280,20 +292,28 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 
 **صنوف:** `furniture`, `printing`, `photography`, `travelAgency`, `realEstate`, `carDealer`.
 
-### WP-15 — پروژه، زمان‌سنجی و صورت‌حساب مرحله‌ای
+### WP-15 — پروژه، زمانسنجی و صورتوضعیت مرحلهای — IMPLEMENTED_NOT_LIVE_VERIFIED
 
-| قابلیت              | ماتریس  | موتور           | لایه غایب | محدودیت                                                   | لنگر |
-| ------------------- | ------- | --------------- | --------- | --------------------------------------------------------- | ---: |
-| `project_costing`   | partial | `projects_time` | local     | `SERVER_ONLY_NO_OFFLINE_ENGINE`, `NO_OVERHEAD_ALLOCATION` |    ۴ |
-| `timesheet_billing` | partial | `projects_time` | local     | `MILESTONE_INVOICE_WIRING_PARTIAL`                        |    ۵ |
+| قابلیت              | ماتریس  | موتور           | لایه غایب | محدودیت                            | لنگر |
+| ------------------- | ------- | --------------- | --------- | ---------------------------------- | ---: |
+| `project_costing`   | partial | `projects_time` | —         | `NO_OVERHEAD_ALLOCATION`           |    ۴ |
+| `timesheet_billing` | partial | `projects_time` | —         | `MILESTONE_INVOICE_WIRING_PARTIAL` |    ۵ |
 
-**کارها:** هزینه‌ی پروژه از تراکنش واقعی (خرید، انبار، زمان، دفتر) · تخصیص سربار · صورت‌وضعیت مرحله‌ای و تأیید · زمان تأییدشده → فاکتور · انحراف بودجه.
+**کارهای انجامشده:** قواعد مشترک `projectCostOf`/`budgetVarianceOf` و `billableTimeOf`/`milestoneReadiness` · Local Engine پروژه (جداول `local_projects`/`project_time_entries`/`project_milestones` + مهاجرت `V32`) · ثبت و تأیید زمان آفلاین · پیشنمای هزینه و آمادگی مرحله · ۶ Hook محلی · مشخصات `WP-15-SPEC.md`.
 
-**معیار خروج:** پروژه ۱۰۰ واحدی با مصالح و کار، دو صورت‌وضعیت و دریافت مرحله‌ای؛ سود واقعی. ۲۰ ساعت ثبت، ۱۸ ساعت تأیید، فاکتور برای همان ۱۸ ساعت.
+**معیار خروج:** فقط ساعات تأییدشده قابل صورتحساباند · هزینهٔ ناشناخته صفر نشان داده نمیشود · فاکتور مرحله فقط توسط سرور صادر میشود.
 
 **صنوف:** `construction`, `consulting`, `printing`, `photography`, `itServices`, `security`.
 
 ### WP-18 — اعتبار جلسه و بسته خدمات
+
+**وضعیت نهایی: IMPLEMENTED_NOT_LIVE_VERIFIED** — اعطای اعتبار آفلاین
+(`POST /local-package-credits/grant` با قاعدهٔ مشترک `planPackageGrant` و idempotency)؛
+بدون enqueue دوباره (فاکتور خود اعطای سرور است). محدودیت → `GRANT_ACTIVATION_POLICY_BASIC`.
+
+**وضعیت نهایی: IMPLEMENTED_NOT_LIVE_VERIFIED** — اعطای اعتبار آفلاین
+(`POST /local-package-credits/grant` با قاعدهٔ مشترک `planPackageGrant` و idempotency)؛
+بدون enqueue دوباره (فاکتور خود اعطای سرور است). محدودیت → `GRANT_ACTIVATION_POLICY_BASIC`.
 
 | قابلیت            | ماتریس  | موتور             | لایه غایب | محدودیت             | لنگر | صنوف |
 | ----------------- | ------- | ----------------- | --------- | ------------------- | ---: | ---: |
@@ -324,6 +344,8 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 
 ### WP-14 — تدارکات: برنامه‌ریزی و تطبیق سه‌طرفه
 
+**IMPLEMENTED_NOT_LIVE_VERIFIED** — گردکردن بسته و پیشنمایش تطبیق سهطرفه (`WP-14-SPEC.md`).
+
 | قابلیت                 | ماتریس  | موتور         | لایه غایب | محدودیت                                                                  | لنگر |
 | ---------------------- | ------- | ------------- | --------- | ------------------------------------------------------------------------ | ---: |
 | `procurement_planning` | partial | `procurement` | —         | `PACK_ROUNDING_SERVER_SIDE`                                              |    ۵ |
@@ -337,6 +359,8 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 
 ### WP-16 — سازگاری قطعات، واحد خودرو و مغزی
 
+**IMPLEMENTED_NOT_LIVE_VERIFIED** — خط مغزی و برگشت یکبار مغزی (`WP-16-SPEC.md`).
+
 | قابلیت          | ماتریس  | موتور               | لایه غایب | محدودیت                   | لنگر | صنوف |
 | --------------- | ------- | ------------------- | --------- | ------------------------- | ---: | ---: |
 | `auto_fitments` | partial | `inventory_catalog` | —         | `CORE_CHARGE_NOT_APPLIED` |    ۸ |    ۲ |
@@ -348,6 +372,8 @@ parity دارد، ولی هیچ ردیف فاکتور، مسیر یا صفحه�
 **صنوف:** `autoParts`, `carDealer`.
 
 ### WP-17 — قرارداد تکرارشونده و صورت‌حساب دوره‌ای
+
+**IMPLEMENTED_NOT_LIVE_VERIFIED** — قرارداد آفلاین و پیشنهاد دوره (`WP-17-SPEC.md`).
 
 | قابلیت                | ماتریس  | موتور                 | لایه غایب    | محدودیت                         | لنگر |
 | --------------------- | ------- | --------------------- | ------------ | ------------------------------- | ---: |

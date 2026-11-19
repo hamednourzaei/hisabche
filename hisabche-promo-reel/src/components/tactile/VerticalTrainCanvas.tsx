@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, mix, progress } from '../../engine/math'
+import { MATERIAL } from '../../ui/art-direction'
 import { DashedConnectorArrow } from './DashedConnectorArrow'
 
 export interface TrainStation {
@@ -110,7 +111,7 @@ export const VerticalTrainCanvas: React.FC<VerticalTrainCanvasProps> = ({
         width: 540,
         height: 960,
         overflow: 'hidden',
-        background: '#070a12',
+        background: MATERIAL.void,
         direction: 'rtl',
         ...style,
       }}
@@ -153,7 +154,6 @@ export const VerticalTrainCanvas: React.FC<VerticalTrainCanvasProps> = ({
           height: maxY + 1200,
           transformOrigin: '270px 480px',
           transform: `translateY(${-cameraY}px) scale(${cameraScale})`,
-          transition: 'none',
           zIndex: 3,
         }}
       >
@@ -180,7 +180,7 @@ export const VerticalTrainCanvas: React.FC<VerticalTrainCanvasProps> = ({
               x2={x2}
               y2={y2}
               curveOffset={cfg.curveOffset ?? (idx % 2 === 0 ? 90 : -90)}
-              strokeColor="#121D35"
+              strokeColor={MATERIAL.paperInk}
               t={t}
               startAt={startConnAt}
               dur={s.dur * 0.35}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 export interface YellowPriceTagProps {
   text: string
@@ -71,8 +72,8 @@ export const YellowPriceTag: React.FC<YellowPriceTagProps> = ({
       <div
         style={{
           position: 'relative',
-          background: '#F6B91E',
-          color: '#121D35',
+          background: ACCENT.amber.solid,
+          color: MATERIAL.paperInk,
           padding: '12px 24px 12px 32px',
           borderRadius: '8px 16px 16px 8px',
           display: 'flex',
@@ -94,7 +95,7 @@ export const YellowPriceTag: React.FC<YellowPriceTagProps> = ({
             width: 10,
             height: 10,
             borderRadius: '50%',
-            background: '#070a12',
+            background: MATERIAL.void,
             border: '2px solid rgba(255, 255, 255, 0.2)',
             boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.6)',
           }}

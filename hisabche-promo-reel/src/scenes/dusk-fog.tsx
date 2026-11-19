@@ -442,7 +442,6 @@ export function PaperWallScene({ t, scene }: SceneProps) {
           style={{
             height: 94,
             backgroundColor: 'rgba(20, 29, 45, 0.85)',
-            backdropFilter: 'blur(12px)',
             borderRadius: 14,
             border: `1.5px solid rgba(56, 189, 248, 0.35)`,
             boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
@@ -470,7 +469,6 @@ export function PaperWallScene({ t, scene }: SceneProps) {
           style={{
             height: 94,
             backgroundColor: 'rgba(20, 29, 45, 0.85)',
-            backdropFilter: 'blur(12px)',
             borderRadius: 14,
             border: `1.5px solid rgba(245, 158, 11, 0.35)`,
             boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
@@ -498,7 +496,6 @@ export function PaperWallScene({ t, scene }: SceneProps) {
           style={{
             height: 94,
             backgroundColor: 'rgba(20, 29, 45, 0.85)',
-            backdropFilter: 'blur(12px)',
             borderRadius: 14,
             border: `1.5px solid rgba(244, 63, 94, 0.35)`,
             boxShadow: '0 12px 30px rgba(0, 0, 0, 0.45)',
@@ -615,7 +612,6 @@ export function PartClearScene({ t, scene }: SceneProps) {
                 height: '100%',
                 backgroundColor: DEEP_TEAL,
                 boxShadow: '0 0 12px #06b6d4',
-                transition: 'width 0.1s linear',
               }}
             />
           </div>

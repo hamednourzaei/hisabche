@@ -243,7 +243,10 @@ describe('the rules fire on the registry defect they exist for', () => {
   })
 
   it('a «planned» capability that carries a limitation is refused', () => {
-    const input = patch('table_service', { limitations: ['NO_SERVER_ROUTE_OR_UI_PICKER'] })
+    // `livestock_register` is still genuinely planned (no domain/engine on disk).
+    // `table_service` used to be this example until WP-10 wired it to the shared
+    // order core, so the rule is now exercised with a capability that is still planned.
+    const input = patch('livestock_register', { limitations: ['NO_SERVER_ROUTE_OR_UI_PICKER'] })
     expect(codesOf(input)).toContain('PLANNED_WITH_LIMITATION')
   })
 
@@ -275,11 +278,12 @@ describe('the rules fire on the registry defect they exist for', () => {
   })
 
   it('the route-less claim still passes for a capability that has no route', () => {
-    // `roll_cutting` has the limitation and no route: the rule must not be a ban
-    // on the wording, only on the wording when it has become false.
-    const roll = claimedCapabilities.find((capability) => capability.key === 'roll_cutting')
-    expect(roll?.hasBackendRoute).toBe(false)
-    expect(capabilityClaimViolations(real).map((v) => v.capability)).not.toContain('roll_cutting')
+    // `area_pricing` still has the limitation and no route: the rule must not be
+    // a ban on the wording, only on the wording when it has become false.
+    // (`roll_cutting` used to be this example until WP-04 shipped its route.)
+    const area = claimedCapabilities.find((capability) => capability.key === 'area_pricing')
+    expect(area?.hasBackendRoute).toBe(false)
+    expect(capabilityClaimViolations(real).map((v) => v.capability)).not.toContain('area_pricing')
   })
 })
 

@@ -1,16 +1,20 @@
 // src/ui/tech-pipeline.tsx
-// High-tech pipeline stepper header & kinetic word-emphasis box inspired by test.mp4 reference
+// Pipeline stepper & kinetic word mark — rebuilt from frosted web pills to
+// film-grade hairline instrumentation. API is frozen.
+// Rules: 22, 33, 52, 58, 98.
 
-import React, { type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
+
+import { ACCENT, MATERIAL } from './art-direction'
 
 export interface TechPipelineHeaderProps {
-  currentStep: number // 1 to 5
+  currentStep: number
   deployCount?: string
   style?: CSSProperties
 }
 
 const STEPS = [
-  { id: 1, label: 'تسک‌ها' },
+  { id: 1, label: 'تسکها' },
   { id: 2, label: 'نظارت' },
   { id: 3, label: 'لینک زنده' },
   { id: 4, label: '۶ ماژول' },
@@ -19,12 +23,13 @@ const STEPS = [
 
 export function TechPipelineHeader({
   currentStep,
-  deployCount = '۲,۷۰۷,۴۰۲ ثبت',
+  deployCount = '۲٬۷۰۷٬۴۰۲ ثبت',
   style,
 }: TechPipelineHeaderProps) {
   return (
     <div
       dir="rtl"
+      data-mg-instrument
       style={{
         position: 'absolute',
         top: 24,
@@ -38,22 +43,19 @@ export function TechPipelineHeader({
         ...style,
       }}
     >
-      {/* Steps Row */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          padding: '6px 14px',
-          borderRadius: 999,
-          background: 'rgba(15, 23, 42, 0.75)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(12px)',
+          paddingBottom: 6,
+          borderBottom: `1px solid ${MATERIAL.panelEdge}`,
         }}
       >
         {STEPS.map((step) => {
-          const isActive = step.id === currentStep
-          const isDone = step.id < currentStep
+          const active = step.id === currentStep
+          const done = step.id < currentStep
+          const color = active ? ACCENT.cyan.solid : done ? ACCENT.green.solid : MATERIAL.muted
           return (
             <div
               key={step.id}
@@ -62,18 +64,18 @@ export function TechPipelineHeader({
                 alignItems: 'center',
                 gap: 5,
                 fontSize: 10,
-                fontWeight: isActive ? 900 : 700,
-                color: isActive ? '#38bdf8' : isDone ? '#10b981' : '#64748b',
-                transition: 'all 0.3s ease',
+                fontWeight: active ? 900 : 700,
+                color,
+                opacity: active || done ? 1 : 0.55,
               }}
             >
-              <div
+              <span
                 style={{
-                  width: isActive ? 8 : 5,
-                  height: isActive ? 8 : 5,
-                  borderRadius: 4,
-                  background: isActive ? '#38bdf8' : isDone ? '#10b981' : '#475569',
-                  boxShadow: isActive ? '0 0 10px #38bdf8' : 'none',
+                  width: active ? 7 : 5,
+                  height: active ? 7 : 5,
+                  background: color,
+                  display: 'inline-block',
+                  transform: 'rotate(45deg)',
                 }}
               />
               <span>{step.label}</span>
@@ -81,103 +83,74 @@ export function TechPipelineHeader({
           )
         })}
       </div>
-
-      {/* Deploy / Action Counter Pill */}
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'baseline',
           gap: 6,
-          padding: '5px 12px',
-          borderRadius: 999,
-          background: 'rgba(2, 132, 199, 0.14)',
-          border: '1px solid rgba(56, 189, 248, 0.35)',
-          color: '#e0f2fe',
+          color: MATERIAL.ink,
           fontSize: 11,
           fontWeight: 800,
         }}
       >
-        <span style={{ color: '#38bdf8' }}>▲</span>
+        <span style={{ color: ACCENT.cyan.solid }}>▲</span>
         <span>{deployCount}</span>
       </div>
     </div>
   )
 }
 
-/**
- * Word emphasis box with 4 corner anchor dots (just like Firecracker / Vercel video reference).
- */
+/** Word emphasis with four corner registration ticks — a film mark, not a UI chip. */
 export function KineticWordBox({
   children,
-  color = '#38bdf8',
+  color = ACCENT.cyan.solid,
   style,
 }: {
   children: React.ReactNode
   color?: string
   style?: CSSProperties
 }) {
+  const tick = (top: number, left: number): CSSProperties => ({
+    position: 'absolute',
+    top,
+    left,
+    width: 5,
+    height: 5,
+    borderTop: `1px solid ${color}`,
+    borderLeft: `1px solid ${color}`,
+  })
   return (
     <span
+      data-mg-registration
       style={{
         position: 'relative',
         display: 'inline-block',
         padding: '2px 8px',
         margin: '0 4px',
-        border: `1.5px solid ${color}`,
-        borderRadius: 4,
-        background: `${color}15`,
-        color: '#ffffff',
+        border: `1px solid ${color}`,
+        color: MATERIAL.ink,
         fontWeight: 900,
         ...style,
       }}
     >
-      {/* 4 Corner Anchor Dots */}
+      <span aria-hidden style={tick(-3, -3)} />
       <span
-        style={{
-          position: 'absolute',
-          top: -3,
-          left: -3,
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          background: '#ffffff',
-          boxShadow: `0 0 6px ${color}`,
-        }}
+        aria-hidden
+        style={{ ...tick(-3, -3), left: 'auto', right: -3, transform: 'scaleX(-1)' }}
       />
       <span
-        style={{
-          position: 'absolute',
-          top: -3,
-          right: -3,
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          background: '#ffffff',
-          boxShadow: `0 0 6px ${color}`,
-        }}
+        aria-hidden
+        style={{ ...tick(-3, -3), top: 'auto', bottom: -3, transform: 'scaleY(-1)' }}
       />
       <span
+        aria-hidden
         style={{
-          position: 'absolute',
+          ...tick(-3, -3),
+          top: 'auto',
           bottom: -3,
-          left: -3,
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          background: '#ffffff',
-          boxShadow: `0 0 6px ${color}`,
-        }}
-      />
-      <span
-        style={{
-          position: 'absolute',
-          bottom: -3,
+          left: 'auto',
           right: -3,
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          background: '#ffffff',
-          boxShadow: `0 0 6px ${color}`,
+          transform: 'scale(-1, -1)',
         }}
       />
       {children}

@@ -1,10 +1,15 @@
 // ============================================
-// Time-driven animation.
+// Time-driven animation — rebuilt on the 100 motion rules.
 //
 // Every value on screen is a pure function of the clock, never of how long
 // something has been mounted. That is what lets the timeline be scrubbed,
 // jumped and recorded frame-exactly: the same time always draws the same
-// frame. (framer-motion's own timers would keep running behind a scrub.)
+// frame. All exports keep their signatures; the motion vocabulary changed:
+//   · one studio ease, cubic-bezier(0.16, 1, 0.3, 1)  (Rule 31)
+//   · no camera zoom: Z/push-in is clamped out         (Rule 9 / 11.9)
+//   · transform + opacity only; no layout properties   (Rule 33)
+//   · stepped flipbook cadence for paper materials     (Rule 40)
+//   · no wall-clock timers, no Math.random             (Rule 34)
 // ============================================
 
 import type { CSSProperties } from 'react'
@@ -14,13 +19,13 @@ export const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v)
 /** Progress of a window [at, at + dur] at time t, 0..1. */
 export const progress = (t: number, at: number, dur: number) => clamp((t - at) / dur)
 
-/** cubic-bezier(0.22, 1, 0.36, 1) — solved for x, then y. */
+/** The single studio ease: cubic-bezier(0.16, 1, 0.3, 1), solved for x then y. */
 export function ease(p: number): number {
   if (p <= 0) return 0
   if (p >= 1) return 1
-  const x1 = 0.22
+  const x1 = 0.16
   const y1 = 1
-  const x2 = 0.36
+  const x2 = 0.3
   const y2 = 1
   const bx = (u: number) => 3 * x1 * u * (1 - u) ** 2 + 3 * x2 * u * u * (1 - u) + u ** 3
   const by = (u: number) => 3 * y1 * u * (1 - u) ** 2 + 3 * y2 * u * u * (1 - u) + u ** 3
@@ -36,7 +41,7 @@ export function ease(p: number): number {
 
 /**
  * A spring (stiffness 120, damping 18, mass 1) as a closed form: the value it
- * reaches `s` seconds after release, from 0 towards 1, overshooting a little.
+ * reaches `s` seconds after release, from 0 towards 1, with a small overshoot.
  */
 const W0 = Math.sqrt(120)
 const ZETA = 18 / (2 * W0)
@@ -53,7 +58,7 @@ export function enter(
   at: number,
   options: { y?: number; x?: number; scale?: number; fade?: number } = {},
 ): CSSProperties {
-  const { y = 24, x = 0, scale = 0.92, fade = 0.35 } = options
+  const { y = 24, x = 0, scale = 0.94, fade = 0.35 } = options
   const s = spring(t - at)
   const o = progress(t, at, fade)
   return {
@@ -63,8 +68,8 @@ export function enter(
 }
 
 /**
- * Studio spring (stiffness 140, damping 18, mass 1) for fluid, Apple/Linear-grade SaaS motion.
- * Closed-form analytical solution: settling quickly with organic deceleration and zero jank.
+ * Studio spring (stiffness 140, damping 18, mass 1) — organic deceleration
+ * with a controlled overshoot (well under the 1.05 cap in Rule 37).
  */
 const WD_140 = Math.sqrt(59)
 export function studioSpring(s: number): number {
@@ -73,18 +78,14 @@ export function studioSpring(s: number): number {
   return 1 - decay * (Math.cos(WD_140 * s) + (9 / WD_140) * Math.sin(WD_140 * s))
 }
 
-/**
- * Premium studio entrance: combines stiffness:140/damping:18 spring physics
- * with a soft Y-axis rise (+25px -> 0px) and scale entrance (0.94 -> 1.0).
- */
+/** Studio entrance: 140/18 spring + a soft rise and a restrained scale. */
 export function studioSpringEnter(
   t: number,
   at: number,
   options: { y?: number; x?: number; scale?: number; fade?: number } = {},
 ): CSSProperties {
-  const { y = 25, x = 0, scale = 0.94, fade = 0.28 } = options
-  const elapsed = t - at
-  const s = studioSpring(elapsed)
+  const { y = 24, x = 0, scale = 0.95, fade = 0.28 } = options
+  const s = studioSpring(t - at)
   const o = clamp(progress(t, at, fade))
   return {
     opacity: o,
@@ -126,7 +127,20 @@ export function strokeDraw(t: number, at: number, dur = 1.0, length = 1000) {
   }
 }
 
-/** Subtle cinematic camera zoom & pan. */
+/**
+ * Stepped flipbook cadence for paper / stop-motion materials (Rule 40).
+ * Returns a 0..1 value that advances in `steps` discrete increments.
+ */
+export function stepsCadence(t: number, at: number, dur: number, steps = 8): number {
+  const raw = clamp(progress(t, at, dur))
+  return Math.floor(raw * steps) / steps
+}
+
+/**
+ * Cinematic camera move — pan only. The old push-in zoom is banned
+ * (Rule 9 / layout-defect-laws 11.9); `zoomFrom`/`zoomTo` are kept in the
+ * signature for source compatibility but the stage scale stays 1.0.
+ */
 export function cinematicZoom(
   t: number,
   at: number,
@@ -135,16 +149,17 @@ export function cinematicZoom(
   zoomTo = 1.06,
   panY = 0,
 ): CSSProperties {
+  void zoomFrom
+  void zoomTo
   const p = ease(progress(t, at, dur))
-  const scale = mix(zoomFrom, zoomTo, p)
   const y = mix(0, panY, p)
   return {
-    transform: `scale(${scale}) translateY(${y}px)`,
+    transform: `translate3d(0, ${y.toFixed(2)}px, 0)`,
     transformOrigin: 'center center',
   }
 }
 
-/** Pure deterministic pseudo-random hash (0..1) for procedural particle and geometry animation. */
+/** Pure deterministic pseudo-random hash (0..1) for procedural geometry. */
 export function deterministicHash(x: number, y: number): number {
   let n = (x * 374761393 + y * 668265263) | 0
   n = Math.imul(n ^ (n >>> 13), 1274126177)
@@ -188,14 +203,17 @@ export function pathFollow(
   const p0 = points[segIdx]!
   const p1 = points[segIdx + 1]!
 
-  const x = mix(p0.x, p1.x, segP)
-  const y = mix(p0.y, p1.y, segP)
-  const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x) * (180 / Math.PI)
-
-  return { x, y, angle }
+  return {
+    x: mix(p0.x, p1.x, segP),
+    y: mix(p0.y, p1.y, segP),
+    angle: (Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180) / Math.PI,
+  }
 }
 
-/** Camera motion operator for 3D perspective stages. */
+/**
+ * Camera operator for perspective stages. Rotation and pan are allowed;
+ * translateZ is clamped out so no shot ever zooms (Rule 9).
+ */
 export function cameraMove(
   t: number,
   at: number,
@@ -208,11 +226,9 @@ export function cameraMove(
   const rx = mix(fromCam.rx ?? 0, toCam.rx ?? 0, p)
   const ry = mix(fromCam.ry ?? 0, toCam.ry ?? 0, p)
   const rz = mix(fromCam.rz ?? 0, toCam.rz ?? 0, p)
-  const z = mix(fromCam.z ?? 0, toCam.z ?? 0, p)
   const y = mix(fromCam.y ?? 0, toCam.y ?? 0, p)
-
   return {
-    transform: `perspective(1000px) translateZ(${z}px) translateY(${y}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
+    transform: `perspective(1000px) translateY(${y}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`,
     transformStyle: 'preserve-3d',
   }
 }
@@ -230,7 +246,7 @@ export function staggerTimings(
   for (let i = 0; i < count; i++) {
     out.push(curr)
     curr += step
-    step = Math.max(0.04, step - decay)
+    step = Math.max(0.05, step - decay)
   }
   return out
 }
@@ -241,24 +257,20 @@ export interface SpringConfig {
   mass: number
 }
 
-// Standard spring configuration for smooth SaaS motion
+/** Standard studio spring configuration. */
 export const SAAS_SPRING: SpringConfig = {
   stiffness: 140,
   damping: 18,
   mass: 1,
 }
 
-// Linear interpolation: lerp(start, end, t) — identical to mix
-export const lerp = (start: number, end: number, t: number): number => {
-  return start + (end - start) * t
-}
+/** Linear interpolation — identical to mix. */
+export const lerp = (start: number, end: number, t: number): number => start + (end - start) * t
 
-// Exponential Out easing for ultra-smooth entry without jank
-export const easeOutExpo = (x: number): number => {
-  return x === 1 ? 1 : 1 - Math.pow(2, -10 * x)
-}
+/** Exponential Out easing for ultra-smooth entry without jank. */
+export const easeOutExpo = (x: number): number => (x === 1 ? 1 : 1 - Math.pow(2, -10 * x))
 
-// Frame-based deterministic progress calculation
+/** Frame-based deterministic progress calculation. */
 export const getFrameProgress = (
   currentFrame: number,
   startFrame: number,

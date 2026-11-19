@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 export interface FastSpinClockProps {
   badgeText?: string
@@ -57,7 +58,7 @@ export const FastSpinClock: React.FC<FastSpinClockProps> = ({
           width: size,
           height: size,
           borderRadius: '50%',
-          background: '#0d131f',
+          background: MATERIAL.panel,
           border: '4px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 12px 28px rgba(0, 0, 0, 0.5)',
           position: 'relative',
@@ -79,7 +80,7 @@ export const FastSpinClock: React.FC<FastSpinClockProps> = ({
                 dominantBaseline="central"
                 fontSize={size > 120 ? 10 : 8}
                 fontWeight={800}
-                fill="#f8fafc"
+                fill={MATERIAL.ink}
               >
                 {num}
               </text>
@@ -92,7 +93,7 @@ export const FastSpinClock: React.FC<FastSpinClockProps> = ({
             y1={cy}
             x2={cx + r * 0.45 * Math.cos(((hourAngle - 90) * Math.PI) / 180)}
             y2={cy + r * 0.45 * Math.sin(((hourAngle - 90) * Math.PI) / 180)}
-            stroke="#f8fafc"
+            stroke={MATERIAL.ink}
             strokeWidth={3.5}
             strokeLinecap="round"
           />
@@ -103,7 +104,7 @@ export const FastSpinClock: React.FC<FastSpinClockProps> = ({
             y1={cy}
             x2={cx + r * 0.65 * Math.cos(((minuteAngle - 90) * Math.PI) / 180)}
             y2={cy + r * 0.65 * Math.sin(((minuteAngle - 90) * Math.PI) / 180)}
-            stroke="#f8fafc"
+            stroke={MATERIAL.ink}
             strokeWidth={2.5}
             strokeLinecap="round"
           />
@@ -114,21 +115,28 @@ export const FastSpinClock: React.FC<FastSpinClockProps> = ({
             y1={cy}
             x2={cx + r * 0.78 * Math.cos(((secondAngle - 90) * Math.PI) / 180)}
             y2={cy + r * 0.78 * Math.sin(((secondAngle - 90) * Math.PI) / 180)}
-            stroke="#F6B91E"
+            stroke={ACCENT.amber.solid}
             strokeWidth={2}
             strokeLinecap="round"
           />
 
           {/* Center Pinion */}
-          <circle cx={cx} cy={cy} r={4} fill="#F6B91E" stroke="#ffffff" strokeWidth={1.5} />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={4}
+            fill={ACCENT.amber.solid}
+            stroke={MATERIAL.ink}
+            strokeWidth={1.5}
+          />
         </svg>
       </div>
 
       {badgeText && (
         <div
           style={{
-            background: '#F6B91E',
-            color: '#121D35',
+            background: ACCENT.amber.solid,
+            color: MATERIAL.paperInk,
             padding: '6px 14px',
             borderRadius: 999,
             fontSize: 13,

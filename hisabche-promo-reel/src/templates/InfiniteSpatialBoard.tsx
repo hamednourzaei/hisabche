@@ -73,7 +73,6 @@ export const InfiniteSpatialBoardTemplate: React.FC<InfiniteSpatialBoardProps> =
           inset: 0,
           transformOrigin: '270px 480px',
           transform: `translate(${camX}px, ${camY}px) scale(${camScale})`,
-          transition: 'none',
         }}
       >
         {/* Infinite Grid Background */}

@@ -1,6 +1,7 @@
 // packages/app-shell/src/features/auth/require-auth.tsx
 import React, { type ReactNode, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { evaluateOfflineOnboarding } from '@hisabche/validation'
 
 import {
   useAuthStore as useSharedAuthStore,
@@ -30,6 +31,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const sharedUser = useSharedAuthStore((s) => s.user)
   const hasNoWorkspace = useWorkspaceStore((s) => s.hasNoWorkspace)
   const localCompleted = useOnboardingStore((s) => s.isCompleted)
+  const localStep = useOnboardingStore((s) => s.step)
   const claimForUser = useOnboardingStore((s) => s.claimForUser)
   const resetOnboarding = useOnboardingStore((s) => s.reset)
 
@@ -46,10 +48,21 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
 
-  // Unknown (a desktop session signed in offline has no server answer) falls
-  // back to the local flag, exactly like the web's guard.
-  const notCompleted =
-    serverCompleted === true ? false : serverCompleted === false ? true : !localCompleted
+  // ONE offline/onboarding decision, shared with the server-side gate's rules:
+  // a locally completed business keeps working offline even when no cloud
+  // answer is available; an incomplete one resumes at its actual step. A stale
+  // «server says false» never takes completed local work away.
+  const decision = evaluateOfflineOnboarding({
+    localCompletedAt: localCompleted ? 'local' : null,
+    localStep,
+    // An offline desktop session has no verified cloud activation; the server
+    // answer only tells us onboarding finished there, not that sync is active.
+    cloudActivated: false,
+    nextRequiredStep: null,
+  })
+  // Keep the established shell semantics when the SERVER positively says the
+  // wizard was never finished (the local flag is then a leftover).
+  const notCompleted = serverCompleted === false ? true : !decision.mayUseBusinessOffline
 
   if (notCompleted || hasNoWorkspace === true) {
     if (location.pathname !== '/onboarding') {

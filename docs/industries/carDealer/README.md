@@ -46,7 +46,7 @@
 | قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
 | --- | --- | --- | --- |
 | `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` |
-| `auto_fitments` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `CORE_CHARGE_NOT_APPLIED` |
+| `auto_fitments` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `CORE_REFUND_POSTING_SERVER_ONLY` |
 
 ## تفاوت با خانواده‌ی «مالی و بازرگانی»
 
@@ -80,4 +80,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`)؛ `auto_fitments` (`CORE_CHARGE_NOT_APPLIED`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`)؛ `auto_fitments` (`CORE_REFUND_POSTING_SERVER_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

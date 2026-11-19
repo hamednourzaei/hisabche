@@ -456,7 +456,6 @@ function CostWaterfallActor({ t, plan }: R56ActorProps) {
                     className="r56-gate-drain"
                     style={{
                       width: isRevealed ? `${drainWidth}%` : '0%',
-                      transition: 'width 0.45s cubic-bezier(0.22, 1, 0.36, 1)',
                     }}
                   />
                 </div>

@@ -25,8 +25,8 @@
 | 3 | `grocery` | خواروبار و سوپرمارکت / خواروبار و سوپرمارکت / Grocery and supermarket | صنف | `RETAIL_STORE` | `RETAIL_STORE` | available: multi_unit | partial: batch_expiry | `core` | `everyday_sales` |
 | 4 | `bakery` | نانوایی و قنادی / نانوایی و قنادی / Bakery and confectionery | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: recipe_bom, batch_expiry · planned: production_batch | `core` | `food_recipe` |
 | 5 | `butcher` | قصابی / قصابی / Butcher | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: batch_expiry | — | `core` | `food_recipe` |
-| 6 | `restaurant` | رستوران / رستوران / Restaurant | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: recipe_bom · planned: table_service, production_batch | `core` | `food_recipe` |
-| 7 | `cafe` | کافه و قهوه‌خانه / کافه و قهوه‌خانه / Cafe and teahouse | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: recipe_bom · planned: table_service, production_batch | `core` | `food_recipe` |
+| 6 | `restaurant` | رستوران / رستوران / Restaurant | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: table_service, recipe_bom · planned: production_batch | `core` | `food_recipe` |
+| 7 | `cafe` | کافه و قهوه‌خانه / کافه و قهوه‌خانه / Cafe and teahouse | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: table_service, recipe_bom · planned: production_batch | `core` | `food_recipe` |
 | 8 | `fruitVegetable` | میوه و سبزی / میوه و سبزی / Fruit and vegetables | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit | partial: batch_expiry | `core` | `everyday_sales` |
 | 9 | `dairy` | لبنیات / لبنیات / Dairy | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit · partial: batch_expiry | — | `core` | `food_recipe` |
 | 10 | `nuts` | خشکبار و آجیل / خشکبار و آجیل / Dried fruit and nuts | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit | — | `core` | `everyday_sales` |
@@ -118,7 +118,7 @@
 | `wholesale_measurement` | عمده‌فروشی و فروش اندازه‌ای | 12 | `wholesale`، `fabric`، `fabricRoll`، `carpet`، `tailoring`، `hardware`، `buildingMaterials`، `paint`، `timber`، `glass`، `fuel`، `seedsFertilizer` | `inventory_catalog`, `pricing_rates`, `sales_invoice` | 10 از 12 |
 | `sku_serial` | SKU، سایز و سریال | 12 | `watches`، `clothing`، `shoes`، `mobilePhones`، `computers`، `computerComponents`، `electronics`، `autoParts`، `carDealer`، `furniture`، `homeAppliances`، `toys` | `inventory_catalog`, `quality_claims`, `sales_invoice` | 12 از 12 |
 | `value_trade` | معاملات ارزش‌محور | 2 | `jewellery`، `currencyExchange` | `exchange`, `pricing_rates`, `sales_invoice` | 2 از 2 |
-| `food_recipe` | غذا و دستور تهیه | 5 | `bakery`، `butcher`، `restaurant`، `cafe`، `dairy` | `inventory_catalog`, `production_bom`, `sales_invoice` | 5 از 5 |
+| `food_recipe` | غذا و دستور تهیه | 5 | `bakery`، `butcher`، `restaurant`، `cafe`، `dairy` | `inventory_catalog`, `production_bom`, `sales_invoice`, `sales_orders` | 5 از 5 |
 | `health` | سلامت | 3 | `pharmacy`، `clinic`، `optician` | `appointments_resources`, `inventory_catalog`, `sales_invoice` | 3 از 3 |
 | `booking_services` | نوبت و خدمات | 6 | `barber`، `beautySalon`، `photography`، `education`، `laundry`، `wedding` | `appointments_resources`, `contracts_recurring`, `deposits_installments`, `package_credits`, `sales_invoice`, `work_orders_repair` | 6 از 6 |
 | `repair_ticket` | تعمیر و تیکت | 3 | `itServices`، `mechanic`، `repairs` | `contracts_recurring`, `quality_claims`, `work_orders_repair` | 3 از 3 |

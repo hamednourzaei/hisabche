@@ -44,7 +44,7 @@
 
 | قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
 | --- | --- | --- | --- |
-| `package_credits` | `EXISTING_BUT_INCOMPLETE` | `package_credits` · partial | `GRANT_ONLINE_ONLY` |
+| `package_credits` | `EXISTING_BUT_INCOMPLETE` | `package_credits` · partial | `GRANT_ACTIVATION_POLICY_BASIC` |
 
 ## تفاوت با خانواده‌ی «آموزش»
 

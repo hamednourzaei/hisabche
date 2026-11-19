@@ -13,10 +13,12 @@
 
 import type { CSSProperties } from 'react'
 import { clamp, ease, mix, progress, pulse, spring } from '../engine/anim'
+import { faNumber as deterministicFaNumber } from './art-direction'
 import { Icon } from './icons'
 import { Rich } from './rich'
 
-export const faNumber = (n: number): string => new Intl.NumberFormat('fa-IR').format(Math.round(n))
+// Back-compat export: deterministic char-map, never Intl (Rule 16/66).
+export const faNumber = deterministicFaNumber
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. OfflineSyncIndicator
@@ -259,7 +261,6 @@ export function OfflineSyncIndicator({
             background: isSynced
               ? 'linear-gradient(90deg, rgba(16,185,129,0.1), rgba(16,185,129,0.3))'
               : 'linear-gradient(90deg, rgba(34,211,238,0.1), rgba(34,211,238,0.3))',
-            transition: 'width 0.1s linear',
             borderLeft: isSyncing ? '2px solid #22d3ee' : isSynced ? '2px solid #34d399' : 'none',
           }}
         />
@@ -950,7 +951,6 @@ export function ProfitWaterfallBreakdown({
               borderRadius: '8px 8px 4px 4px',
               background: 'linear-gradient(180deg, #22d3ee 0%, rgba(34, 211, 238, 0.3) 100%)',
               boxShadow: '0 0 16px rgba(34, 211, 238, 0.25)',
-              transition: 'height 0.1s linear',
             }}
           />
           <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginTop: 6 }}>
@@ -986,7 +986,6 @@ export function ProfitWaterfallBreakdown({
               borderRadius: '8px 8px 4px 4px',
               background: 'linear-gradient(180deg, #fb7185 0%, rgba(251, 113, 133, 0.35) 100%)',
               boxShadow: '0 0 14px rgba(251, 113, 133, 0.25)',
-              transition: 'height 0.1s linear',
             }}
           />
           <div style={{ fontSize: 10, fontWeight: 700, color: '#fb7185', marginTop: 6 }}>
@@ -1022,7 +1021,6 @@ export function ProfitWaterfallBreakdown({
               borderRadius: '8px 8px 4px 4px',
               background: 'linear-gradient(180deg, #f59e0b 0%, rgba(245, 158, 11, 0.35) 100%)',
               boxShadow: '0 0 14px rgba(245, 158, 11, 0.25)',
-              transition: 'height 0.1s linear',
             }}
           />
           <div style={{ fontSize: 10, fontWeight: 700, color: '#fbbf24', marginTop: 6 }}>
@@ -1060,7 +1058,6 @@ export function ProfitWaterfallBreakdown({
               background: 'linear-gradient(180deg, #34d399 0%, rgba(16, 185, 129, 0.4) 100%)',
               boxShadow: '0 0 24px rgba(52, 211, 153, 0.45)',
               border: '1px solid rgba(52, 211, 153, 0.6)',
-              transition: 'height 0.1s linear',
             }}
           />
           <div style={{ fontSize: 10, fontWeight: 800, color: '#34d399', marginTop: 6 }}>

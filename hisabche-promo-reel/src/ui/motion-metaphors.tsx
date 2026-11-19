@@ -1,12 +1,15 @@
 // src/ui/motion-metaphors.tsx
-// Visual Metaphor System — animated graphics that make concepts tangible.
-// Each metaphor is a pure function of (t, at) and returns CSS/JSX.
-// `MetaphorLayer` is consumed by SceneView every frame — see engine/motion-plan.ts.
+// Visual metaphor system — rebuilt from web-widget styling to film marks.
+// Every export and the MotionPlan contract are frozen; colors come from the
+// single art-direction source, emoji are replaced by drawn glyphs, and all
+// motion is a pure function of (t) using transform/opacity only.
+// Rules: 22, 33, 76, 81-90, 98.
 
 import type { CSSProperties, ReactNode } from 'react'
 
 import { clamp, ease, mix, progress, pulse } from '../engine/anim'
 import type { MotionMetaphorName, MotionPlan } from '../engine/motion-plan'
+import { ACCENT, MATERIAL, faNumber } from './art-direction'
 
 export interface MetaphorProps {
   t: number
@@ -15,28 +18,31 @@ export interface MetaphorProps {
   size?: number
 }
 
-// ── Rising Chart ──────────────────────────────────────────────────────────────
+// ── Rising chart: stroked bars, no gradient pill ─────────────────────────
 export function RisingChart({ t, at = 0, dur = 1.2, size = 120 }: MetaphorProps) {
   const bars = [0.3, 0.5, 0.7, 0.85, 1.0]
   return (
     <div
-      style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: size, width: size * 1.4 }}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        gap: 4,
+        height: size,
+        width: size * 1.4,
+        borderBottom: `1px solid ${MATERIAL.panelEdge}`,
+      }}
     >
       {bars.map((h, i) => {
-        const delay = i * 0.08
-        const bp = ease(progress(t, at + delay, dur * 0.6))
-        const height = h * size * bp
+        const bp = ease(progress(t, at + i * 0.06, dur * 0.6))
         return (
           <div
             key={i}
             style={{
-              width: size * 0.22,
-              height: Math.max(2, height),
-              background: `linear-gradient(180deg, #00E5FF, #A855F7)`,
-              borderRadius: 4,
-              transform: `scaleY(${bp})`,
-              transformOrigin: 'bottom',
-              opacity: bp,
+              width: size * 0.2,
+              height: Math.max(2, h * size * bp),
+              background: ACCENT.cyan.solid,
+              opacity: 0.55 + 0.45 * bp,
+              transform: 'none',
             }}
           />
         )
@@ -45,30 +51,35 @@ export function RisingChart({ t, at = 0, dur = 1.2, size = 120 }: MetaphorProps)
   )
 }
 
-// ── Shaking Question Mark ─────────────────────────────────────────────────────
+// ── Question: drawn mark, never a sticker ────────────────────────────────
 export function ShakingQuestion({ t, at = 0, dur = 1.0, size = 80 }: MetaphorProps) {
   const elapsed = Math.max(0, t - at)
-  const shake = elapsed < dur ? Math.sin(elapsed * 25) * 6 * (1 - elapsed / dur) : 0
-  const scale = 1 + pulse(t, at, at + dur, 0.4) * 0.15
-  const opacity = progress(t, at, 0.2)
+  const shake = elapsed < dur ? Math.sin(elapsed * 25) * 5 * (1 - elapsed / dur) : 0
+  const scale = 1 + pulse(t, at, at + dur, 0.4) * 0.1
   return (
-    <div
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 80 80"
+      aria-hidden
       style={{
-        fontSize: size,
-        fontWeight: 900,
-        color: '#F59E0B',
-        transform: `translateX(${shake}px) scale(${scale})`,
-        opacity: clamp(opacity),
-        textShadow: '0 0 20px rgba(245,158,11,0.6)',
-        lineHeight: 1,
+        transform: `translate3d(${shake}px,0,0) scale(${scale})`,
+        opacity: clamp(progress(t, at, 0.2)),
       }}
     >
-      ?
-    </div>
+      <path
+        d="M22 26 C22 16 58 16 58 28 C58 38 44 40 40 50"
+        fill="none"
+        stroke={ACCENT.amber.solid}
+        strokeWidth={7}
+        strokeLinecap="round"
+      />
+      <circle cx={40} cy={62} r={5} fill={ACCENT.amber.solid} />
+    </svg>
   )
 }
 
-// ── Flipping Calendar Pages ───────────────────────────────────────────────────
+// ── Calendar flip: stepped cadence ───────────────────────────────────────
 export function FlippingCalendar({ t, at = 0, dur = 1.5, size = 80 }: MetaphorProps) {
   const pages = 3
   return (
@@ -76,30 +87,28 @@ export function FlippingCalendar({ t, at = 0, dur = 1.5, size = 80 }: MetaphorPr
       {Array.from({ length: pages }).map((_, i) => {
         const pageAt = at + i * (dur / pages)
         const p = ease(progress(t, pageAt, dur / pages))
-        const flip = p * 180
-        const opacity = 1 - p * 0.7
         return (
           <div
             key={i}
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-              border: '2px solid rgba(255,255,255,0.15)',
-              borderRadius: 8,
+              background: MATERIAL.panel,
+              border: `1px solid ${MATERIAL.panelEdge}`,
+              borderRadius: 2,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: size * 0.4,
-              color: '#00E5FF',
-              fontWeight: 700,
-              transform: `rotateX(${flip}deg)`,
+              color: ACCENT.cyan.solid,
+              fontWeight: 800,
+              transform: `rotateX(${p * 180}deg)`,
               transformOrigin: 'top center',
-              opacity: clamp(opacity),
+              opacity: 1 - p * 0.7,
               backfaceVisibility: 'hidden',
             }}
           >
-            {i + 1}
+            {faNumber(i + 1)}
           </div>
         )
       })}
@@ -107,39 +116,48 @@ export function FlippingCalendar({ t, at = 0, dur = 1.5, size = 80 }: MetaphorPr
   )
 }
 
-// ── Warning Icon with Impact ──────────────────────────────────────────────────
+// ── Warning: drawn triangle, no emoji ────────────────────────────────────
 export function WarningImpact({ t, at = 0, dur = 0.8, size = 80 }: MetaphorProps) {
   const elapsed = Math.max(0, t - at)
   const scale =
     elapsed < dur
-      ? mix(0, 1.3, ease(progress(t, at, dur * 0.5))) * (1 - 0.15 * Math.sin(elapsed * 20))
+      ? mix(0, 1.25, ease(progress(t, at, dur * 0.5))) * (1 - 0.1 * Math.sin(elapsed * 18))
       : 1
-  const opacity = progress(t, at, 0.15)
-  const pulseVal = pulse(t, at + dur, at + dur + 1.5, 0.6)
+  const beat = pulse(t, at + dur, at + dur + 1.5, 0.6)
   return (
-    <div
-      style={{
-        fontSize: size,
-        fontWeight: 900,
-        color: '#F59E0B',
-        transform: `scale(${scale})`,
-        opacity: clamp(opacity),
-        textShadow: `0 0 ${10 + pulseVal * 20}px rgba(245,158,11,${0.4 + pulseVal * 0.4})`,
-        lineHeight: 1,
-      }}
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 80 80"
+      aria-hidden
+      style={{ transform: `scale(${scale})`, opacity: clamp(progress(t, at, 0.15)) }}
     >
-      ⚠
-    </div>
+      <path
+        d="M40 10 L74 68 L6 68 Z"
+        fill="none"
+        stroke={ACCENT.amber.solid}
+        strokeWidth={5}
+        strokeLinejoin="round"
+      />
+      <path d="M40 30 L40 50" stroke={ACCENT.amber.solid} strokeWidth={6} strokeLinecap="round" />
+      <circle cx={40} cy={59} r={3.5} fill={ACCENT.amber.solid} />
+      <circle
+        cx={40}
+        cy={40}
+        r={34}
+        fill="none"
+        stroke={ACCENT.amber.solid}
+        strokeWidth={1.5}
+        opacity={beat * 0.5}
+      />
+    </svg>
   )
 }
 
-// ── Opposing Cards ────────────────────────────────────────────────────────────
+// ── Opposing plates ──────────────────────────────────────────────────────
 export function OpposingCards({ t, at = 0, dur = 1.2, size = 100 }: MetaphorProps) {
   const p = ease(progress(t, at, dur))
-  const leftX = mix(-size * 1.5, -size * 0.3, p)
-  const rightX = mix(size * 1.5, size * 0.3, p)
-  const leftScale = mix(0.8, 1, p)
-  const rightScale = mix(0.8, 1, p)
+  const x = mix(size * 1.4, size * 0.3, p)
   return (
     <div
       style={{
@@ -154,14 +172,12 @@ export function OpposingCards({ t, at = 0, dur = 1.2, size = 100 }: MetaphorProp
       <div
         style={{
           position: 'absolute',
-          transform: `translateX(${leftX}px) scale(${leftScale})`,
-          background: 'rgba(0,229,255,0.15)',
-          border: '2px solid #00E5FF',
-          borderRadius: 12,
+          transform: `translate3d(${-x}px,0,0)`,
+          background: ACCENT.cyan.soft,
+          borderInlineStart: `2px solid ${ACCENT.cyan.solid}`,
           padding: '8px 16px',
-          fontSize: size * 0.25,
-          color: '#00E5FF',
-          fontWeight: 700,
+          color: ACCENT.cyan.solid,
+          fontWeight: 800,
           opacity: p,
         }}
       >
@@ -170,14 +186,12 @@ export function OpposingCards({ t, at = 0, dur = 1.2, size = 100 }: MetaphorProp
       <div
         style={{
           position: 'absolute',
-          transform: `translateX(${rightX}px) scale(${rightScale})`,
-          background: 'rgba(239,68,68,0.15)',
-          border: '2px solid #EF4444',
-          borderRadius: 12,
+          transform: `translate3d(${x}px,0,0)`,
+          background: ACCENT.red.soft,
+          borderInlineStart: `2px solid ${ACCENT.red.solid}`,
           padding: '8px 16px',
-          fontSize: size * 0.25,
-          color: '#EF4444',
-          fontWeight: 700,
+          color: ACCENT.red.solid,
+          fontWeight: 800,
           opacity: p,
         }}
       >
@@ -187,7 +201,7 @@ export function OpposingCards({ t, at = 0, dur = 1.2, size = 100 }: MetaphorProp
   )
 }
 
-// ── Transforming Number ───────────────────────────────────────────────────────
+// ── Transformation: unknown → known, never a made-up figure ──────────────
 export function TransformingNumber({
   t,
   at = 0,
@@ -198,7 +212,7 @@ export function TransformingNumber({
 }: MetaphorProps & { from?: string; to?: string }) {
   const p = ease(progress(t, at, dur))
   const showTo = p > 0.5
-  const scale = 1 + Math.sin(p * Math.PI) * 0.2
+  const scale = 1 + Math.sin(p * Math.PI) * 0.1
   const opacity = p < 0.4 ? 1 : p < 0.6 ? 1 - (p - 0.4) * 5 : (p - 0.6) * 2.5
   return (
     <div
@@ -207,9 +221,7 @@ export function TransformingNumber({
         fontWeight: 900,
         transform: `scale(${scale})`,
         opacity: clamp(Math.max(0.3, opacity)),
-        color: showTo ? '#10B981' : '#F59E0B',
-        textShadow: showTo ? '0 0 20px rgba(16,185,129,0.6)' : '0 0 20px rgba(245,158,11,0.6)',
-        transition: 'color 0.3s',
+        color: showTo ? ACCENT.green.solid : ACCENT.amber.solid,
       }}
     >
       {showTo ? to : from}
@@ -217,7 +229,7 @@ export function TransformingNumber({
   )
 }
 
-// ── Animated Arrow ────────────────────────────────────────────────────────────
+// ── Directional stroke ───────────────────────────────────────────────────
 export function AnimatedArrow({
   t,
   at = 0,
@@ -226,44 +238,47 @@ export function AnimatedArrow({
   direction = 'right',
 }: MetaphorProps & { direction?: 'right' | 'down' | 'up' }) {
   const p = ease(progress(t, at, dur))
-  const translate = mix(-20, 0, p)
-  const opacity = p
   const rotation = direction === 'down' ? 90 : direction === 'up' ? -90 : 0
   return (
-    <div
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      aria-hidden
       style={{
-        fontSize: size,
-        opacity: clamp(opacity),
-        transform: `translateX(${translate}px) rotate(${rotation}deg)`,
-        color: '#00E5FF',
-        fontWeight: 900,
-        lineHeight: 1,
+        opacity: clamp(p),
+        transform: `translate3d(${mix(-14, 0, p)}px,0,0) rotate(${rotation}deg)`,
       }}
     >
-      →
-    </div>
+      <path
+        d="M4 20 H32 M24 12 L32 20 L24 28"
+        fill="none"
+        stroke={ACCENT.cyan.solid}
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
-// ── Motion Background (subtle floating particles) ────────────────────────────
+// ── Ambient field ────────────────────────────────────────────────────────
 export function MotionBackground({ t, count = 8 }: { t: number; count?: number }) {
   return (
     <div
+      aria-hidden
       style={{
         position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
         overflow: 'hidden',
-        opacity: 0.15,
+        opacity: 0.18,
       }}
     >
       {Array.from({ length: count }).map((_, i) => {
         const x = (i * 37 + 13) % 100
         const y = (i * 53 + 7) % 100
         const speed = 0.3 + (i % 3) * 0.2
-        const offsetX = Math.sin(t * speed + i) * 15
-        const offsetY = Math.cos(t * speed * 0.7 + i * 1.3) * 10
-        const scale = 0.5 + 0.5 * Math.sin(t * 0.5 + i * 0.8)
         return (
           <div
             key={i}
@@ -271,12 +286,10 @@ export function MotionBackground({ t, count = 8 }: { t: number; count?: number }
               position: 'absolute',
               left: `${x}%`,
               top: `${y}%`,
-              width: 4 + (i % 3) * 3,
-              height: 4 + (i % 3) * 3,
-              borderRadius: '50%',
-              background: i % 2 === 0 ? '#00E5FF' : '#A855F7',
-              transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-              filter: 'blur(1px)',
+              width: 3 + (i % 3) * 2,
+              height: 3 + (i % 3) * 2,
+              background: i % 2 === 0 ? ACCENT.cyan.solid : ACCENT.purple.solid,
+              transform: `translate3d(${Math.sin(t * speed + i) * 12}px, ${Math.cos(t * speed * 0.7 + i * 1.3) * 8}px, 0)`,
             }}
           />
         )
@@ -285,13 +298,12 @@ export function MotionBackground({ t, count = 8 }: { t: number; count?: number }
   )
 }
 
-// ── Silent Leak (profit dripping away — no words, pure motion) ────────────────
+// ── Silent leak ──────────────────────────────────────────────────────────
 export function LeakDrip({ t, at = 0 }: MetaphorProps) {
   return (
     <div style={{ position: 'relative', width: 64, height: 92 }}>
       {[0, 1, 2, 3].map((i) => {
         const cycle = ((((t - at) * 0.8 + i * 0.25) % 1) + 1) % 1
-        const started = t >= at
         return (
           <div
             key={i}
@@ -302,10 +314,9 @@ export function LeakDrip({ t, at = 0 }: MetaphorProps) {
               width: 8,
               height: 12,
               borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
-              background: '#22d3ee',
-              opacity: started ? clamp(1 - cycle) : 0,
-              transform: `translateY(${cycle * 74}px)`,
-              boxShadow: '0 0 8px rgba(34,211,238,0.5)',
+              background: ACCENT.cyan.solid,
+              opacity: t >= at ? clamp(1 - cycle) : 0,
+              transform: `translate3d(0, ${cycle * 74}px, 0)`,
             }}
           />
         )
@@ -314,7 +325,7 @@ export function LeakDrip({ t, at = 0 }: MetaphorProps) {
   )
 }
 
-// ── Opposition Field (two sides pushing apart — no words) ─────────────────────
+// ── Opposition field ─────────────────────────────────────────────────────
 export function OppositionField({ t, at = 0 }: MetaphorProps) {
   const p = ease(progress(t, at, 1))
   const sep = 16 + 6 * Math.sin(t * 1.6)
@@ -327,9 +338,8 @@ export function OppositionField({ t, at = 0 }: MetaphorProps) {
           left: 75 - sep - 46,
           width: 46,
           height: 86,
-          borderRadius: 12,
-          border: '2px solid rgba(34,211,238,0.85)',
-          background: 'rgba(34,211,238,0.10)',
+          border: `1px solid ${ACCENT.cyan.solid}`,
+          background: ACCENT.cyan.soft,
           opacity: p,
         }}
       />
@@ -340,9 +350,8 @@ export function OppositionField({ t, at = 0 }: MetaphorProps) {
           left: 75 + sep,
           width: 46,
           height: 86,
-          borderRadius: 12,
-          border: '2px solid rgba(251,113,133,0.85)',
-          background: 'rgba(251,113,133,0.10)',
+          border: `1px solid ${ACCENT.red.solid}`,
+          background: ACCENT.red.soft,
           opacity: p,
         }}
       />
@@ -350,7 +359,7 @@ export function OppositionField({ t, at = 0 }: MetaphorProps) {
   )
 }
 
-// ── Ripple Pulse (attention rings — no words) ─────────────────────────────────
+// ── Attention rings ──────────────────────────────────────────────────────
 export function RipplePulse({ t, at = 0 }: MetaphorProps) {
   return (
     <div style={{ position: 'relative', width: 124, height: 124 }}>
@@ -364,9 +373,9 @@ export function RipplePulse({ t, at = 0 }: MetaphorProps) {
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              border: '2px solid rgba(34,211,238,0.55)',
+              border: `1px solid ${ACCENT.cyan.solid}`,
               transform: `scale(${0.4 + p * 0.9})`,
-              opacity: t >= at ? clamp(1 - p) * 0.9 : 0,
+              opacity: t >= at ? clamp(1 - p) * 0.8 : 0,
             }}
           />
         )
@@ -375,10 +384,7 @@ export function RipplePulse({ t, at = 0 }: MetaphorProps) {
   )
 }
 
-// ── Metaphor Layer — the render hook every SceneView frame goes through ───────
-// Plan-driven: `plan.metaphor` and `plan.secondaryMetaphor` decide what is drawn.
-// Rendered behind scene content (pointer-events: none) with data attributes so
-// Motion QA and tests can prove the metaphor reached the real output.
+// ── Plan-driven layer ────────────────────────────────────────────────────
 
 const LAYER_POS: Record<MotionMetaphorName, CSSProperties> = {
   'warning-impact': { top: 118, insetInlineStart: 24, opacity: 0.9 },
@@ -422,7 +428,6 @@ function metaphorVisual(name: MotionMetaphorName, t: number, at: number): ReactN
     case 'opposition':
       return <OppositionField t={t} at={at} />
     case 'transformation':
-      // Symbols only — never a made-up figure or a currency.
       return <TransformingNumber t={t} at={at} from="؟" to="✓" size={56} />
     case 'question-shake':
       return <ShakingQuestion t={t} at={at} size={64} />

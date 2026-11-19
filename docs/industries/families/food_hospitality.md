@@ -20,8 +20,8 @@
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
 | [نانوایی و قنادی](../bakery/README.md) (`bakery`) | `generic` | `GENERIC_BUSINESS` | — | — |
-| [رستوران](../restaurant/README.md) (`restaurant`) | `generic` | `GENERIC_BUSINESS` | — | `table_service` |
-| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`) | `generic` | `GENERIC_BUSINESS` | — | `table_service` |
+| [رستوران](../restaurant/README.md) (`restaurant`) | `generic` | `GENERIC_BUSINESS` | — | — |
+| [کافه و قهوه‌خانه](../cafe/README.md) (`cafe`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
 ## پنج گردش کار
 
@@ -91,7 +91,7 @@
 
 ## شکاف‌های خانواده
 
-قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `table_service`.
+هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
 
 ## بر اساس اندازه
 

@@ -679,7 +679,6 @@ export function StockAlertScene({ t, scene }: SceneProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            transition: 'border 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

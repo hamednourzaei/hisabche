@@ -148,12 +148,13 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
   projects_time: {
     key: 'projects_time',
     service: 'backend/src/services/project.service.ts',
-    localEngine: null,
-    localEngineRoute: null,
+    // WP-15: time and milestones are recorded offline; the invoice is the server's.
+    localEngine: 'packages/local-engine/src/routes/projects.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/projects.ts',
     clientHook: 'packages/api/src/hooks/projects.ts',
     uiHost: 'packages/ui/src/components/ui/timesheets/containers/timesheets-container.tsx',
     matrixFeature: 'project.manage',
-    offlineStatus: 'online_required',
+    offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('project.manage'),
     structure: 'service_owned',
     pack: 'workforce',
@@ -213,12 +214,12 @@ export const ENGINES: Readonly<Record<EngineKey, EngineDefinition>> = {
   contracts_recurring: {
     key: 'contracts_recurring',
     service: 'backend/src/routes/contracts.routes.ts',
-    localEngine: null,
-    localEngineRoute: null,
+    localEngine: 'packages/local-engine/src/routes/contracts.ts',
+    localEngineRoute: 'packages/local-engine/src/routes/contracts.ts',
     clientHook: 'packages/api/src/hooks/contracts.ts',
     uiHost: 'packages/ui/src/components/ui/customers/contracts-section.tsx',
     matrixFeature: 'commerce.contracts',
-    offlineStatus: 'online_required',
+    offlineStatus: 'partial',
     offline: deriveEngineOfflineMode('commerce.contracts'),
     structure: 'route_owned',
     pack: 'operations',
@@ -567,12 +568,25 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     engine: null,
     labelKey: 'capabilities.roll_cutting.label',
     evidence: {
-      sources: ['packages/validation/src/schemas/universal-core/roll-batch.domain.ts'],
-      tests: ['packages/validation/src/__tests__/universal-core.test.ts'],
+      sources: [
+        'packages/validation/src/schemas/universal-core/roll-batch.domain.ts',
+        'packages/validation/src/schemas/universal-core/roll-cutting.domain.ts',
+        'backend/src/routes/roll-cutting.routes.ts',
+        'backend/src/services/inventory/roll-cutting.service.ts',
+        'packages/local-engine/src/routes/rolls.ts',
+        'packages/api/src/hooks/rolls.ts',
+      ],
+      tests: [
+        'packages/validation/src/__tests__/roll-cutting.test.ts',
+        'packages/local-engine/src/__tests__/offline-roll-cutting.test.ts',
+        'backend/src/__tests__/roll-cutting-01.pg.test.ts',
+      ],
     },
     ...STANDALONE,
     requires: [needs('measurement')],
-    limitations: ['NO_SERVER_ROUTE_OR_UI_PICKER'],
+    // WP-04: the roll register is wired end-to-end; choosing a specific roll on
+    // a sales invoice line is still not connected.
+    limitations: ['ROLL_INVOICE_LINE_PICKER_MISSING'],
   },
   tiered_pricing: {
     key: 'tiered_pricing',
@@ -721,11 +735,18 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
   },
   table_service: {
     key: 'table_service',
-    status: 'planned',
-    engine: null,
+    status: 'partial',
+    engine: 'sales_orders',
     labelKey: 'capability.tableService',
-    evidence: NO_EVIDENCE,
+    evidence: {
+      sources: [
+        'packages/validation/src/schemas/universal-core/table-service.domain.ts',
+        'packages/local-engine/src/routes/table-service.ts',
+      ],
+      tests: ['packages/validation/src/__tests__/table-service.test.ts'],
+    },
     ...STANDALONE,
+    limitations: ['TABLE_FINAL_INVOICE_SERVER_ONLY'],
   },
   serialized_items: {
     key: 'serialized_items',
@@ -782,7 +803,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     },
     ...STANDALONE,
     // Fitment records and search exist; the core-charge rule has no caller.
-    limitations: ['CORE_CHARGE_NOT_APPLIED'],
+    limitations: ['CORE_REFUND_POSTING_SERVER_ONLY'],
   },
   gold_purity: {
     key: 'gold_purity',
@@ -804,8 +825,10 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     },
     ...STANDALONE,
     requires: [needs('weight_pricing')],
-    // Metal rates are stored and served; no invoice line is priced from purity.
-    limitations: ['LINE_PRICING_FROM_PURITY_NOT_WIRED'],
+    // Invoice lines ARE priced from a locked 24K snapshot x karat through
+    // quoteGoldItemPrice (see withDerivedLineTotals); the remaining gap is the
+    // weight/value report, not line pricing.
+    limitations: ['GOLD_WEIGHT_VALUE_REPORT_NOT_WIRED'],
   },
   making_charges: {
     key: 'making_charges',
@@ -827,7 +850,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     },
     ...STANDALONE,
     requires: [needs('gold_purity')],
-    limitations: ['MAKING_CHARGE_NOT_COMPUTED_ON_LINE'],
+    limitations: ['GOLD_WEIGHT_VALUE_REPORT_NOT_WIRED'],
   },
   resource_capacity: {
     key: 'resource_capacity',
@@ -899,7 +922,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['packages/validation/src/__tests__/procurement-match.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['PACK_ROUNDING_SERVER_SIDE'],
+    limitations: ['PACK_ROUNDING_ON_DEVICE_PREVIEW'],
   },
   three_way_match: {
     key: 'three_way_match',
@@ -915,7 +938,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['packages/validation/src/__tests__/procurement-match.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['SERVER_ONLY_THREE_WAY_MATCH'],
+    limitations: ['THREE_WAY_FINAL_MATCH_SERVER_ONLY'],
   },
   project_costing: {
     key: 'project_costing',
@@ -931,7 +954,8 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['backend/src/__tests__/project-members-tenancy.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE', 'NO_OVERHEAD_ALLOCATION'],
+    // WP-15: the device records time and previews cost; server overhead config is still open.
+    limitations: ['NO_OVERHEAD_ALLOCATION'],
   },
   timesheet_billing: {
     key: 'timesheet_billing',
@@ -969,7 +993,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       ],
     },
     ...STANDALONE,
-    limitations: ['SERVER_ONLY_NO_OFFLINE_ENGINE'],
+    limitations: ['CONTRACT_BILL_INVOICE_SERVER_ONLY'],
   },
   deposits_liability: {
     key: 'deposits_liability',
@@ -1020,7 +1044,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
       tests: ['packages/validation/src/__tests__/universal-core.test.ts'],
     },
     ...STANDALONE,
-    limitations: ['GRANT_ONLINE_ONLY'],
+    limitations: ['GRANT_ACTIVATION_POLICY_BASIC'],
   },
   delivery_pod: {
     key: 'delivery_pod',
@@ -1203,7 +1227,7 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     // trade, the rate board, the positions and the cashbox reconciliation need
     // the server. An offline FX claim would need the cross-device rate/stock
     // conflict test first.
-    limitations: ['FX_TRADES_ONLINE_ONLY'],
+    limitations: ['FX_TRADE_CONFIRMATION_ONLINE_ONLY'],
   },
   gold_trade: {
     key: 'gold_trade',
@@ -1222,9 +1246,10 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     },
     ...STANDALONE,
     requires: [needs('gold_purity')],
-    // The old-gold trade-in calculation is a domain function with a parity test;
-    // no invoice line, route or screen calls it yet.
-    limitations: ['OLD_GOLD_TRADE_IN_NOT_ON_INVOICE'],
+    // Second-hand purchase is wired end to end: route -> service ->
+    // gold_record_second_hand_purchase RPC (weight + money book, KYC, idempotency).
+    // The remaining gap is the weight/value report by karat.
+    limitations: ['GOLD_WEIGHT_VALUE_REPORT_NOT_WIRED'],
   },
   pharmacy_prescription: {
     key: 'pharmacy_prescription',

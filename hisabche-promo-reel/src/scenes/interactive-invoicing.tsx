@@ -239,7 +239,6 @@ export function InvoiceLostDealScene({ t, scene }: { t: number; scene: Scene }) 
             ? '0 25px 60px rgba(0,0,0,0.85), 0 0 35px rgba(239, 68, 68, 0.35)'
             : '0 25px 60px rgba(0,0,0,0.7)',
           transform: hasStamped ? 'rotate(-1deg) scale(0.98)' : 'none',
-          transition: 'transform 0.2s ease',
           zIndex: 20,
           ...cardFx(t, { at: 0.1, enter: 'drop', float: 2 }),
         }}
@@ -857,7 +856,6 @@ export function InvoiceInteractiveGridScene({ t, scene }: { t: number; scene: Sc
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            transition: 'all 0.3s ease',
           }}
         >
           <div>
@@ -1377,7 +1375,6 @@ export function InvoiceCtaScene({ t, scene }: { t: number; scene: Scene }) {
             alignItems: 'center',
             gap: 12,
             transform: `scale(${1 + pulse})`,
-            transition: 'transform 0.1s ease',
           }}
         >
           <span>ارسال کلمه</span>

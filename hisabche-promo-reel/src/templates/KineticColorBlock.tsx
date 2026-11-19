@@ -50,7 +50,6 @@ export const KineticColorBlockTemplate: React.FC<KineticColorBlockProps> = ({
         justifyContent: 'center',
         padding: '0 40px',
         boxSizing: 'border-box',
-        transition: 'background 0.12s ease-out, color 0.12s ease-out',
         ...style,
       }}
     >

@@ -81,7 +81,6 @@ export const ChatPanicToCalmTemplate: React.FC<ChatPanicToCalmProps> = ({
           gap: 14,
           transform: `translateX(${-swipeP * 560}px)`,
           opacity: 1 - swipeP,
-          transition: 'none',
         }}
       >
         {messages.map((m, idx) => {
@@ -121,7 +120,6 @@ export const ChatPanicToCalmTemplate: React.FC<ChatPanicToCalmProps> = ({
           borderRadius: 24,
           padding: '24px 22px',
           boxShadow: '0 0 50px rgba(34, 211, 238, 0.25)',
-          backdropFilter: 'blur(20px)',
           transform: `translateX(${(1 - swipeP) * 560}px)`,
           opacity: swipeP,
           display: 'flex',

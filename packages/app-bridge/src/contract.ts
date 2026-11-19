@@ -138,6 +138,11 @@ export const localTableSchema = z.enum([
   'package_credit_ledger',
   'service_delivery_sessions',
   // WP-19: courier deliveries with POD/COD/fleet data for offline dispatch
+  'local_projects',
+  'project_time_entries',
+  'project_milestones',
+  'local_rolls',
+  'roll_movements',
   'sales_order_drafts',
   'sales_order_draft_items',
   'courier_deliveries',

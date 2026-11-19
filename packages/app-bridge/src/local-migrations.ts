@@ -21,7 +21,11 @@ import { SALES_SIDE_ALTERS, SALES_SIDE_STATEMENTS } from './local-sales-schema'
 import { SCHEMA_VERSION } from './local-schema'
 import {
   COURIER_DELIVERY_STATEMENTS,
+  FX_TRADE_DRAFT_STATEMENTS,
+  CONTRACT_STATEMENTS,
   SALES_ORDER_DRAFT_STATEMENTS,
+  PROJECT_TIME_STATEMENTS,
+  ROLL_STATEMENTS,
   DELIVERY_VEHICLE_STATEMENTS,
   ORDER_DEPOSIT_ALTERS,
   ORDER_DEPOSIT_MOVEMENT_STATEMENTS,
@@ -873,6 +877,44 @@ const V31_SALES_ORDER_DRAFTS: LocalMigration = {
   statements: [...SALES_ORDER_DRAFT_STATEMENTS],
 }
 
+/**
+ * v31 -> v32: offline project time and milestones (WP-15).
+ *
+ * The device records time and readiness; the server still owns the invoice.
+ */
+const V32_PROJECT_TIME: LocalMigration = {
+  to: 32,
+  statements: [...PROJECT_TIME_STATEMENTS],
+}
+
+/**
+ * v32 -> v33: offline roll identity and movement log (WP-04).
+ *
+ * The roll is the stock batch: a partial sale shortens it, a return restores
+ * it, and waste is recorded with the cut. The server still owns the invoice.
+ */
+const V33_ROLL_CUTTING: LocalMigration = {
+  to: 33,
+  statements: [...ROLL_STATEMENTS],
+}
+
+/**
+ * v33 -> v34: offline FX trade drafts (WP-07).
+ *
+ * The device writes a draft with a locked rate; it moves NO cash and posts NO
+ * journal. The server still owns confirmation, KYC and accounting.
+ */
+const V34_FX_TRADE_DRAFTS: LocalMigration = {
+  to: 34,
+  statements: [...FX_TRADE_DRAFT_STATEMENTS],
+}
+
+/** v34 -> v35: offline recurring contracts (WP-17). */
+const V35_CONTRACTS: LocalMigration = {
+  to: 35,
+  statements: [...CONTRACT_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -904,6 +946,10 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V29_LINE_CUT_LOSS,
   V30_DELIVERY_LOGISTICS,
   V31_SALES_ORDER_DRAFTS,
+  V32_PROJECT_TIME,
+  V33_ROLL_CUTTING,
+  V34_FX_TRADE_DRAFTS,
+  V35_CONTRACTS,
 ]
 
 /**

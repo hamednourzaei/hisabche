@@ -19,12 +19,18 @@ import { requireCapability } from '../auth'
 import {
   DRAFT_PURCHASE_LINE_INCOMPLETE,
   createPurchaseOrderSchema,
+  evaluateThreeWayMatch,
   flagFilter,
   orderLineTotal,
   planDraftPurchaseOrders,
+  planReordersWithPackRounding,
   receiptUnitCost,
   receiveRefusal,
   type DraftPurchaseSuggestion,
+  type ReorderSuggestionInput,
+  type ThreeWayInvoiceLine,
+  type ThreeWayOrderLine,
+  type ThreeWayReceiptLine,
 } from '@hisabche/validation'
 import { ConflictError, NotFoundError, ValidationError } from '../errors'
 import type { LocalDb } from '../db'
@@ -414,5 +420,29 @@ export function registerPurchasingRoutes(router: Router): void {
       }
       return { draftPOs, count: draftPOs.length }
     })
+  })
+
+  // ─── WP-14: pack-rounded reorder plan on the device ─────────────
+  // The SAME rule the server uses: deficits are rounded UP to whole purchase
+  // packs; the plan always requires a human before it becomes an order.
+  router.post('/inventory/reorder-suggestions/draft-po-rounded', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'purchase.write')
+    const raw = (c.body ?? {}) as { suggestions?: ReorderSuggestionInput[] }
+    const result = planReordersWithPackRounding(raw.suggestions ?? [])
+    return result
+  })
+
+  // ─── WP-14: three-way match as a device-side PREVIEW ────────────
+  // No PO is changed and no money is posted: the server still owns the binding
+  // match and the approval gate. The device only shows the same verdict early.
+  router.post('/inventory/three-way-match/preview', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'purchase.write')
+    const raw = (c.body ?? {}) as Record<string, unknown>
+    const verdict = evaluateThreeWayMatch({
+      poLines: (raw.poLines ?? []) as ThreeWayOrderLine[],
+      receiptLines: (raw.receiptLines ?? []) as ThreeWayReceiptLine[],
+      invoiceLines: (raw.invoiceLines ?? []) as ThreeWayInvoiceLine[],
+    })
+    return verdict
   })
 }

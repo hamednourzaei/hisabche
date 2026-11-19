@@ -107,7 +107,6 @@ export const SplitScreenStopwatchTemplate: React.FC<SplitScreenStopwatchProps> =
           zIndex: 10,
           whiteSpace: 'nowrap',
           direction: 'ltr',
-          transition: 'background 0.2s, box-shadow 0.2s',
         }}
       >
         ⏱️ {hisabcheSec.toFixed(1)}s

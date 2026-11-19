@@ -10,7 +10,18 @@ import { z } from 'zod'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireOnboardingComplete } from '../middleware/onboarding.middleware'
 import { CloudMigrationService } from '../services/cloud-migration/cloud-migration.service'
+
+const archiveManifestSchema = z.object({
+  formatVersion: z.number().int(),
+  sourceSchemaVersion: z.number().int(),
+  supportedFormatVersions: z.array(z.number().int()),
+  maxSupportedSchemaVersion: z.number().int(),
+  requiredSections: z.array(z.string()),
+  presentSections: z.array(z.string()),
+  totalChecksumMatches: z.boolean(),
+})
 
 const createJobSchema = z.object({
   deviceId: z.string().min(1),
@@ -18,6 +29,10 @@ const createJobSchema = z.object({
   packageChecksum: z.string().length(64),
   chunksTotal: z.number().int().positive(),
   previewMetrics: z.record(z.unknown()),
+  // Optional for older clients. When present the SERVER validates the archive
+  // manifest before a job is created — a retry reuses the same idempotency key.
+  sourceWorkspaceId: z.string().min(1).optional(),
+  manifest: archiveManifestSchema.optional(),
 })
 
 const processChunkSchema = z.object({
@@ -37,9 +52,23 @@ const reconcileSchema = z.object({
   expectedPreview: z.record(z.unknown()),
 })
 
+const activationSchema = z.object({
+  deviceRegistered: z.boolean(),
+  baselineCursorEstablished: z.boolean(),
+  pendingMutationsReconciled: z.boolean(),
+  localDatabasePreserved: z.boolean(),
+})
+
 export async function cloudMigrationRoutes(fastify: FastifyInstance) {
   const service = new CloudMigrationService()
-  const guard = [authenticate, requireWorkspaceContext, requireCapability('data.import')]
+  // A migration is a post-onboarding operation: an incomplete workspace must
+  // resume its wizard, never start importing a business archive.
+  const guard = [
+    authenticate,
+    requireWorkspaceContext,
+    requireOnboardingComplete,
+    requireCapability('data.import'),
+  ]
 
   // ─── 1. POST /api/cloud-migration/jobs ─────────────────────────────────────
   fastify.post(
@@ -54,6 +83,8 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
         packageChecksum: body.packageChecksum,
         chunksTotal: body.chunksTotal,
         previewMetrics: body.previewMetrics as never,
+        sourceWorkspaceId: body.sourceWorkspaceId,
+        manifest: body.manifest,
       })
       return reply.status(201).send(job)
     },
@@ -99,7 +130,9 @@ export async function cloudMigrationRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const ctx = request.tenancy!
       const { id } = request.params as { id: string }
-      const job = await service.confirmJob(ctx, id)
+      const raw = (request.body ?? {}) as Record<string, unknown>
+      const activation = raw.activation ? activationSchema.parse(raw.activation) : undefined
+      const job = await service.confirmJob(ctx, id, activation)
       return reply.status(200).send(job)
     },
   )

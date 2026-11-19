@@ -137,7 +137,6 @@ export function Hub({ spec, t }: { spec: Spec<'hub'>; t: number }) {
                 borderColor: TONE[tone].solid + 'aa',
                 boxShadow: `0 0 16px ${TONE[tone].glow}`,
                 background: 'rgba(12, 10, 24, 0.95)',
-                backdropFilter: 'blur(8px)',
               }}
             >
               <Icon name={node.icon} size={20} />
@@ -149,7 +148,6 @@ export function Hub({ spec, t }: { spec: Spec<'hub'>; t: number }) {
                 padding: '4px 10px',
                 borderRadius: 8,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
-                backdropFilter: 'blur(10px)',
                 whiteSpace: 'nowrap',
                 boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
               }}
@@ -231,7 +229,6 @@ export function Compare({ spec, t }: { spec: Spec<'compare'>; t: number }) {
           background: 'rgba(10, 14, 22, 0.88)',
           border: '1.5px solid rgba(34, 211, 238, 0.35)',
           boxShadow: '0 14px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(34, 211, 238, 0.15)',
-          backdropFilter: 'blur(16px)',
           display: 'flex',
           alignItems: 'center',
           gap: 12,

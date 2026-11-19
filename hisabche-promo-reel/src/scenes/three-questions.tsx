@@ -417,7 +417,6 @@ export function QuestionOneScene({ t }: SceneProps) {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            transition: 'border 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -463,7 +462,6 @@ export function QuestionOneScene({ t }: SceneProps) {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            transition: 'border 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -509,7 +507,6 @@ export function QuestionOneScene({ t }: SceneProps) {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            transition: 'border 0.3s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

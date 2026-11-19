@@ -11,6 +11,7 @@ import {
   planPackageAdjustment,
   planPackageConsumption,
   planPackageExpiration,
+  planPackageGrant,
   planPackageReversal,
   type PackageCreditEntry,
   type PackageCreditEntryType,
@@ -522,5 +523,93 @@ export function registerPackageCreditsRoutes(router: Router): void {
       entry: plan.entry,
       balance: plan.newBalance,
     }
+  })
+
+  // ─── WP-18: GRANT credits offline ─────────────────────────────────
+  // The shared planPackageGrant rule decides the entry; this route only
+  // persists it and keeps a repeated idempotency key from granting twice.
+  router.post('/local-package-credits/grant', async (c: RouteHandlerContext) => {
+    const { db, ctx, body } = c
+    requireCapability(ctx, 'invoice.create')
+    const payload = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+    const customerId = typeof payload.customerId === 'string' ? payload.customerId.trim() : ''
+    const packageProductId =
+      typeof payload.packageProductId === 'string' ? payload.packageProductId.trim() : ''
+    const quantity = Number(payload.quantity)
+    if (!customerId || !packageProductId) {
+      throw new ValidationError('customerId and packageProductId are required')
+    }
+
+    const idempotencyKey =
+      typeof payload.idempotencyKey === 'string' && payload.idempotencyKey.trim()
+        ? payload.idempotencyKey.trim()
+        : null
+    if (idempotencyKey) {
+      const existing = db.get<PackageCreditLedgerRow>(
+        `SELECT * FROM package_credit_ledger
+         WHERE workspace_id = ? AND idempotency_key = ? AND entry_type = 'GRANT' AND deleted_at IS NULL`,
+        [ctx.workspaceId, idempotencyKey],
+      )
+      if (existing) return { entry: rowToEntry(existing), alreadyGranted: true }
+    }
+
+    let entry
+    try {
+      entry = planPackageGrant({
+        workspaceId: ctx.workspaceId,
+        customerId,
+        packageProductId,
+        quantity,
+        unit: typeof payload.unit === 'string' ? payload.unit : undefined,
+        sourceDocumentType:
+          typeof payload.sourceDocumentType === 'string' ? payload.sourceDocumentType : undefined,
+        sourceDocumentId:
+          typeof payload.sourceDocumentId === 'string' ? payload.sourceDocumentId : undefined,
+        sourceLineId: typeof payload.sourceLineId === 'string' ? payload.sourceLineId : undefined,
+        idempotencyKey,
+        notes: typeof payload.notes === 'string' ? payload.notes : undefined,
+        expiresAt: typeof payload.expiresAt === 'string' ? payload.expiresAt : undefined,
+        effectiveDate:
+          typeof payload.effectiveDate === 'string' ? payload.effectiveDate : undefined,
+      })
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'GRANT_QUANTITY_MUST_BE_POSITIVE') {
+        throw new ValidationError(err.message)
+      }
+      throw err
+    }
+
+    const now = new Date().toISOString()
+    db.run(
+      `INSERT INTO package_credit_ledger (
+        id, workspace_id, customer_id, package_product_id, entry_type, quantity,
+        unit, source_document_type, source_document_id, source_line_id, reference_entry_id,
+        idempotency_key, notes, expires_at, effective_date, created_at, updated_at, origin, sync_state
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+      [
+        entry.id,
+        ctx.workspaceId,
+        customerId,
+        packageProductId,
+        entry.entryType,
+        entry.quantity,
+        entry.unit || null,
+        entry.sourceDocumentType || null,
+        entry.sourceDocumentId || null,
+        entry.sourceLineId || null,
+        entry.idempotencyKey || null,
+        entry.notes || null,
+        entry.expiresAt || null,
+        entry.effectiveDate,
+        entry.createdAt,
+        now,
+      ],
+    )
+
+    // Deliberately NO enqueue: when the credit comes from a sale the INVOICE is
+    // the one command that grants it on the server (see package-grant-outbox.test).
+    // Queueing a second GRANT here would double-grant after sync. This route is
+    // for device-side availability while offline; the server stays authoritative.
+    return { entry, alreadyGranted: false }
   })
 }

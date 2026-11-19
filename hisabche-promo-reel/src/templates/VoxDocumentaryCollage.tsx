@@ -168,7 +168,6 @@ export const VoxDocumentaryCollageTemplate: React.FC<VoxDocumentaryCollageProps>
             width: 80,
             height: 24,
             background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.7)',
-            backdropFilter: 'blur(4px)',
             boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
           }}
         />

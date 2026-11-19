@@ -5,7 +5,7 @@
 // Vehicles store attributes in vehicle_attributes linked to stock_serials.
 // ============================================
 
-import { validateVin } from '@hisabche/validation'
+import { buildCoreDepositLine, planCoreRefund, validateVin } from '@hisabche/validation'
 import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -183,5 +183,41 @@ export function registerFitmentsRoutes(router: Router) {
         status: 'in_stock',
       },
     }
+  })
+
+  // ─── WP-16: core deposit liability line (offline) ────────────────
+  // The shared rule decides the line; no money is posted here — the invoice
+  // builder carries this line and the server owns the actual ledger posting.
+  router.post('/local-auto/core-deposit', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+    const raw = (c.body || {}) as Record<string, unknown>
+    const productId = typeof raw.productId === 'string' ? raw.productId.trim() : ''
+    const productName = typeof raw.productName === 'string' ? raw.productName.trim() : ''
+    const quantity = Number(raw.quantity)
+    const depositPerUnitMinor = Number(raw.depositPerUnitMinor)
+    if (
+      !productId ||
+      !productName ||
+      !Number.isSafeInteger(quantity) ||
+      quantity <= 0 ||
+      !Number.isSafeInteger(depositPerUnitMinor) ||
+      depositPerUnitMinor < 0
+    ) {
+      throw new ValidationError('CORE_DEPOSIT_INPUT_INVALID')
+    }
+    return buildCoreDepositLine(productId, productName, quantity, depositPerUnitMinor)
+  })
+
+  // ─── WP-16: settle a returned core, refusing a double refund ──────
+  router.post('/local-auto/core-refund', async (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+    const raw = (c.body || {}) as Record<string, unknown>
+    const plan = planCoreRefund({
+      depositPerUnitMinor: Number(raw.depositPerUnitMinor),
+      returnedQuantity: Number(raw.returnedQuantity),
+      alreadyRefundedQuantity: Number(raw.alreadyRefundedQuantity ?? 0),
+    })
+    if (plan.refundMinor === null) throw new ValidationError('CORE_DEPOSIT_UNKNOWN')
+    return plan
   })
 }

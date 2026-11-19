@@ -498,7 +498,6 @@ export function QuietScene({ t, scene }: { t: number; scene: Scene }) {
                   ? 'none'
                   : `0 8px 24px rgba(0, 0, 0, 0.5), 0 0 14px ${GOLD_ACTIVE}22`,
                 opacity: isQuiet ? 0.6 : 1,
-                transition: 'all 0.4s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -857,7 +856,6 @@ export function OutreachRadarScene({ t, scene }: { t: number; scene: Scene }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              transition: 'all 0.5s ease',
             }}
           >
             <div>

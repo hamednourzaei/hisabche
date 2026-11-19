@@ -48,6 +48,7 @@ import swaggerUi from '@fastify/swagger-ui'
 // Middleware
 // ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
+import { correlateRequests } from './middleware/correlation.middleware'
 import { adminRateLimitHook } from './middleware/admin-rate-limit.middleware'
 import { supabase } from './db'
 
@@ -85,6 +86,7 @@ import { inventoryInsightsRoutes } from './routes/inventory-insights.routes'
 import { intelligenceForecastRoutes } from './routes/intelligence-forecast.routes'
 import { humanResourcesRoutes } from './routes/human-resources.routes'
 import { projectRoutes } from './routes/project.routes'
+import { rollCuttingRoutes } from './routes/roll-cutting.routes'
 import { workspaceRoutes } from './routes/workspace.routes'
 import { permissionRoutes } from './routes/permission.routes'
 import auditRoutes from './routes/audit.routes'
@@ -470,6 +472,11 @@ server.addHook('onSend', async (request, reply, payload) => {
 
   return payload
 })
+
+// ──────────────────────────────────────────────
+// 1b. CORRELATION — before authentication so even a 401 can be traced.
+// ──────────────────────────────────────────────
+server.addHook('onRequest', correlateRequests)
 
 // ──────────────────────────────────────────────
 // 2. AUTH MIDDLEWARE
@@ -936,6 +943,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
   await server.register(intelligenceForecastRoutes)
   await server.register(humanResourcesRoutes)
   await server.register(projectRoutes)
+  await server.register(rollCuttingRoutes)
   await server.register(workspaceRoutes)
   await server.register(permissionRoutes)
   await server.register(auditRoutes)

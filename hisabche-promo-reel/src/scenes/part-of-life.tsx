@@ -193,7 +193,6 @@ function TimeChip({
           borderRadius: 999,
           border: `1px solid ${HAIRLINE_HI}`,
           background: 'rgba(26, 34, 53, 0.72)',
-          backdropFilter: 'blur(12px)',
           boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
         }}
       >
@@ -875,7 +874,6 @@ export function MidnightScene({ t }: SceneProps) {
                 alignItems: 'center',
                 padding: '0 16px',
                 gap: 12,
-                transition: 'all 0.3s ease',
               }}
             >
               {/* Status Indicator Icon */}
@@ -1477,7 +1475,6 @@ export function CurtainScene({ t }: SceneProps) {
             borderRadius: 999,
             border: `1.5px solid ${HAIRLINE_HI}`,
             background: 'rgba(26, 34, 53, 0.75)',
-            backdropFilter: 'blur(16px)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
           }}
         >

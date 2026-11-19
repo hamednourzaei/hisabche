@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 31
+export const SCHEMA_VERSION = 35
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -1181,6 +1181,72 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'origin',
     'sync_state',
   ],
+  // WP-04: offline roll identity and movements
+  local_rolls: [
+    'id',
+    'workspace_id',
+    'roll_number',
+    'initial_length',
+    'remaining_length',
+    'unit',
+    'location',
+    'cost_minor',
+    'custom_conversion_factor',
+    'client_request_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  roll_movements: [
+    'id',
+    'workspace_id',
+    'roll_id',
+    'kind',
+    'length',
+    'waste_length',
+    'client_request_id',
+    'created_at',
+  ],
+  // WP-15: offline project time and milestone tracking
+  local_projects: [
+    'id',
+    'workspace_id',
+    'name',
+    'customer_id',
+    'currency',
+    'budget_minor',
+    'status',
+    'client_request_id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+  ],
+  project_time_entries: [
+    'id',
+    'workspace_id',
+    'project_id',
+    'hours',
+    'rate_minor',
+    'billable',
+    'approved',
+    'work_date',
+    'notes',
+    'created_at',
+    'updated_at',
+  ],
+  project_milestones: [
+    'id',
+    'workspace_id',
+    'project_id',
+    'title',
+    'required_hours',
+    'amount_minor',
+    'status',
+    'created_at',
+    'updated_at',
+  ],
   // WP-13: offline sales-order drafts (not a committed sale until the server confirms)
   sales_order_drafts: [
     'id',
@@ -1454,6 +1520,9 @@ export const SEARCHABLE_COLUMNS: Record<string, readonly string[]> = {
   package_credit_ledger: ['notes', 'idempotency_key'],
   service_delivery_sessions: ['client_notes', 'internal_notes'],
   sales_order_drafts: ['order_number', 'customer_name'],
+  local_rolls: ['roll_number', 'location'],
+  local_projects: ['name'],
+  project_milestones: ['title'],
   courier_deliveries: ['tracking_number', 'customer_name', 'pod_recipient_name'],
   delivery_vehicles: ['name', 'plate_number'],
 }

@@ -848,7 +848,6 @@ export function CashCalendarScene({ t, scene }: { t: number; scene: Scene }) {
             boxShadow: '0 20px 50px rgba(0,0,0,0.8), 0 0 35px rgba(56, 189, 248, 0.2)',
             transform: `rotateX(52deg) rotateZ(-30deg) translateZ(${-60 * ignition}px) scale(${coreScale})`,
             padding: '16px 20px',
-            transition: 'all 0.4s ease',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1136,7 +1135,6 @@ export function LiquidityForecastScene({ t, scene }: { t: number; scene: Scene }
                     borderRadius: 6,
                     background: `linear-gradient(180deg, ${bar.tone}, ${bar.tone}66)`,
                     boxShadow: `0 0 15px ${bar.tone}55`,
-                    transition: 'height 0.3s ease',
                   }}
                 />
                 <span style={{ fontSize: 9, color: TEXT_MUTED, marginTop: 6, textAlign: 'center' }}>
@@ -1402,7 +1400,6 @@ export function CashflowCtaScene({ t, scene }: { t: number; scene: Scene }) {
             alignItems: 'center',
             gap: 12,
             transform: `scale(${1 + pulse})`,
-            transition: 'transform 0.1s ease',
           }}
         >
           <span>ارسال کلمه</span>

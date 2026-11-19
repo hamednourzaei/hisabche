@@ -39,7 +39,6 @@ export function FreeBazaarReelView({ t }: FreeBazaarReelViewProps) {
         flexDirection: 'column',
         justifyContent: 'space-between',
         direction: 'rtl',
-        transition: 'background 0.8s ease',
       }}
     >
       {/* Background Ambient Glow & Grid Lines */}

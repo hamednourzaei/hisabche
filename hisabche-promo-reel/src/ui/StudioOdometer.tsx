@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { clamp, mix, studioSpring } from '../engine/anim'
+import { faNumber } from './art-direction'
 
 const PERSIAN_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
 
@@ -50,9 +51,9 @@ const TONE_COLORS = {
   },
 }
 
-/** Formats an absolute number to Persian digits with separator if needed. */
+/** Deterministic Persian-Indic digits — Intl.NumberFormat is banned (Rule 16/66). */
 function toFaDigits(val: number): string {
-  return new Intl.NumberFormat('fa-IR').format(Math.abs(Math.round(val)))
+  return faNumber(Math.abs(Math.round(val)))
 }
 
 // Extended strip with 2 full cycles (20 items) ensures monotonic sliding without modulo wrapping

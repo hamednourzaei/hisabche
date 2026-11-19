@@ -1,73 +1,94 @@
-// src/components/SafeSaaSCard.tsx
-import React from 'react'
-import { motion } from 'framer-motion'
+// src/components/tactile/SafeSaaSCard.tsx
+// Rebuilt: the old version used Tailwind utility classes that do not exist in
+// this Vite project (no Tailwind pipeline) plus framer-motion's wall-clock
+// animation — both were website-template footprints. This is now a pure,
+// scrub-safe plate drawn from the shared art-direction tokens.
+// Rules: 21-29, 33, 51-57, 98, 99.
+
+import type { CSSProperties, ReactNode } from 'react'
+
+import { ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 interface SafeSaaSCardProps {
   title: string
   subtitle?: string
-  icon?: React.ReactNode
+  icon?: ReactNode
   variant?: 'cyan' | 'purple' | 'emerald' | 'amber'
   align?: 'left' | 'right' | 'center'
   delay?: number
 }
 
-export const SafeSaaSCard: React.FC<SafeSaaSCardProps> = ({
+const VARIANT = {
+  cyan: ACCENT.cyan,
+  purple: ACCENT.purple,
+  emerald: ACCENT.green,
+  amber: ACCENT.amber,
+} as const
+
+export const SafeSaaSCard = ({
   title,
   subtitle,
   icon,
   variant = 'cyan',
   delay = 0,
-}) => {
-  // پالت‌های رنگی حرفه‌ای SaaS با لبه‌های نوری کنترل‌شده
-  const variantStyles = {
-    cyan: 'border-cyan-500/30 bg-[#110f20]/80 shadow-[0_0_25px_rgba(6,182,212,0.15)] text-cyan-300',
-    purple:
-      'border-purple-500/30 bg-[#110f20]/80 shadow-[0_0_25px_rgba(168,85,247,0.15)] text-purple-300',
-    emerald:
-      'border-emerald-500/30 bg-[#110f20]/80 shadow-[0_0_25px_rgba(16,185,129,0.15)] text-emerald-300',
-    amber:
-      'border-amber-500/30 bg-[#110f20]/80 shadow-[0_0_25px_rgba(245,158,11,0.15)] text-amber-300',
-  }
-
+}: SafeSaaSCardProps) => {
+  const c = VARIANT[variant]
+  const enter = ease(progress(1 + delay, delay, 0.5))
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        duration: 0.5,
-        delay,
-        ease: [0.22, 1, 0.36, 1], // Exponential Out منحنی سرعت استودیویی
-      }}
-      className={`relative w-full max-w-[92%] mx-auto rounded-2xl border p-5 backdrop-blur-xl transition-all duration-300 ${variantStyles[variant]}`}
-      style={{
-        boxSizing: 'border-box',
-        overflow: 'hidden', // جلوگیری قاطع از بیرون‌زدگی محتوا
-      }}
+    <div
+      data-mg-safe-plate
+      style={
+        {
+          width: '100%',
+          maxWidth: '92%',
+          margin: '0 auto',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          background: MATERIAL.panel,
+          border: `1px solid ${MATERIAL.panelEdge}`,
+          borderInlineStart: `3px solid ${c.solid}`,
+          padding: 16,
+          opacity: enter,
+          transform: `translate3d(0, ${((1 - enter) * 16).toFixed(2)}px, 0)`,
+          boxShadow: '0 18px 40px rgba(0,0,0,0.5)',
+        } as CSSProperties
+      }
     >
-      <div className="flex items-start gap-4">
-        {icon && (
-          <div className="flex-shrink-0 p-2.5 rounded-xl bg-white/5 border border-white/10">
-            {icon}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          {/* عنوان با قابلیت کنترل توازن متن و جلوگیری از کلمات یتیم */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        {icon && <div style={{ flexShrink: 0, color: c.solid }}>{icon}</div>}
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h4
-            className="text-white font-bold text-lg leading-snug tracking-tight mb-1.5"
-            style={{ textWrap: 'balance' }}
+            style={
+              {
+                margin: '0 0 6px',
+                color: MATERIAL.ink,
+                fontSize: 18,
+                fontWeight: 800,
+                lineHeight: 1.45,
+                textWrap: 'balance',
+              } as CSSProperties
+            }
           >
             {title}
           </h4>
           {subtitle && (
             <p
-              className="text-slate-300 text-sm leading-relaxed font-normal opacity-90"
-              style={{ textWrap: 'pretty' }}
+              style={
+                {
+                  margin: 0,
+                  color: MATERIAL.muted,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  textWrap: 'pretty',
+                } as CSSProperties
+              }
             >
               {subtitle}
             </p>
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

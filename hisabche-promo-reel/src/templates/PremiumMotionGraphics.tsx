@@ -236,7 +236,6 @@ export const PremiumMotionGraphicsTemplate: React.FC<PremiumMotionGraphicsProps>
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 boxShadow: '0 12px 30px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(16px)',
                 opacity: splitP,
                 transform: `translateX(${(1 - splitP) * 40}px)`,
               }}
@@ -293,7 +292,6 @@ export const PremiumMotionGraphicsTemplate: React.FC<PremiumMotionGraphicsProps>
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 boxShadow: '0 16px 36px rgba(245, 158, 11, 0.15)',
-                backdropFilter: 'blur(16px)',
                 opacity: clamp(progress(t, 1.8, 0.5)),
                 transform: `translateX(${(1 - clamp(progress(t, 1.8, 0.5))) * -40}px)`,
               }}
@@ -335,7 +333,6 @@ export const PremiumMotionGraphicsTemplate: React.FC<PremiumMotionGraphicsProps>
               borderRadius: 22,
               padding: '22px 24px',
               boxShadow: '0 0 50px rgba(34, 211, 238, 0.28)',
-              backdropFilter: 'blur(20px)',
               opacity: cardP,
               transform: `scale(${mix(0.85, 1, cardP)}) translateY(${mix(30, 0, cardP)}px)`,
             }}

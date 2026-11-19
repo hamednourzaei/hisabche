@@ -196,7 +196,6 @@ export function Hook({ spec, t }: { spec: Spec<'hook'>; t: number }) {
             border: `2px solid ${isCracked ? 'rgba(244, 63, 94, 0.85)' : 'rgba(255,255,255,0.08)'}`,
             boxShadow: isCracked ? '0 0 35px rgba(244, 63, 94, 0.4)' : 'none',
             transform: `scale(${isCracked ? 1 + 0.03 * (1 - fractureProgress) : 0.96})`,
-            transition: 'border 0.2s ease, transform 0.2s ease',
             ...enter(t, 0.4, { y: 35 }),
           }}
         >
@@ -283,7 +282,6 @@ export function Hook({ spec, t }: { spec: Spec<'hook'>; t: number }) {
             borderRadius: 14,
             background: 'rgba(255, 255, 255, 0.06)',
             border: '1px dashed rgba(255, 255, 255, 0.25)',
-            backdropFilter: 'blur(10px)',
             ...enter(t, 0.7, { y: 30 }),
           }}
         >
@@ -626,7 +624,6 @@ export function Hook({ spec, t }: { spec: Spec<'hook'>; t: number }) {
               borderRadius: 999,
               background: 'rgba(12, 14, 24, 0.85)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
-              backdropFilter: 'blur(16px)',
               boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6)',
               display: 'flex',
               alignItems: 'center',

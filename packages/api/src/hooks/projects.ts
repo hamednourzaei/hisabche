@@ -13,7 +13,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { applyOptimisticPatch, rollbackOptimisticPatch } from '../lib/optimistic'
-import { apiClient } from '../lib/client'
+import { apiClient, localRequest } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 
@@ -293,5 +293,103 @@ export function useBillProjectMilestone() {
       qc.invalidateQueries({ queryKey: ['timesheets'] })
       qc.invalidateQueries({ queryKey: ['invoices'] })
     },
+  })
+}
+
+// ─── WP-15: offline project time & milestones ───────────────────────
+// These go through localRequest (the device transport door), not apiClient:
+// a project manager records time without signal; the server issues the invoice.
+export interface LocalProjectRow {
+  id: string
+  name: string
+  customer_id: string | null
+  currency: string
+  budget_minor: number
+  status: string
+}
+export interface LocalTimeEntry {
+  id: string
+  project_id: string
+  hours: number
+  rate_minor: number
+  billable: number
+  approved: number
+  work_date: string
+}
+
+export function useLocalProjects() {
+  return useQuery({
+    queryKey: [...projectKeys.all, 'local'],
+    queryFn: async () =>
+      (await localRequest<{ data?: LocalProjectRow[] }>('GET', '/local-projects'))?.data ?? [],
+  })
+}
+
+export function useLocalProjectTime(projectId: string | null) {
+  return useQuery({
+    queryKey: [...projectKeys.all, 'time', projectId ?? ''],
+    queryFn: async () =>
+      (
+        await localRequest<{ data?: LocalTimeEntry[] }>(
+          'GET',
+          `/local-projects/${projectId}/time-entries`,
+        )
+      )?.data ?? [],
+    enabled: Boolean(projectId),
+  })
+}
+
+export function useLocalProjectCost(projectId: string | null) {
+  return useQuery({
+    queryKey: [...projectKeys.all, 'cost', projectId ?? ''],
+    queryFn: async () =>
+      (await localRequest<{ cost: unknown; variance: unknown }>(
+        'GET',
+        `/local-projects/${projectId}/cost`,
+      ))!,
+    enabled: Boolean(projectId),
+  })
+}
+
+export function useLocalProjectBilling(projectId: string | null) {
+  return useQuery({
+    queryKey: [...projectKeys.all, 'billing', projectId ?? ''],
+    queryFn: async () =>
+      (await localRequest<{ time: unknown; milestones: unknown[] }>(
+        'GET',
+        `/local-projects/${projectId}/billing`,
+      ))!,
+    enabled: Boolean(projectId),
+  })
+}
+
+export function useRecordProjectTime() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      projectId: string
+      hours: number
+      rateMinor: number
+      workDate?: string
+    }) =>
+      (await localRequest<LocalTimeEntry>(
+        'POST',
+        `/local-projects/${input.projectId}/time-entries`,
+        input,
+      ))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
+  })
+}
+
+export function useApproveProjectTime() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (entryId: string) =>
+      (await localRequest<LocalTimeEntry>(
+        'POST',
+        `/local-projects/time-entries/${entryId}/approve`,
+        {},
+      ))!,
+    onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
   })
 }

@@ -2,13 +2,13 @@
 // Reel #109 — «نقشه‌ی یکپارچه‌ی کسب‌وکار» (The One Workspace)
 //
 // Topic: the market's need for one comprehensive business workspace —
-// از جامع، به حسابچه. The film speaks the product's own visual language
-// (graphite glass, hairlines, mono digits, one indigo accent) instead of a
-// metaphor, so every beat is a real UI state the owner recognises.
+// از جامع، به حسابچه. Complete design refactor: a working letterpress
+// foundry — carved metal type blocks on a dark press bed. Four disagreeing
+// answers collide into one casting, stamp five records, lock into one bar and
+// finally print the brand. Material and weight carry the story.
 //
-// Art direction: cinematic-obsidian product surfaces / data-flow-matrix.
-// Distinct from 107 (hollow blueprint), 108 (radar telemetry) and 104–106
-// (lanes, plates, rope): here the canvas holds the product itself.
+// Art direction: obsidian-cinematic letterpress / spatial-2.5d-portal.
+// Distinct from 107 (blueprint), 108 (radar), 110 (light arc) and 111 (rewind).
 //
 // Guardrails honoured: no camera zoom (noZoom), no decorative divider,
 // ≤ 6 on-stage words, 24px+ safe margins, dark theme, deterministic math,
@@ -27,7 +27,7 @@ import {
   SystemMapScene,
 } from '../scenes/one-map'
 
-const theme = 'financial-intelligence' as const
+const theme = 'obsidian-cinematic' as const
 
 const scenes = sequence(
   [
@@ -161,12 +161,12 @@ export const reel109: Reel = {
     emotionalPayoff: 'عدد واحد، آرامش واحد.',
     cta: 'از جامع، به حسابچه — hisabche.com',
     selectedOperators: [
-      'FourDisagreeingAnswers',
-      'AnswerMergeSurface',
-      'InvoiceConfirmFanout',
-      'SystemMapPulse',
-      'OneWorkspaceScreen',
-      'QuietBrandCurtain',
+      'FourMetalAnswers',
+      'SingleBarCast',
+      'InvoicePressFiveTiles',
+      'InterlockedRecordBar',
+      'OneLineOfType',
+      'QuietTypeCurtain',
     ],
   },
   scenes,

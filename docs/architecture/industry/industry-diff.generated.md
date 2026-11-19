@@ -15,7 +15,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | General-purpose baseline | 15 |
 | Exact match with `JOURNEY_INDUSTRIES` | 14 |
 | Available capabilities | 4 |
-| Partial capabilities | 32 |
+| Partial capabilities | 33 |
 
 ## Industry registry
 
@@ -107,7 +107,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `batch_expiry` | partial | فعال (جزئی) |
 | `recipe_bom` | partial | فعال (جزئی) |
 | `variants` | partial | فعال (جزئی) |
-| `table_service` | planned | فعال نیست |
+| `table_service` | partial | فعال (جزئی) |
 | `serialized_items` | partial | فعال (جزئی) |
 | `auto_fitments` | partial | فعال (جزئی) |
 | `gold_purity` | partial | فعال (جزئی) |

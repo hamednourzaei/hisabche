@@ -1,5 +1,6 @@
 import React from 'react'
 import { clamp, ease, progress } from '../../engine/math'
+import { ACCENT, MATERIAL } from '../../ui/art-direction'
 
 export interface StrikethroughPaperTagProps {
   label: string
@@ -22,7 +23,7 @@ export const StrikethroughPaperTag: React.FC<StrikethroughPaperTagProps> = ({
   startAt = 0,
   strikeAt = 0.4,
   rotation = -2.5,
-  strikeColor = '#ef4444',
+  strikeColor = ACCENT.red.solid,
   style,
   className = '',
 }) => {
@@ -42,7 +43,7 @@ export const StrikethroughPaperTag: React.FC<StrikethroughPaperTagProps> = ({
         border: '1.5px solid rgba(255, 255, 255, 0.12)',
         borderRadius: 8,
         boxShadow: '0 8px 18px rgba(0, 0, 0, 0.4)',
-        color: '#f8fafc',
+        color: MATERIAL.ink,
         fontSize: 15,
         fontWeight: 700,
         direction: 'rtl',
