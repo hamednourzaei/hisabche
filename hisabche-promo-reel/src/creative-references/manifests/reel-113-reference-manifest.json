@@ -1,0 +1,59 @@
+{
+  "reelId": "113",
+  "title": "چرتکه زنده — معرفی حسابچه با دو هوک و CTA کامنت",
+  "protocol": ".claude/reel-plugin/creative-reference-engine.md (بندهای ۲۴–۲۵ و ۲۸)",
+  "paradigm": "Living Abacus / counting-frame — یک پارادایم بصری کاملاً جدید که در هیچ‌یک از ۱۱۲ ریل قبلی ساخته نشده است. میله‌های افقی = ابعاد دفتر؛ مهره‌های لغزان = ثبت مقدار؛ یک رویداد همه میله‌ها را همزمان می‌لغزاند؛ چرتکه بدون منبع برق کار می‌کند = استعاره آفلاین‌اول.",
+  "note": "صحنه‌های ۱ تا ۴ موتور bespoke تازه (src/scenes/living-abacus.tsx) هستند چون هیچ موتور موجودی مکانیزم چرتکه را اجرا نمی‌کند و کاربر صریحاً نوآوری خواست. صحنه ۵ از ctaScene مشترک استودیو است. هندسه بدون همپوشانی به‌صورت ساختاری تضمین شده (باندهای میله disjoint، مهره‌ها با فاصله > عرض، توکن/هدلاین/کنسول/زیرنویس در باندهای y جدا). invented فقط برای موتور تازه مجاز است و رفرنس واقعی دارد.",
+  "scenes": [
+    {
+      "scene": 1,
+      "specKind": "bespoke",
+      "component": "AbacusHookScene",
+      "reference": { "id": "ref-wikipedia-abacus-counting-frame" },
+      "mechanism": "Counting frame with beads at rest; one jammed bead flickers red; bold interrupt headline",
+      "reuse": "ساختار میله/مهره چرتکه از رفرنس ویکی‌پدیا؛ میله‌های افقی schoty با مهره‌های لغزان",
+      "adapt": "چرتکه نئون شیشه‌ای روی بوم تیره dark-neon؛ به‌جای رقم، هر میله یک بعد دفتر است؛ هوک «دستی ننویس!»",
+      "invented": ["LivingAbacusStage (موتور تازه با رفرنس واقعی؛ کاربر نوآوری صریح خواست)"]
+    },
+    {
+      "scene": 2,
+      "specKind": "bespoke",
+      "component": "AbacusManualScene",
+      "reference": { "id": "ref-wikihow-abacus-bead-ops" },
+      "mechanism": "Manual counting = a sequence of discrete bead pushes, one rod at a time; one bead misses -> red imbalance",
+      "reuse": "مکانیزم فشار دستی مهره‌ها ستون‌به‌ستون از wikiHow؛ حرکت ترتیبی چپ‌به‌راست",
+      "adapt": "یک نشانگر دست، میله‌به‌میله مهره‌ها را دستی می‌لغزاند؛ مهره جامانده با لرزش قرمز (حالت بصری، بدون متن)؛ برچسب‌های یک‌واژه‌ای دفتر/کاردکس/مشتری/دخل",
+      "invented": []
+    },
+    {
+      "scene": 3,
+      "specKind": "bespoke",
+      "component": "AbacusOutageScene",
+      "reference": { "id": "ref-wikipedia-abacus-counting-frame" },
+      "mechanism": "The abacus needs no power source: network cuts, ambient drops, but beads hold position and the frame keeps a local ember glow",
+      "reuse": "حقیقت ویکی‌پدیا: چرتکه بدون منبع برق کار می‌کند؛ مهره‌ها موقعیت خود را حفظ می‌کنند",
+      "adapt": "هوک وسط «قطع!»؛ نشانگر نت قرمز می‌شود اما چرتکه با تابش محلی روشن می‌ماند و بج «آفلاین» می‌نشیند = آفلاین‌اول",
+      "invented": []
+    },
+    {
+      "scene": 4,
+      "specKind": "bespoke",
+      "component": "AbacusSyncScene",
+      "reference": { "id": "ref-wikihow-abacus-bead-ops" },
+      "mechanism": "Automation collapses the manual sequence into one synchronized sweep across all rods; balance lock; reconnect sync",
+      "reuse": "مکانیزم انتشار عملیات across columns از wikiHow؛ یک رویداد همه ستون‌ها را با هم می‌راند",
+      "adapt": "توکن فاکتور به هسته می‌لغزد؛ همه مهره‌ها همزمان rest→counted (مونوتونیک، بدون wrap)؛ قفل «تراز» سبز؛ اتصال دوباره نت و بج «همگام»",
+      "invented": []
+    },
+    {
+      "scene": 5,
+      "specKind": "cta",
+      "component": "ctaScene (shared)",
+      "reference": { "id": "ref-aeon-shortform-hook-cta" },
+      "mechanism": "Explicit comment-keyword CTA end card; comment rate as the engagement goal",
+      "reuse": "ctaScene مشترک استودیو (shared.ts)؛ دو باکس کامنت «رایگان» / «حسابچه» + hisabche.com",
+      "adapt": "switchAt=3.3s برای هولد ≥۳ ثانیه باکس دوم؛ CTA کامنت",
+      "invented": []
+    }
+  ]
+}

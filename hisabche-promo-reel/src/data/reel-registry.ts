@@ -2117,6 +2117,32 @@ export const REEL_REGISTRY_LIST: ReelRegistryEntry[] = [
     description:
       'هر بار که تصویر جلو میرود، پرش فیلمی او را به دفتر کاغذی قدیمی برمیگرداند تا اینکه فلشبک بالاخره رو به جلو میچرخد: یک فاکتور در حسابچه، پنج سند همزمان، و دیگر برگشتی به کاغذ نیست.',
   },
+  {
+    id: '113',
+    title: 'چرتکه زنده — یک بار بزن، تمام',
+    artDirection: 'kinetic-manifesto',
+    layoutTopology: 'data-flow-matrix',
+    operators: [
+      'LivingAbacusStage',
+      'ManualBeadPush',
+      'OfflineEmberHold',
+      'SynchronizedSweep',
+      'DualCommentCta',
+    ],
+    themeName: 'dark-neon',
+    cardQuotaMax: 2,
+    targetCustomer: 'retail-shopkeeper',
+    openingArchetype: 'visual-pattern-interrupt',
+    merchantPainCategory: 'offline-pos-paralysis',
+    audioStrategy: 'high-contrast-impact',
+    viralTemplate: 'premium-motion-graphics',
+    hookConcept: 'دستی ننویس! چرتکه‌ای که با یک فاکتور، همه میله‌هایش همزمان می‌لغزد.',
+    narrativeArc:
+      'هوک چرتکه جامانده → فشار دستی مهره‌ها میله‌به‌میله و یک مهره جامانده → هوک وسط قطع اینترنت و روشن‌ماندن چرتکه → یک لغزش همزمان همه میله‌ها، قفل تراز و همگام‌سازی → CTA کامنت',
+    ctaVariant: 'dual-comment-keyword',
+    description:
+      'پارادایم بصری کاملاً تازه «چرتکه زنده»: هر میله یک بعد دفتر و هر مهره یک ثبت. کار دستی یعنی فشار ترتیبی مهره‌ها؛ حسابچه یعنی یک لغزش همزمان همه میله‌ها. چرتکه بدون برق کار می‌کند، استعاره صادقانه آفلاین‌اول. هندسه بدون همپوشانی ساختاری.',
+  },
 ]
 
 // Ensure every entry in the registry carries its designated viral template

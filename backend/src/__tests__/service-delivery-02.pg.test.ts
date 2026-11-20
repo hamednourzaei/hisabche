@@ -41,6 +41,7 @@ const run: Run = async (text, params) => {
 describe('Postgres: service delivery is atomic (service-delivery-02)', () => {
   beforeAll(async () => {
     try {
+      await pg.initialise()
       await pg.start()
     } catch {
       // Non-elevated Windows (error 1314) or a quarantined binary: the scenarios are skipped here and run in CI.

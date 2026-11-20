@@ -123,6 +123,7 @@ const logFor = async (entityType: string) =>
 describe('Postgres: the four tables reach the delta pull (operational-pull-02)', () => {
   beforeAll(async () => {
     try {
+      await pg.initialise()
       await pg.start()
     } catch {
       return // non-elevated Windows (error 1314) or a quarantined binary

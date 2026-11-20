@@ -413,6 +413,21 @@
         "ForwardResolutionScene",
         "FlashbackEndCardScene"
       ]
+    },
+    {
+      "id": "113",
+      "title": "چرتکه زنده — یک بار بزن، تمام",
+      "theme": "dark-neon",
+      "hookFormula": "visual-pattern-interrupt",
+      "dominantLayout": "data-flow-matrix",
+      "cardQuotaPercent": 10,
+      "components": [
+        "AbacusHookScene",
+        "AbacusManualScene",
+        "AbacusOutageScene",
+        "AbacusSyncScene",
+        "cta"
+      ]
     }
   ]
 }

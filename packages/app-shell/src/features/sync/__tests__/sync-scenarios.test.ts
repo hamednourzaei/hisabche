@@ -113,6 +113,7 @@ jest.mock('@/shared/lib/api', () => ({
     get: (url: string, config?: Record<string, unknown>) => get(url, config),
     post: (url: string, body?: unknown, config?: Record<string, unknown>) =>
       post(url, body, config),
+    put: (url: string, body?: unknown, config?: Record<string, unknown>) => post(url, body, config),
     patch: (url: string, body?: unknown, config?: Record<string, unknown>) =>
       post(url, body, config),
     delete: (url: string, config?: Record<string, unknown>) => post(url, undefined, config),
@@ -665,5 +666,369 @@ describe('Client Sync Integrity Scenarios with Unstable Transport', () => {
     const stuck = queue[0]!
     expect(stuck.status).toBe('failed')
     expect(stuck.lastError).toContain('NO_ENDPOINT:no_such_entity')
+  })
+})
+
+// ============================================
+// SUCCESSFUL service-session and package-credit sync paths (Finding F-001).
+//
+// The suite above proves the REFUSAL roads: a delivery the server turns down
+// stays visible and is never re-sent by itself. What it did not prove is the
+// happy road — that a session delivered / cancelled / moved offline actually
+// reaches the RIGHT parameterized endpoint, with the right id, the whole
+// payload, and its own Idempotency-Key, and is drained exactly once. A routing
+// bug here (e.g. a status flip falling into the create call) would mint a second
+// session or spend a credit twice, and every refusal test would still be green.
+//
+// The sync engine runs for real; only the transport and the device outbox are
+// stubbed. The server's own atomicity is proved separately on real Postgres
+// (service-delivery-02.pg.test.ts, service-delivery-sync-roundtrip.pg.test.ts).
+// ============================================
+describe('successful service-session and package-credit delivery', () => {
+  const queryClient = { invalidateQueries: jest.fn(async () => undefined) } as never
+
+  const SESSION = '66666666-6666-4666-8666-666666666666'
+  const PACKAGE = '22222222-2222-4222-8222-222222222222'
+  const CONSUME = '77777777-7777-4777-8777-777777777777'
+
+  const cmd = (
+    clientId: string,
+    entity: QueueEntry['entity'],
+    operation: 'create' | 'update' | 'delete',
+    payload: Record<string, unknown>,
+  ): QueueEntry => ({
+    clientId,
+    entity,
+    operation,
+    payload,
+    attempts: 0,
+    status: 'pending',
+    lastError: null,
+    createdAt: '2026-11-20T00:00:00Z',
+    userId: 'user-agent-1',
+    workspaceId: 'ws-test-alpha',
+  })
+
+  beforeEach(() => {
+    queue = []
+    postCalls = []
+    nextPostAction = 'pass'
+    jest.clearAllMocks()
+    for (const k of Object.keys(localTables)) delete localTables[k]
+  })
+
+  const deliveredPayload = {
+    id: SESSION,
+    status: 'delivered',
+    settlementMethod: 'package_credit',
+    packageProductId: PACKAGE,
+    quantity: 1,
+    consumptionEntryId: CONSUME,
+  }
+
+  it('a session delivered offline reaches /deliver with its id, whole payload and own key, and drains once', async () => {
+    queue = [cmd(`${SESSION}-deliver`, 'service_delivery_sessions', 'update', deliveredPayload)]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === `/service-delivery/sessions/${SESSION}/deliver`)
+    expect(sent).toBeDefined()
+    expect(sent?.body).toEqual(deliveredPayload)
+    expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(`${SESSION}-deliver`)
+    expect((sent?.headers as Record<string, string>)['x-workspace-id']).toBe('ws-test-alpha')
+    // It did NOT fall into the create call or the generic status road.
+    expect(postCalls.filter((c) => c.url === '/service-delivery/sessions')).toHaveLength(0)
+    expect(queue).toHaveLength(0)
+    expect(resolveQueue).toHaveBeenCalledWith(`${SESSION}-deliver`, 'done')
+    expect(resolveQueue).toHaveBeenCalledTimes(1)
+  })
+
+  it('a session cancelled offline reaches /cancel, not create, and drains once', async () => {
+    const payload = { id: SESSION, status: 'cancelled', reason: 'customer asked' }
+    queue = [cmd(`${SESSION}-cancel`, 'service_delivery_sessions', 'update', payload)]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === `/service-delivery/sessions/${SESSION}/cancel`)
+    expect(sent).toBeDefined()
+    expect(sent?.body).toEqual(payload)
+    expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(`${SESSION}-cancel`)
+    expect(postCalls.filter((c) => c.url === '/service-delivery/sessions')).toHaveLength(0)
+    expect(queue).toHaveLength(0)
+    expect(resolveQueue).toHaveBeenCalledWith(`${SESSION}-cancel`, 'done')
+  })
+
+  it.each(['in_progress', 'no_show', 'checked_in'] as const)(
+    'a session moved to %s offline reaches /status (not a second create), and drains once',
+    async (status) => {
+      const payload = { id: SESSION, status }
+      queue = [cmd(`${SESSION}-${status}`, 'service_delivery_sessions', 'update', payload)]
+
+      await runSync(queryClient)
+
+      const sent = postCalls.find((c) => c.url === `/service-delivery/sessions/${SESSION}/status`)
+      expect(sent).toBeDefined()
+      expect(sent?.body).toEqual(payload)
+      expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(
+        `${SESSION}-${status}`,
+      )
+      // The bug this guards: without the /status branch the row fell to create.
+      expect(postCalls.filter((c) => c.url === '/service-delivery/sessions')).toHaveLength(0)
+      expect(queue).toHaveLength(0)
+      expect(resolveQueue).toHaveBeenCalledWith(`${SESSION}-${status}`, 'done')
+    },
+  )
+
+  it('a session created offline reaches the create endpoint and drains once', async () => {
+    const payload = {
+      id: SESSION,
+      customerId: 'c0000000-0000-4000-8000-000000000001',
+      serviceOfferingId: '20000000-0000-4000-8000-000000000001',
+      sessionDate: '2026-11-20',
+      startTime: '10:00',
+      endTime: '11:00',
+      settlementMethod: 'package_credit',
+    }
+    queue = [cmd(SESSION, 'service_delivery_sessions', 'create', payload)]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === '/service-delivery/sessions')
+    expect(sent).toBeDefined()
+    expect(sent?.body).toEqual(payload)
+    expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(SESSION)
+    expect(queue).toHaveLength(0)
+    expect(resolveQueue).toHaveBeenCalledWith(SESSION, 'done')
+  })
+
+  it('a lost acknowledgement on delivery: the retry reuses the SAME key, so the server consumes once', async () => {
+    queue = [cmd(`${SESSION}-deliver`, 'service_delivery_sessions', 'update', deliveredPayload)]
+
+    // The server received it, but the socket died before the device heard back.
+    nextPostAction = 'drop'
+    await runSync(queryClient)
+    expect(queue).toHaveLength(1)
+    expect(queue[0]?.status).toBe('failed')
+
+    nextPostAction = 'pass'
+    await runSync(queryClient)
+
+    const attempts = postCalls.filter(
+      (c) => c.url === `/service-delivery/sessions/${SESSION}/deliver`,
+    )
+    expect(attempts).toHaveLength(2)
+    for (const attempt of attempts) {
+      expect((attempt.headers as Record<string, string>)['Idempotency-Key']).toBe(
+        `${SESSION}-deliver`,
+      )
+      expect(attempt.body).toEqual(deliveredPayload)
+    }
+    expect(queue).toHaveLength(0)
+    expect(resolveQueue).toHaveBeenCalledWith(`${SESSION}-deliver`, 'done')
+  })
+
+  it.each([
+    ['CONSUME', '/package-credits/consume'],
+    ['REVERSAL', '/package-credits/reverse'],
+    ['EXPIRE', '/package-credits/expire'],
+    ['ADJUSTMENT', '/package-credits/adjust'],
+  ] as const)(
+    'a package-credit %s command reaches %s with its own key, and drains once',
+    async (entryType, url) => {
+      const payload = {
+        id: CONSUME,
+        entry_type: entryType,
+        quantity: 1,
+        customer_id: 'c0000000-0000-4000-8000-000000000001',
+        package_product_id: PACKAGE,
+      }
+      queue = [cmd(CONSUME, 'package_credit_ledger', 'create', payload)]
+
+      await runSync(queryClient)
+
+      const sent = postCalls.find((c) => c.url === url)
+      expect(sent).toBeDefined()
+      expect(sent?.body).toEqual(payload)
+      expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(CONSUME)
+      // A consume must never be misrouted to another credit endpoint.
+      expect(postCalls.filter((c) => c.url.startsWith('/package-credits'))).toHaveLength(1)
+      expect(queue).toHaveLength(0)
+      expect(resolveQueue).toHaveBeenCalledWith(CONSUME, 'done')
+    },
+  )
+})
+
+// ============================================
+// The remaining parameterized domain roads (audit SC-07).
+//
+// These branches of pushEntry were built to fix the NO_ENDPOINT freeze (money
+// queued for years with nowhere to go), but only the refusal side and a handful
+// of creates had success-path coverage. Each road below is proved end to end
+// through the real engine: right URL, right body, own key, drained once.
+// ============================================
+describe('the remaining domain roads deliver successfully', () => {
+  const queryClient = { invalidateQueries: jest.fn(async () => undefined) } as never
+
+  const ID = '99999999-9999-4999-8999-999999999999'
+
+  const cmd = (
+    clientId: string,
+    entity: QueueEntry['entity'],
+    operation: 'create' | 'update' | 'delete',
+    payload: Record<string, unknown>,
+  ): QueueEntry => ({
+    clientId,
+    entity,
+    operation,
+    payload,
+    attempts: 0,
+    status: 'pending',
+    lastError: null,
+    createdAt: '2026-11-20T00:00:00Z',
+    userId: 'user-agent-1',
+    workspaceId: 'ws-test-alpha',
+  })
+
+  beforeEach(() => {
+    queue = []
+    postCalls = []
+    nextPostAction = 'pass'
+    jest.clearAllMocks()
+    for (const k of Object.keys(localTables)) delete localTables[k]
+  })
+
+  const roads: ReadonlyArray<{
+    name: string
+    entry: QueueEntry
+    method: 'post' | 'put' | 'patch'
+    url: string
+    body?: Record<string, unknown>
+  }> = [
+    {
+      name: 'a courier delivery closed offline (delivered)',
+      entry: cmd('del-1', 'courier_deliveries', 'update', { id: ID, status: 'delivered' }),
+      method: 'post',
+      url: `/deliveries/courier/${ID}/close`,
+    },
+    {
+      name: 'a courier delivery closed offline (failed)',
+      entry: cmd('del-2', 'courier_deliveries', 'update', { id: ID, status: 'failed' }),
+      method: 'post',
+      url: `/deliveries/courier/${ID}/close`,
+    },
+    {
+      name: 'a courier delivery assigned to a vehicle offline',
+      entry: cmd('del-3', 'courier_deliveries', 'update', {
+        id: ID,
+        status: 'pending',
+        vehicle_id: 'veh-1',
+      }),
+      method: 'post',
+      url: `/deliveries/courier/${ID}/assign`,
+    },
+    {
+      name: 'a new courier delivery made offline',
+      entry: cmd('del-4', 'courier_deliveries', 'create', { id: ID, status: 'pending' }),
+      method: 'post',
+      url: '/deliveries/courier',
+    },
+    {
+      name: 'a resource booking made offline',
+      entry: cmd('book-1', 'resource_bookings' as QueueEntry['entity'], 'create', {
+        id: ID,
+        resourceId: 'res-1',
+        startAt: '2026-11-20T10:00:00Z',
+        endAt: '2026-11-20T11:00:00Z',
+      }),
+      method: 'post',
+      url: '/resource-bookings',
+    },
+    {
+      name: 'a serial issue made offline',
+      entry: cmd('ser-1', 'stock_serials', 'create', { id: ID, serialNumbers: ['IMEI-001'] }),
+      method: 'post',
+      url: '/operations/serials/issue',
+    },
+    {
+      name: 'a manual journal entry reversed offline',
+      entry: cmd('je-1', 'journal_entry', 'update', { id: ID, action: 'reverse', reason: 'خطا' }),
+      method: 'post',
+      url: `/accounting/journal/${ID}/reverse`,
+    },
+    {
+      name: 'a price list whose items were edited offline',
+      entry: cmd('pl-1', 'price_list', 'update', {
+        id: ID,
+        items: [{ productId: 'p-1', price: 120 }],
+      }),
+      method: 'put',
+      url: `/price-lists/${ID}/items`,
+      body: { items: [{ productId: 'p-1', price: 120 }] },
+    },
+    {
+      name: 'a price list deactivated offline',
+      entry: cmd('pl-2', 'price_list', 'update', { id: ID, isActive: false }),
+      method: 'patch',
+      url: `/price-lists/${ID}/active`,
+      body: { isActive: false },
+    },
+    {
+      name: 'a promotion deactivated offline',
+      entry: cmd('promo-1', 'promotion', 'update', { id: ID, isActive: false }),
+      method: 'patch',
+      url: `/promotions/${ID}/active`,
+      body: { isActive: false },
+    },
+    {
+      name: 'a payment cancelled offline',
+      entry: cmd('pay-1-cancel', 'payment', 'delete', { id: ID }),
+      method: 'post',
+      url: `/payments/${ID}/cancel`,
+    },
+  ]
+
+  for (const road of roads) {
+    it(`${road.name} reaches ${road.url} with its own key, and drains once`, async () => {
+      queue = [road.entry]
+
+      await runSync(queryClient)
+
+      const sent = postCalls.find((c) => c.url === road.url)
+      expect(sent).toBeDefined()
+      expect((sent?.headers as Record<string, string>)['Idempotency-Key']).toBe(road.entry.clientId)
+      if (road.body) expect(sent?.body).toEqual(road.body)
+      else expect(sent?.body).toEqual(road.entry.payload)
+      expect(queue).toHaveLength(0)
+      expect(resolveQueue).toHaveBeenCalledWith(road.entry.clientId, 'done')
+    })
+  }
+
+  it('a replayed payment cancel whose first attempt already landed (404) is met, not failed', async () => {
+    post.mockImplementationOnce(async () => {
+      const err = new Error('Payment not found') as Error & { status?: number }
+      err.status = 404
+      throw err
+    })
+    queue = [cmd('pay-2-cancel', 'payment', 'delete', { id: ID })]
+
+    await runSync(queryClient)
+
+    expect(queue).toHaveLength(0)
+    expect(resolveQueue).toHaveBeenCalledWith('pay-2-cancel', 'done')
+  })
+
+  it('a command of ANOTHER business travels with THAT business in the header, not the active one', async () => {
+    const foreign = {
+      ...cmd('cust-foreign', 'customer', 'create', { id: ID, fullName: 'مشتری دیگر' }),
+      workspaceId: 'ws-other-business',
+    }
+    queue = [foreign]
+
+    await runSync(queryClient)
+
+    const sent = postCalls.find((c) => c.url === '/customers')
+    expect(sent).toBeDefined()
+    expect((sent?.headers as Record<string, string>)['x-workspace-id']).toBe('ws-other-business')
+    expect(queue).toHaveLength(0)
   })
 })

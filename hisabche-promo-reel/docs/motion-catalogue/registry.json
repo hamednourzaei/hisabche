@@ -1,8 +1,8 @@
 {
   "summary": {
-    "assets": 781,
+    "assets": 789,
     "types": 125,
-    "reels": 112,
+    "reels": 113,
     "specKinds": 34,
     "reelsWithoutSource": [],
     "reelsWithIdCollision": ["75"],
@@ -1919,7 +1919,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cashflow-cheques.tsx",
-        "line": 1033
+        "line": 1032
       },
       "params": [
         {
@@ -1977,7 +1977,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/cashflow-cheques.tsx",
-        "line": 1257
+        "line": 1255
       },
       "params": [
         {
@@ -4149,7 +4149,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 736
+        "line": 735
       },
       "params": [
         {
@@ -4203,7 +4203,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer-credit-limit.tsx",
-        "line": 825
+        "line": 824
       },
       "params": [
         {
@@ -5433,7 +5433,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/customer.tsx",
-        "line": 351
+        "line": 349
       },
       "params": [
         {
@@ -5484,7 +5484,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer.tsx",
-        "line": 366
+        "line": 364
       },
       "params": [],
       "dependencies": [
@@ -5529,7 +5529,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/customer.tsx",
-        "line": 373
+        "line": 371
       },
       "params": [
         {
@@ -5585,7 +5585,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/customer.tsx",
-        "line": 419
+        "line": 417
       },
       "params": [
         {
@@ -6345,7 +6345,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/dialogue.tsx",
-        "line": 140
+        "line": 139
       },
       "params": [
         {
@@ -7512,7 +7512,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/scenes/dusk-fog.tsx",
-        "line": 533
+        "line": 530
       },
       "params": [
         {
@@ -7566,7 +7566,7 @@
       "tags": ["transition", "background"],
       "source": {
         "path": "src/scenes/dusk-fog.tsx",
-        "line": 650
+        "line": 646
       },
       "params": [
         {
@@ -7620,7 +7620,7 @@
       "tags": ["background", "product-demo"],
       "source": {
         "path": "src/scenes/dusk-fog.tsx",
-        "line": 747
+        "line": 743
       },
       "params": [
         {
@@ -7674,7 +7674,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/scenes/dusk-fog.tsx",
-        "line": 887
+        "line": 883
       },
       "params": [
         {
@@ -7767,7 +7767,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/flashback-rewind.tsx",
-        "line": 286
+        "line": 274
       },
       "params": [
         {
@@ -7825,7 +7825,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/flashback-rewind.tsx",
-        "line": 371
+        "line": 388
       },
       "params": [
         {
@@ -7883,7 +7883,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/flashback-rewind.tsx",
-        "line": 439
+        "line": 472
       },
       "params": [
         {
@@ -7941,7 +7941,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/flashback-rewind.tsx",
-        "line": 509
+        "line": 542
       },
       "params": [
         {
@@ -7999,7 +7999,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/flashback-rewind.tsx",
-        "line": 622
+        "line": 655
       },
       "params": [
         {
@@ -10933,7 +10933,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/interactive-invoicing.tsx",
-        "line": 482
+        "line": 481
       },
       "params": [
         {
@@ -11005,7 +11005,7 @@
       "tags": ["background", "product-demo"],
       "source": {
         "path": "src/scenes/interactive-invoicing.tsx",
-        "line": 759
+        "line": 758
       },
       "params": [
         {
@@ -11077,7 +11077,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/interactive-invoicing.tsx",
-        "line": 1013
+        "line": 1011
       },
       "params": [
         {
@@ -11149,7 +11149,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/interactive-invoicing.tsx",
-        "line": 1244
+        "line": 1242
       },
       "params": [
         {
@@ -11271,7 +11271,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/intro.tsx",
-        "line": 661
+        "line": 658
       },
       "params": [
         {
@@ -11316,7 +11316,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/intro.tsx",
-        "line": 734
+        "line": 731
       },
       "params": [
         {
@@ -11366,7 +11366,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/intro.tsx",
-        "line": 818
+        "line": 815
       },
       "params": [],
       "dependencies": [
@@ -11405,7 +11405,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/intro.tsx",
-        "line": 828
+        "line": 825
       },
       "params": [
         {
@@ -11455,7 +11455,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/intro.tsx",
-        "line": 885
+        "line": 882
       },
       "params": [
         {
@@ -12912,6 +12912,362 @@
       }
     },
     {
+      "id": "scenes/living-abacus#AbacusHookScene",
+      "name": "AbacusHookScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 470
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "─── Scene 1 — HOOK 1: the jammed frame ──────────────────────────────────────",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 26
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 26
+      }
+    },
+    {
+      "id": "scenes/living-abacus#AbacusManualScene",
+      "name": "AbacusManualScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 501
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "─── Scene 2 — PAIN: manual rod-by-rod pushing, one bead misses ──────────────",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 27
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 27
+      }
+    },
+    {
+      "id": "scenes/living-abacus#AbacusOutageScene",
+      "name": "AbacusOutageScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 536
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "─── Scene 3 — HOOK 2 (mid): the network cuts, the abacus stays lit ──────────",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 28
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 28
+      }
+    },
+    {
+      "id": "scenes/living-abacus#AbacusSyncScene",
+      "name": "AbacusSyncScene",
+      "type": "scene-component",
+      "tags": [],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 569
+      },
+      "params": [
+        {
+          "name": "t",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": false
+        }
+      ],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "─── Scene 4 — RESOLUTION: one synchronized sweep, balance lock, sync ────────",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 29
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 29
+      }
+    },
+    {
+      "id": "scenes/living-abacus#abacusHookCues",
+      "name": "abacusHookCues",
+      "type": "sound-cues",
+      "tags": ["sound"],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 605
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "─── Cues (deterministic, per scene local time) ──────────────────────────────",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 30
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 30
+      }
+    },
+    {
+      "id": "scenes/living-abacus#abacusManualCues",
+      "name": "abacusManualCues",
+      "type": "sound-cues",
+      "tags": ["sound"],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 611
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 31
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 31
+      }
+    },
+    {
+      "id": "scenes/living-abacus#abacusOutageCues",
+      "name": "abacusOutageCues",
+      "type": "sound-cues",
+      "tags": ["sound"],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 621
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 32
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 32
+      }
+    },
+    {
+      "id": "scenes/living-abacus#abacusSyncCues",
+      "name": "abacusSyncCues",
+      "type": "sound-cues",
+      "tags": ["sound"],
+      "source": {
+        "path": "src/scenes/living-abacus.tsx",
+        "line": 629
+      },
+      "params": [],
+      "dependencies": [
+        {
+          "module": "react",
+          "names": ["React"]
+        },
+        {
+          "module": "../engine/types",
+          "names": ["Scene"]
+        },
+        {
+          "module": "../engine/anim",
+          "names": ["ease", "enter", "mix", "progress"]
+        }
+      ],
+      "doc": "",
+      "provenance": ["References (opened & analyzed): ref-wikipedia-abacus-counting-frame,"],
+      "licence": "see provenance notes",
+      "usedBy": [
+        {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 33
+        }
+      ],
+      "themes": ["dark-neon"],
+      "example": {
+        "file": "src/reels/reel-113-living-abacus.ts",
+        "line": 33
+      }
+    },
+    {
       "id": "scenes/manufacturing-bom#DARK",
       "name": "DARK",
       "type": "scene-component",
@@ -14151,7 +14507,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/midnight-desk.tsx",
-        "line": 735
+        "line": 734
       },
       "params": [
         {
@@ -14205,7 +14561,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/midnight-desk.tsx",
-        "line": 820
+        "line": 819
       },
       "params": [
         {
@@ -15837,7 +16193,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 324
+        "line": 323
       },
       "params": [
         {
@@ -15886,7 +16242,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 409
+        "line": 408
       },
       "params": [],
       "dependencies": [
@@ -15921,7 +16277,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 411
+        "line": 410
       },
       "params": [
         {
@@ -15970,7 +16326,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 507
+        "line": 515
       },
       "params": [
         {
@@ -16019,7 +16375,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 592
+        "line": 600
       },
       "params": [
         {
@@ -16068,7 +16424,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/one-map.tsx",
-        "line": 673
+        "line": 710
       },
       "params": [
         {
@@ -18622,7 +18978,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 219
+        "line": 218
       },
       "params": [
         {
@@ -18667,7 +19023,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 469
+        "line": 468
       },
       "params": [
         {
@@ -18712,7 +19068,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 713
+        "line": 712
       },
       "params": [
         {
@@ -18757,7 +19113,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 993
+        "line": 991
       },
       "params": [
         {
@@ -18802,7 +19158,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 1202
+        "line": 1200
       },
       "params": [
         {
@@ -18847,7 +19203,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/part-of-life.tsx",
-        "line": 1374
+        "line": 1372
       },
       "params": [
         {
@@ -19096,7 +19452,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 434
+        "line": 433
       },
       "params": [
         {
@@ -19145,7 +19501,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 579
+        "line": 578
       },
       "params": [
         {
@@ -19194,7 +19550,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 726
+        "line": 722
       },
       "params": [
         {
@@ -19243,7 +19599,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 855
+        "line": 850
       },
       "params": [
         {
@@ -19292,7 +19648,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/profit-shock.tsx",
-        "line": 949
+        "line": 944
       },
       "params": [
         {
@@ -19652,7 +20008,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/quiet-customers.tsx",
-        "line": 610
+        "line": 609
       },
       "params": [
         {
@@ -19710,7 +20066,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/quiet-customers.tsx",
-        "line": 773
+        "line": 772
       },
       "params": [
         {
@@ -19768,7 +20124,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/scenes/quiet-customers.tsx",
-        "line": 1012
+        "line": 1010
       },
       "params": [
         {
@@ -19826,7 +20182,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/quiet-customers.tsx",
-        "line": 1168
+        "line": 1166
       },
       "params": [
         {
@@ -21261,7 +21617,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 439
+        "line": 438
       },
       "params": [
         {
@@ -21310,7 +21666,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 449
+        "line": 448
       },
       "params": [
         {
@@ -21364,7 +21720,7 @@
       "tags": ["product-demo", "sound"],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 501
+        "line": 500
       },
       "params": [
         {
@@ -21413,7 +21769,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 513
+        "line": 512
       },
       "params": [
         {
@@ -21467,7 +21823,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 562
+        "line": 561
       },
       "params": [
         {
@@ -21516,7 +21872,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 599
+        "line": 598
       },
       "params": [
         {
@@ -21570,7 +21926,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/story.tsx",
-        "line": 976
+        "line": 975
       },
       "params": [
         {
@@ -21669,7 +22025,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/system.tsx",
-        "line": 166
+        "line": 164
       },
       "params": [
         {
@@ -21714,7 +22070,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/system.tsx",
-        "line": 184
+        "line": 182
       },
       "params": [
         {
@@ -21764,7 +22120,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/system.tsx",
-        "line": 269
+        "line": 266
       },
       "params": [
         {
@@ -21809,7 +22165,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/system.tsx",
-        "line": 292
+        "line": 289
       },
       "params": [
         {
@@ -21859,7 +22215,7 @@
       "tags": ["sound"],
       "source": {
         "path": "src/scenes/system.tsx",
-        "line": 385
+        "line": 382
       },
       "params": [],
       "dependencies": [
@@ -22459,7 +22815,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-flow.tsx",
-        "line": 543
+        "line": 542
       },
       "params": [
         {
@@ -22517,7 +22873,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-flow.tsx",
-        "line": 807
+        "line": 806
       },
       "params": [
         {
@@ -22575,7 +22931,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/team-flow.tsx",
-        "line": 955
+        "line": 954
       },
       "params": [
         {
@@ -24035,7 +24391,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/three-questions.tsx",
-        "line": 573
+        "line": 570
       },
       "params": [
         {
@@ -24084,7 +24440,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/three-questions.tsx",
-        "line": 717
+        "line": 714
       },
       "params": [
         {
@@ -24133,7 +24489,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/three-questions.tsx",
-        "line": 820
+        "line": 817
       },
       "params": [
         {
@@ -24182,7 +24538,7 @@
       "tags": [],
       "source": {
         "path": "src/scenes/three-questions.tsx",
-        "line": 985
+        "line": 982
       },
       "params": [
         {
@@ -27138,7 +27494,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 84
+        "line": 107
       },
       "params": [
         {
@@ -27190,7 +27546,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 105
+        "line": 128
       },
       "params": [
         {
@@ -27237,7 +27593,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 147
+        "line": 192
       },
       "params": [
         {
@@ -27289,7 +27645,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 168
+        "line": 213
       },
       "params": [
         {
@@ -27341,7 +27697,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 196
+        "line": 253
       },
       "params": [
         {
@@ -27393,7 +27749,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 218
+        "line": 286
       },
       "params": [
         {
@@ -27445,7 +27801,7 @@
       "tags": [],
       "source": {
         "path": "src/motion-operators/index.tsx",
-        "line": 259
+        "line": 358
       },
       "params": [
         {
@@ -29444,7 +29800,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 18
+        "line": 27
       },
       "params": [
         {
@@ -29527,7 +29883,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 49
+        "line": 60
       },
       "params": [
         {
@@ -29610,7 +29966,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 73
+        "line": 87
       },
       "params": [
         {
@@ -29678,7 +30034,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 121
+        "line": 152
       },
       "params": [
         {
@@ -29741,7 +30097,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 155
+        "line": 214
       },
       "params": [
         {
@@ -29824,7 +30180,7 @@
       "tags": ["transition"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 189
+        "line": 256
       },
       "params": [
         {
@@ -29892,7 +30248,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 233
+        "line": 365
       },
       "params": [
         {
@@ -29965,7 +30321,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/creative-primitives.tsx",
-        "line": 281
+        "line": 442
       },
       "params": [
         {
@@ -30186,7 +30542,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 438
+        "line": 437
       },
       "params": [],
       "dependencies": [
@@ -30225,7 +30581,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 446
+        "line": 445
       },
       "params": [
         {
@@ -30290,7 +30646,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 796
+        "line": 795
       },
       "params": [],
       "dependencies": [
@@ -30329,7 +30685,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 807
+        "line": 806
       },
       "params": [
         {
@@ -30409,7 +30765,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1106
+        "line": 1101
       },
       "params": [],
       "dependencies": [
@@ -30448,7 +30804,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1120
+        "line": 1115
       },
       "params": [
         {
@@ -30543,7 +30899,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1484
+        "line": 1479
       },
       "params": [],
       "dependencies": [
@@ -30582,7 +30938,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/customer-primitives.tsx",
-        "line": 1496
+        "line": 1491
       },
       "params": [
         {
@@ -30838,7 +31194,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 37
+        "line": 55
       },
       "params": [
         {
@@ -30894,7 +31250,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 50
+        "line": 83
       },
       "params": [
         {
@@ -30950,7 +31306,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 68
+        "line": 120
       },
       "params": [
         {
@@ -31006,7 +31362,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 83
+        "line": 158
       },
       "params": [
         {
@@ -31062,7 +31418,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 95
+        "line": 205
       },
       "params": [
         {
@@ -31128,7 +31484,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 115
+        "line": 233
       },
       "params": [
         {
@@ -31189,7 +31545,7 @@
       "tags": ["background"],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 132
+        "line": 266
       },
       "params": [
         {
@@ -31235,7 +31591,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 148
+        "line": 302
       },
       "params": [
         {
@@ -31281,7 +31637,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 162
+        "line": 329
       },
       "params": [
         {
@@ -31327,7 +31683,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 174
+        "line": 363
       },
       "params": [
         {
@@ -31373,7 +31729,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-metaphors.tsx",
-        "line": 212
+        "line": 439
       },
       "params": [
         {
@@ -31731,7 +32087,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 162
+        "line": 163
       },
       "params": [
         {
@@ -31819,7 +32175,7 @@
       "tags": ["product-demo"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 290
+        "line": 322
       },
       "params": [
         {
@@ -31902,7 +32258,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 365
+        "line": 453
       },
       "params": [
         {
@@ -31975,7 +32331,7 @@
       "tags": ["chart"],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 415
+        "line": 517
       },
       "params": [
         {
@@ -32048,7 +32404,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 452
+        "line": 573
       },
       "params": [
         {
@@ -32121,7 +32477,7 @@
       "tags": [],
       "source": {
         "path": "src/ui/motion-primitives.tsx",
-        "line": 490
+        "line": 611
       },
       "params": [
         {
@@ -32400,7 +32756,7 @@
       "tags": ["typography"],
       "source": {
         "path": "src/ui/tech-pipeline.tsx",
-        "line": 68
+        "line": 104
       },
       "params": [
         {
@@ -39184,6 +39540,10 @@
           "line": 2
         },
         {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 2
+        },
+        {
           "file": "src/reels/reel-41-dread.ts",
           "line": 2
         },
@@ -39515,6 +39875,10 @@
           "line": 22
         },
         {
+          "file": "src/reels/reel-113-living-abacus.ts",
+          "line": 46
+        },
+        {
           "file": "src/reels/reel-71-full-cycle.ts",
           "line": 32
         },
@@ -39737,6 +40101,7 @@
         "110",
         "111",
         "112",
+        "113",
         "71",
         "72",
         "73",
@@ -39767,7 +40132,7 @@
         "98",
         "99"
       ],
-      "scenes": 245
+      "scenes": 249
     },
     {
       "id": "spec-kind:branch",
@@ -39841,6 +40206,7 @@
         "09",
         "10",
         "11",
+        "113",
         "12",
         "13",
         "14",
@@ -39882,7 +40248,7 @@
         "51",
         "52"
       ],
-      "scenes": 51
+      "scenes": 52
     },
     {
       "id": "spec-kind:day",
@@ -48356,6 +48722,85 @@
         "../scenes/flashback-timing",
         "../scenes/flashback-rewind"
       ]
+    },
+    {
+      "id": "113",
+      "title": "چرتکه زنده — یک بار بزن، تمام",
+      "seconds": 31,
+      "theme": "dark-neon",
+      "artDirection": "kinetic-manifesto",
+      "layoutTopology": "data-flow-matrix",
+      "viralTemplate": "premium-motion-graphics",
+      "aspectRatio": "9:16 (1080x1920)",
+      "source": "src/reels/reel-113-living-abacus.ts",
+      "sourceNote": null,
+      "scenes": [
+        {
+          "kind": "bespoke",
+          "start": 0,
+          "end": 3.5,
+          "theme": "dark-neon",
+          "component": "AbacusHookScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 3.5,
+          "end": 10,
+          "theme": "dark-neon",
+          "component": "AbacusManualScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 10,
+          "end": 15,
+          "theme": "dark-neon",
+          "component": "AbacusOutageScene",
+          "actor": null
+        },
+        {
+          "kind": "bespoke",
+          "start": 15,
+          "end": 24,
+          "theme": "dark-neon",
+          "component": "AbacusSyncScene",
+          "actor": null
+        },
+        {
+          "kind": "cta",
+          "start": 24,
+          "end": 31,
+          "theme": null,
+          "component": null,
+          "actor": null
+        }
+      ],
+      "soundKinds": [
+        "alert",
+        "chime",
+        "dataFlow",
+        "financialMilestone",
+        "impact",
+        "pop",
+        "softTransition",
+        "success",
+        "sync",
+        "tick",
+        "titleHit",
+        "whoosh"
+      ],
+      "assetsUsed": [
+        "scenes/living-abacus#AbacusHookScene",
+        "scenes/living-abacus#AbacusManualScene",
+        "scenes/living-abacus#AbacusOutageScene",
+        "scenes/living-abacus#AbacusSyncScene",
+        "scenes/living-abacus#abacusHookCues",
+        "scenes/living-abacus#abacusManualCues",
+        "scenes/living-abacus#abacusOutageCues",
+        "scenes/living-abacus#abacusSyncCues"
+      ],
+      "importsFrom": ["../engine/types", "../scenes/living-abacus", "./shared"]
     }
   ],
   "sounds": {
