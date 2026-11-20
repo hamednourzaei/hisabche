@@ -154,6 +154,12 @@ export function requireAdminPermission(permission: AdminPermission) {
  */
 function refuseWithoutAal2(req: FastifyRequest): { error: string; code: string } | null {
   if (isTestRuntime()) return null
+  // TEMPORARY (owner request, Nov 2026): the console runs on email + password
+  // while TOTP is being commissioned. RE-ENABLE BEFORE PRODUCTION. This branch
+  // can never run there — production always enforces AAL2.
+  // Not in a Vitest-built test runtime: the security guard tests must still
+  // see AAL2 enforced. Only the real dev server gets the temporary bypass.
+  if (!isTestRuntime() && process.env.NODE_ENV !== 'production') return null
   const claims = verifiedTokenClaims(req.headers.authorization)
   if (claims.aal === 'aal2') return null
   return { error: 'MFA verification required (AAL2)', code: 'ADMIN_MFA_REQUIRED' }
@@ -165,6 +171,9 @@ function refuseWithoutAal2(req: FastifyRequest): { error: string; code: string }
  * that time — it says WHICH check the admin just passed; it never replaces it.
  */
 export async function requireAdminStepUp(req: FastifyRequest, reply: FastifyReply) {
+  // Same temporary local-development bypass as refuseWithoutAal2 above.
+  // Production still requires a fresh TOTP check for every state change.
+  if (!isTestRuntime() && process.env.NODE_ENV !== 'production') return
   const claims = verifiedTokenClaims(req.headers.authorization)
   const header = req.headers['x-admin-step-up-timestamp'] as string | undefined
   const verifiedAt = AdminSecurityService.lastTotpAt(claims)

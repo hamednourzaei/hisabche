@@ -4,7 +4,12 @@ import { useEffect, useState, useEffectEvent } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
 import { createAdminSupabaseClient } from '@/lib/supabase-client'
+import { setAdminAccessToken } from '@/lib/admin-api-token'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+
+// TEMPORARY (Nov 2026): TOTP/MFA is being commissioned. Set to true to restore
+// password + authenticator sign-in. Production still enforces AAL2 on the API.
+const ADMIN_MFA_ENABLED = false
 import Image from 'next/image'
 
 /**
@@ -97,6 +102,15 @@ export function LoginClient() {
       const supabase = createAdminSupabaseClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) throw signInError
+      if (!ADMIN_MFA_ENABLED) {
+        // Hand the fresh token straight to the shared API client. Waiting for
+        // onAuthStateChange on a different client instance left requests going
+        // out with no Authorization header (401 "Missing authorization header").
+        const { data } = await supabase.auth.getSession()
+        setAdminAccessToken(data.session?.access_token ?? null)
+        goToDashboard()
+        return
+      }
       await continueToSecondFactor()
     })
 
@@ -117,6 +131,11 @@ export function LoginClient() {
     const supabase = createAdminSupabaseClient()
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return
+      if (!ADMIN_MFA_ENABLED) {
+        setAdminAccessToken(data.session.access_token)
+        goToDashboard()
+        return
+      }
       try {
         await continueToSecondFactor()
       } catch (e: unknown) {

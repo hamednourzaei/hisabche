@@ -39,21 +39,29 @@ let started = false
  * awaits, and declaring it earlier would let the first request race out
  * without a header.
  */
+/** Publish a freshly issued token to the shared API client immediately. */
+export function setAdminAccessToken(token: string | null): void {
+  accessToken = token
+}
+
 export function initAdminApiAuth(): void {
   if (started || typeof window === 'undefined') return
   started = true
 
   const supabase = createAdminSupabaseClient()
 
+  // Register the getter BEFORE the async session read. The API client waits on
+  // tokenReady, so nothing can race out; a later login can now publish its
+  // token through setAdminAccessToken even if onAuthStateChange on this second
+  // Supabase client instance never fires in this tab.
+  registerTokenGetter(() => accessToken)
+
   supabase.auth.onAuthStateChange((_event, session) => {
     accessToken = session?.access_token ?? null
   })
 
   void supabase.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      accessToken = data.session.access_token
-    }
-    registerTokenGetter(() => accessToken)
+    accessToken = data.session?.access_token ?? null
     markTokenReady()
   })
 }
