@@ -24,6 +24,7 @@ const state: {
 interface Query {
   eq: (...args: unknown[]) => Query
   is: (...args: unknown[]) => Query
+  order: (...args: unknown[]) => Query
   maybeSingle: () => Promise<Read>
   then: <T>(onfulfilled: (value: Read) => T) => Promise<T>
 }
@@ -51,6 +52,7 @@ vi.mock('../db', () => ({
         const q: Query = {
           eq: () => q,
           is: () => q,
+          order: () => q,
           maybeSingle: async (): Promise<Read> => readFor(table),
           // supabase-js builders are thenable; the service awaits the builder
           // directly for the membership list, so the mock must be too.

@@ -64,6 +64,14 @@ function resetWorld() {
     { id: WORKSPACE_B, name: 'Workspace B', base_currency: 'USD' },
   ])
 
+  // 1b. Profiles — both owners finished onboarding. This suite isolates the
+  //     cross-tenant boundary; an incomplete profile would answer 428 before
+  //     the tenancy check and hide the behaviour being tested.
+  db.seed('profiles', [
+    { id: USER_A.id, full_name: 'Owner A', onboarding_completed_at: '2026-01-01T00:00:00Z' },
+    { id: USER_B.id, full_name: 'Owner B', onboarding_completed_at: '2026-01-01T00:00:00Z' },
+  ])
+
   // 2. Members
   db.seed('workspace_members', [
     member(WORKSPACE_A, USER_A.id, 'owner'),

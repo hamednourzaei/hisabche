@@ -746,6 +746,7 @@ export const SERIALS_STATEMENTS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS stock_serials (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     product_id TEXT NOT NULL,
     serial_number TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'in_stock'
@@ -785,6 +786,7 @@ export const BATCHES_STATEMENTS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS stock_batches (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     product_id TEXT NOT NULL,
     batch_number TEXT NOT NULL,
     -- NULL means this batch does not expire. Distinct from a far-future date:

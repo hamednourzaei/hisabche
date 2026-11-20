@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 35
+export const SCHEMA_VERSION = 36
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -519,6 +519,7 @@ export const CREATE_STATEMENTS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS cost_layer (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     product_id TEXT NOT NULL,
     variant_id TEXT,
     warehouse_id TEXT,
@@ -608,10 +609,12 @@ export const CREATE_STATEMENTS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS account (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     role TEXT,
+    kind TEXT,
     parent_id TEXT,
     is_group INTEGER NOT NULL DEFAULT 0,
     is_active INTEGER NOT NULL DEFAULT 1,
@@ -679,6 +682,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
   // ─── Inventory Settings ───────────────────────────────────────
   `CREATE TABLE IF NOT EXISTS inventory_settings (
     workspace_id TEXT PRIMARY KEY,
+    id TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     costing_method TEXT NOT NULL DEFAULT 'fifo',
     negative_stock TEXT NOT NULL DEFAULT 'block',
     updated_at TEXT NOT NULL
@@ -1000,7 +1005,9 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
   cost_layer: [
     'id',
     'workspace_id',
+    'version',
     'product_id',
+    'variant_id',
     'warehouse_id',
     'source_type',
     'source_id',
@@ -1073,10 +1080,12 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
   account: [
     'id',
     'workspace_id',
+    'version',
     'code',
     'name',
     'type',
     'role',
+    'kind',
     'parent_id',
     'is_group',
     'is_active',
@@ -1130,7 +1139,14 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'origin',
     'sync_state',
   ],
-  inventory_settings: ['workspace_id', 'costing_method', 'negative_stock', 'updated_at'],
+  inventory_settings: [
+    'id',
+    'workspace_id',
+    'version',
+    'costing_method',
+    'negative_stock',
+    'updated_at',
+  ],
   invoice_counter: ['workspace_id', 'prefix', 'next', 'updated_at'],
   package_credit_ledger: [
     'id',
@@ -1437,6 +1453,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
   stock_serials: [
     'id',
     'workspace_id',
+    'version',
     'product_id',
     'serial_number',
     'status',
@@ -1459,6 +1476,7 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
   stock_batches: [
     'id',
     'workspace_id',
+    'version',
     'product_id',
     'batch_number',
     'expiry_date',

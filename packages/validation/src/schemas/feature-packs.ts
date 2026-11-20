@@ -118,6 +118,14 @@ export const FEATURE_PACKS: Readonly<Record<PackId, FeaturePackDefinition>> = {
       // V70.2: a variant is a product row's detail — it belongs to the pack
       // that owns the product catalogue, not to a second one.
       'product_variants',
+      // Sync entity coverage: cost layers, expiry batches, unit serials, the
+      // costing settings and the chart of accounts are all read by the core
+      // invoice route. They are pull-only; no pack may write them through sync.
+      'cost_layer',
+      'stock_batches',
+      'stock_serials',
+      'inventory_settings',
+      'account',
     ],
     dependsOn: [],
     budgetKb: 650,

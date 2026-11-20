@@ -2975,6 +2975,15 @@
       "ownerOnly": "Only the business owner can download a full copy of the data.",
       "failed": "The download failed. Please try again."
     },
+    "restore": {
+      "title": "Restore a backup",
+      "hint": "Choose a portable archive exported from Hisabche. A restore only fills an empty business and never overwrites existing data.",
+      "select": "Choose archive",
+      "restoring": "Restoring…",
+      "success": "Restored {count} rows across {tables} tables.",
+      "failed": "Restore failed. No business data was changed.",
+      "ownerOnly": "Only the business owner can restore a backup."
+    },
     "title": "Sync",
     "description": "Manage offline sync",
     "syncing": "Syncing...",

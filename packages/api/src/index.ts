@@ -253,9 +253,11 @@ export {
 export {
   useWorkspaceBackup,
   useDownloadWorkspaceBackup,
+  useRestoreWorkspaceBackup,
   type BackupFileFormat,
   type WorkspaceBackup,
   type WorkspaceBackupMeta,
+  type WorkspaceRestoreResult,
 } from './hooks/backup'
 
 // ─── Realtime ─────────────────────────────────────────────

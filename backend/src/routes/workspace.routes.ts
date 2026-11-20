@@ -20,6 +20,7 @@ import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireActiveSubscriptionForWorkspaceParam } from '../middleware/subscription.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { PlanLimitError } from '../services/plan-limits.service'
 import { toJsonSchema } from '../utils/json-schema'
@@ -103,6 +104,25 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.code(500).send({ error: 'Failed to export the workspace backup' })
       }
     },
+  )
+
+  // ─── POST /api/workspaces/restore ─────────────────────────
+  // A portable archive is restored by the DEVICE's local engine, where the
+  // SQLite rows actually live. The server has no such database and must never
+  // pretend to import one. This route exists so the shared UI hook always
+  // reaches a real address: on the cloud host it answers with a clear code,
+  // on the desktop host the local transport handles the same path offline.
+  fastify.post(
+    '/api/workspaces/restore',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('data.import')],
+    },
+    async (_request: FastifyRequest, reply: FastifyReply) =>
+      reply.code(400).send({
+        error: 'RESTORE_LOCAL_ONLY',
+        code: 'RESTORE_LOCAL_ONLY',
+        message: 'Restore runs in the device local engine, not on the cloud API.',
+      }),
   )
 
   fastify.get(

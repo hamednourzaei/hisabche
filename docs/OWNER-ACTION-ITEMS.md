@@ -1,78 +1,91 @@
 # Hisabche — Owner Action Items (only what YOU must do)
 
-Everything code-side that could be done safely is already implemented in the working tree.
-The items below CANNOT be done by the coding agent — they need your hand, your environment or
-your decision. Nothing here has been executed or claimed as applied.
+Updated at HEAD `f2df3731` after the owner reported that all migrations were applied and confirmed
+from `information_schema` that `accounts` now has a NOT NULL `workspace_id`.
 
-## 1. Apply pending SQL migrations — in this exact order
+Everything code-side that can be done safely is implemented in the working tree. The items
+below genuinely need your hand, your environment or your signal. Nothing here is claimed as
+applied by the coding agent.
 
-1. `docs/tenancy-workspace-migration.sql` (if not already applied — prerequisite of the sync engine)
-2. `docs/sync-engine-migration.sql` (change log, cursor, idempotency, versions)
-3. **`docs/sync-entity-coverage-migration.sql`** (NEW this session — four missing sync entities)
-4. `docs/onboarding-server-state-migration.sql` (profile onboarding columns)
-5. the other pending migrations listed in `docs/MIGRATIONS-PENDING.md` (roll-cutting, WP-13/15/19, …)
+## 1. Apply ONE new migration — `docs/sync-account-tenancy-coverage-migration.sql`
 
-For each: run the matching `docs/VERIFY-*.sql` afterwards and confirm every check is true.
-Status to record: `Post-migration verification query generated — PENDING HUMAN CONFIRMATION`.
-No migration may be marked PASS until you have run it.
+The earlier `docs/sync-entity-coverage-migration.sql` already covered four entities. The final
+two are now implemented in code and need their server DDL:
 
-## 2. Fix the PostgreSQL test environment
+- `accounts` — receives a version column, a bump trigger and a change-log trigger under the
+  protocol name `account`. The tenancy question is **RESOLVED**: `docs/accounting-core-migration.sql`
+  already added `accounts.workspace_id` and backfilled it; your `information_schema` output
+  confirms it is NOT NULL. No tenant was invented.
+- `inventory_settings` — receives a stable `id` (its primary key stays `workspace_id`) so the
+  keyset snapshot and the device's id-based upsert can address the single settings row.
 
-Embedded Postgres fails with `SeCreateGlobalPrivilege` (error 1314).
+Run, in order:
 
-- Open `secpol.msc` → Local Policies → User Rights Assignment → **Create global objects**
-- Add your Windows account, then **sign out and back in**
-- Then run:
-  ```
-  cd backend && npx vitest run --project pg
-  cd backend && npx vitest run --project pg src/__tests__/sync-entity-coverage.pg.test.ts
-  ```
+```
+docs/sync-account-tenancy-coverage-migration.sql
+docs/VERIFY-sync-account-tenancy-coverage.sql
+```
 
-Until then the 168 `*.pg.test.ts` files cannot provide a live witness.
+The migration is guarded and safe to re-run. Record the result as
+`Post-migration verification query generated — PENDING HUMAN CONFIRMATION`; do not mark PASS
+from a source file alone.
 
-## 3. Decision required — `accounts` tenancy
+When this is applied, the device code is already ready: all five entities are in
+`PULLED_TABLES`/`DELTA_ENTITIES`, with server pull columns, device mappers, local `version`
+columns (local schema v36) and push refusal by name. Existing devices rehydrate on next sync
+because their stamps for the new tables are missing.
 
-`public.accounts` has `user_id` but **no `workspace_id`** (see
-`docs/FINDING-sync-account-tenancy.sql`). A change-log trigger cannot route its rows to a
-workspace. You must decide the backfill rule for historical accounts (which workspace owns each
-row). Do NOT invent one. After your decision:
+## 1b. Commit the temporary Postgres cleanup (no decision needed)
 
-- add the tenancy column + backfill migration,
-- then enable the `account` change-log trigger,
-- then add `account` to `DELTA_ENTITIES`/`PULLED_TABLES` and remove it from `NOT_PULLED_YET`.
+The 968 embedded-Postgres files under `backend/src/__tests__/.pg-sync-scope-55723/` are deleted in the
+working tree and `.gitignore` now ignores `backend/src/__tests__/.pg-*/`. Just include the deletions in
+your next commit — no reset, no history rewrite. The file names inspected (`PG_VERSION`, `base/1/…`)
+are a test cluster, not source; review the diff if you want before committing.
 
-## 4. Decision required — widen local sync lists ONLY after step 1.3
+## 2. Re-run the PostgreSQL witness suites (environment prerequisite)
 
-After the sync-entity migration is actually applied and verified, move these four entities from
-`NOT_PULLED_YET` into `PULLED_TABLES` / `DELTA_ENTITIES` (in `device-sync-state.ts` and
-`sync-engine.ts`): `cost_layer`, `stock_batches`, `stock_serials`, `inventory_settings`.
-Doing it BEFORE the server triggers exist makes devices wait forever for changes nobody emits.
+If embedded Postgres still fails with `SeCreateGlobalPrivilege`:
 
-## 5. Verification you must perform (production evidence)
+- `secpol.msc` → Local Policies → User Rights Assignment → **Create global objects**
+- add your Windows account, then **sign out and back in**
 
-| Evidence                 | Command / action                                                                     |
-| ------------------------ | ------------------------------------------------------------------------------------ |
-| Live database            | steps 1–2 above                                                                      |
-| Browser E2E              | run the 10 onboarding scenarios in `docs/onboarding/ONBOARDING-ARCHITECTURE.md`      |
-| This internet cut        | install on Windows/Android, disconnect, create invoice, restart, confirm it survives |
-| Reconnect exactly-once   | create offline changes, reconnect, count server rows                                 |
-| Conflict review          | conflict an invoice/payment, confirm both versions survive and are reviewable        |
-| Full archive round-trip  | export from a real device, import into a new cloud workspace, reconcile balances     |
-| Windows packaged runtime | install the built app (you authorise any build)                                      |
-| Android physical device  | run on a real phone                                                                  |
-| Performance baselines    | low-memory Android + ordinary Windows, measured — not guessed                        |
+Then:
 
-## 6. Deployment order (when you are ready)
+```
+cd backend && npx vitest run --project pg
+cd backend && npx vitest run --project pg src/__tests__/sync-entity-coverage.pg.test.ts src/__tests__/sync-account-tenancy-coverage.pg.test.ts
+```
 
-1. Apply migrations (step 1)
+Until then the `*.pg.test.ts` suites provide no live witness (they exit without asserting).
+
+## 3. Verification only you can perform (production evidence)
+
+| Evidence            | Action                                                                                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Browser E2E         | the 10 onboarding scenarios in `docs/onboarding/ONBOARDING-ARCHITECTURE.md`                                                                                                                                              |
+| Internet cut        | install, disconnect, create an invoice, restart, confirm it survives                                                                                                                                                     |
+| Exactly-once        | offline changes → reconnect → count server rows                                                                                                                                                                          |
+| Conflict            | conflict an invoice/payment, confirm both versions survive and are reviewable                                                                                                                                            |
+| Archive round-trip  | export from a real device, import into a new cloud workspace, reconcile                                                                                                                                                  |
+| Local restore drill | in the Sync Centre choose a portable archive, restore into a FRESH empty workspace, then reconcile `invoices`, `payments`, `journal_lines` totals. A non-empty workspace must refuse it with `RESTORE_TARGET_NOT_EMPTY`. |
+| Windows packaged    | install the built app (you authorise any build)                                                                                                                                                                          |
+| Android physical    | run on a real phone                                                                                                                                                                                                      |
+| Performance         | low-memory Android + ordinary Windows, measured — not guessed                                                                                                                                                            |
+
+Automated harnesses/scripts for these are code-side work and are already in the repository;
+only the real-device execution remains yours.
+
+## 4. Deployment order
+
+1. Apply the migration in step 1
 2. Deploy **backend**
 3. Deploy web / desktop / mobile
-4. Run the five acceptance tests above
+4. Run the acceptance tests above
 
-## 7. What is deliberately NOT asked of you by the agent
+## 5. Explicitly NOT asked of you
 
-No commit, no push, no build, no dependency change, no `.env` access, no live DDL was performed
-by the agent. All code changes are uncommitted in the working tree at HEAD `b54636fa`.
+No commit, push, build, dependency change, `.env` access or live DDL was performed by the
+agent. All changes are uncommitted in the working tree at HEAD `b54636fa`.
 
-Full status and evidence: `docs/prompts/THE-LAST.md` (PART 8–11),
-`docs/audits/V2-PHASE-REVIEW.md`, `docs/audits/REMAINING-PHASES-CLOSURE.md`.
+Full evidence: `docs/prompts/THE-LAST.md`, `docs/audits/V2-PHASE-REVIEW.md`,
+`docs/audits/REMAINING-PHASES-CLOSURE.md`.

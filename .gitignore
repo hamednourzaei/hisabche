@@ -13,6 +13,9 @@ node_modules
 
 # Embedded Postgres data directories (see backend/src/__tests__/helpers/pg-temp-dir.ts)
 .pgtest
+# Per-suite embedded Postgres clusters created under the test folder. They hold
+# PG_VERSION, base/ and WAL files — never source, and never a commit.
+backend/src/__tests__/.pg-*/
 
 # Build outputs
 dist

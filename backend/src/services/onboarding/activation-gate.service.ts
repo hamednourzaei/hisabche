@@ -17,7 +17,8 @@ import {
   type OnboardingGateResult,
 } from '@hisabche/validation'
 import { supabase } from '../../db'
-import { rowOf, rowText, rowsOf } from '../../utils/db-row'
+import { listAuthorizedWorkspaces } from '../tenancy.service'
+import { rowOf, rowText } from '../../utils/db-row'
 
 interface ProfileOverride {
   readonly fullName?: string | null | undefined
@@ -48,16 +49,13 @@ export async function evaluateOnboardingGateForUser(
   if (profileError) throw new Error(`ONBOARDING_GATE_PROFILE_READ_FAILED: ${profileError.message}`)
   const profile = rowOf(profileData)
 
-  const { data: memberData, error: memberError } = await supabase
-    .from('workspace_members')
-    .select('workspace_id, role')
-    .eq('user_id', userId)
-    .eq('has_access', true)
-    .is('suspended_at', null)
-  if (memberError) throw new Error(`ONBOARDING_GATE_MEMBERSHIP_READ_FAILED: ${memberError.message}`)
-  const memberships = rowsOf(memberData)
-  const target = memberships.find((m) => rowText(m.role) === 'owner') ?? memberships[0]
-  const workspaceId = rowText(target?.workspace_id)
+  // ONE resolver. Constitution laws 32/33: a second membership query here
+  // would be a second tenancy model. listAuthorizedWorkspaces already honours
+  // has_access and suspended_at, so the activation facts use the same rule as
+  // every other protected operation.
+  const memberships = await listAuthorizedWorkspaces(userId)
+  const target = memberships.find((m) => m.role === 'owner') ?? memberships[0]
+  const workspaceId = target?.workspaceId ?? null
   const hasWorkspace = memberships.length > 0
 
   let workspaceBusinessName: string | null = null

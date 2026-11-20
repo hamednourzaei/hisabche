@@ -8,8 +8,15 @@
 
 import { localTableSchema } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
+import { restoreArchive } from '../export'
+import type { ExportPackage } from '../export/types'
+import { ValidationError } from '../errors'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+
+interface RestoreBody {
+  archive?: unknown
+}
 
 export function registerBackupRoutes(router: Router): void {
   // ─── GET /workspaces/backup ──────────────────────────────────
@@ -85,6 +92,34 @@ export function registerBackupRoutes(router: Router): void {
         totalRows,
       },
       ...resultData,
+    }
+  })
+
+  // ─── POST /workspaces/restore ─────────────────────────────────
+  // The missing half of portability. The diagnostic dump above is
+  // deliberately NOT restorable; this endpoint takes the checksummed portable
+  // archive from `createExportPackage` and restores it into the current
+  // workspace. The archive is validated before any write and the write is one
+  // transaction, so a refused or interrupted restore leaves no half business.
+  //
+  // The workspace id is the caller's CONTEXT, never a field in the archive: a
+  // file can be copied anywhere, but it can only land in the workspace the
+  // signed-in device is currently pointing at.
+  router.post('/workspaces/restore', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'backup.manage')
+
+    const body = c.body as RestoreBody | null
+    const archive = body?.archive as ExportPackage | undefined
+    if (!archive || typeof archive !== 'object' || !archive.sections || !archive.metadata) {
+      throw new ValidationError('RESTORE_ARCHIVE_MISSING')
+    }
+
+    try {
+      return restoreArchive(c.db, archive, { expectedWorkspaceId: c.ctx.workspaceId })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const code = /^(RESTORE_[A-Z_]+)/.exec(message)?.[1] ?? 'RESTORE_FAILED'
+      throw new ValidationError(message, undefined, code)
     }
   })
 }

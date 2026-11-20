@@ -28,7 +28,7 @@
 
 | بسته | نشانی‌ها | جدول‌های همگام‌سازی | وابسته به |
 | --- | --- | --- | --- |
-| `core` | 26 | `invoice`، `customer`، `product`، `transaction`، `warehouse`، `branch`، `exchange_rate`، `product_stock`، `product_variants` | — |
+| `core` | 26 | `invoice`، `customer`، `product`، `transaction`، `warehouse`، `branch`، `exchange_rate`، `product_stock`، `product_variants`، `cost_layer`، `stock_batches`، `stock_serials`، `inventory_settings`، `account` | — |
 | `operations` | 2 | `order_deposits`، `order_deposit_applications`، `order_deposit_refunds` | `core` |
 | `manufacturing` | 1 | — | `core` |
 | `workforce` | 2 | `time_entry`، `service_delivery_sessions`، `package_credit_ledger`، `repair_tickets` | `core` |

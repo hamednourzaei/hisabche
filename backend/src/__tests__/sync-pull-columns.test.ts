@@ -33,6 +33,13 @@ const TABLE: Record<string, string> = {
   service_delivery_sessions: 'service_delivery_sessions',
   package_credit_ledger: 'package_credit_ledger',
   repair_tickets: 'repair_tickets',
+  // Sync entity coverage. The device stores all five under the server's name
+  // except cost_layer, whose local table is singular.
+  cost_layer: 'cost_layers',
+  stock_batches: 'stock_batches',
+  stock_serials: 'stock_serials',
+  inventory_settings: 'inventory_settings',
+  account: 'accounts',
 }
 
 describe('sync pull columns', () => {

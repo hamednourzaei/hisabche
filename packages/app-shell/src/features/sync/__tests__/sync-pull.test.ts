@@ -137,6 +137,13 @@ describe('first pull: complete snapshot through /sync/snapshot, then the log fro
           'service_delivery_sessions',
           'package_credit_ledger',
           'repair_tickets',
+          // Sync entity coverage: these five arrive the same way — empty in
+          // this fixture, not an error the pull has to hide.
+          'cost_layer',
+          'stock_batches',
+          'stock_serials',
+          'inventory_settings',
+          'account',
         ].includes(String(params.entity))
       ) {
         return asJson({ rows: [], hasMore: false, nextAfter: null })

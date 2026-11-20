@@ -19,6 +19,20 @@ export interface RestoreOptions {
   readonly expectedWorkspaceId: string
 }
 
+/**
+ * Bookkeeping columns that describe WHEN a row was last written on THIS device,
+ * not WHAT the row means. They differ between two machines even for the same
+ * pre-seeded default row and must not decide whether a restore is safe.
+ */
+const AUDIT_COLUMNS: ReadonlySet<string> = new Set([
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'origin',
+  'sync_state',
+  'version',
+])
+
 export interface RestoreResult {
   readonly restoredTables: readonly string[]
   readonly totalRows: number
@@ -85,10 +99,17 @@ export function restoreArchive(
         )
         if (!existing) continue
         // A pre-seeded default row (e.g. the device's own warehouse) may share
-        // the id. Identical is safe to skip; DIFFERENT data must never be
-        // silently overwritten by a restore.
-        const normalize = (value: unknown): string =>
-          JSON.stringify(value, (_k, v) => (v === null ? null : v))
+        // the id. Its audit stamps are written by `datetime('now')` on each
+        // install, so they NEVER match across two devices — comparing the whole
+        // row would refuse every real restore to a fresh install. Compare the
+        // BUSINESS columns only; a genuinely different row is still refused.
+        const normalize = (record: Record<string, unknown>): string => {
+          const business = Object.keys(record)
+            .filter((column) => !AUDIT_COLUMNS.has(column))
+            .sort()
+            .map((column) => [column, record[column]])
+          return JSON.stringify(business)
+        }
         if (normalize(existing) === normalize(row)) continue
         throw new Error(`RESTORE_TARGET_NOT_EMPTY:${table}:${value}`)
       }

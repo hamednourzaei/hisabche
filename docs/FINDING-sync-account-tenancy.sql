@@ -1,34 +1,38 @@
 -- READ-ONLY FINDING — do not run as a migration.
--- PART 5 §6.4: why `account` cannot join the sync delta at current HEAD.
+-- PART 5 §6.4: the accounts tenancy question, now RESOLVED by applied DDL.
 
--- 1. The local engine and the device both own an `account` table, and local
---    routes read it. It is in NOT_PULLED_YET, so on a device it holds only what
---    that device wrote.
--- 2. The server owns `public.accounts` (base-schema-migration.sql:62). That
---    table has `user_id`, NOT `workspace_id`. The canonical
---    sync_record_change() trigger reads NEW.workspace_id to route a change to
---    a pull; without the column it would either fail every INSERT/UPDATE or
---    log a change no workspace can ever receive.
--- 3. Adding workspace_id requires a TENANCY backfill decision: which workspace
---    owns historical accounts that currently carry only user_id? Inventing one
---    would silently misattribute financial chart-of-accounts data. That is an
---    OWNER_DECISION_REQUIRED — not something this migration may guess.
+-- HISTORY. An early survey read base-schema-migration.sql:62, where
+-- public.accounts has user_id and no workspace_id. On that evidence the entity
+-- was marked OWNER_DECISION_REQUIRED: a change-log trigger could not route its
+-- rows to a workspace, and guessing a tenant for historical chart-of-accounts
+-- rows would have misattributed financial data.
 
--- Read-only evidence for the owner:
+-- RESOLUTION. docs/accounting-core-migration.sql — already in this repository
+-- and applied on the live database — adds accounts.workspace_id and backfills
+-- it from the owning membership. The owner has now confirmed from
+-- information_schema that accounts has a NOT NULL workspace_id (plus id and
+-- user_id). No historical tenant was invented by the coding agent.
+
+-- Therefore the remaining work was engineering, not a business decision:
+--   docs/sync-account-tenancy-coverage-migration.sql adds the version column
+--   and the change-log trigger under the protocol name 'account';
+--   inventory_settings gains a stable id so the generic keyset snapshot and
+--   the device's id-based upsert can address its single workspace row.
+-- Both can now join PULLED_TABLES / DELTA_ENTITIES.
+
+-- Read-only evidence — run this to re-confirm the premise:
 SELECT table_name,
        column_name,
        is_nullable
 FROM information_schema.columns
 WHERE table_schema = 'public'
   AND table_name IN ('accounts', 'cost_layers', 'stock_batches', 'stock_serials', 'inventory_settings')
-  AND column_name IN ('workspace_id', 'user_id', 'id')
+  AND column_name IN ('workspace_id', 'user_id', 'id', 'version')
 ORDER BY table_name, column_name;
 
 -- Expected interpretation:
---   accounts            -> workspace_id ABSENT, user_id PRESENT  => BLOCKED
---   cost_layers         -> workspace_id + id                     => covered by
---                           docs/sync-entity-coverage-migration.sql
---   stock_batches       -> workspace_id + id                     => covered
---   stock_serials       -> workspace_id + id                     => covered
---   inventory_settings  -> workspace_id (no id)                  => covered by
---                           the workspace-keyed trigger variant
+--   accounts            -> workspace_id NOT NULL + id + version  => covered
+--   cost_layers         -> workspace_id + id + version            => covered
+--   stock_batches       -> workspace_id + id + version            => covered
+--   stock_serials       -> workspace_id + id + version            => covered
+--   inventory_settings  -> workspace_id + id + version            => covered

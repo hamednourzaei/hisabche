@@ -18,3 +18,8 @@ docs/architecture/universal-core/INDUSTRY-COVERAGE-TABLE.csv
 docs/campaigns/ENGINE-WIRING-STATUS.md
 docs/campaigns/CAPABILITY-RECONCILIATION.md
 docs/campaigns/INDUSTRY-MATRIX.md
+
+# Captured Supabase metadata export — never reformat the observed snapshot.
+# It is a raw 91k-line JSON dump inside Markdown; formatting it is extremely
+# slow and would rewrite the exact bytes the export produced.
+docs/supabase-All-detail.md

@@ -240,16 +240,16 @@ The profile of each industry has this information:
 - `dashboard`: Dashboard sections that should be displayed.
 - `vocabulary`: Industry-specific vocabulary.
   However, the number of actually defined specialized vocabularies is much less than 67 industries.
-  | Industry | Vocabulary defined in code |
-  | :--- | :--- |
-  | Restaurant | `productKey: dish` |
-  | Cafe | `productKey: drink` |
-  | Barber | `productKey: service`, `customerKey: client` |
-  | Beauty Salon | `productKey: service`, `customerKey: client` |
-  | Academy | `productKey: course`, `customerKey: student` |
-  | Repairs | `productKey: repairItem` |
-  | Gold Shop | `productKey: piece` |
-  | Other Industries | Mostly general vocabulary |
+  | Industry         | Vocabulary defined in code                   |
+  | :--------------- | :------------------------------------------- |
+  | Restaurant       | `productKey: dish`                           |
+  | Cafe             | `productKey: drink`                          |
+  | Barber           | `productKey: service`, `customerKey: client` |
+  | Beauty Salon     | `productKey: service`, `customerKey: client` |
+  | Academy          | `productKey: course`, `customerKey: student` |
+  | Repairs          | `productKey: repairItem`                     |
+  | Gold Shop        | `productKey: piece`                          |
+  | Other Industries | Mostly general vocabulary                    |
 
 So if a mechanic owner enters Hisabche, we should not yet claim that all titles like "Accepted Vehicle", "Repair Labor Fee", "Consumed Parts", and "Vehicle Delivery" have been integrated and dynamically replaced in all pages. These are correct mechanic experience titles, but their existence in the entire UI is not proven from this profile.
 
@@ -399,16 +399,16 @@ This ranking is my product evaluation based on profiles and registered gaps, not
 - Many specialized engines are still not offline.
 - Specialized vocabularies and KPIs for all industries have not reached an integrated UI level.
   **My Suggested Priority for the Next Version**
-  | Priority | Work that must be completed | Commercial Result |
-  | :--- | :--- | :--- |
-  | 1 | Completing and proving sales, receipts, returns, general ledger, and costing | Trust in money and profit. |
-  | 2 | Completing batch, expiry, variant, serial, and returns | Reducing inventory loss. |
-  | 3 | Completing orders, purchasing, receipts, and inter-warehouse transfers | Capital and procurement control. |
-  | 4 | Completing offline orders, Sync, and two-device testing | Trust in working in weak internet. |
-  | 5 | Completing production, waste, and healthy output cost | Real entry into production. |
-  | 6 | Completing tickets, reservations, capacity, and delivery | Real entry into services. |
-  | 7 | Completing vocabularies and KPIs of each industry in the UI | Specialized and sellable experience. |
-  | 8 | PostgreSQL, HTTP, Browser, and real device acceptance | Proving Production readiness. |
+  | Priority | Work that must be completed                                                  | Commercial Result                    |
+  | :------- | :--------------------------------------------------------------------------- | :----------------------------------- |
+  | 1        | Completing and proving sales, receipts, returns, general ledger, and costing | Trust in money and profit.           |
+  | 2        | Completing batch, expiry, variant, serial, and returns                       | Reducing inventory loss.             |
+  | 3        | Completing orders, purchasing, receipts, and inter-warehouse transfers       | Capital and procurement control.     |
+  | 4        | Completing offline orders, Sync, and two-device testing                      | Trust in working in weak internet.   |
+  | 5        | Completing production, waste, and healthy output cost                        | Real entry into production.          |
+  | 6        | Completing tickets, reservations, capacity, and delivery                     | Real entry into services.            |
+  | 7        | Completing vocabularies and KPIs of each industry in the UI                  | Specialized and sellable experience. |
+  | 8        | PostgreSQL, HTTP, Browser, and real device acceptance                        | Proving Production readiness.        |
 
 **My Final Verdict:** Commit `b54636fa` has significant technical progress compared to the previous version, especially in inventory, delivery, order, and production chains. But I still cannot consider Hisabche a "67-industry system ready for specialized sales". In the current state, Hisabche is a multi-industry business core with several more advanced operational workflows; not 67 completed specialized software.
 
@@ -3846,3 +3846,135 @@ executed against a live database. HEAD unchanged `b54636fa`.
    and shrink `NOT_PULLED_YET` — doing it earlier would make devices wait for changes no server emits.
 
 `PENDING HUMAN CONFIRMATION` — no live DDL was run and no migration is claimed applied.
+
+---
+
+## PART 12 — FINAL CODE-COMPLETE CLOSURE (after owner applied migrations)
+
+The owner reported that all migrations were applied and supplied `information_schema` evidence
+that `accounts` has `id`, `user_id` and a NOT NULL `workspace_id`, and that `cost_layers`,
+`stock_batches`, `stock_serials` and `inventory_settings` all carry `workspace_id`. This
+resolves the earlier `OWNER_DECISION_REQUIRED` on `accounts`: the tenancy column was already
+added by `docs/accounting-core-migration.sql`; the old finding read only
+`base-schema-migration.sql`. No historical tenant was invented.
+
+### Implementation performed
+
+- `packages/validation/src/schemas/sync-protocol.schema.ts` — added the last five protocol
+  entities: `cost_layer`, `stock_batches`, `stock_serials`, `inventory_settings`, `account`.
+- `backend/src/services/sync.service.ts` — added all five to `ENTITY_TABLE`,
+  `ENTITIES_WITH_VERSION`, `WRITABLE` (read-only), `PULL_COLUMNS` (lean, versioned),
+  `SYNC_WRITE_CAPABILITY` and `DOMAIN_ONLY_ENTITIES` (push refused by name).
+- `docs/sync-account-tenancy-coverage-migration.sql` + `docs/VERIFY-sync-account-tenancy-coverage.sql`
+  (NEW) — version + bump + change-log trigger for `accounts`; stable `id` for
+  `inventory_settings` so the keyset snapshot and the device upsert can address it.
+- `docs/FINDING-sync-account-tenancy.sql` — rewritten as RESOLVED with the evidence that
+  supersedes it.
+- `packages/app-bridge/src/local-schema.ts` / `local-universal-core-schema.ts` — local `version`
+  columns for all five tables, `id` for local `inventory_settings`, `kind` for local `account`,
+  `variant_id` added to cost-layer writable columns; `SCHEMA_VERSION` 35 → 36.
+- `packages/app-bridge/src/local-migrations.ts` — v36 migration (idempotent; duplicate column
+  errors are already recognised by the host).
+- `packages/app-shell/src/features/sync/sync-engine.ts` / `device-sync-state.ts` — five
+  `FROM_LOG` mappers, five entries in `BACKGROUND_ENTITIES`/`PULLED_TABLES`, and
+  `NOT_PULLED_YET` is now empty. Existing devices rehydrate on next sync because their stamps
+  for the new tables are absent.
+- Tests: `sync-entity-coverage-2.test.ts` (NEW, 14), extended
+  `sync-entity-coverage.pg.test.ts`, NEW `sync-account-tenancy-coverage.pg.test.ts`, and the
+  updated `device-operation-reads.test.ts` guard (11 passed).
+
+### Evidence
+
+- tsc: validation, app-bridge, app-shell, backend, api, apps/web — 0 errors.
+- `backend` sync suites: 138 passed / 7 files (including both PG suites in env-blocked mode).
+- `backend` new coverage guard: 14 passed.
+- `packages/app-bridge`: 56 passed / 7 files.
+- `apps/desktop` jest `device-operation-reads`: 11 passed.
+- `docs/OWNER-ACTION-ITEMS.md` updated: one new migration to run; the tenancy decision and
+  widening items are removed because they are no longer owner actions.
+
+Status: `IMPLEMENTED_NOT_LIVE_VERIFIED`. The new migration is
+`PENDING HUMAN CONFIRMATION` — apply and run its VERIFY file before deploying the backend.
+
+---
+
+## PART 13 — CLOSURE AT HEAD `f2df3731` (audit-driven round)
+
+The owner audited commit `f2df3731` and named three immediate code-side gaps. All three are closed
+here; only live evidence remains.
+
+### 1. Temporary PostgreSQL data removed from the tree
+
+`backend/src/__tests__/.pg-sync-scope-55723/` contained 968 embedded-Postgres files (39.19 MB:
+`PG_VERSION`, `base/1/…`). All are deleted in the working tree (a clean deletion the owner commits —
+no history rewrite, no `git reset`). `.gitignore` now ignores `backend/src/__tests__/.pg-*/` so a
+future suite cannot re-commit its scratch cluster.
+
+### 2. Restore is now an operational path, not just a function
+
+- `POST /workspaces/restore` added to `packages/local-engine/src/routes/backup.ts`: checksummed
+  portable archive in, one transaction out; workspace id from the caller's context, never the body;
+  audit stamps ignored when deciding whether a pre-seeded default row is "the same" (two installs
+  can never share `datetime('now')`, which otherwise refused every real restore to a fresh install).
+- `packages/api/src/hooks/backup.ts` — `useRestoreWorkspaceBackup`; exported from `packages/api`.
+- `packages/ui/src/components/ui/sync-center/backup-restore-panel.tsx` — file picker in the Sync
+  Centre; reads the file only in the change handler; shows the real error code on refusal.
+- `packages/validation` — new `data.restore` feature (a restore WRITES, so it cannot share the
+  always-allowed read feature `data.backup`); endpoint matrix, capability CSV, industry coverage
+  table and sellable evidence regenerated from code.
+- i18n keys added in fa / af / en. Tests: `restore.test.ts` + `restore-route.test.ts` = 11 passed.
+- `V72-OPERATIONS-RUNBOOKS.md` updated from `NOT_IMPLEMENTED (restore)` to
+  `IMPLEMENTED_NOT_LIVE_VERIFIED (restore)`.
+
+### 3. Sync coverage and ledger guards
+
+All five earlier protocol entities are now in the server maps, device mappers, local schema v36 and
+`PULLED_TABLES`; `NOT_PULLED_YET` is empty. The migration `docs/sync-account-tenancy-coverage-migration.sql`
+closes accounts and inventory_settings; evidence that accounts has a NOT NULL workspace_id is recorded
+in `docs/FINDING-sync-account-tenancy.sql` (RESOLVED). Ledger regenerated: 292 migrations · 173 with
+VERIFY · 184 with a PG test.
+
+### Verification at this HEAD
+
+- tsc: validation, local-engine, app-bridge, app-shell, api, ui, backend, apps/web — 0 errors.
+- vitest: validation **1251 passed / 103 files**; local-engine **663 passed / 3 pre-existing flaky
+  restart tests** (all 3 pass when run together outside the full parallel suite — files untouched);
+  app-bridge 56 passed; backend 9 targeted suites **98 passed**; app-shell guard 11 passed;
+  sync coverage guard 14 passed.
+- eslint: 0 across all edited source files. All 7 generators `--check`: exit 0. `git diff --check`: 0.
+- HEAD unchanged `f2df3731`; no commit, push, build, dependency change, `.env` access or live DDL.
+
+---
+
+## PART 14 — ZERO CODE GAP ROUND
+
+Exact inventory generated at `docs/audits/ZERO-CODE-GAP-INVENTORY.md`: **1,020 stable-ID items**
+(8 closed code gaps, 689 offline endpoints, 21 sync entities, 67 industries, 227 migration
+verification gaps, 8 external/owner items). Counts derived from the current files, not from an older
+report.
+
+### Code gaps found by the full local suites and closed
+
+| ID      | Root cause                                             | Fix                                                            | Evidence                                |
+| ------- | ------------------------------------------------------ | -------------------------------------------------------------- | --------------------------------------- |
+| FIX-001 | restore hook called a path with no server address      | explicit `POST /api/workspaces/restore` → `RESTORE_LOCAL_ONLY` | `client-route-contract` passed          |
+| FIX-002 | activation gate resolved membership itself             | uses canonical `listAuthorizedWorkspaces`                      | `constitution-guards` passed            |
+| FIX-003 | five new sync entities had no offline position         | `OFFLINE_POSITION` entries with reasons                        | `offline-contract` passed               |
+| FIX-004 | onboarding gate returned 428 before cross-tenant check | fixture owners onboarded; gate unchanged                       | `tenant-isolation-http` passed          |
+| FIX-005 | new restore route had no capability                    | `requireCapability('data.import')`                             | `write-routes-have-a-capability` passed |
+| FIX-006 | two generated industry docs stale                      | builder regenerated                                            | `industry-specs-complete` passed        |
+| FIX-007 | sync-pull mock lacked the 5 new entities               | fixture extended                                               | desktop jest 44 suites passed           |
+| FIX-008 | activation-gate mock lacked `.order()`                 | fake query extended                                            | activation-gate tests passed            |
+
+### Final verification
+
+- backend `--project unit`: **5,881 passed / 470 files**
+- validation: **1,251 passed**; local-engine: **666 passed**; app-bridge: **56 passed**;
+  packages/ui: **2,873 passed**; desktop jest: **350 passed / 44 suites**
+- tsc: 8 packages, 0 errors; eslint edited files: 0; 8 generators `--check`: 0;
+  `git diff --check`: 0. HEAD unchanged.
+
+Verdict: `CODE_GAPS_REMAIN` — 227 migration verification artifacts (119 missing VERIFY SQL,
+108 missing PG tests) are code-addressable but require per-migration, domain-correct content; mass
+boilerplate would be a placeholder, which repository rules forbid. All test-detected defects are
+closed.

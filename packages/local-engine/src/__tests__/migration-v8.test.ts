@@ -63,6 +63,13 @@ function v7Synthetic(): DatabaseSync {
     -- instead of pretending the migration alters a table the device lacks.
     CREATE TABLE cost_layer (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, product_id TEXT NOT NULL, entry_date TEXT, created_at TEXT);
     CREATE TABLE cost_consumption (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL);
+    -- Sync entity coverage (v36) alters these four too. A real v7/v8 cache has
+    -- all of them from the base schema; the minimal stand-in says so rather
+    -- than failing on a table a device would always have.
+    CREATE TABLE account (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, code TEXT, name TEXT, type TEXT, role TEXT, is_group INTEGER, is_active INTEGER);
+    CREATE TABLE inventory_settings (workspace_id TEXT PRIMARY KEY, costing_method TEXT, negative_stock TEXT, updated_at TEXT);
+    CREATE TABLE stock_serials (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, product_id TEXT, serial_number TEXT, status TEXT, batch_id TEXT, cost_layer_id TEXT, unit_cost_minor INTEGER, warehouse_id TEXT, received_on TEXT, invoice_id TEXT, sold_on TEXT, created_at TEXT, updated_at TEXT, deleted_at TEXT, origin TEXT, sync_state TEXT);
+    CREATE TABLE stock_batches (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, product_id TEXT, batch_number TEXT, expiry_date TEXT, manufactured_date TEXT, received_qty REAL, remaining_qty REAL, cost_layer_id TEXT, warehouse_id TEXT, received_on TEXT, recalled_at TEXT, recalled_reason TEXT, recalled_by TEXT, created_at TEXT, updated_at TEXT, deleted_at TEXT, origin TEXT, sync_state TEXT);
     INSERT INTO local_workspace (id, name, base_currency) VALUES ('w1', 'Existing shop', 'AFN');
     INSERT INTO product (id, name) VALUES ('p1', 'Existing product');
     INSERT INTO invoice (id) VALUES ('i1');

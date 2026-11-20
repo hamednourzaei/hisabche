@@ -915,6 +915,34 @@ const V35_CONTRACTS: LocalMigration = {
   statements: [...CONTRACT_STATEMENTS],
 }
 
+/**
+ * v35 -> v36: identity for the five newly pulled entities (sync coverage).
+ *
+ * A pulled row is stored with the server's version — it is the token the next
+ * edit sends back as expectedVersion. Without a local column the upsert drops
+ * it and the first offline edit of a cost layer, a batch, a serial, a settings
+ * row or a chart-of-accounts row is refused as a version conflict.
+ *
+ * inventory_settings had no id at all (it is keyed by workspace_id). The
+ * generic upsert writes by id, so the row gains a stable id and a unique
+ * index; the workspace key stays the primary key and keeps every existing
+ * caller valid. Existing rows are backfilled once.
+ */
+const V36_SYNC_ENTITY_COVERAGE: LocalMigration = {
+  to: 36,
+  statements: [
+    `ALTER TABLE cost_layer ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE account ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE account ADD COLUMN kind TEXT`,
+    `ALTER TABLE stock_serials ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE stock_batches ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE inventory_settings ADD COLUMN version INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE inventory_settings ADD COLUMN id TEXT`,
+    `UPDATE inventory_settings SET id = lower(hex(randomblob(16))) WHERE id IS NULL`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_settings_id ON inventory_settings(id)`,
+  ],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -950,6 +978,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V33_ROLL_CUTTING,
   V34_FX_TRADE_DRAFTS,
   V35_CONTRACTS,
+  V36_SYNC_ENTITY_COVERAGE,
 ]
 
 /**

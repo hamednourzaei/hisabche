@@ -102,6 +102,12 @@ export const PULLED_TABLES: readonly LocalTable[] = [
   'service_delivery_sessions',
   'package_credit_ledger',
   'repair_tickets',
+  // Sync entity coverage — the server now emits change-log rows for all five.
+  'cost_layer',
+  'stock_batches',
+  'stock_serials',
+  'inventory_settings',
+  'account',
 ]
 
 /**
@@ -138,13 +144,10 @@ export const DEVICE_WRITTEN_TABLES: readonly LocalTable[] = [
  * `DELTA_ENTITIES` (docs/architecture/V70-BACKLOG.md). Then it moves to
  * `PULLED_TABLES` and this list shrinks — the guard forces the move.
  */
-export const NOT_PULLED_YET: readonly LocalTable[] = [
-  'inventory_settings',
-  'cost_layer',
-  'account',
-  'stock_serials',
-  'stock_batches',
-]
+// The gap is CLOSED: every server-owned table a local route reads now arrives
+// through the pull. The guard below pins this empty list so a new read without
+// a pull path turns the suite red instead of silently claiming readiness.
+export const NOT_PULLED_YET: readonly LocalTable[] = []
 
 /**
  * Operations a ready device may run itself.

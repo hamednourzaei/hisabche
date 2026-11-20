@@ -7,6 +7,7 @@ import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { SyncCenterPage } from '../sync-center-page'
 import type { SyncCenterPageProps } from '../sync-center-page'
 import { BackupDownloadPanel } from '../backup-download-panel'
+import { BackupRestorePanel } from '../backup-restore-panel'
 
 export function SyncCenterContainer() {
   const t = useTranslations()
@@ -71,6 +72,7 @@ export function SyncCenterContainer() {
   return (
     <div className="space-y-4">
       <BackupDownloadPanel />
+      <BackupRestorePanel />
       <SyncCenterPage
         t={safeT}
         timeAgo={timeAgo}

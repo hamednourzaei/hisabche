@@ -256,6 +256,12 @@ export const FEATURE_REGISTRY = {
     server: 'the cloud snapshot',
     alwaysAllowed: true,
   },
+  // A RESTORE WRITES. The same rule that splits settings.business_profile from
+  // settings.business_profile_edit applies here: reading your backup never
+  // stops, but filling a workspace from one is a separate, entitled operation.
+  // Keeping both under one always-allowed feature would let an expired workspace
+  // replace its books through a route that was only meant to be a read.
+  'data.restore': { execution: 'local', plans: ALL },
   'sync.queue': { execution: 'local', plans: ALL, alwaysAllowed: true },
   'sync.push_pull': { execution: 'server', plans: CLOUD },
   'sync.overview': { execution: 'server', plans: CLOUD },

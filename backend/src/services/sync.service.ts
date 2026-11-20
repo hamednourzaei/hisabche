@@ -95,6 +95,13 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   service_delivery_sessions: 'service_delivery_sessions',
   package_credit_ledger: 'package_credit_ledger',
   repair_tickets: 'repair_tickets',
+  // Sync entity coverage. The protocol name is singular for cost_layer; the
+  // physical table keeps the server's plural name.
+  cost_layer: 'cost_layers',
+  stock_batches: 'stock_batches',
+  stock_serials: 'stock_serials',
+  inventory_settings: 'inventory_settings',
+  account: 'accounts',
 }
 
 /**
@@ -126,6 +133,13 @@ export const ENTITIES_WITH_VERSION: ReadonlySet<SyncEntity> = new Set([
   'service_delivery_sessions',
   'package_credit_ledger',
   'repair_tickets',
+  // The change-log migration adds version to each of these tables. Without
+  // it the optimistic-lock guard cannot compare an offline edit.
+  'cost_layer',
+  'stock_batches',
+  'stock_serials',
+  'inventory_settings',
+  'account',
 ])
 
 /** Canonical SQL pattern for the version-guarded UPDATE issued on versioned entities. */
@@ -221,6 +235,14 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
   service_delivery_sessions: [],
   package_credit_ledger: [],
   repair_tickets: [],
+  // Cost layers, batches, serials, inventory settings and the chart of
+  // accounts are the server's facts. A device that could write one could
+  // invent stock, a costing method or an account balance.
+  cost_layer: [],
+  stock_batches: [],
+  stock_serials: [],
+  inventory_settings: [],
+  account: [],
 }
 
 /**
@@ -471,6 +493,84 @@ export const PULL_COLUMNS: Record<SyncEntity, readonly string[] | null> = {
     'updated_at',
     'closed_at',
   ],
+  // ─── Sync entity coverage: lean pull columns ────────────────────────────
+  // No soft-delete flags travel: a delete is a delete change in the log.
+  // Every list carries id, workspace_id and version (guarded by
+  // sync-pull-columns.test.ts). inventory_settings gains an id in
+  // docs/sync-account-tenancy-coverage-migration.sql; without one a keyset
+  // snapshot and the local id-based upsert cannot address the row.
+  cost_layer: [
+    'id',
+    'workspace_id',
+    'version',
+    'product_id',
+    'variant_id',
+    'warehouse_id',
+    'source_type',
+    'source_id',
+    'source_line',
+    'received_qty',
+    'remaining_qty',
+    'unit_cost',
+    'currency',
+    'entry_date',
+    'created_at',
+  ],
+  stock_batches: [
+    'id',
+    'workspace_id',
+    'version',
+    'product_id',
+    'batch_number',
+    'expiry_date',
+    'manufactured_date',
+    'received_qty',
+    'remaining_qty',
+    'cost_layer_id',
+    'warehouse_id',
+    'received_on',
+    'recalled_at',
+    'recalled_reason',
+    'created_at',
+  ],
+  stock_serials: [
+    'id',
+    'workspace_id',
+    'version',
+    'product_id',
+    'serial_number',
+    'status',
+    'batch_id',
+    'cost_layer_id',
+    'unit_cost_minor',
+    'warehouse_id',
+    'received_on',
+    'invoice_id',
+    'sold_on',
+    'created_at',
+  ],
+  inventory_settings: [
+    'id',
+    'workspace_id',
+    'version',
+    'costing_method',
+    'negative_stock',
+    'updated_at',
+  ],
+  account: [
+    'id',
+    'workspace_id',
+    'version',
+    'code',
+    'name',
+    'type',
+    'role',
+    'kind',
+    'parent_id',
+    'is_group',
+    'is_active',
+    'created_at',
+  ],
 }
 
 /** What a device stores of each invoice line. */
@@ -585,6 +685,14 @@ const SYNC_WRITE_CAPABILITY: Record<
   service_delivery_sessions: { create: 'invoice.create', update: 'invoice.create' },
   package_credit_ledger: { create: 'invoice.create', update: 'invoice.create' },
   repair_tickets: { create: 'invoice.create', update: 'invoice.create' },
+  // Unreachable: DOMAIN_ONLY_ENTITIES refuses these before the capability is
+  // read. Named so the exhaustive record keeps compiling when a capability is
+  // added or renamed.
+  cost_layer: { create: 'product.write', update: 'product.write' },
+  stock_batches: { create: 'product.write', update: 'product.write' },
+  stock_serials: { create: 'product.write', update: 'product.write' },
+  inventory_settings: { create: 'inventory.configure', update: 'inventory.configure' },
+  account: { create: 'account.manage', update: 'account.manage' },
 }
 
 /**
@@ -608,6 +716,14 @@ const DOMAIN_ONLY_ENTITIES: ReadonlyMap<SyncEntity, string> = new Map([
   ['service_delivery_sessions', 'POST /api/service-delivery/sessions'],
   ['package_credit_ledger', 'POST /api/package-credits/consume'],
   ['repair_tickets', 'POST /api/repair-tickets'],
+  // Sync entity coverage. Each of these rows is written by a service that
+  // moves stock, money or the books; a bare row insert would be a balance with
+  // nothing behind it. The owning domain, not this generic road, owns them.
+  ['cost_layer', 'the inventory-costing domain (receipt posting)'],
+  ['stock_batches', 'the traceability domain (batch receiving)'],
+  ['stock_serials', 'the traceability domain (serial receiving)'],
+  ['inventory_settings', 'PUT /api/inventory/settings'],
+  ['account', 'the accounting domain (chart of accounts)'],
 ])
 
 class SyncError extends Error {

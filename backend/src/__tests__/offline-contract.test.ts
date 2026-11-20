@@ -130,6 +130,30 @@ const OFFLINE_POSITION: Record<string, { syncs: boolean; because: string }> = {
     syncs: true,
     because: 'a ticket opened on another shift is work this bench has to do',
   },
+
+  // ─── Sync entity coverage: the last five server-owned tables ─────────────
+  // All are DOWN-ONLY (write allow-list is []): the device stores the server's
+  // version so a reader sees the truth, not so it can invent stock or credit.
+  cost_layer: {
+    syncs: true,
+    because: 'a layer consumed at another counter must not be valued twice here',
+  },
+  stock_batches: {
+    syncs: true,
+    because: 'a batch received elsewhere must be sellable by FEFO on every device',
+  },
+  stock_serials: {
+    syncs: true,
+    because: 'a serial already sold elsewhere must not be offered again',
+  },
+  inventory_settings: {
+    syncs: true,
+    because: 'the costing method must agree with the books when offline sale is costed',
+  },
+  account: {
+    syncs: true,
+    because: 'a posting must name the same chart of accounts as the server',
+  },
 }
 
 describe('the offline contract', () => {

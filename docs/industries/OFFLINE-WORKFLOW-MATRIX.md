@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-688 endpoint: 218 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
+689 endpoint: 219 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
 
 | قابلیت | در دسترس | فقط آنلاین | نیست |
 | --- | ---: | ---: | ---: |
@@ -61,6 +61,7 @@
 | `dashboard.today_sessions` | 1 | 0 | 0 |
 | `data.backup` | 1 | 0 | 0 |
 | `data.migration` | 1 | 7 | 0 |
+| `data.restore` | 1 | 0 | 0 |
 | `data.snapshots` | 0 | 3 | 0 |
 | `developer.keys` | 0 | 40 | 0 |
 | `employee.list` | 1 | 0 | 0 |

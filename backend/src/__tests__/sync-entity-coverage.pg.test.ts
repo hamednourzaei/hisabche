@@ -131,24 +131,34 @@ describe('Postgres: sync entity coverage (sync-entity-coverage)', () => {
     expect(rows[1]?.entity_version).toBe(2)
   })
 
-  it('inventory_settings is keyed by workspace_id, not a missing id column', async () => {
+  it('inventory_settings is routable by its stable id, under the protocol name', async () => {
     if (!sql) return
-    await sql.unsafe(`INSERT INTO inventory_settings (workspace_id) VALUES ($1)`, [WS])
+    const inserted = await sql.unsafe<Array<{ id: string }>>(
+      `INSERT INTO inventory_settings (workspace_id) VALUES ($1) RETURNING id`,
+      [WS],
+    )
+    const id = inserted[0]?.id
+    expect(id).toBeTruthy()
     await sql.unsafe(`UPDATE inventory_settings SET version = version WHERE workspace_id = $1`, [
       WS,
     ])
-    const rows = await sql.unsafe<Array<{ entity_type: string; entity_id: string }>>(
-      `SELECT entity_type, entity_id FROM sync_change_log
+    const rows = await sql.unsafe<
+      Array<{ entity_type: string; entity_id: string; entity_version: number }>
+    >(
+      `SELECT entity_type, entity_id, entity_version FROM sync_change_log
         WHERE workspace_id = $1 AND entity_type = 'inventory_settings' ORDER BY sync_version`,
       [WS],
     )
     expect(rows).toHaveLength(2)
-    expect(rows[0]?.entity_id).toBe(WS)
+    expect(rows[0]?.entity_id).toBe(id)
+    expect(rows[1]?.entity_version).toBe(2)
   })
 
-  it('accounts remains explicitly blocked, not silently covered', () => {
+  it('accounts is covered once the applied tenancy column exists', () => {
     const finding = read('FINDING-sync-account-tenancy.sql')
-    expect(finding).toContain('workspace_id ABSENT')
-    expect(finding).toContain('OWNER_DECISION_REQUIRED')
+    expect(finding).toContain('RESOLUTION')
+    expect(finding).toContain('workspace_id NOT NULL')
+    const migration = read('sync-account-tenancy-coverage-migration.sql')
+    expect(migration).toContain("sync_record_change('account')")
   })
 })

@@ -352,6 +352,11 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /workspaces/:x/invites': ['team.members', 'online_required'],
   'GET /workspaces/:x/members': ['settings.workspace_profile', 'available'],
   'GET /workspaces/backup': ['data.backup', 'available'],
+  // The portable-archive restore runs in the local engine, in one transaction.
+  // Owner-only through `backup.manage`. Its FEATURE is separate from
+  // `data.backup` because a restore WRITES — an always-allowed read feature
+  // must never also carry a write endpoint (entitlement-reads-never-stop).
+  'POST /workspaces/restore': ['data.restore', 'available'],
   'PATCH /auth/profile': ['settings.workspace_profile', 'available'],
   'PATCH /automations/:x': ['automation.rules', 'online_required'],
   'PATCH /custom-fields/definitions/:x/active': ['custom.fields', 'online_required'],

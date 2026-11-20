@@ -91,6 +91,15 @@ export const syncEntitySchema = z.enum([
   'service_delivery_sessions',
   'package_credit_ledger',
   'repair_tickets',
+  // Sync entity coverage: the five server-owned tables a local route reads but
+  // no pull delivered until the change-log migration was applied. They are
+  // PULL-ONLY — their rows are money, stock or the chart of accounts, so a
+  // device may never write them through /sync/push.
+  'cost_layer',
+  'stock_batches',
+  'stock_serials',
+  'inventory_settings',
+  'account',
 ])
 export type SyncEntity = z.infer<typeof syncEntitySchema>
 

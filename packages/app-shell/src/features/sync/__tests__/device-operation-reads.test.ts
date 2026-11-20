@@ -124,9 +124,7 @@ describe('V68.1 — «the device is ready»', () => {
     // DELTA_ENTITIES and PULLED_TABLES). Adding one = a local route started
     // reading server-owned rows the device never receives: say why, here.
     // `package_credit_ledger` left this list in V70.2 — the pull carries it now.
-    expect([...NOT_PULLED_YET].sort()).toEqual(
-      ['account', 'cost_layer', 'inventory_settings', 'stock_batches', 'stock_serials'].sort(),
-    )
+    expect([...NOT_PULLED_YET].sort()).toEqual([])
   })
 
   test('ready only when every pulled read is on the device', () => {

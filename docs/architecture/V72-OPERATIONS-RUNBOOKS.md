@@ -34,13 +34,20 @@ refused by CORS — CLAUDE.md §8, BUG-099).
    rejected / conflict). A rejected financial row is never auto-resent.
 4. Never print or paste `.env*` values or keys into a ticket or chat.
 
-## 4. Backup and restore (P2) — **NOT_IMPLEMENTED (restore)**
+## 4. Backup and restore (P2) — **IMPLEMENTED_NOT_LIVE_VERIFIED (restore)**
 
 - **What exists:** the local engine's `GET /workspaces/backup` (`packages/local-engine/src/routes/backup.ts`,
   capability `backup.manage`) returns a JSON dump of the device tables plus `sync_queue`, naming tables it
   could not read (`failedTables`) or cut short (`truncatedTables`).
-- **What does not:** no route, IPC handler or screen restores that dump. A backup that has never been
-  restored is not a backup (your acceptance table: «Restore آزمایش‌شده، نه صرفاً Export»).
+- **Restore now has a real path (this round):** the portable, checksummed archive from
+  `createExportPackage` is restored by `POST /workspaces/restore` in the same route file. It validates
+  the archive and the workspace BEFORE writing, then restores in ONE SQLite transaction; an identical
+  repeat is a no-op and a different local row with the same id is refused. The endpoint is exposed
+  through the existing `localApiRequest` IPC channel, listed as locally available in
+  `offline-endpoint-matrix.ts`, called from `useRestoreWorkspaceBackup` and offered in the Sync Centre
+  (`BackupRestorePanel`). Tests: `restore.test.ts` (5) and `restore-route.test.ts` (6).
+- **What still needs proof:** a real device round-trip — export from one install, restore into a fresh
+  workspace, reconcile balances. A passing local test is not a production restore witness.
 - **Cloud drill available today:** Supabase point-in-time restore into a **separate** project, then
   compare row counts of `invoices`, `payments`, `journal_lines` per workspace. Owner action; record the result.
 - Decision D15 in `V72-OPEN-DECISIONS.md`.

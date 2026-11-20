@@ -47,6 +47,30 @@ export function useWorkspaceBackup() {
   }, [])
 }
 
+export interface WorkspaceRestoreResult {
+  /** Tables that received at least one row from the archive. */
+  restoredTables: string[]
+  totalRows: number
+}
+
+/**
+ * Restore a checksummed portable archive into the CURRENT workspace.
+ *
+ * The local engine refuses an archive that does not match this workspace, an
+ * invalid checksum, an unsupported schema version, or a different local row
+ * with the same id. It never overwrites business data; an identical repeat is a
+ * safe no-op. The call is a function, not a mutation hook: it must run from a
+ * deliberate file-picker action, never during render or on mount.
+ */
+export function useRestoreWorkspaceBackup() {
+  return useCallback(async (archive: unknown): Promise<WorkspaceRestoreResult> => {
+    const { data } = await apiClient.post<WorkspaceRestoreResult>('/workspaces/restore', {
+      archive,
+    })
+    return data
+  }, [])
+}
+
 export type BackupFileFormat = 'md' | 'xlsx'
 
 /**
