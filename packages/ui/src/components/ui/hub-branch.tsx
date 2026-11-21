@@ -65,6 +65,19 @@ function measureLines(bar: HTMLElement, canvas: SVGSVGElement, slot: HTMLElement
   const tab = bar.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
   const choices = [...slot.querySelectorAll<HTMLElement>('[role="radio"]')]
   if (!tab || choices.length === 0) return []
+  // A switch with a «بیشتر» menu owns one extra line: the button stands for
+  // the selected choice inside its menu — but only while it holds that choice,
+  // and only where it sits on the same row. On a phone it is a row below the
+  // words, and a line there would point into the middle of them.
+  const first = choices[0]
+  const proxy = slot.querySelector<HTMLElement>('[data-branch-proxy]')
+  if (
+    proxy?.hasAttribute('data-branch-selected') &&
+    first &&
+    Math.abs(proxy.getBoundingClientRect().top - first.getBoundingClientRect().top) < 8
+  ) {
+    choices.push(proxy)
+  }
   const origin = canvas.getBoundingClientRect().left
   const centre = (element: HTMLElement) => {
     const box = element.getBoundingClientRect()
@@ -74,7 +87,8 @@ function measureLines(bar: HTMLElement, canvas: SVGSVGElement, slot: HTMLElement
   return choices.map((choice) => ({
     from,
     to: centre(choice),
-    selected: choice.getAttribute('aria-checked') === 'true',
+    selected:
+      choice.getAttribute('aria-checked') === 'true' || choice.hasAttribute('data-branch-selected'),
   }))
 }
 

@@ -2,11 +2,16 @@
 // backend/src/services/monitoring/route-metrics.ts
 //
 // V63 · M-1/M-2/M-4 — cheap, aggregated-at-the-source traffic metrics.
+// Unified Core Observability (21 Nov 2026) — the SAME collector now also
+// buckets every observation by business core (core-registry.ts). There is
+// still ONE collector, ONE flush authority, ONE sampler per process.
 //
 // WHAT IS COUNTED
-//   one bucket per (route TEMPLATE, method, status class) per minute, plus one
-//   row per instance per minute, plus the SET SIZE of hashed user and workspace
-//   ids seen in that minute.
+//   one bucket per (route TEMPLATE, method, status class) per minute,
+//   one bucket per (core, operation group) per minute,
+//   one row per instance per minute, plus the SET SIZE of hashed user and
+//   workspace ids seen in that minute. Once per closed minute the gauge
+//   provider adds the job queue and database vitals (exact counts, no PII).
 //
 // WHAT IS NEVER COUNTED
 //   the raw URL (ids and query strings are PII), a user id, an email, a
@@ -25,11 +30,10 @@ import { createHash } from 'node:crypto'
 import { supabase } from '../../db'
 import { INSTANCE_LABEL } from '../instance-registry'
 import { cursorWatcher } from '../sync-stream'
+import { parseProcessRole, type ProcessRole } from '../../runtime/role'
+import { bucketIndex, coreForRoute, operationGroupFor } from './core-registry'
 
 export type StatusClass = '1xx' | '2xx' | '3xx' | '4xx' | '5xx'
-
-/** Fixed histogram: <50, <100, <250, <500, <1000, >=1000 ms. */
-export const DURATION_BUCKETS_MS = [50, 100, 250, 500, 1000] as const
 
 export function statusClassOf(statusCode: number): StatusClass {
   if (statusCode >= 500) return '5xx'
@@ -37,14 +41,6 @@ export function statusClassOf(statusCode: number): StatusClass {
   if (statusCode >= 300) return '3xx'
   if (statusCode >= 200) return '2xx'
   return '1xx'
-}
-
-/** Index into the six-slot histogram. */
-export function bucketIndex(durationMs: number): number {
-  for (let index = 0; index < DURATION_BUCKETS_MS.length; index += 1) {
-    if (durationMs < DURATION_BUCKETS_MS[index]!) return index
-  }
-  return DURATION_BUCKETS_MS.length
 }
 
 export interface RouteHit {
@@ -57,6 +53,10 @@ export interface RouteHit {
   bytesOut: number | null
   userId?: string | undefined
   workspaceId?: string | undefined
+  /** Wall time with a Supabase call open (utils/supabase-fetch-metrics). Null = uninstrumented. */
+  dependencyWaitMs?: number | null | undefined
+  /** Global requests already in flight when this one started (concurrency sample). */
+  inflightAtStart?: number | undefined
 }
 
 export interface RequestMetricRow {
@@ -72,6 +72,55 @@ export interface RequestMetricRow {
   duration_buckets: number[]
 }
 
+/** One core × operation group × minute × instance. No ids, no urls, no PII. */
+export interface CoreMetricRow {
+  minute: string
+  instance_id: string
+  process_role: ProcessRole
+  core_id: string
+  operation_group: string
+  operation_count: number
+  success_count: number
+  error_count: number
+  client_error_count: number
+  duration_sum_ms: number
+  duration_max_ms: number
+  duration_buckets: number[]
+  inflight_max: number
+  concurrency_max: number
+  timeout_count: number
+  /** Null when no request in the minute carried a measured dependency wait. */
+  dependency_wait_total_ms: number | null
+  /** How many operations contributed to the dependency wait total. */
+  dependency_measured_count: number
+}
+
+/** Core-level gauges sampled once per closed minute (job queue today). */
+export interface CoreGaugeRow {
+  minute: string
+  instance_id: string
+  core_id: string
+  queue_depth: number | null
+  processing_count: number | null
+  stuck_count: number | null
+  retry_count: number | null
+  queue_wait_total_ms: number | null
+}
+
+/** Database vitals sampled once per closed minute (admin_db_vitals RPC). */
+export interface DbMetricRow {
+  minute: string
+  instance_id: string
+  connections_active: number | null
+  connections_idle: number | null
+  connections_total: number | null
+  connections_max: number | null
+  waiting_locks: number | null
+  cache_hit_ratio: number | null
+  longest_transaction_seconds: number | null
+  database_size_bytes: number | null
+}
+
 export interface ActiveUserRow {
   minute: string
   user_hash: string
@@ -85,11 +134,13 @@ export interface ActiveWorkspaceRow {
 export interface InstanceMinuteRow {
   minute: string
   instance_id: string
+  process_role: ProcessRole
   cpu_percent: number
   memory_percent: number
   event_loop_p99_ms: number
   heap_used_bytes: number
   heap_total_bytes: number
+  rss_bytes: number
   inflight_requests: number
   sync_sockets: number
 }
@@ -100,8 +151,22 @@ export interface InstanceSample {
   eventLoopP99Ms: number
   heapUsedBytes: number
   heapTotalBytes: number
+  rssBytes: number
   inflightRequests: number
   syncSockets: number
+}
+
+/** What the gauge provider measured for one closed minute. Null = unavailable. */
+export interface CoreGaugeSample {
+  cores: Array<{
+    coreId: string
+    queueDepth: number | null
+    processingCount: number | null
+    stuckCount: number | null
+    retryCount: number | null
+    queueWaitTotalMs: number | null
+  }>
+  db: Omit<DbMetricRow, 'minute' | 'instance_id'> | null
 }
 
 export interface MetricsSink {
@@ -109,6 +174,9 @@ export interface MetricsSink {
   writeActiveUsers(rows: ActiveUserRow[]): Promise<void>
   writeActiveWorkspaces(rows: ActiveWorkspaceRow[]): Promise<void>
   writeInstanceMetrics(row: InstanceMinuteRow): Promise<void>
+  writeCoreMetrics(rows: CoreMetricRow[]): Promise<void>
+  writeCoreGauges(rows: CoreGaugeRow[]): Promise<void>
+  writeDbMetrics(row: DbMetricRow): Promise<void>
 }
 
 interface MutableBucket {
@@ -117,6 +185,21 @@ interface MutableBucket {
   durationSumMs: number
   durationMaxMs: number
   buckets: number[]
+}
+
+interface MutableCoreBucket {
+  count: number
+  successCount: number
+  errorCount: number
+  clientErrorCount: number
+  durationSumMs: number
+  durationMaxMs: number
+  buckets: number[]
+  inflightMax: number
+  concurrencyMax: number
+  timeoutCount: number
+  dependencyWaitTotalMs: number
+  dependencyMeasured: number
 }
 
 const MINUTE_MS = 60_000
@@ -137,26 +220,96 @@ function addBytes(current: number | null, next: number | null): number | null {
   return current + next
 }
 
+function freshCoreBucket(): MutableCoreBucket {
+  return {
+    count: 0,
+    successCount: 0,
+    errorCount: 0,
+    clientErrorCount: 0,
+    durationSumMs: 0,
+    durationMaxMs: 0,
+    buckets: [0, 0, 0, 0, 0, 0],
+    inflightMax: 0,
+    concurrencyMax: 0,
+    timeoutCount: 0,
+    dependencyWaitTotalMs: 0,
+    dependencyMeasured: 0,
+  }
+}
+
 export class RouteMetricsCollector {
   private readonly requests = new Map<string, Map<string, MutableBucket>>()
+  private readonly cores = new Map<string, Map<string, MutableCoreBucket>>()
   private readonly users = new Map<string, Set<string>>()
   private readonly workspaces = new Map<string, Set<string>>()
+  /** Live per-core in-flight operations of THIS process (begin/end paired). */
+  private readonly coreInflight = new Map<string, number>()
   private readonly instanceId: string
+  private readonly processRole: ProcessRole
   private readonly sink: MetricsSink
   private readonly now: () => Date
   private readonly sample: (() => InstanceSample) | null
+  private readonly gauges: (() => Promise<CoreGaugeSample>) | null
   private lastFlushedMinute: string | null = null
 
   constructor(options: {
     sink: MetricsSink
     instanceId?: string
+    processRole?: ProcessRole
     now?: () => Date
     sample?: (() => InstanceSample) | null
+    gauges?: (() => Promise<CoreGaugeSample>) | null
   }) {
     this.sink = options.sink
     this.instanceId = options.instanceId ?? INSTANCE_LABEL
+    this.processRole = options.processRole ?? parseProcessRole()
     this.now = options.now ?? (() => new Date())
     this.sample = options.sample === undefined ? null : options.sample
+    this.gauges = options.gauges === undefined ? null : options.gauges
+  }
+
+  /**
+   * A request of this core started. Paired with `endOperation` through the
+   * ghost-safe release path (raw response 'close'), so a hijacked or aborted
+   * request never leaves a core «in flight» forever.
+   */
+  beginOperation(coreId: string): void {
+    const next = (this.coreInflight.get(coreId) ?? 0) + 1
+    this.coreInflight.set(coreId, next)
+    const minute = minuteStart(this.now()).toISOString()
+    const bucket = this.coreBucket(minute, coreId, 'read')
+    // inflightMax is a gauge of the moment, recorded on the minute it happens.
+    // The group key here is only a carrier; the flush merges inflight across
+    // groups into the core's max (see flushClosedMinutes).
+    bucket.inflightMax = Math.max(bucket.inflightMax, next)
+  }
+
+  endOperation(coreId: string): void {
+    const next = Math.max(0, (this.coreInflight.get(coreId) ?? 0) - 1)
+    this.coreInflight.set(coreId, next)
+  }
+
+  /** Live per-core in-flight counts of this process (for the stream snapshot). */
+  liveCoreInflight(): Record<string, number> {
+    const out: Record<string, number> = {}
+    for (const [coreId, count] of this.coreInflight) {
+      if (count > 0) out[coreId] = count
+    }
+    return out
+  }
+
+  private coreBucket(minute: string, coreId: string, group: string): MutableCoreBucket {
+    let buckets = this.cores.get(minute)
+    if (!buckets) {
+      buckets = new Map<string, MutableCoreBucket>()
+      this.cores.set(minute, buckets)
+    }
+    const key = `${coreId}\u0000${group}`
+    const existing = buckets.get(key)
+    if (existing) return existing
+    const fresh = freshCoreBucket()
+    buckets.set(key, fresh)
+    return fresh
   }
 
   observe(hit: RouteHit): void {
@@ -185,6 +338,27 @@ export class RouteMetricsCollector {
     bucket.buckets[bucketIndex(hit.durationMs)]! += 1
     buckets.set(key, bucket)
 
+    // ── Core dimension: the SAME observation, attributed to exactly one core.
+    const core = coreForRoute(hit.route)
+    const group = operationGroupFor(hit.method, hit.route)
+    const coreBucket = this.coreBucket(minute, core.id, group)
+    const duration = Math.max(0, Math.round(hit.durationMs))
+    coreBucket.count += 1
+    if (hit.statusCode >= 500) coreBucket.errorCount += 1
+    else if (hit.statusCode >= 400) coreBucket.clientErrorCount += 1
+    else coreBucket.successCount += 1
+    coreBucket.durationSumMs += duration
+    coreBucket.durationMaxMs = Math.max(coreBucket.durationMaxMs, duration)
+    coreBucket.buckets[bucketIndex(hit.durationMs)]! += 1
+    if (hit.statusCode === 504 || hit.statusCode === 408) coreBucket.timeoutCount += 1
+    if (typeof hit.inflightAtStart === 'number') {
+      coreBucket.concurrencyMax = Math.max(coreBucket.concurrencyMax, hit.inflightAtStart + 1)
+    }
+    if (typeof hit.dependencyWaitMs === 'number' && Number.isFinite(hit.dependencyWaitMs)) {
+      coreBucket.dependencyWaitTotalMs += Math.max(0, Math.round(hit.dependencyWaitMs))
+      coreBucket.dependencyMeasured += 1
+    }
+
     if (hit.userId) {
       const set = this.users.get(minute) ?? new Set<string>()
       set.add(hashIdentity(hit.userId))
@@ -206,12 +380,12 @@ export class RouteMetricsCollector {
   async flushClosedMinutes(): Promise<number> {
     const currentMinute = minuteStart(this.now()).toISOString()
     const closed = [...this.requests.keys()].filter((minute) => minute < currentMinute)
+    const closedCores = [...this.cores.keys()].filter((minute) => minute < currentMinute)
     const closedUsers = [...this.users.keys()].filter((minute) => minute < currentMinute)
     const closedWorkspaces = [...this.workspaces.keys()].filter((minute) => minute < currentMinute)
 
-    const closedAll = new Set([...closed, ...closedUsers, ...closedWorkspaces])
+    const closedAll = new Set([...closed, ...closedCores, ...closedUsers, ...closedWorkspaces])
     if (closedAll.size === 0) return 0
-    if (this.lastFlushedMinute === currentMinute && closedAll.size === 0) return 0
 
     const requestRows: RequestMetricRow[] = []
     for (const minute of closed) {
@@ -233,6 +407,44 @@ export class RouteMetricsCollector {
         })
       }
       this.requests.delete(minute)
+    }
+
+    const coreRows: CoreMetricRow[] = []
+    for (const minute of closedCores) {
+      const buckets = this.cores.get(minute)
+      if (!buckets) continue
+      // The live-inflight gauge was recorded on whichever group bucket saw the
+      // begin; the core's inflight max is the max across its groups.
+      const inflightByCore = new Map<string, number>()
+      for (const [key, bucket] of buckets) {
+        const [coreId] = key.split('\u0000') as [string, string]
+        inflightByCore.set(coreId, Math.max(inflightByCore.get(coreId) ?? 0, bucket.inflightMax))
+      }
+      for (const [key, bucket] of buckets) {
+        const [coreId, group] = key.split('\u0000') as [string, string]
+        if (bucket.count === 0 && bucket.inflightMax === 0) continue
+        coreRows.push({
+          minute,
+          instance_id: this.instanceId,
+          process_role: this.processRole,
+          core_id: coreId,
+          operation_group: group,
+          operation_count: bucket.count,
+          success_count: bucket.successCount,
+          error_count: bucket.errorCount,
+          client_error_count: bucket.clientErrorCount,
+          duration_sum_ms: bucket.durationSumMs,
+          duration_max_ms: bucket.durationMaxMs,
+          duration_buckets: bucket.buckets,
+          inflight_max: inflightByCore.get(coreId) ?? 0,
+          concurrency_max: bucket.concurrencyMax,
+          timeout_count: bucket.timeoutCount,
+          dependency_wait_total_ms:
+            bucket.dependencyMeasured > 0 ? bucket.dependencyWaitTotalMs : null,
+          dependency_measured_count: bucket.dependencyMeasured,
+        })
+      }
+      this.cores.delete(minute)
     }
 
     const userRows: ActiveUserRow[] = []
@@ -263,14 +475,61 @@ export class RouteMetricsCollector {
         await this.sink.writeInstanceMetrics({
           minute,
           instance_id: this.instanceId,
+          process_role: this.processRole,
           cpu_percent: value.cpuPercent,
           memory_percent: value.memoryPercent,
           event_loop_p99_ms: value.eventLoopP99Ms,
           heap_used_bytes: value.heapUsedBytes,
           heap_total_bytes: value.heapTotalBytes,
+          rss_bytes: value.rssBytes,
           inflight_requests: value.inflightRequests,
           sync_sockets: value.syncSockets,
         })
+      }
+    }
+
+    // The core tables arrive with admin-core-monitoring-01 (PENDING HUMAN
+    // CONFIRMATION). Until the migration runs, a missing schema must not take
+    // the existing monitoring writes down with it: core rows are dropped for
+    // that minute and the next flush tries again. No fake rows, ever.
+    if (coreRows.length > 0) {
+      try {
+        await this.sink.writeCoreMetrics(coreRows)
+      } catch {
+        // schema not migrated yet — observation only, never fatal
+      }
+    }
+
+    if (this.gauges) {
+      // One gauge sample per flush — exact counts, never per request. A gauge
+      // is a measurement of NOW: it is attributed only to the minute that just
+      // closed. Older closed minutes stay missing (UNKNOWN gaps), never filled
+      // with a later value dressed as history. A failed read is a missing row.
+      const latestClosed = [...closedAll].sort().pop()
+      if (latestClosed) {
+        try {
+          const sample = await this.gauges()
+          const gaugeRows: CoreGaugeRow[] = sample.cores.map((gauge) => ({
+            minute: latestClosed,
+            instance_id: this.instanceId,
+            core_id: gauge.coreId,
+            queue_depth: gauge.queueDepth,
+            processing_count: gauge.processingCount,
+            stuck_count: gauge.stuckCount,
+            retry_count: gauge.retryCount,
+            queue_wait_total_ms: gauge.queueWaitTotalMs,
+          }))
+          if (gaugeRows.length > 0) await this.sink.writeCoreGauges(gaugeRows)
+          if (sample.db) {
+            await this.sink.writeDbMetrics({
+              minute: latestClosed,
+              instance_id: this.instanceId,
+              ...sample.db,
+            })
+          }
+        } catch {
+          // The gauge is observation only; the next minute tries again.
+        }
       }
     }
 
@@ -305,12 +564,30 @@ export const supabaseMetricsSink: MetricsSink = {
       .upsert(row, { onConflict: 'minute,instance_id' })
     if (error) throw error
   },
+  async writeCoreMetrics(rows) {
+    const { error } = await supabase
+      .from('core_metrics_minute')
+      .upsert(rows, { onConflict: 'minute,instance_id,core_id,operation_group' })
+    if (error) throw error
+  },
+  async writeCoreGauges(rows) {
+    const { error } = await supabase
+      .from('core_gauges_minute')
+      .upsert(rows, { onConflict: 'minute,instance_id,core_id' })
+    if (error) throw error
+  },
+  async writeDbMetrics(row) {
+    const { error } = await supabase
+      .from('db_metrics_minute')
+      .upsert(row, { onConflict: 'minute,instance_id' })
+    if (error) throw error
+  },
 }
 
 /** The live instance sample, beside what the heartbeat already reports. */
 export function currentInstanceSample(
   system: { cpuPercent: number; memoryPercent: number; inflightRequests: number },
-  pressure: { eventLoopDelayMs: number; heapUsedBytes: number },
+  pressure: { eventLoopDelayMs: number; heapUsedBytes: number; rssBytes: number },
 ): InstanceSample {
   return {
     cpuPercent: system.cpuPercent,
@@ -318,6 +595,7 @@ export function currentInstanceSample(
     eventLoopP99Ms: pressure.eventLoopDelayMs,
     heapUsedBytes: pressure.heapUsedBytes,
     heapTotalBytes: process.memoryUsage().heapTotal,
+    rssBytes: pressure.rssBytes,
     inflightRequests: system.inflightRequests,
     // Open Sync WebSockets are devices, not viewers — the wall shows them apart.
     syncSockets: cursorWatcher.socketCount,

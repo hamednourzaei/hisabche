@@ -179,6 +179,8 @@ import {
   currentInstanceSample,
   supabaseMetricsSink,
 } from './services/monitoring/route-metrics'
+import { sampleCoreGauges } from './services/monitoring/core-gauges'
+import { coreForRoute } from './services/monitoring/core-registry'
 import { createSampler } from './utils/system-metrics'
 import { cloudMigrationRoutes } from './routes/cloud-migration.routes'
 import { developerRoutes } from './routes/developer.routes'
@@ -269,6 +271,9 @@ const routeMetrics = new RouteMetricsCollector({
     const pressure = pressureMonitor.snapshot()
     return currentInstanceSample(systemSampler(), pressure)
   },
+  // Job queue + database vitals: one exact-count sample per closed minute,
+  // inside the SAME flush — never a second sampler (mission §5.3).
+  gauges: () => sampleCoreGauges(),
 })
 
 /**
@@ -283,11 +288,18 @@ const routeMetrics = new RouteMetricsCollector({
 // Per-request bookkeeping kept beside the request, not as untyped fields on it.
 const requestStartedAt = new WeakMap<object, number>()
 const countedInflight = new WeakSet<object>()
+/** The business core this request belongs to — paired begin/end for inflight. */
+const requestCore = new WeakMap<object, string>()
 
 function releaseInflight(request: object): void {
   if (!countedInflight.has(request)) return
   countedInflight.delete(request)
   inflightRequests = Math.max(0, inflightRequests - 1)
+  const coreId = requestCore.get(request)
+  if (coreId !== undefined) {
+    requestCore.delete(request)
+    routeMetrics.endOperation(coreId)
+  }
 }
 
 function elapsedSince(request: object): number {
@@ -320,6 +332,11 @@ server.addHook('onRequest', async (request, reply) => {
   enterMetricsContext(inflightRequests)
   inflightRequests += 1
   countedInflight.add(request)
+  // Core attribution at the operation boundary: routing has already resolved
+  // the template, so the inflight gauge is per business core, not per URL.
+  const coreId = coreForRoute(request.routeOptions?.url ?? '(unmatched)').id
+  requestCore.set(request, coreId)
+  routeMetrics.beginOperation(coreId)
   reply.raw.once('close', () => releaseInflight(request))
 
   const pathOnly = request.url.split('?')[0]
@@ -447,6 +464,7 @@ server.addHook('onResponse', async (request, reply) => {
   const header = reply.getHeader('content-length')
   const parsed = typeof header === 'number' ? header : Number(header)
   const bytesOut = header === undefined || !Number.isFinite(parsed) ? null : parsed
+  const m = getMetrics()
   routeMetrics.observe({
     route: request.routeOptions.url ?? '(unmatched)',
     method: request.method,
@@ -455,6 +473,10 @@ server.addHook('onResponse', async (request, reply) => {
     bytesOut,
     userId: request.userId ?? undefined,
     workspaceId: request.tenancy?.workspaceId,
+    // Measured dependency wait (wall time with a Supabase call open) and the
+    // concurrency sample — null/undefined when uninstrumented, never zero.
+    dependencyWaitMs: m?.db ? waitingMs() : null,
+    inflightAtStart: m?.inflightAtStart ?? undefined,
   })
 })
 

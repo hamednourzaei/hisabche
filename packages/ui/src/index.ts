@@ -393,6 +393,7 @@ export { ToastProvider, useToast } from './components/ui/toast-provider'
 export { Breadcrumb } from './components/ui/breadcrumb'
 export { NotificationBell } from './components/ui/notification-bell'
 export { SalesChart } from './components/ui/dashboard/sales-chart'
+export { TrendChart, type TrendChartProps, type TrendSeries } from './components/ui/trend-chart'
 export { JalaliDatePicker } from './components/ui/jalali-datepicker'
 export { PhoneInput } from './components/ui/phone-input'
 

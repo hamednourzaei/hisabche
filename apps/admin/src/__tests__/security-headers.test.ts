@@ -13,7 +13,10 @@ import path from 'node:path'
  *
  * The split matters and is asserted in both directions:
  *
- *  - next.config.js carries the STATIC headers (HSTS, Permissions-Policy, COOP);
+ *  - next.config.js carries the STATIC headers (Permissions-Policy, COOP);
+ *  - HSTS is NOT static: it is dev-aware and lives only in proxy.ts. An
+ *    unconditional HSTS in next.config.js poisons a local http:// dev server
+ *    (the browser rewrites localhost to https and every RSC fetch fails);
  *  - proxy.ts builds the CSP WITH A NONCE per request, because a static CSP
  *    either needs 'unsafe-inline' or breaks Next's inline bootstrap;
  *  - the CSP must not ALSO be set in next.config.js — Next applies its headers
@@ -34,9 +37,12 @@ function stripComments(source: string): string {
 describe('admin security headers', () => {
   const config = read('next.config.js')
 
-  it('sends HSTS for two years with subdomains and preload', () => {
-    expect(config).toContain('Strict-Transport-Security')
-    expect(config).toContain('max-age=63072000; includeSubDomains; preload')
+  it('does NOT emit HSTS from next.config.js (it would break local http dev)', () => {
+    // Regression: an unconditional Strict-Transport-Security here makes the
+    // browser cache "https-only for localhost" and every later RSC/navigation
+    // fetch to http://localhost:3040 dies with "TypeError: Failed to fetch".
+    // HSTS must be dev-aware, so it lives only in proxy.ts (asserted below).
+    expect(stripComments(config)).not.toContain('Strict-Transport-Security')
   })
 
   it('turns off camera, microphone and geolocation', () => {
@@ -90,6 +96,17 @@ describe('admin CSP is generated per request', () => {
     // A production build must never eval: the term is behind the `dev` flag and
     // never unconditional.
     expect(proxy).toContain("dev ? \" 'unsafe-eval'\" : ''")
+  })
+
+  it('sends HSTS for two years, but only outside local dev', () => {
+    // HSTS is the deployed console's header. On a local http:// dev server it
+    // must be absent, or the browser forces https://localhost and every RSC
+    // fetch fails. It is gated by isLocalDevConsole(), never unconditional.
+    expect(proxy).toContain('Strict-Transport-Security')
+    expect(proxy).toContain('max-age=63072000; includeSubDomains; preload')
+    expect(proxy).toMatch(
+      /isLocalDevConsole\(\)\s*\?\s*\[\]\s*:\s*\(\[\['Strict-Transport-Security'/,
+    )
   })
 
   it('never returns a bare NextResponse.next() without the headers', () => {

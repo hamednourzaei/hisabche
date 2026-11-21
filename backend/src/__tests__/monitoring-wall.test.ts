@@ -146,15 +146,28 @@ describe('the wall is not an admin door', () => {
     expect(res.statusCode).toBe(401)
   })
 
-  it('the removed stream and session routes are gone', async () => {
+  // 12 Nov 2026: the wall stream/session had no caller and were removed.
+  // 21 Nov 2026: the ADMIN stream returns with a real consumer — it is private
+  // (401 without admin auth), while the wall stream stays gone.
+  it('the wall stream and session routes stay gone', async () => {
     for (const [method, url] of [
       ['GET', '/api/wall/stream'],
       ['POST', '/api/wall/session'],
-      ['GET', '/api/admin/monitor/stream'],
     ] as const) {
       const res = await app.inject({ method, url })
-      expect(res.statusCode, url).not.toBe(200)
+      expect(res.statusCode, url).toBe(404)
     }
+  })
+
+  it('the admin stream requires admin authentication, never a wall token', async () => {
+    const anonymous = await app.inject({ method: 'GET', url: '/api/admin/monitor/stream' })
+    expect(anonymous.statusCode).toBe(401)
+    const withWallToken = await app.inject({
+      method: 'GET',
+      url: '/api/admin/monitor/stream',
+      headers: { 'x-wall-token': ACTIVE },
+    })
+    expect(withWallToken.statusCode).toBe(401)
   })
 
   it('keeps /api/wall/ public and /api/wallx private', () => {

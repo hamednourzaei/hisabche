@@ -86,10 +86,15 @@ const nextConfig = {
           // V63 · S-4. The nonce-bearing CSP is generated per response in
           // proxy.ts (a static one cannot carry a nonce); these are static and
           // cover responses the middleware does not see, e.g. static assets.
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
+          //
+          // HSTS is deliberately NOT here. It must be dev-aware: an
+          // unconditional `Strict-Transport-Security` on a local http:// dev
+          // server makes the browser cache "always use https for localhost"
+          // and rewrite every later request — including the RSC payload fetch
+          // behind a tab switch — to https://localhost:3040, which refuses the
+          // connection ("Failed to fetch RSC payload … TypeError: Failed to
+          // fetch"). proxy.ts emits HSTS only when it is not a local dev
+          // console, so it stays the single source of truth for it.
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',

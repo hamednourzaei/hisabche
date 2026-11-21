@@ -37,7 +37,16 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Hourglass, Warehouse as WarehouseIcon } from 'lucide-react'
+import {
+  Archive,
+  Bookmark,
+  FileSearch,
+  Handshake,
+  Hourglass,
+  PackageSearch,
+  Warehouse as WarehouseIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
@@ -120,6 +129,28 @@ export type StockSection = (typeof STOCK_SECTIONS)[number]
 
 /** `?warehouse=` names an open warehouse, `?stockWarehouse=` the shelves tab of «کالاها». */
 const STOCK_SECTION_CLEARS = ['warehouse', 'stockWarehouse', 'shelf'] as const
+
+/**
+ * The BAR's order, not the data's: the catalogue is the daily errand and comes
+ * first, then every other view exactly as `STOCK_SECTIONS` lists it. All nine
+ * stay offered — four words on the bar, five under «بیشتر».
+ */
+export const STOCK_SECTION_BAR_ORDER: readonly StockSection[] = [
+  'products',
+  ...STOCK_SECTIONS.filter((section) => section !== 'products'),
+]
+
+/** The four daily errands; the rest go under «بیشتر» (nothing is removed). */
+export const STOCK_SECTION_BAR_COUNT = 4
+
+/** Menu rows only — the bar stays words. */
+const STOCK_SECTION_ICON: Partial<Record<StockSection, LucideIcon>> = {
+  holds: Bookmark,
+  reorder: PackageSearch,
+  deadStock: Archive,
+  rfqs: FileSearch,
+  consignments: Handshake,
+}
 
 const TAB_ICON = { stock: WarehouseIcon, expiry: Hourglass } as const
 
@@ -247,12 +278,15 @@ function WarehouseHub() {
             <SegmentedControl
               branch
               label={t('warehouseHub.sectionsLabel')}
-              options={STOCK_SECTIONS.map((value) => ({
+              options={STOCK_SECTION_BAR_ORDER.map((value) => ({
                 value,
                 label: t(`warehouseHub.sections.${value}`),
+                icon: STOCK_SECTION_ICON[value],
               }))}
               value={section}
               onChange={selectSection}
+              overflowAfter={STOCK_SECTION_BAR_COUNT}
+              moreLabel={t('nav.more')}
             />
             {/* Both branches are ELEMENTS. See WarehouseStockTab above for why. */}
             {section === 'reorder' || section === 'deadStock' ? (

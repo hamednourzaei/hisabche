@@ -177,6 +177,10 @@ export async function runDivergenceAlarmTick(now: Date = new Date()): Promise<bo
  * V63 · M-3 — roll the closed hour into `request_metrics_hour`, then prune.
  * Once per hour across all instances; late and repeated runs are harmless
  * because the rollup is an idempotent UPSERT keyed by the hour.
+ * Unified Core Observability (21 Nov 2026): the SAME tick also rolls and
+ * prunes the core tables — no second timer. Until admin-core-monitoring-01
+ * is applied, the core RPCs are absent (PGRST202) and that half is skipped;
+ * the infrastructure rollup keeps working.
  */
 export async function runMonitorRollupTick(now: Date = new Date()): Promise<boolean> {
   return runScheduledOnce('monitor-rollup', slotOf(60 * 60, now), async () => {
@@ -194,6 +198,21 @@ export async function runMonitorRollupTick(now: Date = new Date()): Promise<bool
       p_keep_hour_days: 90,
     })
     if (pruned.error) throw pruned.error
+
+    const coreRolled = await supabase.rpc('admin_core_monitor_rollup_hour', {
+      p_hour: closed.toISOString(),
+    })
+    if (coreRolled.error && (coreRolled.error as { code?: string }).code !== 'PGRST202') {
+      throw coreRolled.error
+    }
+
+    const corePruned = await supabase.rpc('admin_core_monitor_prune', {
+      p_keep_minute_days: 7,
+      p_keep_hour_days: 90,
+    })
+    if (corePruned.error && (corePruned.error as { code?: string }).code !== 'PGRST202') {
+      throw corePruned.error
+    }
   })
 }
 
@@ -210,7 +229,11 @@ export async function runMonitorAlertsTick(now: Date = new Date()): Promise<bool
       const evaluations = await MonitoringService.evaluateAlerts({ notify: true, now })
       const breaching = evaluations.filter((row) => row.state === 'breaching')
       if (breaching.length > 0) {
-        console.warn(`⚠️ Monitor alerts: ${breaching.map((row) => row.rule.metric).join(',')}`)
+        console.warn(
+          `⚠️ Monitor alerts: ${breaching
+            .map((row) => (row.coreId ? `${row.rule.metric}:${row.coreId}` : row.rule.metric))
+            .join(',')}`,
+        )
       }
     },
     MONITOR_ALERT_SECONDS,

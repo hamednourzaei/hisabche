@@ -93,6 +93,11 @@ const APPROVED_TOP_LEVEL_PRIMITIVES = [
   'toast.tsx',
   'toast-provider.tsx',
   'tooltip.tsx',
+  // Unified Core Observability (21 Nov 2026): THE shared time-series chart on
+  // the existing ChartContainer/recharts — reviewed, mission §11. The internal
+  // file is its lazy-loaded recharts body (the SalesChart pattern).
+  'trend-chart.tsx',
+  'trend-chart-internal.tsx',
   'undo-disclosure.tsx',
 ].sort()
 
