@@ -41,6 +41,12 @@ const createDataRequestBody = z.object({
   adminNotes: z.string().optional(),
 })
 
+const purgeWorkspaceBody = z.object({
+  /** The typed business name — the RPC refuses a mismatch before deleting. */
+  confirmName: z.string().trim().min(1).max(200),
+  reason: z.string().trim().min(5).max(500),
+})
+
 export default async function adminCustomersRoutes(fastify: FastifyInstance) {
   const handle = async (reply: FastifyReply, fn: () => Promise<unknown>) => {
     try {
@@ -71,6 +77,36 @@ export default async function adminCustomersRoutes(fastify: FastifyInstance) {
       const { id } = req.params as { id: string }
       return handle(reply, async () => {
         return AdminCustomersService.getWorkspace360(id)
+      })
+    },
+  )
+
+  // ─── DELETE /api/admin/workspaces/:id ──────────────────────────
+  //
+  // «حذف کامل اشتراک و دیتابیسشون». One Postgres function deletes the
+  // business and every row it owns; the typed name and the step-up are the two
+  // controls, and the audit entry survives the business (admin_security_events).
+  fastify.delete(
+    '/api/admin/workspaces/:id',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('customers.workspaces.purge'),
+        requireAdminStepUp,
+      ],
+    },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+      const body = purgeWorkspaceBody.parse(req.body)
+      const adminEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        return AdminCustomersService.purgeWorkspace({
+          workspaceId: id,
+          confirmName: body.confirmName,
+          reason: body.reason,
+          adminEmail,
+        })
       })
     },
   )

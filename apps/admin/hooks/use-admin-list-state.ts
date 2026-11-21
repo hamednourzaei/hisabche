@@ -35,48 +35,58 @@ export interface AdminListState {
 export interface AdminListStateOptions {
   /** The filter keys this list owns; `reset()` removes them. */
   filterKeys?: readonly string[]
+  /**
+   * Prefix for the URL keys when two lists share one page (workspaces and
+   * users on `/customers`). The default keeps every existing URL unchanged.
+   */
+  keyPrefix?: string
 }
 
-export function useAdminListState({ filterKeys = [] }: AdminListStateOptions = {}): AdminListState {
+export function useAdminListState({
+  filterKeys = [],
+  keyPrefix = '',
+}: AdminListStateOptions = {}): AdminListState {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const replace = useLocaleReplace()
+  const keyOf = useCallback((base: string) => `${keyPrefix}${base}`, [keyPrefix])
 
   const update = useCallback(
     (patch: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams.toString())
       let changedView = false
       for (const [key, value] of Object.entries(patch)) {
-        if (key !== PAGE_KEY) changedView = true
+        if (key !== keyOf(PAGE_KEY)) changedView = true
         if (value === null || value === '') next.delete(key)
         else next.set(key, value)
       }
       // A new query, sort or filter starts at the first page. Without this,
       // narrowing a list on page 4 showed an empty table.
-      if (changedView && !(PAGE_KEY in patch)) next.delete(PAGE_KEY)
+      if (changedView && !(keyOf(PAGE_KEY) in patch)) next.delete(keyOf(PAGE_KEY))
       const queryString = next.toString()
       replace(`${routeOf(pathname)}${queryString ? `?${queryString}` : ''}`)
     },
-    [pathname, replace, searchParams],
+    // `keyOf` is memoized on keyPrefix, so the dependency list is complete.
+    [pathname, replace, searchParams, keyOf],
   )
 
-  const rawPage = Number(searchParams.get(PAGE_KEY) ?? '1')
+  const rawPage = Number(searchParams.get(keyOf(PAGE_KEY)) ?? '1')
   const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1
 
   return {
-    query: searchParams.get(QUERY_KEY) ?? '',
+    query: searchParams.get(keyOf(QUERY_KEY)) ?? '',
     page,
-    sort: searchParams.get(SORT_KEY),
+    sort: searchParams.get(keyOf(SORT_KEY)),
     filter: (key) => searchParams.get(key),
-    setQuery: (value) => update({ [QUERY_KEY]: value }),
-    setPage: (value) => update({ [PAGE_KEY]: value <= 1 ? null : String(value) }),
-    setSort: (value) => update({ [SORT_KEY]: value }),
+    setQuery: (value) => update({ [keyOf(QUERY_KEY)]: value }),
+    setPage: (value) => update({ [keyOf(PAGE_KEY)]: value <= 1 ? null : String(value) }),
+    setSort: (value) => update({ [keyOf(SORT_KEY)]: value }),
     setFilter: (key, value) => update({ [key]: value }),
     reset: () => {
       const patch: Record<string, string | null> = {
-        [QUERY_KEY]: null,
-        [PAGE_KEY]: null,
-        [SORT_KEY]: null,
+        [keyOf(QUERY_KEY)]: null,
+        [keyOf(PAGE_KEY)]: null,
+        [keyOf(SORT_KEY)]: null,
       }
       for (const key of filterKeys) patch[key] = null
       update(patch)

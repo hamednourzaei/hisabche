@@ -40,15 +40,27 @@ import {
   MonitoringService,
   rangeWindow,
   type AlertEvaluation,
+  type AlertEventRow,
   type CoreSnapshot,
   type MonitorRange,
 } from '../services/monitoring/monitoring.service'
+import {
+  CORE_EXPORT_SCHEMA,
+  buildCoreExportCsv,
+  coreExportFileName,
+  type CoreExportBundle,
+} from '../services/monitoring/core-export.domain'
 import { WallTokenService } from '../services/monitoring/wall-token.service'
 
 const RANGES = ['1h', '24h', '7d', '30d', '90d'] as const
 
 const seriesQuery = z.object({
   range: z.enum(RANGES).default('1h'),
+})
+
+const exportQuery = z.object({
+  range: z.enum(RANGES).default('24h'),
+  format: z.enum(['csv', 'json']).default('json'),
 })
 
 const alertBody = z.object({
@@ -287,6 +299,55 @@ export default async function adminMonitorRoutes(fastify: FastifyInstance) {
   fastify.get('/api/admin/monitor/cores', { preHandler: read }, async (_req, reply) => {
     try {
       return reply.send(await sharedCoreSnapshot())
+    } catch (err) {
+      return handleError(reply, err)
+    }
+  })
+
+  // ─── The downloadable core log ───────────────────────────────────────
+  // Read-only, so no step-up. CSV is the sheet an operator opens in Excel;
+  // the JSON is the same bundle — snapshot, per-core history, alert events —
+  // without flattening, for whoever fixes the core.
+  fastify.get('/api/admin/monitor/cores/export', { preHandler: read }, async (req, reply) => {
+    try {
+      const { range, format } = exportQuery.parse(req.query)
+      const monitorRange = range as MonitorRange
+      const window = rangeWindow(monitorRange)
+      const [snapshot, history] = await Promise.all([
+        sharedCoreSnapshot(),
+        MonitoringService.coreSeriesAll(monitorRange),
+      ])
+      let alertEvents: AlertEventRow[] = []
+      let alertEventsError: string | null = null
+      try {
+        alertEvents = await MonitoringService.alertEvents(200)
+      } catch (err) {
+        alertEventsError = err instanceof Error ? err.message : 'alert history could not be read'
+      }
+      const bundle: CoreExportBundle = {
+        schema: CORE_EXPORT_SCHEMA,
+        generatedAt: snapshot.generatedAt,
+        range: monitorRange,
+        unit: window.unit,
+        since: window.since.toISOString(),
+        windowMinutes: snapshot.windowMinutes,
+        counts: snapshot.counts,
+        cores: snapshot.cores,
+        series: history.series,
+        seriesErrors: history.errors,
+        instances: snapshot.instances,
+        db: snapshot.db,
+        alertEvents,
+        alertEventsError,
+      }
+      const filename = coreExportFileName(monitorRange, snapshot.generatedAt, format)
+      reply.header(
+        'Content-Type',
+        format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8',
+      )
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`)
+      reply.header('Cache-Control', 'no-store')
+      return reply.send(format === 'csv' ? buildCoreExportCsv(bundle) : JSON.stringify(bundle))
     } catch (err) {
       return handleError(reply, err)
     }

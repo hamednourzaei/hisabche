@@ -129,7 +129,7 @@ const OLD_ROUTE_REDIRECTS: Record<string, string> = {
   '/': '/dashboard?tab=overview',
   '/dashboard': '/dashboard?tab=overview',
   '/workspaces': '/customers?tab=workspaces',
-  '/users': '/customers?tab=users',
+  '/users': '/customers',
   '/subscriptions': '/customers?tab=workspaces',
   '/wallet': '/revenue?tab=wallet',
   '/ai': '/product?tab=ai',

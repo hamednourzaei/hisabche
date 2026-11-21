@@ -384,6 +384,19 @@ export class BillingService {
     return access
   }
 
+  /**
+   * The one subscription row for a business: this workspace's earliest row,
+   * then its OWNER's earliest LEGACY row (`workspace_id IS NULL`).
+   *
+   * Public so the platform admin reads the same row the write lock does. The
+   * owner's report of 30 Aug 1405 was exactly this disagreement: /billing
+   * showed lolokhan's enterprise plan (owner fallback), while the admin panel
+   * showed «بدون اشتراک» for the same business (workspace_id only).
+   */
+  async getWorkspaceSubscriptionRow(workspaceId: string) {
+    return this.findWorkspaceSubscriptionRow(workspaceId)
+  }
+
   private async findWorkspaceSubscriptionRow(workspaceId: string) {
     const { data, error } = await supabase
       .from('subscriptions')
@@ -406,10 +419,13 @@ export class BillingService {
     if (wsError) throw new DatabaseError('Failed to resolve workspace owner', wsError)
     if (!workspace?.owner_id) return null
 
-    const { data: legacy, error: legacyError } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', workspace.owner_id)
+    // ⚠️ ONLY a legacy row. The owner's subscription that already names
+    // ANOTHER workspace says nothing about this one — using it would put
+    // someone else's plan and expiry on this business.
+    let legacyQuery = supabase.from('subscriptions').select('*').eq('user_id', workspace.owner_id)
+    if (!missingColumn) legacyQuery = legacyQuery.is('workspace_id', null)
+
+    const { data: legacy, error: legacyError } = await legacyQuery
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()

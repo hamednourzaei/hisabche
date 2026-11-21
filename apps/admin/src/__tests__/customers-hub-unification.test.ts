@@ -63,6 +63,21 @@ describe('Customers hub unification', () => {
     expect(row).toContain('PLANS.map')
   })
 
+  it('users live beside workspaces, not on a second tab', () => {
+    const customers = flat(read('app/[lang]/(admin)/customers/customers-client.tsx'))
+    expect(count(customers, '<UsersClient />')).toBe(1)
+    expect(customers).not.toContain("'users'")
+    expect(customers).not.toContain("id: 'users'")
+    const users = flat(read('app/[lang]/(admin)/users/users-client.tsx'))
+    // Both lists share one page now; they must not fight over `q`/`page`.
+    expect(users).toContain("keyPrefix: 'user_'")
+    const page = flat(read('app/[lang]/(admin)/users/page.tsx'))
+    expect(page).toContain('redirect(`/${lang}/customers`)')
+    expect(page).not.toContain('tab=users')
+    expect(flat(read('proxy.ts'))).toContain("'/users': '/customers'")
+    expect(flat(read('next.config.js'))).toContain("destination: '/:lang/customers',")
+  })
+
   it('the backend enriches the workspace page with subscription identity and lifecycle', () => {
     const svc = flat(read('../../backend/src/services/admin.service.ts'))
     expect(svc).toContain(

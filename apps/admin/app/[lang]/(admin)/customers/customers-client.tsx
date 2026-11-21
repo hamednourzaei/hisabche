@@ -24,7 +24,6 @@ import { adminDateTime } from '@/lib/admin-format'
 
 const CUSTOMERS_TABS = [
   'workspaces',
-  'users',
   'upgrade_requests',
   'plan_limits',
   'devices',
@@ -44,7 +43,6 @@ export function CustomersClient() {
         label={t('admin.hubs.customers.title')}
         items={[
           { id: 'workspaces', label: t('admin.hubs.customers.workspaces') },
-          { id: 'users', label: t('admin.hubs.customers.users') },
           { id: 'upgrade_requests', label: t('admin.hubs.customers.upgradeRequests') },
           { id: 'plan_limits', label: t('admin.hubs.customers.planLimits') },
           { id: 'devices', label: t('admin.hubs.customers.devices') },
@@ -55,9 +53,21 @@ export function CustomersClient() {
         onSelect={setTab}
       />
 
-      {tab === 'workspaces' && <WorkspacesClient onOpen360={(id) => setSelectedWorkspaceId(id)} />}
+      {tab === 'workspaces' && (
+        <div className="space-y-8">
+          <WorkspacesClient onOpen360={(id) => setSelectedWorkspaceId(id)} />
 
-      {tab === 'users' && <UsersClient />}
+          {/* The people behind the businesses. This used to be a second tab
+              (and a second URL); a user is read next to the workspace that
+              owns them now, and old `?tab=users` links fall back here. */}
+          <section className="space-y-3" aria-labelledby="customers-users-heading">
+            <h2 id="customers-users-heading" className="text-lg font-semibold">
+              {t('admin.hubs.customers.users')}
+            </h2>
+            <UsersClient />
+          </section>
+        </div>
+      )}
 
       {tab === 'upgrade_requests' && <UpgradeRequestsPanel />}
 

@@ -99,6 +99,29 @@ export function useManageUser() {
   })
 }
 
+export function usePurgeWorkspace() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      workspaceId: string
+      confirmName: string
+      reason: string
+      stepUpTimestamp: string
+    }) => {
+      const res = await apiClient.delete(`/admin/workspaces/${input.workspaceId}`, {
+        headers: { 'X-Admin-Step-Up-Timestamp': input.stepUpTimestamp },
+        data: { confirmName: input.confirmName, reason: input.reason },
+      })
+      return res.data as { success: boolean; deleted: Record<string, number> }
+    },
+    onSuccess: () => {
+      // The row is gone: every workspace-derived read is stale.
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'workspaces'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'trial-abuse'] })
+    },
+  })
+}
+
 export function useCreateSupportSession() {
   const queryClient = useQueryClient()
   return useMutation({

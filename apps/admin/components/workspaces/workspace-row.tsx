@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { ChevronLeft, Users } from 'lucide-react'
+import { ChevronLeft, Trash2, Users } from 'lucide-react'
 import {
   Badge,
   Button,
@@ -15,6 +15,8 @@ import {
 import { cn } from '@/lib/utils'
 
 import { MemberList } from '@/components/members/member-list'
+import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
+import { usePurgeWorkspace } from '@/hooks/use-admin-customers'
 import type { AdminWorkspace } from '@/hooks/use-admin-workspaces'
 import {
   PLANS,
@@ -47,10 +49,12 @@ export function WorkspaceRow({
   const t = useTranslations()
   const dateLocale = useAdminLocale()
   const [expanded, setExpanded] = useState(false)
+  const [purgeOpen, setPurgeOpen] = useState(false)
   const regionId = useId()
 
   const updatePlan = useUpdateSubscriptionPlan()
   const updateStatus = useUpdateSubscriptionStatus()
+  const purge = usePurgeWorkspace()
 
   const periodEndMs = workspace.subscriptionPeriodEnd
     ? new Date(workspace.subscriptionPeriodEnd).getTime()
@@ -256,8 +260,45 @@ export function WorkspaceRow({
               </div>
             </div>
           )}
+
+          <div
+            className="mx-2 mb-2 space-y-2 rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.05)] p-3"
+            data-workspace-purge=""
+          >
+            <div className="text-xs font-semibold text-destructive">
+              {t('admin.workspaces.purgeAction')}
+            </div>
+            <p className="text-xs text-muted-foreground">{t('admin.workspaces.purgeDesc')}</p>
+            <Button variant="destructive" size="sm" onClick={() => setPurgeOpen(true)}>
+              <Trash2 className="me-1 size-4" aria-hidden="true" />
+              {t('admin.workspaces.purgeAction')}
+            </Button>
+          </div>
         </div>
       )}
+
+      <StepUpDialog
+        open={purgeOpen}
+        onOpenChange={setPurgeOpen}
+        title={t('admin.workspaces.purgeTitle', { name: workspace.name })}
+        description={t('admin.workspaces.purgeDesc')}
+        confirmName={workspace.name}
+        confirmNameLabel={t('admin.workspaces.purgeTypeName')}
+        requireReason
+        destructive
+        onConfirm={async ({ stepUpTimestamp, reason, confirmName }) => {
+          try {
+            await purge.mutateAsync({
+              workspaceId: workspace.id,
+              confirmName: confirmName ?? '',
+              reason: reason ?? '',
+              stepUpTimestamp,
+            })
+          } catch {
+            throw new Error(t('admin.workspaces.purgeFailed'))
+          }
+        }}
+      />
     </li>
   )
 }

@@ -238,7 +238,12 @@ export class AdminService {
       countOf('workspace_members', (q) => q.eq('has_access', true).is('suspended_at', null)),
 
       countOf('subscriptions'),
-      countOf('subscriptions', (q) => q.eq('status', 'active')),
+      // Active = status active AND the paid period has not ended. A stale
+      // «active» row whose period_end is in the past is exactly the «اشتراک
+      // لولوخان ... اما در ادمین پنل نوشته فعال» the owner reported.
+      countOf('subscriptions', (q) =>
+        q.eq('status', 'active').gte('period_end', now.toISOString()),
+      ),
       countOf('subscriptions', (q) => q.lt('period_end', now.toISOString())),
       countOf('subscriptions', (q) =>
         q.gte('period_end', now.toISOString()).lte('period_end', inSevenDays),
@@ -376,15 +381,23 @@ export class AdminService {
    * One page of workspaces, enriched with owner identity, plan and member
    * count — everything the admin table's parent row shows.
    *
-   * FOUR queries total, regardless of page size:
+   * FIVE queries total, regardless of page size:
    *
    *   1. the workspaces page          (paged + counted)
    *   2. owner identities             .in('id', ownerIds)
-   *   3. subscriptions for the page   .in('workspace_id', ids)
-   *   4. memberships for the page     .in('workspace_id', ids)
+   *   3. subscriptions by workspace   .in('workspace_id', ids)
+   *   4. LEGACY subscriptions of the owners (workspace_id IS NULL)
+   *   5. memberships for the page     .in('workspace_id', ids)
    *
-   * Not 1 + 3N. A 20-row page costs 4 round-trips, a 100-row page also costs
-   * 4. The enrichment queries are only issued when the page is non-empty.
+   * Not 1 + 3N. A 20-row page costs 5 round-trips, a 100-row page also costs
+   * 5. The enrichment queries are only issued when the page is non-empty.
+   *
+   * ⚠️ QUERIES 3 AND 4 ARE THE SAME RULE THE WRITE LOCK USES
+   * (BillingService.findWorkspaceSubscriptionRow): this workspace's own row
+   * first, then its owner's earliest LEGACY row. Query 3 alone is what made
+   * the admin panel say «بدون اشتراک» while /billing showed a live enterprise
+   * plan for the same business (owner's report, 30 Aug 1405). A row that
+   * already names ANOTHER workspace is never used here.
    *
    * Everything here is REAL: owner name/email come from the users projection,
    * plan from subscriptions.plan, member count from actual membership rows.
@@ -414,40 +427,64 @@ export class AdminService {
     const workspaceIds = rows.map((w) => w.id)
     const ownerIds = [...new Set(rows.map((w) => w.owner_id).filter((id): id is string => !!id))]
 
-    const [ownersResult, subscriptionsResult, membersResult] = await Promise.all([
-      this.resolveIdentities(ownerIds),
-      supabase
-        .from('subscriptions')
-        .select(
-          'id, workspace_id, plan, status, period_end, is_trial, trial_ends_at, cancel_at_period_end',
-        )
-        .in('workspace_id', workspaceIds),
-      // Only the columns needed to COUNT and to identify active seats — never
-      // the whole membership row for every workspace on the page.
-      supabase
-        .from('workspace_members')
-        .select('workspace_id, has_access, suspended_at')
-        .in('workspace_id', workspaceIds),
-    ])
+    type SubscriptionSummary = {
+      id: string
+      workspace_id: string | null
+      user_id?: string | null
+      plan: string | null
+      status: string | null
+      period_end: string | null
+      is_trial: boolean | null
+      trial_ends_at: string | null
+      cancel_at_period_end: boolean | null
+    }
+
+    const [ownersResult, subscriptionsResult, legacySubscriptionsResult, membersResult] =
+      await Promise.all([
+        this.resolveIdentities(ownerIds),
+        supabase
+          .from('subscriptions')
+          .select(
+            'id, workspace_id, plan, status, period_end, is_trial, trial_ends_at, cancel_at_period_end',
+          )
+          .in('workspace_id', workspaceIds)
+          .order('created_at', { ascending: true }),
+        ownerIds.length > 0
+          ? supabase
+              .from('subscriptions')
+              .select(
+                'id, user_id, plan, status, period_end, is_trial, trial_ends_at, cancel_at_period_end',
+              )
+              .is('workspace_id', null)
+              .in('user_id', ownerIds)
+              .order('created_at', { ascending: true })
+          : Promise.resolve({ data: [] as SubscriptionSummary[], error: null }),
+        // Only the columns needed to COUNT and to identify active seats — never
+        // the whole membership row for every workspace on the page.
+        supabase
+          .from('workspace_members')
+          .select('workspace_id, has_access, suspended_at')
+          .in('workspace_id', workspaceIds),
+      ])
 
     const ownerById = ownersResult
 
-    const subscriptionByWorkspace = new Map(
-      (
-        (subscriptionsResult.data ?? []) as Array<{
-          id: string
-          workspace_id: string | null
-          plan: string | null
-          status: string | null
-          period_end: string | null
-          is_trial: boolean | null
-          trial_ends_at: string | null
-          cancel_at_period_end: boolean | null
-        }>
-      )
-        .filter((s) => s.workspace_id)
-        .map((s) => [s.workspace_id as string, s]),
-    )
+    // Earliest row wins, exactly as the write lock reads it.
+    const subscriptionByWorkspace = new Map<string, SubscriptionSummary>()
+    for (const subscription of (subscriptionsResult.data ?? []) as SubscriptionSummary[]) {
+      if (subscription.workspace_id && !subscriptionByWorkspace.has(subscription.workspace_id)) {
+        subscriptionByWorkspace.set(subscription.workspace_id, subscription)
+      }
+    }
+
+    // A legacy row belongs to its owner, and only fills a workspace that has
+    // no subscription of its own.
+    const legacyByOwner = new Map<string, SubscriptionSummary>()
+    for (const subscription of (legacySubscriptionsResult.data ?? []) as SubscriptionSummary[]) {
+      if (subscription.user_id && !legacyByOwner.has(subscription.user_id)) {
+        legacyByOwner.set(subscription.user_id, subscription)
+      }
+    }
 
     // Active seats only: a suspended or access-revoked row is not a member for
     // any purpose the admin cares about.
@@ -466,7 +503,9 @@ export class AdminService {
 
     const workspaces = rows.map((w) => {
       const owner = w.owner_id ? ownerById.get(w.owner_id) : undefined
-      const subscription = subscriptionByWorkspace.get(w.id)
+      const subscription =
+        subscriptionByWorkspace.get(w.id) ??
+        (w.owner_id ? legacyByOwner.get(w.owner_id) : undefined)
 
       return {
         ...w,
@@ -497,19 +536,15 @@ export class AdminService {
     if (error) throw new DatabaseError('Failed to fetch workspace', error)
     if (!workspace) throw new NotFoundError('Workspace')
 
-    const [{ data: members }, { data: subscription }, invoicesCount, transactionsCount] =
-      await Promise.all([
-        supabase.from('workspace_members').select(MEMBER_COLUMNS).eq('workspace_id', workspaceId),
-        supabase
-          .from('subscriptions')
-          .select(SUBSCRIPTION_COLUMNS)
-          .eq('workspace_id', workspaceId)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-        this.countInWorkspace('invoices', workspaceId),
-        this.countInWorkspace('transactions', workspaceId),
-      ])
+    const [{ data: members }, subscription, invoicesCount, transactionsCount] = await Promise.all([
+      supabase.from('workspace_members').select(MEMBER_COLUMNS).eq('workspace_id', workspaceId),
+      // Same rule as the write lock and the list: this workspace's row, then
+      // the owner's LEGACY row. A workspace_id-only read showed «no
+      // subscription» on the detail while /billing showed a live plan.
+      this.billingService.getWorkspaceSubscriptionRow(workspaceId),
+      this.countInWorkspace('invoices', workspaceId),
+      this.countInWorkspace('transactions', workspaceId),
+    ])
 
     // Limits are shown only for a RECOGNIZED plan — a legacy/garbage value
     // must not crash the detail view.

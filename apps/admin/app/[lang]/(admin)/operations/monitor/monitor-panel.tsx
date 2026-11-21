@@ -30,6 +30,8 @@ import {
   ArrowUpRight,
   Building2,
   Database,
+  Download,
+  Loader2,
   Minus,
   Server,
   Users,
@@ -65,6 +67,7 @@ import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDateTime, adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
 import {
+  downloadCoreExport,
   useAdminAlertEvents,
   useAdminCoreSeries,
   useAdminMonitor,
@@ -201,6 +204,21 @@ export function MonitorPanel() {
   const [coreSearch, setCoreSearch] = useState('')
   const [coreGroup, setCoreGroup] = useState('all')
   const [openCoreId, setOpenCoreId] = useState<string | null>(null)
+  const [exportRange, setExportRange] = useState<MonitorRange>('24h')
+  const [exporting, setExporting] = useState<'csv' | 'json' | null>(null)
+  const [exportFailed, setExportFailed] = useState(false)
+
+  const handleExport = async (format: 'csv' | 'json') => {
+    setExporting(format)
+    setExportFailed(false)
+    try {
+      await downloadCoreExport(exportRange, format)
+    } catch {
+      setExportFailed(true)
+    } finally {
+      setExporting(null)
+    }
+  }
 
   const overview = data?.overview
   const vitals = data?.vitals
@@ -266,7 +284,18 @@ export function MonitorPanel() {
       id: 'status',
       labelKey: 'admin.operations.monitor.coreStatus',
       labelFallback: 'وضعیت',
-      render: (row) => <CoreStatusBadge status={row.status} />,
+      render: (row) => (
+        <div className="space-y-0.5">
+          <CoreStatusBadge status={row.status} />
+          {/* Which window the verdict describes: live 5 minutes, or the
+              24-hour fallback for a core with no traffic right now. */}
+          <span className="block whitespace-nowrap text-[10px] text-muted-foreground">
+            {row.windowMinutes >= 24 * 60
+              ? t('admin.operations.monitor.window24h')
+              : t('admin.operations.monitor.window5m')}
+          </span>
+        </div>
+      ),
       sortValue: (row) => row.status,
     },
     {
@@ -917,8 +946,49 @@ export function MonitorPanel() {
       {/* ── Core pressure ranking ───────────────────────────────── */}
       <Card>
         <CardHeader className="text-start">
-          <CardTitle>{t('admin.operations.monitor.coresTitle')}</CardTitle>
-          <CardDescription>{t('admin.operations.monitor.coresDesc')}</CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>{t('admin.operations.monitor.coresTitle')}</CardTitle>
+              <CardDescription>{t('admin.operations.monitor.coresDesc')}</CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <TableFilterSelect
+                label={t('admin.operations.monitor.exportRange')}
+                value={exportRange}
+                onChange={(value) => setExportRange(value as MonitorRange)}
+                options={RANGES.map((value) => ({
+                  value,
+                  label: t(`admin.operations.monitor.range.${value}`),
+                }))}
+              />
+              {(['csv', 'json'] as const).map((format) => (
+                <Button
+                  key={format}
+                  variant="outline"
+                  size="sm"
+                  disabled={exporting !== null}
+                  onClick={() => void handleExport(format)}
+                >
+                  {exporting === format ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Download className="size-4" aria-hidden="true" />
+                  )}
+                  {format === 'csv'
+                    ? t('admin.operations.monitor.downloadCsv')
+                    : t('admin.operations.monitor.downloadJson')}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('admin.operations.monitor.exportHint')}
+          </p>
+          {exportFailed && (
+            <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+              {t('admin.operations.monitor.downloadFailed')}
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -1446,6 +1516,12 @@ function CoreDetail({
         <p className="text-xs text-muted-foreground">
           {t('admin.operations.monitor.coverage')}: {adminNumber(core.coverage * 100, locale, 0)}% ·
           pressure-v1 {t('admin.operations.monitor.composite')}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t('admin.operations.monitor.measuredWindow')}:{' '}
+          {core.windowMinutes >= 24 * 60
+            ? t('admin.operations.monitor.window24h')
+            : t('admin.operations.monitor.window5m')}
         </p>
         <div className="space-y-1.5">
           {core.components.map((component) => (

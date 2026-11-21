@@ -145,6 +145,8 @@ export interface CorePressureItem {
   coverage: number
   components: PressureComponent[]
   operations: number
+  /** 5 for the live window; 1440 when the live window was empty. */
+  windowMinutes: number
   callsPerMin: number | null
   successRate: number | null
   errorRate: number | null
@@ -503,4 +505,31 @@ export function useRevokeWallToken() {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'security-events'] })
     },
   })
+}
+
+/**
+ * Download the complete core log for one range. The server owns the content —
+ * snapshot rows for every registered core, per-core history, alert events —
+ * and the browser only saves the bytes. Read-only: no step-up.
+ */
+export async function downloadCoreExport(
+  range: MonitorRange,
+  format: 'csv' | 'json',
+): Promise<void> {
+  const res = await apiClient.get('/admin/monitor/cores/export', {
+    params: { range, format },
+    responseType: 'blob',
+  })
+  const blob = new Blob([res.data as Blob], {
+    type: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `hisabche-cores-${range}-${new Date().toISOString().replace(/[:.]/g, '-')}.${format}`
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  // Revoke only after the browser has been handed the download.
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }

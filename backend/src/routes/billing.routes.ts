@@ -202,9 +202,12 @@ export async function billingRoutes(fastify: FastifyInstance) {
           request.userId,
           request.tenancy.workspaceId,
         )
-        if (current.plan === body.plan && !current.isTrial && current.status === 'active') {
-          return reply.code(409).send({ error: 'ALREADY_ON_PLAN', code: 'ALREADY_ON_PLAN' })
-        }
+        // ⚠️ No ALREADY_ON_PLAN refusal. The same plan is a RENEWAL: an expired
+        // business must be able to renew (the owner's report), and an early
+        // renewal keeps the paid-for remainder (approve_subscription_upgrade
+        // now starts the new period at GREATEST(now(), period_end)).
+        // A duplicate is already prevented by the one-pending-request unique
+        // index; the money still moves only on admin approval.
         const created = await subscriptionUpgradeService.request(request.tenancy, current.plan, {
           plan: body.plan,
           interval: body.interval,

@@ -22,7 +22,15 @@ export function UsersClient() {
   const { loading: authLoading, error: authError } = useAdminSession()
   const { mutateAsync: manageUser } = useManageUser()
 
-  const { query, page: pageParam, setQuery, setPage: setPageParam } = useAdminListState()
+  const {
+    query,
+    page: pageParam,
+    setQuery,
+    setPage: setPageParam,
+  } = useAdminListState({
+    // The workspace list above owns `q`/`page`; this list keeps its own keys.
+    keyPrefix: 'user_',
+  })
   const page = pageParam - 1
   const [search, setSearch] = useState(query)
   const [lastQuery, setLastQuery] = useState(query)

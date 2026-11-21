@@ -497,6 +497,15 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${SVC}/admin/admin-customers.service.ts`, text: 'createDataRequest' }],
   },
   {
+    routeFile: 'admin-customers.routes.ts',
+    route: 'DELETE /api/admin/workspaces/:id',
+    mechanisms: ['db-function'],
+    evidence: [
+      { file: `${SVC}/admin/admin-customers.service.ts`, text: "rpc('purge_workspace'" },
+      { file: 'docs/workspace-purge-migration.sql', text: 'WORKSPACE_NAME_MISMATCH' },
+    ],
+  },
+  {
     routeFile: 'admin-billing.routes.ts',
     route: 'POST /api/admin/billing/prices',
     mechanisms: ['last-write-wins'],

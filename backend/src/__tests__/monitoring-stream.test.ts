@@ -129,6 +129,7 @@ beforeAll(async () => {
     },
   ])
   db.seed('metric_alert_rules', [])
+  db.seed('metric_alert_events', [])
   db.rpc('admin_core_monitor_snapshot', () => coreSnapshotPayload())
   db.rpc('admin_monitor_overview', () => ({
     since: new Date().toISOString(),
@@ -253,6 +254,56 @@ describe('core reads', () => {
     expect(body.unit).toBe('hour')
     expect(body.points[0]?.p95?.value).toBe(100)
   })
+
+  it('exports the whole core log as CSV and JSON for a chosen range', async () => {
+    const anonymous = await app.inject({
+      method: 'GET',
+      url: '/api/admin/monitor/cores/export',
+    })
+    expect(anonymous.statusCode).toBe(401)
+
+    const shopkeeper = await app.inject({
+      method: 'GET',
+      url: '/api/admin/monitor/cores/export',
+      headers: { authorization: `Bearer ${SHOPKEEPER.token}` },
+    })
+    expect(shopkeeper.statusCode).toBe(403)
+
+    const csv = await app.inject({
+      method: 'GET',
+      url: '/api/admin/monitor/cores/export?format=csv&range=24h',
+      headers: asAdmin(),
+    })
+    expect(csv.statusCode).toBe(200)
+    expect(String(csv.headers['content-type'])).toContain('text/csv')
+    expect(String(csv.headers['content-disposition'])).toContain('hisabche-cores-24h-')
+    expect(csv.body.charCodeAt(0)).toBe(0xfeff)
+    expect(csv.body).toContain('row_type,generated_at,range,unit,bucket,core_id')
+    // Every registered core is present — measured or UNKNOWN.
+    expect(csv.body).toContain(',sales,')
+    expect(csv.body).toContain(',ai,')
+
+    const json = await app.inject({
+      method: 'GET',
+      url: '/api/admin/monitor/cores/export?format=json&range=7d',
+      headers: asAdmin(),
+    })
+    expect(json.statusCode).toBe(200)
+    const body = json.json() as {
+      schema: string
+      range: string
+      cores: unknown[]
+      series: Record<string, unknown[]>
+      alertEvents: unknown[]
+      alertEventsError: string | null
+    }
+    expect(body.schema).toBe('hisabche.core-export.v1')
+    expect(body.range).toBe('7d')
+    expect(body.cores).toHaveLength(CORES.length)
+    expect(body.series.sales).toHaveLength(1)
+    expect(body.alertEvents).toEqual([])
+    expect(body.alertEventsError).toBeNull()
+  }, 30_000)
 })
 
 describe('the admin SSE stream', () => {

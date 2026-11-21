@@ -51,6 +51,7 @@ export const ADMIN_PERMISSIONS = [
   // Customers
   'customers.workspaces.read',
   'customers.workspaces.suspend',
+  'customers.workspaces.purge',
   'customers.users.read',
   'customers.users.suspend',
   'customers.users.revoke_sessions',

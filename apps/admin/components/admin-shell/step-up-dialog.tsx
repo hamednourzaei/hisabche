@@ -39,7 +39,17 @@ export interface StepUpDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   destructive?: boolean
-  onConfirm: (data: { stepUpTimestamp: string; reason?: string }) => Promise<void> | void
+  /**
+   * The exact text the operator must type — a business name for a purge. The
+   * dialog does not trust a click alone for a destructive, irreversible action.
+   */
+  confirmName?: string | undefined
+  confirmNameLabel?: string | undefined
+  onConfirm: (data: {
+    stepUpTimestamp: string
+    reason?: string
+    confirmName?: string
+  }) => Promise<void> | void
 }
 
 export function StepUpDialog({
@@ -52,12 +62,15 @@ export function StepUpDialog({
   confirmLabel,
   cancelLabel,
   destructive = false,
+  confirmName,
+  confirmNameLabel,
   onConfirm,
 }: StepUpDialogProps) {
   const t = useTranslations()
   const { mutateAsync: stepUp, isPending: isStepUpPending } = useAdminStepUp()
   const [totpCode, setTotpCode] = useState('')
   const [reason, setReason] = useState('')
+  const [typedName, setTypedName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -65,6 +78,7 @@ export function StepUpDialog({
     if (!nextOpen) {
       setTotpCode('')
       setReason('')
+      setTypedName('')
       setError(null)
       setIsSubmitting(false)
     }
@@ -74,6 +88,10 @@ export function StepUpDialog({
   const handleConfirm = async () => {
     if (requireReason && !reason.trim()) {
       setError(t('admin.security.reasonRequired'))
+      return
+    }
+    if (confirmName !== undefined && typedName.trim() !== confirmName) {
+      setError(t('admin.security.confirmNameMismatch'))
       return
     }
 
@@ -86,6 +104,7 @@ export function StepUpDialog({
       await onConfirm({
         stepUpTimestamp: result.stepUpTimestamp,
         reason: requireReason ? reason.trim() : undefined,
+        confirmName: confirmName !== undefined ? typedName.trim() : undefined,
       })
 
       handleOpenChange(false)
@@ -110,6 +129,23 @@ export function StepUpDialog({
         </AlertDialogHeader>
 
         <div className="space-y-4 py-2">
+          {confirmName !== undefined && (
+            <div className="space-y-1.5">
+              <Label htmlFor="step-up-name">
+                {confirmNameLabel ?? t('admin.security.confirmNamePrompt', { name: confirmName })}
+                <span className="ms-1 text-destructive">*</span>
+              </Label>
+              <Input
+                id="step-up-name"
+                type="text"
+                value={typedName}
+                onChange={(e) => setTypedName(e.target.value)}
+                autoComplete="off"
+                required
+              />
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="step-up-totp">{t('admin.security.totpPrompt')}</Label>
             <Input

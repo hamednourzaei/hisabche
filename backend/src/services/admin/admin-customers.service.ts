@@ -12,7 +12,9 @@
 
 import { randomBytes } from 'node:crypto'
 import { supabase } from '../../db'
+import { BaseError } from '../../errors/base.error'
 import { DatabaseError, NotFoundError } from '../../errors/database.error'
+import { BillingService } from '../billing.service'
 import { AdminSecurityService } from './admin-security.service'
 
 export interface Workspace360Data {
@@ -60,6 +62,24 @@ export interface Workspace360Data {
 export type UserLifecycleAction =
   'suspend' | 'reactivate' | 'revoke_sessions' | 'reset_mfa' | 'force_signout'
 
+export interface PurgeWorkspaceResult {
+  workspaceId: string
+  /** Rows the function removed, or null when the database did not say. */
+  deletedRows: number | null
+  passes: number | null
+}
+
+/** A refusal from purge_workspace(), with its own code for the screen. */
+class WorkspacePurgeError extends BaseError {
+  public readonly code: string
+
+  constructor(code: string, statusCode: number) {
+    super(code, statusCode)
+    this.name = 'WorkspacePurgeError'
+    this.code = code
+  }
+}
+
 export class AdminCustomersService {
   /**
    * Builds the comprehensive Workspace 360 view.
@@ -83,13 +103,11 @@ export class AdminCustomersService {
 
     if (mError) throw new DatabaseError(mError.message)
 
-    // 3. Subscriptions (if table exists)
-    const { data: subs } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false })
-      .limit(10)
+    // 3. Subscription — the SAME rule as the write lock and /billing: this
+    //    workspace's row, then the owner's LEGACY row (workspace_id IS NULL).
+    //    A workspace_id-only read showed «بدون اشتراک» here while /billing
+    //    showed a live enterprise plan for the same business.
+    const subscription = await new BillingService().getWorkspaceSubscriptionRow(workspaceId)
 
     // 4. Notes
     const { data: notes, error: notesError } = await supabase
@@ -121,13 +139,70 @@ export class AdminCustomersService {
     return {
       workspace: ws,
       members: members ?? [],
-      subscriptions: subs ?? [],
+      subscriptions: subscription ? [subscription] : [],
       devices: [],
       licences: [],
       notes: notes ?? [],
       supportSessions: sessions ?? [],
       dataRequests: requests ?? [],
     }
+  }
+
+  /**
+   * Deletes ONE business and every row it owns, in one Postgres transaction.
+   *
+   * `purge_workspace` (docs/workspace-purge-migration.sql) is the only writer:
+   * it locks the workspace, requires the exact typed name, removes every
+   * workspace-owned row and every child that carries only its parent's id,
+   * then refuses rather than half-delete. Auth users are NOT touched — they
+   * may own or join other businesses.
+   *
+   * The success is logged AFTER the commit, into admin_security_events, which
+   * lives outside the business being removed.
+   */
+  static async purgeWorkspace(params: {
+    workspaceId: string
+    confirmName: string
+    reason: string
+    adminEmail: string
+  }): Promise<PurgeWorkspaceResult> {
+    const { data, error } = await supabase.rpc('purge_workspace', {
+      p_workspace_id: params.workspaceId,
+      p_confirm_name: params.confirmName,
+    })
+
+    if (error) {
+      // The migration has not run: «not configured», never a silent success.
+      if (['42883', '42P01', 'PGRST202', 'PGRST205'].includes(error.code ?? '')) {
+        throw new WorkspacePurgeError('WORKSPACE_PURGE_NOT_CONFIGURED', 503)
+      }
+      const raised =
+        /(WORKSPACE_NOT_FOUND|WORKSPACE_NAME_MISMATCH|WORKSPACE_PURGE_INCOMPLETE)/.exec(
+          error.message ?? '',
+        )?.[1]
+      if (raised === 'WORKSPACE_NOT_FOUND') throw new WorkspacePurgeError(raised, 404)
+      if (raised === 'WORKSPACE_NAME_MISMATCH') throw new WorkspacePurgeError(raised, 409)
+      if (raised === 'WORKSPACE_PURGE_INCOMPLETE') throw new WorkspacePurgeError(raised, 409)
+      throw new DatabaseError('Failed to purge the workspace', error)
+    }
+
+    const result = (data ?? {}) as Record<string, unknown>
+    const deletedRows = typeof result.deleted_rows === 'number' ? result.deleted_rows : null
+    const passes = typeof result.passes === 'number' ? result.passes : null
+
+    await AdminSecurityService.logSecurityEvent({
+      eventType: 'WORKSPACE_PURGED',
+      adminEmail: params.adminEmail,
+      details: {
+        workspaceId: params.workspaceId,
+        confirmName: params.confirmName,
+        reason: params.reason,
+        deletedRows,
+        passes,
+      },
+    })
+
+    return { workspaceId: params.workspaceId, deletedRows, passes }
   }
 
   /**

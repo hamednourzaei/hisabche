@@ -67,13 +67,32 @@ export function BillingContainer() {
         ? t('billing.plans.pro.name')
         : t('billing.plans.enterprise.name')
 
+  // The server evaluates expiry against its own clock (GET /billing/subscription
+  // returns `access`). The client must not re-derive it from a local timezone.
+  const expired = subscription.access?.expired === true
+
   return (
     <div className="space-y-5 sm:space-y-6">
-      {/* Header */}
+      {/* The header */}
       <div>
         <h1 className="text-2xl font-bold">{t('billing.title')}</h1>
         <p className="text-[hsl(var(--fg-tertiary))]">{t('billing.subtitle')}</p>
       </div>
+
+      {/* Expiry is stated by the server, not guessed from the browser clock.
+          The plans stay reachable below, so renewing is one click from here. */}
+      {expired ? (
+        <div
+          role="alert"
+          data-subscription-expired=""
+          className="rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.08)] p-4"
+        >
+          <p className="font-semibold text-[hsl(var(--color-destructive))]">
+            {t('billing.expiredTitle')}
+          </p>
+          <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">{t('billing.expiredDesc')}</p>
+        </div>
+      ) : null}
 
       {/* Current Plan */}
       <Card>
@@ -120,7 +139,11 @@ export function BillingContainer() {
 
           {!subscription.isTrial && subscription.plan !== 'free' && subscription.periodEnd ? (
             <p className="text-sm text-[hsl(var(--fg-secondary))]" data-period-end="">
-              {t('billing.request.validUntil', { date: formatDate(subscription.periodEnd, lang) })}
+              {expired
+                ? t('billing.expiredOn', { date: formatDate(subscription.periodEnd, lang) })
+                : t('billing.request.validUntil', {
+                    date: formatDate(subscription.periodEnd, lang),
+                  })}
             </p>
           ) : null}
 
@@ -151,7 +174,7 @@ export function BillingContainer() {
             </div>
           )}
 
-          {subscription.plan !== 'free' && !subscription.isTrial && (
+          {subscription.plan !== 'free' && !subscription.isTrial && !expired && (
             <Button variant="outline" size="sm" onClick={() => cancel.mutate()}>
               {t('billing.cancelSubscription')}
             </Button>
@@ -165,11 +188,14 @@ export function BillingContainer() {
           condition excluded. Someone already paying sees their plan marked as
           current rather than a wall of buy buttons. */}
       {/* Anyone below the top plan may ask for a bigger one — a pro
-          subscriber had no way to reach enterprise (reported). */}
-      {subscription.plan !== 'enterprise' || subscription.isTrial ? (
+          subscriber had no way to reach enterprise (reported). An EXPIRED
+          enterprise subscription is the case that hid this block entirely:
+          the plan was already the top one, so no card offered a renewal. */}
+      {subscription.plan !== 'enterprise' || subscription.isTrial || expired ? (
         <PricingPage
           currentPlan={subscription.plan}
           isTrial={subscription.isTrial}
+          expired={expired}
           pendingRequest={pendingRequest}
         />
       ) : null}

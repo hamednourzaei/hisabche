@@ -65,6 +65,12 @@ export interface PricingPageProps {
   currentPlan?: string | undefined
   /** True while the trial is running — a trial user may still upgrade. */
   isTrial?: boolean | undefined
+  /**
+   * The server says the paid period ended. The plan the workspace is already
+   * on becomes a RENEWAL instead of a disabled «current» card; without this an
+   * expired enterprise business had no reachable plan at all.
+   */
+  expired?: boolean | undefined
   /** The workspace's request awaiting approval — no second one can be sent. */
   pendingRequest?: UpgradeRequest | null | undefined
 }
@@ -110,7 +116,12 @@ const UPGRADE_ERROR_CODES = [
   'UPGRADE_FORBIDDEN',
 ]
 
-export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPageProps = {}) {
+export function PricingPage({
+  currentPlan,
+  isTrial,
+  expired = false,
+  pendingRequest,
+}: PricingPageProps = {}) {
   const t = useTranslations()
   const { data: plans, isLoading } = usePlans()
   const upgrade = useUpgrade()
@@ -120,7 +131,10 @@ export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPag
   const [method, setMethod] = useState<PaymentMethod>('card_to_card')
   const [reference, setReference] = useState('')
   const [note, setNote] = useState('')
-  const currentRank = PLAN_RANK[currentPlan ?? 'free'] ?? 0
+  // An expired subscription is not «on» a plan: every plan is available again,
+  // including the very one that lapsed (that is the renewal).
+  const currentRank = expired ? 0 : (PLAN_RANK[currentPlan ?? 'free'] ?? 0)
+  const chosenRenewal = expired && chosen !== null && chosen.plan === currentPlan
 
   if (isLoading) {
     return (
@@ -171,9 +185,10 @@ export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPag
 
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => {
-          const isCurrent = currentPlan === plan.plan && !isTrial
+          const isCurrent = currentPlan === plan.plan && !isTrial && !expired
+          const isRenewal = expired && currentPlan === plan.plan
           // Nothing below the plan already paid for is on sale here.
-          const isLower = !isTrial && (PLAN_RANK[plan.plan] ?? 0) < currentRank
+          const isLower = !isTrial && !expired && (PLAN_RANK[plan.plan] ?? 0) < currentRank
           const isPopular = plan.plan === 'pro'
           const amount = priceFor(plan, interval)
           const saving = interval === 'year' ? yearlySaving(plan) : null
@@ -245,13 +260,15 @@ export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPag
                     setChosen(plan)
                   }}
                 >
-                  {isCurrent
-                    ? t('billing.currentPlanLabel')
-                    : pendingRequest?.requested_plan === plan.plan
-                      ? t('billing.request.pendingLabel')
-                      : isLower
-                        ? t('billing.request.lowerPlan')
-                        : t('billing.request.button')}
+                  {isRenewal
+                    ? t('billing.renewPlan')
+                    : isCurrent
+                      ? t('billing.currentPlanLabel')
+                      : pendingRequest?.requested_plan === plan.plan
+                        ? t('billing.request.pendingLabel')
+                        : isLower
+                          ? t('billing.request.lowerPlan')
+                          : t('billing.request.button')}
                 </Button>
               </CardFooter>
             </Card>
@@ -266,9 +283,15 @@ export function PricingPage({ currentPlan, isTrial, pendingRequest }: PricingPag
         <Card data-upgrade-form="">
           <CardHeader>
             <CardTitle className="text-base">
-              {t('billing.request.confirmTitle', { plan: t(`billing.plans.${chosen.plan}.name`) })}
+              {chosenRenewal
+                ? t('billing.renewTitle', { plan: t(`billing.plans.${chosen.plan}.name`) })
+                : t('billing.request.confirmTitle', {
+                    plan: t(`billing.plans.${chosen.plan}.name`),
+                  })}
             </CardTitle>
-            <CardDescription>{t('billing.request.howItWorks')}</CardDescription>
+            <CardDescription>
+              {chosenRenewal ? t('billing.renewHowItWorks') : t('billing.request.howItWorks')}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Paid from the wallet: activated at once, in one server

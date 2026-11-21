@@ -24,7 +24,7 @@ const nextConfig = {
       },
       {
         source: '/:lang(fa|af|en)/users',
-        destination: '/:lang/customers?tab=users',
+        destination: '/:lang/customers',
         permanent: true,
       },
       {

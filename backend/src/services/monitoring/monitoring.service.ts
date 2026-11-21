@@ -508,9 +508,19 @@ export const MonitoringService = {
    */
   async coreSnapshot(now: Date = new Date()): Promise<CoreSnapshot> {
     const windowMinutes = 5
+    /**
+     * When the live window has no measurable input, the same core is read over
+     * the last day instead. The operator's report (30 Aug 1405) was «هسته‌های
+     * نامعلوم اصلاً منظوری نمی‌رسونن» — most cores showed a dash because a
+     * five-minute window on a normal business day is empty for them, not
+     * because the data is missing. The row carries `windowMinutes`, so the
+     * screen can say which window the verdict describes. A core with no
+     * measurement in 24 hours stays UNKNOWN.
+     */
+    const recentWindowMinutes = 24 * 60
     const since = new Date(now.getTime() - windowMinutes * 60_000)
     const prevSince = new Date(since.getTime() - windowMinutes * 60_000)
-    const [current, previous] = await Promise.all([
+    const [current, previous, recent] = await Promise.all([
       supabase.rpc('admin_core_monitor_snapshot', {
         p_since: since.toISOString(),
         p_until: now.toISOString(),
@@ -519,12 +529,23 @@ export const MonitoringService = {
         p_since: prevSince.toISOString(),
         p_until: since.toISOString(),
       }),
+      supabase.rpc('admin_core_monitor_snapshot', {
+        p_since: new Date(now.getTime() - recentWindowMinutes * 60_000).toISOString(),
+        p_until: now.toISOString(),
+      }),
     ])
     if (current.error) throw new Error(rpcFailure(current.error))
     // A failed previous-window read degrades the trend to null, not the page.
     const prevCores = previous.error
       ? new Map<string, CoreAggregate>()
       : aggregatesOf(previous.data)
+    // The 24-hour fallback is observation — a failure leaves those cores
+    // UNKNOWN with their reason, never a fabricated status.
+    const recentRow = recent.error ? null : recordOf(recent.data)
+    const recentAggregates = recent.error
+      ? new Map<string, CoreAggregate>()
+      : aggregatesOf(recent.data)
+    const recentGauges = recentRow ? gaugesOf(recentRow.gauges) : new Map<string, CoreGauge>()
 
     const row = recordOf(current.data)
     const aggregates = aggregatesOf(current.data)
@@ -535,7 +556,18 @@ export const MonitoringService = {
     const cores: CorePressureRow[] = CORES.map((definition) => {
       const aggregate = aggregates.get(definition.id) ?? null
       const gauge = gauges.get(definition.id) ?? null
-      const measured = toCoreRow(definition, aggregate, gauge, windowMinutes)
+      let measured = toCoreRow(definition, aggregate, gauge, windowMinutes)
+      if (measured.operations === 0 && measured.pressure === null) {
+        const recentAggregate = recentAggregates.get(definition.id) ?? null
+        if (recentAggregate && recentAggregate.operations > 0) {
+          measured = toCoreRow(
+            definition,
+            recentAggregate,
+            recentGauges.get(definition.id) ?? gauge,
+            recentWindowMinutes,
+          )
+        }
+      }
       const prevAggregate = prevCores.get(definition.id) ?? null
       const prevPressure = prevAggregate
         ? computePressure(toPressureInput(definition, prevAggregate, gauge)).pressure
@@ -543,7 +575,9 @@ export const MonitoringService = {
       return {
         ...measured,
         trend:
-          measured.pressure !== null && prevPressure !== null
+          measured.windowMinutes === windowMinutes &&
+          measured.pressure !== null &&
+          prevPressure !== null
             ? measured.pressure - prevPressure
             : null,
       }
@@ -581,28 +615,44 @@ export const MonitoringService = {
       p_unit: window.unit,
     })
     if (error) throw new Error(rpcFailure(error))
-    const rows = Array.isArray(data) ? data : []
-    return rows.map((entry) => {
-      const point = recordOf(entry)
-      const buckets = arrayOfNumbers(point.duration_buckets)
-      const operations = intOf(point.operations)
-      const errors = intOf(point.errors)
-      return {
-        bucket: String(point.bucket ?? ''),
-        operations,
-        errors,
-        clientErrors: intOf(point.client_errors),
-        errorPercent: operations > 0 ? (errors / operations) * 100 : null,
-        avgMs: numberOf(point.avg_ms),
-        p50: estimatePercentile(buckets, 50),
-        p95: estimatePercentile(buckets, 95),
-        p99: estimatePercentile(buckets, 99),
-        timeouts: intOf(point.timeouts),
-        inflightMax: intOf(point.inflight_max),
-        queueDepth: numberOf(point.queue_depth),
-        dependencyWaitAvgMs: numberOf(point.dep_wait_avg_ms),
-      }
-    })
+    return toCoreSeriesPoints(data)
+  },
+
+  /**
+   * The same per-core history for EVERY registered core, for the downloadable
+   * log. Five cores per round trip keeps a 90-day export from opening ~30
+   * concurrent queries on the database. One failed core is a labelled hole in
+   * the export, not a failed export: the other cores' history is still real.
+   */
+  async coreSeriesAll(
+    range: MonitorRange,
+    now: Date = new Date(),
+  ): Promise<{
+    series: Record<string, CoreSeriesPoint[]>
+    errors: Record<string, string>
+  }> {
+    const window = rangeWindow(range, now)
+    const series: Record<string, CoreSeriesPoint[]> = {}
+    const errors: Record<string, string> = {}
+    const batchSize = 5
+    for (let index = 0; index < CORES.length; index += batchSize) {
+      const batch = CORES.slice(index, index + batchSize)
+      await Promise.all(
+        batch.map(async (definition) => {
+          const { data, error } = await supabase.rpc('admin_core_monitor_series', {
+            p_core_id: definition.id,
+            p_since: window.since.toISOString(),
+            p_unit: window.unit,
+          })
+          if (error) {
+            errors[definition.id] = rpcFailure(error)
+            return
+          }
+          series[definition.id] = toCoreSeriesPoints(data)
+        }),
+      )
+    }
+    return { series, errors }
   },
 
   /** Alert event history — raised AND resolved, newest first. */
@@ -774,6 +824,8 @@ export interface CorePressureRow {
   coverage: number
   components: PressureComponent[]
   operations: number
+  /** 5 for the live window; 1440 when the live window was empty. */
+  windowMinutes: number
   callsPerMin: number | null
   successRate: number | null
   errorRate: number | null
@@ -867,6 +919,31 @@ function arrayOfNumbers(value: unknown): number[] {
   return out.slice(0, 6)
 }
 
+function toCoreSeriesPoints(data: unknown): CoreSeriesPoint[] {
+  const rows = Array.isArray(data) ? data : []
+  return rows.map((entry) => {
+    const point = recordOf(entry)
+    const buckets = arrayOfNumbers(point.duration_buckets)
+    const operations = intOf(point.operations)
+    const errors = intOf(point.errors)
+    return {
+      bucket: String(point.bucket ?? ''),
+      operations,
+      errors,
+      clientErrors: intOf(point.client_errors),
+      errorPercent: operations > 0 ? (errors / operations) * 100 : null,
+      avgMs: numberOf(point.avg_ms),
+      p50: estimatePercentile(buckets, 50),
+      p95: estimatePercentile(buckets, 95),
+      p99: estimatePercentile(buckets, 99),
+      timeouts: intOf(point.timeouts),
+      inflightMax: intOf(point.inflight_max),
+      queueDepth: numberOf(point.queue_depth),
+      dependencyWaitAvgMs: numberOf(point.dep_wait_avg_ms),
+    }
+  })
+}
+
 function aggregatesOf(data: unknown): Map<string, CoreAggregate> {
   const row = recordOf(data)
   const cores = Array.isArray(row.cores) ? row.cores : []
@@ -941,6 +1018,7 @@ function toCoreRow(
     group: definition.group,
     owner: definition.owner,
     slo: definition.slo,
+    windowMinutes,
     queueDepth: gauge?.queueDepth ?? null,
     processingCount: gauge?.processingCount ?? null,
     stuckCount: gauge?.stuckCount ?? null,
@@ -963,7 +1041,12 @@ function toCoreRow(
       ...base,
       status: pressure.status,
       pressure: pressure.pressure,
-      reason: pressure.reason,
+      reason:
+        pressure.reason === 'no operations in window'
+          ? windowMinutes >= 24 * 60
+            ? 'no operations in the last 24 hours'
+            : `no operations in the last ${windowMinutes} minutes`
+          : pressure.reason,
       coverage: pressure.coverage,
       components: pressure.components,
       operations: 0,
