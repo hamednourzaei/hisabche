@@ -1,12 +1,12 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 'use client'
 
-import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { memo, useCallback, useState, type ReactNode } from 'react'
 import type { StockSummary } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
-import { BentoStats, type BentoStat } from '../bento-stats'
+import { KpiCard, formatPercent, fullAmount } from '../kpi-card'
 import { WarehouseProductList } from './warehouse-product-list'
 import {
   Plus,
@@ -16,11 +16,14 @@ import {
   Package,
   Pencil,
   AlertTriangle,
+  Ban,
   LayoutGrid,
+  Warehouse,
 } from 'lucide-react'
 import type { Product, Currency } from '../../../lib/warehouse/warehouse-types'
 import { nameOfCurrency } from '../../../lib/currency-name'
 import { SelectField } from '../select-field'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WarehouseView v5 — search moved onto the table toolbar
@@ -70,6 +73,12 @@ interface WarehouseViewProps {
    * reducing the page of `products` (which is at most 100 rows).
    */
   summary: StockSummary | null
+  /** The fifth hub card — the warehouse list shows it; a warehouse does not. */
+  showUnassigned?: boolean | undefined
+  /** Stock in no warehouse. `undefined` = not read; `null` = there is none. */
+  unassigned?: StockSummary | null | undefined
+  /** The overview is still loading — the fifth card shows «…», not «نامعلوم». */
+  unassignedLoading?: boolean | undefined
   currencies: Currency[]
   /** A value chip was clicked (`code`) or «+» (`null`): open the rate form. */
   onOpenRate: (code: string | null) => void
@@ -117,6 +126,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
   shelvesActionLabel,
   onShelvesAction,
   headerExtra,
+  eyebrow,
   title,
   description,
   onBack,
@@ -132,6 +142,8 @@ const WarehouseHeader = memo(function WarehouseHeader({
   shelvesActionLabel?: string | undefined
   onShelvesAction?: (() => void) | undefined
   headerExtra?: ReactNode
+  /** «موجودی / انبارها» above the title — the list only, not inside a warehouse. */
+  eyebrow?: string | undefined
   title: string
   description: string
   onBack?: (() => void) | undefined
@@ -158,6 +170,12 @@ const WarehouseHeader = memo(function WarehouseHeader({
           </button>
         ) : null}
         <div className="min-w-0 space-y-1.5">
+          {eyebrow ? (
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(var(--fg-tertiary))]">
+              <Warehouse className="size-3.5 shrink-0" aria-hidden="true" />
+              {eyebrow}
+            </div>
+          ) : null}
           <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
             <span className="truncate">{title}</span>
             {onEditCurrent ? (
@@ -376,6 +394,9 @@ export const WarehouseView = memo(function WarehouseView({
   overflowIds,
   isLoading,
   summary,
+  showUnassigned,
+  unassigned,
+  unassignedLoading,
   currencies,
   onOpenRate,
   onNavigate,
@@ -426,57 +447,76 @@ export const WarehouseView = memo(function WarehouseView({
           ? t('warehouse.enterRate', 'نرخ را وارد کنید')
           : fmt(summary.totalValue * displayed.rate)
 
-  const stats: BentoStat[] = useMemo(
-    () => [
-      {
-        id: 'value',
-        icon: DollarSign,
-        label: t('warehouse.totalValueShort', 'ارزش کل'),
-        labelAddon:
-          currencies.length > 0 || bookCode ? (
-            <SelectField
-              aria-label={t('warehouse.showIn', 'نمایش به')}
-              value={displayCode ?? ''}
-              onChange={setDisplayOverride}
-              options={[
-                ...(bookCode ? [{ value: bookCode, label: baseLabel }] : []),
-                ...currencies.map((c) => ({ value: c.code, label: c.label })),
-              ]}
-              // Currency-code sized (owner's request, 27 Sep 2026): SelectField is
-              // full-width by default and pushed the label «ارزش کل» to «ارز…».
-              className="h-6 w-auto shrink-0 gap-0.5 rounded-md border-transparent bg-transparent px-1 text-[11px] font-semibold hover:bg-[hsl(var(--surface-muted))] [&>svg]:size-3"
-            />
-          ) : (
-            <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">({baseLabel})</span>
-          ),
-        text: valueText,
-      },
-      {
-        id: 'count',
-        icon: Package,
-        label: t('warehouse.totalProducts', 'تعداد محصولات'),
-        text: figure(summary?.productCount),
-      },
-      {
-        id: 'low',
-        icon: AlertTriangle,
-        label: t('warehouse.lowStock', 'موجودی کم'),
-        text: figure(summary?.lowStockCount),
-      },
-      {
-        id: 'out',
-        icon: AlertTriangle,
-        label: t('warehouse.outOfStock', 'ناموجود'),
-        text: figure(summary?.outOfStockCount),
-      },
-    ],
-    [t, figure, summary, currencies, displayCode, valueText, bookCode, baseLabel],
+  const locale = useIntlLocale()
+
+  // Counts are not money: `fullAmount` groups the digits without a currency's
+  // decimals. Money still goes through `fmt`.
+  const countText = useCallback(
+    (value: number | undefined) =>
+      isLoading
+        ? '…'
+        : value === undefined
+          ? t('warehouse.summaryUnavailable', 'نامعلوم')
+          : fullAmount(value, locale),
+    [isLoading, t, locale],
   )
 
+  // «۳٫۷٪ از کالاها» — a share of the SAME server summary's product count,
+  // never of a page of rows. No count (or no total) = no percentage, rather
+  // than a 0 that claims to have been measured.
+  const shareOf = useCallback(
+    (count: number | undefined) =>
+      count === undefined || summary?.productCount === undefined || summary.productCount <= 0
+        ? null
+        : formatPercent((count / summary.productCount) * 100, locale),
+    [summary, locale],
+  )
+
+  const lowShare = shareOf(summary?.lowStockCount)
+  const outShare = shareOf(summary?.outOfStockCount)
+  const hubTitle = title ?? t('warehouse.hubTitle', 'انبارها')
+
+  const valueAddon =
+    currencies.length > 0 || bookCode ? (
+      <SelectField
+        aria-label={t('warehouse.showIn', 'نمایش به')}
+        value={displayCode ?? ''}
+        onChange={setDisplayOverride}
+        options={[
+          ...(bookCode ? [{ value: bookCode, label: baseLabel }] : []),
+          ...currencies.map((c) => ({ value: c.code, label: c.label })),
+        ]}
+        // Currency-code sized (owner's request, 27 Sep 2026): SelectField is
+        // full-width by default and pushed the label «ارزش کل» to «ارز…».
+        className="h-6 w-auto shrink-0 gap-0.5 rounded-md border-transparent bg-transparent px-1 text-[11px] font-semibold hover:bg-[hsl(var(--surface-muted))] [&>svg]:size-3"
+      />
+    ) : (
+      <span className="text-[11px] text-[hsl(var(--fg-tertiary))]">({baseLabel})</span>
+    )
+
+  // The fifth card is only on the hub: inside a warehouse the four cards
+  // describe that warehouse, and a business-wide «unassigned» figure in the
+  // same row would be a second scope under one heading.
+  const unassignedValue =
+    unassignedLoading || isLoading
+      ? '…'
+      : unassigned === undefined
+        ? t('warehouse.summaryUnavailable', 'نامعلوم')
+        : fmt(unassigned === null ? 0 : unassigned.totalValue)
+
+  const unassignedHint =
+    unassignedLoading || isLoading || unassigned === undefined
+      ? undefined
+      : unassigned === null
+        ? t('warehouse.nothingUnassigned', 'موجودی بدون انبار وجود ندارد.')
+        : `${fullAmount(unassigned.productCount, locale)} ${t('warehouse.unassignedCountHint', 'کالا هنوز جای داده نشده')}`
+
   const showEmptyState = !isLoading && products.length === 0
+  const showHint = (share: string | null) =>
+    share ? `${share} ${t('warehouse.ofProducts', 'از کالاها')}` : undefined
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <SaveIndicator t={t} deletingId={deletingId} />
       <WarehouseHeader
         t={t}
@@ -489,14 +529,74 @@ export const WarehouseView = memo(function WarehouseView({
         shelvesActionLabel={shelvesActionLabel}
         onShelvesAction={onShelvesAction}
         headerExtra={headerExtra}
-        title={title ?? t('nav.stock', 'موجودی')}
-        description={description ?? t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است')}
+        eyebrow={showUnassigned ? t('warehouse.eyebrow', 'موجودی') : undefined}
+        title={hubTitle}
+        description={
+          description ??
+          (showUnassigned
+            ? t('warehouse.hubDescription', 'موجودی هر انبار، ارزش آن و پیشنهاد سفارش')
+            : t('nav.stock_description', 'چه چیزی داریم و چه چیزی کم است'))
+        }
         onBack={onBack}
         onEditCurrent={onEditCurrent}
       />
 
-      {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}
-      <BentoStats t={t} stats={stats} />
+      {/* Five figures, five real server numbers. Layout: a phone shows 2+2+1,
+          a tablet 2+1+1+1 (the value card is wider), a desktop the five-column
+          row the mockup was approved on. A warehouse shows four — a
+          business-wide «بدون انبار» inside one warehouse would be a second
+          scope under one heading. */}
+      <div
+        className={cn(
+          'grid gap-2.5',
+          showUnassigned
+            ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.32fr_1fr_.96fr_.96fr_1.18fr]'
+            : 'grid-cols-2 md:grid-cols-4',
+        )}
+      >
+        <KpiCard
+          label={t('warehouse.totalValueShort', 'ارزش کل')}
+          labelAddon={valueAddon}
+          icon={DollarSign}
+          value={valueText}
+          hint={
+            displayed && displayed.rate !== null && displayCode !== bookCode
+              ? t('warehouse.atPurchasePriceWithRate', 'به بهای خرید، با نرخ ثبت‌شده')
+              : t('warehouse.atPurchasePrice', 'به بهای خرید')
+          }
+          {...(showUnassigned ? { className: 'sm:col-span-2 lg:col-span-1' } : {})}
+        />
+        <KpiCard
+          label={t('warehouse.totalProducts', 'تعداد محصولات')}
+          icon={Package}
+          value={countText(summary?.productCount)}
+          hint={t('warehouse.activeProductsOnly', 'فقط کالاهای فعال')}
+        />
+        <KpiCard
+          label={t('warehouse.lowStock', 'موجودی کم')}
+          icon={AlertTriangle}
+          tone="warning"
+          value={countText(summary?.lowStockCount)}
+          hint={showHint(lowShare)}
+        />
+        <KpiCard
+          label={t('warehouse.outOfStock', 'ناموجود')}
+          icon={Ban}
+          tone="destructive"
+          value={countText(summary?.outOfStockCount)}
+          hint={showHint(outShare)}
+        />
+        {showUnassigned ? (
+          <KpiCard
+            label={t('warehouse.unassigned', 'بدون انبار')}
+            icon={Warehouse}
+            tone="info"
+            value={unassignedValue}
+            hint={unassignedHint}
+            className="col-span-2 sm:col-span-1"
+          />
+        ) : null}
+      </div>
 
       <CurrencyChips
         t={t}

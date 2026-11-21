@@ -14,6 +14,11 @@
 import { render, fireEvent, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
+// The table formats its counts in the reader's locale (`useIntlLocale`), which
+// reads next-intl. This test renders the component on its own, so it supplies
+// the same minimal locale the app does.
+vi.mock('next-intl', () => ({ useLocale: () => 'fa' }))
+
 import { WarehouseListTable } from '../warehouse-list-table'
 
 const t = (key: string, fallback?: string) => fallback ?? key

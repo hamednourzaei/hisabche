@@ -830,8 +830,8 @@ export function useCreateAdvance() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
-      /** Made once per filled form: a retried tap is the same advance. */
-      id: string
+      /** Made once per filled form: a retried tap is the same advance. A uuid. */
+      id?: string | undefined
       kind: AdvanceKind
       partyId: string
       amountMinor: number

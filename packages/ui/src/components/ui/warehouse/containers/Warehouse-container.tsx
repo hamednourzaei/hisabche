@@ -32,6 +32,8 @@ import {
   useWarehouseOverview,
 } from '@hisabche/api'
 import { WarehouseListTable, UNASSIGNED_WAREHOUSE_ID } from '../warehouse-list-table'
+import { WarehouseValueChart } from '../warehouse-value-chart'
+import { WarehouseReorderCard } from '../warehouse-reorder-card'
 import { AddWarehouseDialog, AssignStockDialog, TransferStockDialog } from '../warehouse-dialogs'
 import { ExchangeRateDialog, useLatestCustomUnits } from '../../dashboard/exchange-rate-dialog'
 import { AddToWarehouseModal } from '../add-to-warehouse-modal'
@@ -326,6 +328,11 @@ export function WarehouseContainer() {
           products,
           isLoading,
           summary,
+          // The fifth card and the two aside cards describe the whole business,
+          // so they exist only on the hub — never inside one warehouse.
+          showUnassigned: true,
+          unassigned: overview.data?.unassigned,
+          unassignedLoading: overview.isLoading,
           children: overview.isError ? (
             <p
               role="alert"
@@ -341,15 +348,34 @@ export function WarehouseContainer() {
               {safeT('common.loading', 'در حال بارگذاری…')}
             </p>
           ) : (
-            <WarehouseListTable
-              t={safeT}
-              fmt={fmt}
-              warehouses={overview.data?.warehouses ?? []}
-              unassigned={overview.data?.unassigned ?? null}
-              onOpen={(id) => openWarehouse(id)}
-              onAdd={() => setShowAddWarehouse(true)}
-              onEdit={setEditingWarehouse}
-            />
+            // The table takes the wide side; the figures that explain it sit
+            // beside it from xl. Below xl they stack UNDER the table, so a
+            // phone reaches its warehouses before its charts.
+            <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_352px] xl:items-start">
+              <div className="min-w-0">
+                <WarehouseListTable
+                  t={safeT}
+                  fmt={fmt}
+                  warehouses={overview.data?.warehouses ?? []}
+                  unassigned={overview.data?.unassigned ?? null}
+                  onOpen={(id) => openWarehouse(id)}
+                  onAdd={() => setShowAddWarehouse(true)}
+                  onEdit={setEditingWarehouse}
+                />
+              </div>
+              <aside className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <WarehouseValueChart
+                  t={safeT}
+                  fmt={fmt}
+                  warehouses={overview.data?.warehouses ?? []}
+                  unassigned={overview.data?.unassigned ?? null}
+                />
+                <WarehouseReorderCard
+                  t={safeT}
+                  onOpenAll={() => localeReplace('/warehouse?view=reorder')}
+                />
+              </aside>
+            </div>
           ),
         }),
   }

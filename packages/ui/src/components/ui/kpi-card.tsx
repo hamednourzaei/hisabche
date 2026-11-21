@@ -154,13 +154,15 @@ export type KpiSurface =
  * values that read the same on the light and the dark theme (the token itself
  * flips, the alpha does not).
  */
-export type KpiTone = 'default' | 'success' | 'info' | 'warning' | 'primary'
+export type KpiTone = 'default' | 'success' | 'info' | 'warning' | 'destructive' | 'primary'
 
 const TONE_SURFACE: Record<KpiTone, string> = {
   default: '',
   success: 'border-[hsl(var(--color-success)/0.16)] bg-[hsl(var(--color-success)/0.07)]',
   info: 'border-[hsl(var(--color-info)/0.16)] bg-[hsl(var(--color-info)/0.07)]',
   warning: 'border-[hsl(var(--color-warning)/0.16)] bg-[hsl(var(--color-warning)/0.08)]',
+  destructive:
+    'border-[hsl(var(--color-destructive)/0.16)] bg-[hsl(var(--color-destructive)/0.07)]',
   primary: 'border-[hsl(var(--color-primary)/0.14)] bg-[hsl(var(--color-primary)/0.06)]',
 }
 
@@ -169,6 +171,7 @@ const TONE_ICON: Record<KpiTone, string> = {
   success: 'text-[hsl(var(--color-success))]',
   info: 'text-[hsl(var(--color-info))]',
   warning: 'text-[hsl(var(--color-warning))]',
+  destructive: 'text-[hsl(var(--color-destructive))]',
   primary: 'text-[hsl(var(--color-primary))]',
 }
 

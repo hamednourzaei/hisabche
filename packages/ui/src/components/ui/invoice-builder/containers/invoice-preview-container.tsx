@@ -59,6 +59,7 @@ import {
 import { InvoiceExchangeRate } from '../invoice-exchange-rate'
 import { exchangeRateOf, needsExchangeRate } from '../../../../lib/invoices/exchange-rate'
 import { invoiceInStoredMetal } from '../../../../lib/invoices/metal-amounts'
+import { advanceIdFromSubmissionKey } from '../../../../lib/invoices/advance-id'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { useTillChoice } from '../../../../hooks/use-till-choice'
 import { TillSelectField } from '../../till/till-select-field'
@@ -609,8 +610,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     }
     setError(null)
     try {
+      // ⚠️ The ADVANCE's id is a plain uuid. `submissionKey` is the invoice
+      // endpoint's idempotency key (`inv_web_<uuid>`); sending it unchanged
+      // made every pre-purchase fail with «id: Invalid uuid».
+      const advanceId = advanceIdFromSubmissionKey(submissionKey)
       const created = await createAdvance.mutateAsync({
-        id: submissionKey,
+        ...(advanceId ? { id: advanceId } : {}),
         kind: advanceKind,
         partyId: primaryCustomer.id,
         amountMinor,
