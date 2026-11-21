@@ -6,5 +6,5 @@ export default async function AdminSubscriptionsPage({
   params: Promise<{ lang: string }>
 }) {
   const { lang } = await params
-  redirect(`/${lang}/revenue?tab=subscriptions`)
+  redirect(`/${lang}/customers?tab=workspaces`)
 }

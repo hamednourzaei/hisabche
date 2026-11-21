@@ -29,7 +29,7 @@ const nextConfig = {
       },
       {
         source: '/:lang(fa|af|en)/subscriptions',
-        destination: '/:lang/revenue?tab=subscriptions',
+        destination: '/:lang/customers?tab=workspaces',
         permanent: true,
       },
       {

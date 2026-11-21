@@ -17,9 +17,6 @@ import {
   type TableColumn,
   useHubTab,
 } from '@/components/ui'
-import { PlanLimitsPanel } from '../subscriptions/plan-limits-panel'
-import { SubscriptionsClient } from '../subscriptions/subscriptions-client'
-import { UpgradeRequestsPanel } from '../subscriptions/upgrade-requests-panel'
 import { WalletClient } from '../wallet/wallet-client'
 import { GatewaysPanel } from './gateways/gateways-panel'
 import { GatewayAnalyticsPanel } from './gateways/gateway-analytics-panel'
@@ -38,14 +35,7 @@ import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDate, adminDateTime, adminMoney, UNKNOWN_VALUE } from '@/lib/admin-format'
 
-const REVENUE_TABS = [
-  'plans',
-  'subscriptions',
-  'ledger',
-  'maker_checker',
-  'wallet',
-  'gateways',
-] as const
+const REVENUE_TABS = ['plans', 'ledger', 'maker_checker', 'wallet', 'gateways'] as const
 type RevenueTab = (typeof REVENUE_TABS)[number]
 
 export function RevenueClient() {
@@ -58,7 +48,6 @@ export function RevenueClient() {
         label={t('admin.hubs.revenue.title')}
         items={[
           { id: 'plans', label: t('admin.hubs.revenue.plans') },
-          { id: 'subscriptions', label: t('admin.hubs.revenue.subscriptions') },
           { id: 'ledger', label: t('admin.hubs.revenue.ledger') },
           { id: 'maker_checker', label: t('admin.hubs.revenue.makerChecker') },
           { id: 'wallet', label: t('admin.hubs.revenue.wallet') },
@@ -68,19 +57,7 @@ export function RevenueClient() {
         onSelect={setTab}
       />
 
-      {tab === 'plans' && (
-        <div className="space-y-6">
-          <PlanPricesCatalog />
-          <PlanLimitsPanel />
-        </div>
-      )}
-
-      {tab === 'subscriptions' && (
-        <div className="space-y-6">
-          <SubscriptionsClient />
-          <UpgradeRequestsPanel />
-        </div>
-      )}
+      {tab === 'plans' && <PlanPricesCatalog />}
 
       {tab === 'ledger' && <BillingLedgerTabContent />}
 

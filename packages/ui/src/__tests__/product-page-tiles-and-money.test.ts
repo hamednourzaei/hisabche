@@ -4,10 +4,12 @@
 //
 //   · the cards tell the money: a price to buy and a price to sell one unit,
 //     then the two shelf totals — «ارزش کل خرید» and «ارزش کل فروش»
-//   · under them three lines: the category, the stock WITH its unit, and
-//     where it sits — «موجودی در هر انبار» as its own section is gone
+//   · the product aside carries the stock WITH its unit and where it sits —
+//     «موجودی در هر انبار» as its own section is gone
 //   · the four panels (ساخت و تولید، فیلدهای اختصاصی، عکس‌ها، بارکدها) are
-//     square buttons that open OVER the page, not sections in its middle
+//     square buttons in «جزئیات بیشتر» that open OVER the page, not sections
+//     in its middle
+//   · notes and expiry share their own tab; neither was dropped by the tabs
 //   · the movements table splits «نوع» from «جهت», searches, and exports
 //     Excel and Markdown built from the same reading it renders
 //   · every text exists in fa, af and en
@@ -34,8 +36,10 @@ describe('the cards tell the money', () => {
     const page = read(PAGE)
     expect(page).toContain("t('warehouse.totalBuyValue', 'ارزش کل خرید')")
     expect(page).toContain("t('warehouse.totalSellValue', 'ارزش کل فروش')")
-    expect(page).toContain('{fmt(purchaseValue)} AFN')
-    expect(page).toContain('{fmt(totalValue)} AFN')
+    expect(page).toContain('{fmt(purchaseValue)}')
+    expect(page).toContain('{fmt(totalValue)}')
+    // The currency is the server's, never typed into this page.
+    expect(page).not.toContain(' AFN')
     // The bare «۵ عدد» card is gone: the stock is a strip line WITH its unit.
     expect(page).not.toContain("label={t('warehouse.quantity'")
     // Both totals are derived in the domain layer, not by the page.
@@ -101,10 +105,17 @@ describe('the four panels are tiles that open over the page', () => {
     expect(customFields).toContain('const [open, setOpen] = useState(defaultOpen)')
   })
 
-  it('notes and expiry stay on the page itself, below the tiles', () => {
+  it('notes and expiry keep their own tab, and every panel is still mounted', () => {
+    // The owner's tabbed layout (20 Nov 2026) moved the panels behind tabs;
+    // it did not delete one. Notes and expiry share the «یادداشت‌ها و انقضا»
+    // tab, in that order, and the four square panels live in «جزئیات بیشتر».
     const page = read(PAGE)
-    expect(page.indexOf('{notes}')).toBeGreaterThan(page.indexOf('data-product-tiles'))
-    expect(page.indexOf('{expiry}')).toBeGreaterThan(page.indexOf('{notes}'))
+    expect(page).toContain('{notes}')
+    expect(page).toContain('{expiry}')
+    expect(page.indexOf('{notes}')).toBeLessThan(page.indexOf('{expiry}'))
+    for (const tab of ['variants', 'kits', 'notes', 'units', 'history', 'more'])
+      expect(page, tab).toContain(`value="${tab}"`)
+    expect(page).toContain('{specialties}')
   })
 })
 

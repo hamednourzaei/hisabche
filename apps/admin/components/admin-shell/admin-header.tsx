@@ -98,7 +98,7 @@ export function AdminHeader({
 
       <button
         type="button"
-        onClick={() => push('/revenue?tab=subscriptions&status=past_due')}
+        onClick={() => push('/customers?tab=workspaces')}
         className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={
           alertCount > 0

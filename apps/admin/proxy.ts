@@ -16,6 +16,20 @@ import { createAdminSupabaseServer } from './lib/supabase-server'
 // injected <script> tag cannot execute even if it reaches the DOM.
 // ============================================
 
+/**
+ * True when this console is a LOCAL dev server, even if a stray
+ * `NODE_ENV=production` leaked in from an env file. `next dev` is launched
+ * by the pnpm/npm `dev` script; a deployed console runs `next start`.
+ *
+ * Deciding this in one place keeps the nonce CSP, HSTS and the AAL2 gate
+ * consistent — otherwise a dev server with a mislabelled NODE_ENV ends up
+ * sending upgrade-insecure-requests and redirecting every login to
+ * `?error=mfa_required` over https://localhost, which cannot connect.
+ */
+function isLocalDevConsole(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.npm_lifecycle_event === 'dev'
+}
+
 function extraConnectSources(): string[] {
   const sources = new Set<string>()
   for (const raw of [
@@ -38,7 +52,7 @@ function extraConnectSources(): string[] {
 
 function buildCsp(nonce: string): string {
   const connect = ["'self'", ...extraConnectSources()].join(' ')
-  const dev = process.env.NODE_ENV !== 'production'
+  const dev = isLocalDevConsole()
   return [
     "default-src 'self'",
     // Next injects its bootstrap inline; the nonce lets exactly those run.
@@ -63,9 +77,14 @@ function buildCsp(nonce: string): string {
 /** Headers every admin response carries, redirects included. */
 function staticSecurityHeaders(): Array<[string, string]> {
   return [
-    // Two years, subdomains, preload-eligible. The console is never served over
-    // plain HTTP; a downgrade would leak the session cookie.
-    ['Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload'],
+    // HSTS is for the deployed console only. On a local http:// dev server it
+    // makes the browser rewrite localhost:3040 to https://localhost:3040 and
+    // the page dies with ERR_CONNECTION_REFUSED.
+    ...(isLocalDevConsole()
+      ? []
+      : ([['Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload']] as Array<
+          [string, string]
+        >)),
     // The console never needs a camera, a microphone or the location.
     ['Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()'],
     // Keep the admin origin in its own browsing context group.
@@ -111,7 +130,7 @@ const OLD_ROUTE_REDIRECTS: Record<string, string> = {
   '/dashboard': '/dashboard?tab=overview',
   '/workspaces': '/customers?tab=workspaces',
   '/users': '/customers?tab=users',
-  '/subscriptions': '/revenue?tab=subscriptions',
+  '/subscriptions': '/customers?tab=workspaces',
   '/wallet': '/revenue?tab=wallet',
   '/ai': '/product?tab=ai',
   '/oauth-apps': '/product?tab=oauth',
@@ -216,7 +235,7 @@ export async function proxy(req: NextRequest) {
   const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
   const hasAal2 = assurance?.currentLevel === 'aal2'
 
-  if (process.env.NODE_ENV === 'production' && !hasAal2) {
+  if (!isLocalDevConsole() && !hasAal2) {
     const redirect = req.nextUrl.clone()
     redirect.pathname = `/${locale}/login`
     redirect.searchParams.set('error', 'mfa_required')

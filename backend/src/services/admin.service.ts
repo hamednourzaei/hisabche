@@ -418,7 +418,9 @@ export class AdminService {
       this.resolveIdentities(ownerIds),
       supabase
         .from('subscriptions')
-        .select('workspace_id, plan, status, period_end')
+        .select(
+          'id, workspace_id, plan, status, period_end, is_trial, trial_ends_at, cancel_at_period_end',
+        )
         .in('workspace_id', workspaceIds),
       // Only the columns needed to COUNT and to identify active seats — never
       // the whole membership row for every workspace on the page.
@@ -433,10 +435,14 @@ export class AdminService {
     const subscriptionByWorkspace = new Map(
       (
         (subscriptionsResult.data ?? []) as Array<{
+          id: string
           workspace_id: string | null
           plan: string | null
           status: string | null
           period_end: string | null
+          is_trial: boolean | null
+          trial_ends_at: string | null
+          cancel_at_period_end: boolean | null
         }>
       )
         .filter((s) => s.workspace_id)
@@ -467,8 +473,12 @@ export class AdminService {
         ownerName: owner?.name ?? null,
         ownerEmail: owner?.email ?? null,
         plan: subscription?.plan ?? null,
+        subscriptionId: subscription?.id ?? null,
         subscriptionStatus: subscription?.status ?? null,
         subscriptionPeriodEnd: subscription?.period_end ?? null,
+        isTrial: subscription?.is_trial ?? null,
+        trialEndsAt: subscription?.trial_ends_at ?? null,
+        cancelAtPeriodEnd: subscription?.cancel_at_period_end ?? null,
         memberCount: memberCountByWorkspace.get(w.id) ?? 0,
       }
     })

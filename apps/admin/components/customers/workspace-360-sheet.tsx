@@ -26,7 +26,7 @@ import {
 } from '@/hooks/use-admin-customers'
 import { StepUpDialog } from '@/components/admin-shell/step-up-dialog'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
-import { adminDate, adminDateTime } from '@/lib/admin-format'
+import { adminDate, adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
 import { WorkspaceUsageSection } from './workspace-usage-section'
 
 interface Workspace360SheetProps {
@@ -177,14 +177,32 @@ export function Workspace360Sheet({ workspaceId, onClose }: Workspace360SheetPro
                 ) : (
                   <div className="space-y-1">
                     {data.subscriptions.map((subItem, i) => {
-                      const sub = subItem as { plan?: string; status?: string }
+                      const sub = subItem as {
+                        plan?: string
+                        status?: string
+                        is_trial?: boolean
+                        period_end?: string
+                      }
                       return (
                         <div
-                          key={i}
-                          className="flex justify-between font-mono bg-muted/50 p-2 rounded"
+                          key={typeof subItem.id === 'string' ? subItem.id : i}
+                          className="space-y-1 rounded-lg bg-muted/50 p-2"
                         >
-                          <span>{sub.plan ?? 'PLAN'}</span>
-                          <span>{sub.status ?? 'active'}</span>
+                          <div className="flex justify-between font-mono">
+                            <span>{sub.plan ?? UNKNOWN_VALUE}</span>
+                            <span>{sub.status ?? UNKNOWN_VALUE}</span>
+                          </div>
+                          {sub.is_trial === true ? (
+                            <div className="text-muted-foreground">
+                              {t('admin.subscriptions.trial')}
+                            </div>
+                          ) : null}
+                          {sub.period_end ? (
+                            <div className="tabular-nums text-muted-foreground">
+                              {t('admin.subscriptions.periodEnd')}:{' '}
+                              {adminDate(sub.period_end, dateLocale)}
+                            </div>
+                          ) : null}
                         </div>
                       )
                     })}

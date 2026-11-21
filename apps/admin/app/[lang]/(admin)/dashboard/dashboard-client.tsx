@@ -295,7 +295,7 @@ export function DashboardClient() {
                       </p>
                     </div>
                     <Link
-                      href={`/${locale}/revenue?tab=subscriptions&status=past_due`}
+                      href={`/${locale}/customers?tab=workspaces`}
                       className="text-xs text-[hsl(var(--color-primary))] hover:underline"
                     >
                       {t('admin.subscriptions.title')}

@@ -38,8 +38,13 @@ export interface AdminWorkspace {
   ownerName: string | null
   ownerEmail: string | null
   plan: string | null
+  /** Primary key of the workspace's subscription — needed for admin mutations. */
+  subscriptionId: string | null
   subscriptionStatus: string | null
   subscriptionPeriodEnd: string | null
+  isTrial: boolean | null
+  trialEndsAt: string | null
+  cancelAtPeriodEnd: boolean | null
   /** Active seats only — suspended and access-revoked rows are excluded. */
   memberCount: number
 }

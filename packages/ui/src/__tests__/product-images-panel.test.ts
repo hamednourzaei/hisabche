@@ -45,6 +45,28 @@ describe('the product page shows the gallery', () => {
     expect(page).toContain('images?: React.ReactNode')
     expect(page).toContain('{images}')
   })
+
+  it('no cover means an upload control — on phone and desktop alike', () => {
+    const page = read('components', 'ui', 'warehouse-detail', 'warehouse-detail-page.tsx')
+    expect(page).toContain("t('productImages.add'")
+    expect(page).toContain("setOpenSection('images')")
+    // Loading and a failed read are their own answers, not «no photo».
+    expect(page).toContain('imagesLoading')
+    expect(page).toContain('imagesError')
+  })
+
+  it('the cover comes from the one images query, and a failure is not emptiness', () => {
+    const container = read(
+      'components',
+      'ui',
+      'warehouse-detail',
+      'containers',
+      'warehouse-detail-container.tsx',
+    )
+    expect(container).toContain('useProductImages(id)')
+    expect(container).toContain('coverImage={')
+    expect(container).toContain('imagesError={productImages.isError}')
+  })
 })
 
 describe('the panel says what happened', () => {

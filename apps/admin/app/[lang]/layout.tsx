@@ -44,6 +44,7 @@ export default async function RootLayout({
       lang={lang}
       dir={isRTL ? 'rtl' : 'ltr'}
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={vazirmatn.variable}
     >
       <head>

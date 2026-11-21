@@ -148,6 +148,30 @@ export type KpiSurface =
   /** No shell at all; the caller owns it. */
   | 'none'
 
+/**
+ * The card's accent. `default` is the shared elevated card every screen uses;
+ * the other four tint the surface with the matching semantic token, at alpha
+ * values that read the same on the light and the dark theme (the token itself
+ * flips, the alpha does not).
+ */
+export type KpiTone = 'default' | 'success' | 'info' | 'warning' | 'primary'
+
+const TONE_SURFACE: Record<KpiTone, string> = {
+  default: '',
+  success: 'border-[hsl(var(--color-success)/0.16)] bg-[hsl(var(--color-success)/0.07)]',
+  info: 'border-[hsl(var(--color-info)/0.16)] bg-[hsl(var(--color-info)/0.07)]',
+  warning: 'border-[hsl(var(--color-warning)/0.16)] bg-[hsl(var(--color-warning)/0.08)]',
+  primary: 'border-[hsl(var(--color-primary)/0.14)] bg-[hsl(var(--color-primary)/0.06)]',
+}
+
+const TONE_ICON: Record<KpiTone, string> = {
+  default: 'text-[hsl(var(--color-primary))]',
+  success: 'text-[hsl(var(--color-success))]',
+  info: 'text-[hsl(var(--color-info))]',
+  warning: 'text-[hsl(var(--color-warning))]',
+  primary: 'text-[hsl(var(--color-primary))]',
+}
+
 export interface KpiCardProps {
   label: string
   /** A small control beside the label — e.g. the currency a value is shown in. */
@@ -178,6 +202,8 @@ export interface KpiCardProps {
    */
   invertDelta?: boolean
   surface?: KpiSurface
+  /** Semantic accent for a row that groups related figures. */
+  tone?: KpiTone
   className?: string
   /** The shape of what is coming, at the card's own height. */
   isLoading?: boolean
@@ -219,6 +245,7 @@ export function KpiCard({
   deltaLabel,
   invertDelta = false,
   surface = 'card',
+  tone = 'default',
   className,
   isLoading = false,
   onOpen,
@@ -265,6 +292,7 @@ export function KpiCard({
       className={cn(
         SURFACE_CLASS[surface],
         STAT_PADDING,
+        TONE_SURFACE[tone],
         // RTL-safe: `text-start`, never `text-left`. A button centre-aligns
         // its content by default, which would silently re-align every figure
         // the moment a card became clickable.
@@ -275,10 +303,7 @@ export function KpiCard({
     >
       <div className="flex items-center gap-1.5 sm:gap-2">
         {Icon ? (
-          <Icon
-            className="size-3.5 shrink-0 text-[hsl(var(--color-primary))] sm:size-4"
-            aria-hidden="true"
-          />
+          <Icon className={cn('size-3.5 shrink-0 sm:size-4', TONE_ICON[tone])} aria-hidden="true" />
         ) : null}
         <span className={STAT_LABEL}>{label}</span>
         {labelAddon}

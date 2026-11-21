@@ -145,20 +145,6 @@ export function useUpdateSubscriptionStatus() {
   })
 }
 
-/**
- * Days until `period_end`, or null when there is no period.
- *
- * Negative means already expired. Used only to colour a row that is ALREADY on
- * screen — never to filter, because filtering client-side over a paged list
- * would silently miss every subscription on another page.
- */
-export function daysUntilExpiry(periodEnd: string | null): number | null {
-  if (!periodEnd) return null
-  const end = new Date(periodEnd).getTime()
-  if (Number.isNaN(end)) return null
-  return Math.ceil((end - Date.now()) / (1000 * 60 * 60 * 24))
-}
-
 // ─── Upgrade requests: the approval queue ─────────────────────────────────
 //
 // A member's «request upgrade» lands here. Approving runs ONE transaction on

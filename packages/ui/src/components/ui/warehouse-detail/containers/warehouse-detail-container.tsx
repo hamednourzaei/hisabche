@@ -16,6 +16,7 @@ import {
 import {
   apiErrorMessage,
   useProduct,
+  useProductImages,
   useProductWarehouseBreakdown,
   useUpdateProduct,
   useDeleteProduct,
@@ -43,6 +44,7 @@ import { ProductManufacturingPanel } from '../../manufacturing/product-manufactu
 import { EntityNotes } from '../../entity-notes'
 import { CustomFieldsPanel } from '../../custom-fields-panel'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { ProductDetailPage } from '../warehouse-detail-page'
 import { isProductInUse, productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
 import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
@@ -128,6 +130,8 @@ export function ProductDetailContainer() {
   const { id } = useParams<{ id: string }>()
 
   const { data: product, isLoading } = useProduct(id)
+  const productImages = useProductImages(id)
+  const currency = useBookCurrency()
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
   const breakdown = useProductWarehouseBreakdown(id ?? null)
@@ -297,6 +301,20 @@ ${t('warehouse.deactivateInstead')}`)
       onCancelEditing={() => setEditing(false)}
       onSave={onSave}
       onDelete={handleDelete}
+      currency={currency}
+      dir={locale.startsWith('en') ? 'ltr' : 'rtl'}
+      isActive={typeof product?.isActive === 'boolean' ? product.isActive : null}
+      coverImage={
+        productImages.data?.[0]
+          ? {
+              url: productImages.data[0].url,
+              altText: productImages.data[0].altText,
+            }
+          : null
+      }
+      imagesLoading={productImages.isLoading}
+      imagesError={productImages.isError}
+      onRetryImages={() => void productImages.refetch()}
       barcodes={id ? <ProductBarcodesPanel t={safeT} productId={id} embedded /> : null}
       images={
         id ? (
@@ -332,24 +350,39 @@ ${t('warehouse.deactivateInstead')}`)
       notes={id ? <EntityNotes entityType="product" entityId={id} /> : null}
       stockWarehouses={(breakdown.data?.warehouses ?? []).map((w) => ({ id: w.id, name: w.name }))}
       expiry={id ? <ProductExpiryPanel t={safeT} productId={id} /> : null}
+      variants={
+        id && profile.capabilities.includes('variants') ? (
+          <>
+            <ProductVariantsSection t={safeT} productId={id} />
+            {/* Clothing (10 Nov 2026): the size × colour grid and stock per variant. */}
+            <VariantStockPanel
+              productId={id}
+              skuPrefix={
+                (product ? String((product as RawProduct).barcode ?? '') : '') ||
+                id.slice(0, 6).toUpperCase()
+              }
+            />
+          </>
+        ) : null
+      }
+      kits={id && isStocked ? <BundleEditor productId={id} /> : null}
+      units={id && isStocked ? <ProductUnitsPanel t={safeT} productId={id} /> : null}
+      waste={
+        id && isStocked ? (
+          <ProductWastePanel
+            t={safeT}
+            productId={id}
+            unitLabel={product ? String((product as RawProduct).unit ?? '') : ''}
+            warehouses={(breakdown.data?.warehouses ?? []).map((w) => ({
+              id: w.id,
+              name: w.name,
+            }))}
+          />
+        ) : null
+      }
       specialties={
         id ? (
           <>
-            {/* Goods only: a service or a package has nothing on a shelf. */}
-            {isStocked ? (
-              <ProductWastePanel
-                t={safeT}
-                productId={id}
-                unitLabel={product ? String((product as RawProduct).unit ?? '') : ''}
-                warehouses={(breakdown.data?.warehouses ?? []).map((w) => ({
-                  id: w.id,
-                  name: w.name,
-                }))}
-              />
-            ) : null}
-            {isStocked ? <ProductUnitsPanel t={safeT} productId={id} /> : null}
-            {/* V61 B.2.8: what a bundle (kit) is made of. */}
-            {isStocked ? <BundleEditor productId={id} /> : null}
             {profile.capabilities.includes('serialized_items') ? (
               <ProductSerialsPanel
                 t={safeT}
@@ -360,19 +393,6 @@ ${t('warehouse.deactivateInstead')}`)
                     : 0
                 }
               />
-            ) : null}
-            {profile.capabilities.includes('variants') ? (
-              <>
-                <ProductVariantsSection t={safeT} productId={id} />
-                {/* Clothing (10 Nov 2026): the size × colour grid and stock per variant. */}
-                <VariantStockPanel
-                  productId={id}
-                  skuPrefix={
-                    (product ? String((product as RawProduct).barcode ?? '') : '') ||
-                    id.slice(0, 6).toUpperCase()
-                  }
-                />
-              </>
             ) : null}
             {profile.capabilities.includes('auto_fitments') ? (
               <ProductFitmentsSection t={safeT} productId={id} />

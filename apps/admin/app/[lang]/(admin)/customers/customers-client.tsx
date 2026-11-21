@@ -14,13 +14,23 @@ import {
 } from '@/components/ui'
 import { WorkspacesClient } from '../workspaces/workspaces-client'
 import { UsersClient } from '../users/users-client'
+import { UpgradeRequestsPanel } from '../subscriptions/upgrade-requests-panel'
+import { PlanLimitsPanel } from '../subscriptions/plan-limits-panel'
 import { Workspace360Sheet } from '@/components/customers/workspace-360-sheet'
 import { useTrialAbuseSignals, type TrialAbuseSignalItem } from '@/hooks/use-admin-customers'
 import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDateTime } from '@/lib/admin-format'
 
-const CUSTOMERS_TABS = ['workspaces', 'users', 'devices', 'support', 'trial_abuse'] as const
+const CUSTOMERS_TABS = [
+  'workspaces',
+  'users',
+  'upgrade_requests',
+  'plan_limits',
+  'devices',
+  'support',
+  'trial_abuse',
+] as const
 type CustomersTab = (typeof CUSTOMERS_TABS)[number]
 
 export function CustomersClient() {
@@ -35,6 +45,8 @@ export function CustomersClient() {
         items={[
           { id: 'workspaces', label: t('admin.hubs.customers.workspaces') },
           { id: 'users', label: t('admin.hubs.customers.users') },
+          { id: 'upgrade_requests', label: t('admin.hubs.customers.upgradeRequests') },
+          { id: 'plan_limits', label: t('admin.hubs.customers.planLimits') },
           { id: 'devices', label: t('admin.hubs.customers.devices') },
           { id: 'support', label: t('admin.hubs.customers.support') },
           { id: 'trial_abuse', label: t('admin.hubs.customers.trialAbuse') },
@@ -43,17 +55,13 @@ export function CustomersClient() {
         onSelect={setTab}
       />
 
-      {tab === 'workspaces' && (
-        <>
-          <WorkspacesClient onOpen360={(id) => setSelectedWorkspaceId(id)} />
-          <Workspace360Sheet
-            workspaceId={selectedWorkspaceId}
-            onClose={() => setSelectedWorkspaceId(null)}
-          />
-        </>
-      )}
+      {tab === 'workspaces' && <WorkspacesClient onOpen360={(id) => setSelectedWorkspaceId(id)} />}
 
       {tab === 'users' && <UsersClient />}
+
+      {tab === 'upgrade_requests' && <UpgradeRequestsPanel />}
+
+      {tab === 'plan_limits' && <PlanLimitsPanel />}
 
       {tab === 'devices' && (
         <Card className="p-8">
@@ -74,6 +82,12 @@ export function CustomersClient() {
       )}
 
       {tab === 'trial_abuse' && <TrialAbuseTabContent />}
+
+      {/* One 360 sheet for the whole hub: opened from workspaces AND subscriptions. */}
+      <Workspace360Sheet
+        workspaceId={selectedWorkspaceId}
+        onClose={() => setSelectedWorkspaceId(null)}
+      />
     </div>
   )
 }

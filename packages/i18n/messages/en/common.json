@@ -2449,6 +2449,17 @@
     "extClaimIssuePlaceholder": "Describe the defect to file a warranty claim",
     "extClaimsCount": "Claims",
     "extQualityCount": "Quality checks",
+    "productDetails": "Product details",
+    "productSections": "Product sections",
+    "breadcrumb": "Breadcrumb",
+    "tabVariants": "Variants",
+    "tabKits": "Kits",
+    "tabNotes": "Notes & expiry",
+    "tabUnits": "Units of measure",
+    "tabMore": "More details",
+    "atBuyPrice": "At purchase price",
+    "atSellPrice": "At selling price",
+    "perUnit": "Per unit",
     "label": "Warehouse"
   },
   "customers": {
@@ -5828,7 +5839,13 @@
       "empty": "No subscriptions match these filters.",
       "loadError": "Could not load subscriptions.",
       "updateError": "The change failed.",
-      "noDateBuckets": "Date-based expiry buckets are not implemented in the backend yet; filtering is by status."
+      "noDateBuckets": "Date-based expiry buckets are not implemented in the backend yet; filtering is by status.",
+      "resetReason": "Expired subscription reset by admin",
+      "upgradeReason": "Plan upgrade by admin",
+      "changeReason": "Subscription status change by admin",
+      "managementTitle": "Subscription management",
+      "expiredAlert": "This subscription has expired. Reset it or choose another plan to continue.",
+      "resetSubscription": "Reset subscription"
     },
     "plan": {
       "free": "Free",
@@ -6384,9 +6401,9 @@
       "dashboard": "Dashboard",
       "dashboardDesc": "Overview of platform metrics, revenue, and alerts",
       "customers": "Customers",
-      "customersDesc": "Workspaces, users, devices, and support sessions",
+      "customersDesc": "Workspaces, users, subscriptions, devices, and support sessions",
       "revenue": "Revenue",
-      "revenueDesc": "Plans, prices, subscriptions, financial ledger, and wallets",
+      "revenueDesc": "Plans, prices, financial ledger, wallets, and gateways",
       "offline": "Offline",
       "offlineDesc": "Offline licences, device fleet, offline to online migration, and reconciliation",
       "product": "Product",
@@ -6411,7 +6428,11 @@
         "users": "Users",
         "devices": "Devices",
         "support": "Support Sessions",
-        "trialAbuse": "Abuse signals"
+        "trialAbuse": "Abuse signals",
+        "subscriptions": "Subscriptions",
+        "upgradeRequests": "Upgrade Requests",
+        "planLimits": "Plan Limits",
+        "open360": "Open workspace 360"
       },
       "revenue": {
         "title": "Revenue",

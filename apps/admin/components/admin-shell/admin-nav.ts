@@ -93,9 +93,9 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: CreditCard,
     titleKey: 'admin.nav.revenue',
     descriptionKey: 'admin.nav.revenueDesc',
-    endpoint: 'GET /admin/subscriptions',
+    endpoint: 'GET /admin/billing/prices',
     group: 'customers',
-    defaultTab: 'subscriptions',
+    defaultTab: 'plans',
   },
   {
     id: 'offline',
@@ -155,7 +155,7 @@ const ROUTE_HUB_MAP: Record<string, string> = {
   '/workspaces': 'customers',
   '/users': 'customers',
   '/revenue': 'revenue',
-  '/subscriptions': 'revenue',
+  '/subscriptions': 'customers', // now lands on the unified workspaces view
   '/wallet': 'revenue',
   '/offline': 'offline',
   '/product': 'product',
