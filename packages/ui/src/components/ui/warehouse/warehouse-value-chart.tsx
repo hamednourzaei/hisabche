@@ -59,12 +59,17 @@ export const WarehouseValueChart = memo(function WarehouseValueChart({
   const rows = useMemo<ChartRow[]>(() => {
     // The declared type says `summary` is always there; the wire does not
     // promise it (see warehouse-list-table.tsx — same rule, same reason).
-    const list: ChartRow[] = warehouses.map((warehouse) => ({
-      id: warehouse.id,
-      name: warehouse.name,
-      value: (warehouse as { summary?: StockSummary | null }).summary?.totalValue ?? null,
-      unassigned: false,
-    }))
+    const list: ChartRow[] = warehouses
+      .map((warehouse) => ({
+        id: warehouse.id,
+        name: warehouse.name,
+        value: (warehouse as { summary?: StockSummary | null }).summary?.totalValue ?? null,
+        unassigned: false,
+      }))
+      // Largest first; an unknown value sinks to the end. «بدون انبار» is
+      // appended AFTER this sort: it is a state, not a warehouse competing
+      // with them, and the approved layout keeps it last in warning colour.
+      .sort(byValue)
     if (unassigned) {
       list.push({
         id: 'unassigned',
@@ -73,7 +78,7 @@ export const WarehouseValueChart = memo(function WarehouseValueChart({
         unassigned: true,
       })
     }
-    return list.sort(byValue)
+    return list
   }, [warehouses, unassigned, t])
 
   const shares = valueShares(rows.map((row) => row.value))
