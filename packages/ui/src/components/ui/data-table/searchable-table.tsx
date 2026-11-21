@@ -34,6 +34,8 @@ export interface SearchableTableProps<T> {
   /** Shown when no row is left — a sentence, or a whole empty state. */
   empty: ReactNode
   minWidthClass?: string | undefined
+  /** A total of the rows, rendered inside the same table. */
+  footer?: ReactNode | undefined
 }
 
 export function SearchableTable<T>({
@@ -46,6 +48,7 @@ export function SearchableTable<T>({
   actions,
   empty,
   minWidthClass = 'min-w-[420px]',
+  footer,
 }: SearchableTableProps<T>) {
   const translate = useTranslations()
   const [search, setSearch] = useState('')
@@ -67,6 +70,7 @@ export function SearchableTable<T>({
       onSearchChange={setSearch}
       actions={actions}
       minWidthClass={minWidthClass}
+      footer={footer}
       emptyState={
         typeof empty === 'string' ? (
           <p className="py-10 text-center text-sm text-[hsl(var(--fg-secondary))]">{empty}</p>

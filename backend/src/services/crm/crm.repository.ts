@@ -105,17 +105,27 @@ export class CrmRepository {
     if (primary.error)
       throw new DatabaseError('Failed to fetch customer interactions', primary.error)
 
+    // ⚠️ `contains` must receive JSON TEXT for a jsonb array of objects.
+    // postgrest-js serialises an Array with `join(',')`, so an array of objects
+    // became `cs.{[object Object]}` and PostgREST answered 22P02 — the CRM tab
+    // of every customer showed «اطلاعات CRM این مشتری خوانده نشد».
     const onSnapshot = await readAll('customer interactions', (from, to) =>
       supabase
         .from('interactions')
         .select(INTERACTION_COLUMNS)
         .eq('workspace_id', workspaceId)
-        .contains('customers_snapshot', [{ id: customerId }])
+        .contains('customers_snapshot', JSON.stringify([{ id: customerId }]))
         .order('interaction_date', { ascending: false })
         .range(from, to),
     )
     if (onSnapshot.error) {
-      throw new DatabaseError('Failed to fetch customer interactions', onSnapshot.error)
+      // A database that has not run docs/task-assignment-migration.sql has no
+      // `customers_snapshot` column. That is «no task sent to a snapshot», not
+      // «the CRM tab is broken»: the primary matches are the whole answer.
+      if (!isMissingColumn(onSnapshot.error)) {
+        throw new DatabaseError('Failed to fetch customer interactions', onSnapshot.error)
+      }
+      return primary.rows
     }
 
     const byId = new Map<string, Row>()

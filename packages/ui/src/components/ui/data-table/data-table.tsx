@@ -62,6 +62,12 @@ export interface DataTableProps<T> {
   cardTone?: ((row: T) => CardTone | undefined) | undefined
   /** Column ids to put first in the card's grid (the table's order is untouched). */
   cardOrder?: readonly string[] | undefined
+  /**
+   * Totals of the rows above, rendered inside the SAME table (one `<tfoot>`
+   * cell) so a summary never becomes a second table. Below `md` it renders
+   * under the cards. The content spans every visible column.
+   */
+  footer?: ReactNode | undefined
 }
 
 /** Below the `md` breakpoint (tablet). */
@@ -118,6 +124,7 @@ function DataTableInner<T>({
   paginate = true,
   cardTone,
   cardOrder,
+  footer,
 }: DataTableProps<T>) {
   const state = useTableState(tableId, columns)
   const sorted = useMemo(() => state.sortRows(rows), [rows, state])
@@ -178,18 +185,25 @@ function DataTableInner<T>({
       ) : (
         <>
           {cards ? (
-            <DataTableCards
-              t={t}
-              rows={pageRows}
-              columns={state.visibleColumns}
-              rowKey={rowKey}
-              offset={view.start}
-              onRowClick={onRowClick}
-              selectedIds={selectedIds}
-              onToggleRow={onToggleRow}
-              cardTone={cardTone}
-              cardOrder={cardOrder}
-            />
+            <>
+              <DataTableCards
+                t={t}
+                rows={pageRows}
+                columns={state.visibleColumns}
+                rowKey={rowKey}
+                offset={view.start}
+                onRowClick={onRowClick}
+                selectedIds={selectedIds}
+                onToggleRow={onToggleRow}
+                cardTone={cardTone}
+                cardOrder={cardOrder}
+              />
+              {footer ? (
+                <div className="mt-2 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.35)] p-3">
+                  {footer}
+                </div>
+              ) : null}
+            </>
           ) : (
             <div className="w-full overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))]">
               <table className={cn('w-full text-sm', minWidthClass)}>
@@ -271,6 +285,20 @@ function DataTableInner<T>({
                     )
                   })}
                 </tbody>
+
+                {/* A total belongs to the table it totals — never a second one. */}
+                {footer ? (
+                  <tfoot>
+                    <tr className="border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.35)]">
+                      <td
+                        colSpan={state.visibleColumns.length + (selectable ? 1 : 0)}
+                        className="px-3 py-3"
+                      >
+                        {footer}
+                      </td>
+                    </tr>
+                  </tfoot>
+                ) : null}
               </table>
             </div>
           )}

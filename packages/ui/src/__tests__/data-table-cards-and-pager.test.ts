@@ -14,7 +14,8 @@ describe('DataTable — cards below md', () => {
   it('renders the cards below md and the table from md up, from the same columns', () => {
     const src = read('data-table/data-table.tsx')
     // ONE of the two is rendered — never both hidden by CSS (rows drawn twice).
-    expect(src).toContain('{cards ? ( <DataTableCards')
+    // The fragment also carries the footer under the cards.
+    expect(src).toContain('{cards ? ( <> <DataTableCards')
     expect(src).not.toContain('md:hidden')
     expect(src).toContain("'(max-width: 767px)'")
     expect(src).toContain('columns={state.visibleColumns}')

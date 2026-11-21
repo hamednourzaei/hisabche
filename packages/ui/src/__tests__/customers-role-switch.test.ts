@@ -103,7 +103,9 @@ describe('statement totals: one function, one row per currency', () => {
     expect(view).toContain('getStatementTotals(props.summary, ledger)')
     expect(container).toContain('getStatementTotals(summary, ledger)')
     expect(container).not.toContain('byCurrency')
-    expect(view).toContain('tableId="customer-statement-totals"')
+    // One table: the per-currency totals are its footer, not a second table.
+    expect(view).toContain("footer={kind === 'all' ? totals : undefined}")
+    expect(view).not.toContain('tableId="customer-statement-totals"')
   })
 
   it('⚠️ three currencies stay three rows; no figure adds two of them', () => {

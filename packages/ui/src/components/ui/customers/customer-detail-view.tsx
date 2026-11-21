@@ -20,13 +20,10 @@
 // ============================================
 
 import { KpiCard, valueFontClass } from '../kpi-card'
-import { DataTable, SearchableTable, TableFilterSelect, type TableColumn } from '../data-table'
+import { SearchableTable, TableFilterSelect, type TableColumn } from '../data-table'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import {
-  getStatementTotals,
-  type StatementTotalsRow,
-} from '../../../lib/customers/statement-totals'
+import { getStatementTotals } from '../../../lib/customers/statement-totals'
 import {
   AlertTriangle,
   ChevronRight,
@@ -132,9 +129,6 @@ const outlineBtn =
 const primaryBtn =
   'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition motion-reduce:transition-none hover:brightness-110'
 const iconBtn = cn(outlineBtn, 'w-10 px-0')
-
-/** The caption over a supporting figure — the KPI card's caption, one step smaller. */
-const FIGURE_LABEL = 'truncate text-[11px] text-[hsl(var(--fg-tertiary))]'
 
 /** A figure that is bad news (money overdue). */
 const DANGER_VALUE = 'text-[hsl(var(--color-destructive))]'
@@ -656,29 +650,6 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
                 hint={t('invoiceCount', { count: summary.invoiceCount })}
               />
             </div>
-
-            {/* The rest of the picture, one step down: it supports the four
-                above and does not need the same weight. */}
-            {(summary.totalPurchases > 0 || summary.openingBalance !== 0) && (
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[hsl(var(--border-default))] pt-3">
-                {summary.totalPurchases > 0 && (
-                  <div className="min-w-0">
-                    <dt className={FIGURE_LABEL}>{t('totalPurchases')}</dt>
-                    <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-                      {figure((row) => row.totalPurchases)}
-                    </dd>
-                  </div>
-                )}
-                {summary.openingBalance !== 0 && (
-                  <div className="min-w-0">
-                    <dt className={FIGURE_LABEL}>{tc('customers.openingBalance')}</dt>
-                    <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-                      {figure((row) => row.openingBalance)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            )}
           </section>
         )}
 
@@ -1001,87 +972,63 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
   ]
   const currencyTotals = getStatementTotals(props.summary, ledger)
 
-  const totalColumns: TableColumn<StatementTotalsRow>[] = [
-    {
-      id: 'currency',
-      labelKey: 'customer360.colCurrency',
-      labelFallback: t('colCurrency'),
-      sortValue: (row) => row.currency,
-      render: (row) => (
-        <span className="font-medium text-[hsl(var(--fg-primary))]">{row.currency || '—'}</span>
-      ),
-    },
-    {
-      id: 'totalSales',
-      labelKey: 'customer360.totalSales',
-      labelFallback: t('totalSales'),
-      align: 'end',
-      sortValue: (row) => row.totalSales,
-      render: (row) => (
-        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-          {row.totalSales != null ? props.money(row.totalSales, row.currency) : '—'}
-        </span>
-      ),
-    },
-    {
-      id: 'totalPurchases',
-      labelKey: 'customer360.totalPurchases',
-      labelFallback: t('totalPurchases'),
-      align: 'end',
-      sortValue: (row) => row.totalPurchases,
-      render: (row) => (
-        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-          {row.totalPurchases != null ? props.money(row.totalPurchases, row.currency) : '—'}
-        </span>
-      ),
-    },
-    {
-      id: 'totalReceived',
-      labelKey: 'customer360.totalReceived',
-      labelFallback: t('totalReceived'),
-      align: 'end',
-      sortValue: (row) => row.totalReceived,
-      render: (row) => (
-        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-          {row.totalReceived != null ? props.money(row.totalReceived, row.currency) : '—'}
-        </span>
-      ),
-    },
-    {
-      id: 'totalPaid',
-      labelKey: 'customer360.totalPaid',
-      labelFallback: t('totalPaid'),
-      align: 'end',
-      sortValue: (row) => row.totalPaid,
-      render: (row) => (
-        <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-          {row.totalPaid != null ? props.money(row.totalPaid, row.currency) : '—'}
-        </span>
-      ),
-    },
-    {
-      id: 'netBalance',
-      labelKey: 'customer360.colBalance',
-      labelFallback: t('colBalance'),
-      align: 'end',
-      sortValue: (row) => row.netBalance,
-      render: (row) => (
-        <span
-          className={cn(
-            'font-medium tabular-nums',
-            row.netBalance != null && row.netBalance > 0 && 'text-[hsl(var(--color-destructive))]',
-          )}
-        >
-          {row.netBalance != null ? props.money(row.netBalance, row.currency) : '—'}
-        </span>
-      ),
-    },
-  ]
-
-  const tableT = (key: string, fallback?: string): string => {
-    const value = tc(key as never)
-    return value && value !== key ? value : (fallback ?? key)
-  }
+  // One table, not two: the per-currency totals are this table's footer. A
+  // second table under it repeated the same figures and the rail's cards.
+  const totals =
+    currencyTotals.length === 0 ? undefined : (
+      <div className="space-y-2" data-statement-totals>
+        <p className="text-xs font-semibold text-[hsl(var(--fg-primary))]">{t('totalsTitle')}</p>
+        {currencyTotals.map((row) => (
+          <div
+            key={row.currency}
+            className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs sm:text-[13px]"
+          >
+            <span dir="ltr" className="font-bold text-[hsl(var(--fg-secondary))]">
+              {row.currency || '—'}
+            </span>
+            <StatementTotal
+              label={t('totalSales')}
+              value={row.totalSales}
+              currency={row.currency}
+              money={props.money}
+            />
+            <StatementTotal
+              label={t('totalPurchases')}
+              value={row.totalPurchases}
+              currency={row.currency}
+              money={props.money}
+            />
+            <StatementTotal
+              label={t('totalReceived')}
+              value={row.totalReceived}
+              currency={row.currency}
+              money={props.money}
+            />
+            <StatementTotal
+              label={t('totalPaid')}
+              value={row.totalPaid}
+              currency={row.currency}
+              money={props.money}
+            />
+            {row.openingBalance !== null ? (
+              <StatementTotal
+                label={tc('customers.openingBalance')}
+                value={row.openingBalance}
+                currency={row.currency}
+                money={props.money}
+              />
+            ) : null}
+            <StatementTotal
+              label={t('colBalance')}
+              value={row.netBalance}
+              currency={row.currency}
+              money={props.money}
+              strong
+            />
+          </div>
+        ))}
+      </div>
+    )
 
   return (
     <div className="space-y-2">
@@ -1117,28 +1064,50 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
           </>
         }
         empty={kind === 'all' ? t('statementEmpty') : t('noMatch')}
+        // The footer is the whole account's totals, not a sum of the filtered
+        // rows — it is shown only when no kind filter can contradict it.
+        footer={kind === 'all' ? totals : undefined}
       />
-      {ledger.openingBalance !== 0 ? (
+      {/* Only when the per-currency footer cannot carry it: the movement rows
+          have no per-currency summary in that case. Never printed twice. */}
+      {currencyTotals.length === 0 && ledger.openingBalance !== 0 ? (
         <p className="flex justify-between gap-3 px-3 text-sm text-[hsl(var(--fg-secondary))]">
           <span>{tc('customers.openingBalance')}</span>
           <span className="tabular-nums">{props.money(ledger.openingBalance)}</span>
         </p>
       ) : null}
-      {currencyTotals.length > 0 && (
-        <div className="mt-6 space-y-2">
-          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-            {t('totalsTitle')}
-          </h3>
-          <DataTable
-            tableId="customer-statement-totals"
-            t={tableT}
-            rows={currencyTotals}
-            columns={totalColumns}
-            rowKey={(row) => row.currency}
-          />
-        </div>
-      )}
     </div>
+  )
+}
+
+/** One labelled figure in the statement footer. `null` is «—», never zero. */
+function StatementTotal({
+  label,
+  value,
+  currency,
+  money,
+  strong,
+}: {
+  label: string
+  value: number | null
+  currency: string
+  money: Money
+  strong?: boolean | undefined
+}) {
+  return (
+    <span className="inline-flex items-baseline gap-1">
+      <span className="text-[hsl(var(--fg-tertiary))]">{label}</span>
+      <span
+        className={cn(
+          'tabular-nums',
+          strong
+            ? 'font-semibold text-[hsl(var(--fg-primary))]'
+            : 'text-[hsl(var(--fg-secondary))]',
+        )}
+      >
+        {value !== null ? money(value, currency) : '—'}
+      </span>
+    </span>
   )
 }
 
@@ -1354,7 +1323,9 @@ function Row({
   )
 }
 
-// Sales vs receipts per month (server figures) as paired bars, then top products.
+// One section, not two: how the last 12 months went and what they buy are the
+// same question about the same customer, so they share one card and one
+// divider — never two headings and two boxes repeating each other.
 function Activity(props: CustomerDetailViewProps & { money: Money }) {
   const t = useTranslations('customer360')
   const tc = useTranslations()
@@ -1364,63 +1335,64 @@ function Activity(props: CustomerDetailViewProps & { money: Money }) {
   const peak = Math.max(0, ...monthly.map((m) => Math.max(m.sales, m.receipts)))
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-          {t('chartTitle')}
-        </h3>
+    <section
+      aria-label={t('tabActivity')}
+      className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))]"
+    >
+      <div className="p-3">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('chartTitle')}</h3>
+          <p className="flex gap-4 text-xs text-[hsl(var(--fg-secondary))]">
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="size-2.5 rounded-sm bg-[hsl(var(--color-primary))]"
+              />
+              {t('chartSales')}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="size-2.5 rounded-sm bg-[hsl(var(--color-success))]"
+              />
+              {t('chartReceipts')}
+            </span>
+          </p>
+        </div>
         {peak === 0 ? (
           <Empty text={t('chartEmpty')} />
         ) : (
-          <>
-            <div className="flex h-40 items-end gap-1.5 overflow-x-auto" role="list">
-              {monthly.map((m) => (
-                <div
-                  key={m.month}
-                  role="listitem"
-                  aria-label={`${m.month}: ${t('chartSales')} ${props.money(m.sales)}, ${t('chartReceipts')} ${props.money(m.receipts)}`}
-                  className="flex min-w-8 flex-1 flex-col items-center gap-1"
-                >
-                  <div className="flex h-32 w-full items-end justify-center gap-0.5">
-                    <span
-                      className="w-2.5 rounded-t bg-[hsl(var(--color-primary))]"
-                      style={{ height: `${(m.sales / peak) * 100}%` }}
-                    />
-                    <span
-                      className="w-2.5 rounded-t bg-[hsl(var(--color-success))]"
-                      style={{ height: `${(m.receipts / peak) * 100}%` }}
-                    />
-                  </div>
+          <div className="flex h-40 items-end gap-1.5 overflow-x-auto" role="list">
+            {monthly.map((m) => (
+              <div
+                key={m.month}
+                role="listitem"
+                aria-label={`${m.month}: ${t('chartSales')} ${props.money(m.sales)}, ${t('chartReceipts')} ${props.money(m.receipts)}`}
+                className="flex min-w-8 flex-1 flex-col items-center gap-1"
+              >
+                <div className="flex h-32 w-full items-end justify-center gap-0.5">
                   <span
-                    className="text-[0.625rem] tabular-nums text-[hsl(var(--fg-tertiary))]"
-                    dir="ltr"
-                  >
-                    {m.month.slice(2)}
-                  </span>
+                    className="w-2.5 rounded-t bg-[hsl(var(--color-primary))]"
+                    style={{ height: `${(m.sales / peak) * 100}%` }}
+                  />
+                  <span
+                    className="w-2.5 rounded-t bg-[hsl(var(--color-success))]"
+                    style={{ height: `${(m.receipts / peak) * 100}%` }}
+                  />
                 </div>
-              ))}
-            </div>
-            <p className="mt-2 flex gap-4 text-xs text-[hsl(var(--fg-secondary))]">
-              <span className="flex items-center gap-1.5">
                 <span
-                  aria-hidden="true"
-                  className="size-2.5 rounded-sm bg-[hsl(var(--color-primary))]"
-                />
-                {t('chartSales')}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span
-                  aria-hidden="true"
-                  className="size-2.5 rounded-sm bg-[hsl(var(--color-success))]"
-                />
-                {t('chartReceipts')}
-              </span>
-            </p>
-          </>
+                  className="text-[0.625rem] tabular-nums text-[hsl(var(--fg-tertiary))]"
+                  dir="ltr"
+                >
+                  {m.month.slice(2)}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
-      </section>
+      </div>
 
-      <section>
+      <div className="border-t border-[hsl(var(--border-default))] p-3">
         <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           {t('topProducts')}
         </h3>
@@ -1481,8 +1453,8 @@ function Activity(props: CustomerDetailViewProps & { money: Money }) {
           words={(p) => [p.name]}
           empty={t('noProducts')}
         />
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }
 

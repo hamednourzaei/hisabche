@@ -57,6 +57,17 @@ describe('customer 360 phase 2 — activity, CRM core panel, history', () => {
     expect(container.replace(/\s+/g, '')).toContain("useRecordHistory('customer',customerId")
   })
 
+  it('the activity tab is ONE section: the 12-month chart and the products together', () => {
+    // It used to be two headings and two boxes («فروش و دریافت» and
+    // «کالاهای پرخرید») saying the same thing about the same customer.
+    const flat = code(view).replace(/\s+/g, ' ')
+    const activity = flat.slice(flat.indexOf('function Activity('), flat.indexOf('function Empty('))
+    expect(activity.match(/<section/g)?.length).toBe(1)
+    expect(activity).toContain("aria-label={t('tabActivity')}")
+    expect(activity).toContain("t('chartTitle')")
+    expect(activity).toContain('tableId="customer-products"')
+  })
+
   it('CRM tab uses the shared panel, which reads only the CRM core port', () => {
     expect(code(view)).toContain('<CustomerCrmPanel customerId={customer.id}')
     expect(code(panel)).toContain('useCustomerCrm(customerId)')
