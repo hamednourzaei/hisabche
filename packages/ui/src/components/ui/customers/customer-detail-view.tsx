@@ -4,13 +4,22 @@
 // Customer 360 — view. Presentational only; every figure arrives from the
 // container, which gets it from the server (see customer-detail-container.tsx).
 //
-// Layout: identity + actions → the money picture (net balance, receivable,
-// overdue, sales, receipts, open invoices) → what is owed by due date and by
-// age → tabs: statement with running balance, invoices, payments, activity
-// (12-month chart + top products), CRM (shared CustomerCrmPanel), history.
+// Layout (owner-approved mockup, 21 Nov 2026 — docs/design-mockups/customer-360):
+//   · phone (<md):   identity → balance hero → KPIs → aging → tabs; the two
+//                    money actions live in a sticky bottom bar. Lists become
+//                    cards through the shared DataTable itself.
+//   · tablet (md+):  one column; the action row sits under the identity card,
+//                    KPIs go four across, aging five across.
+//   · desktop (≥1200px): two columns — a sticky rail (identity, balance,
+//                    KPIs, aging) beside the action row and the tabs card, so
+//                    the net balance stays in view while the statement scrolls.
+//
+// The money picture is unchanged in substance: net balance (sign is the
+// meaning), receivable/payable, what is owed by due date and by age, then the
+// nine parts in two groups. Two currencies are never added up.
 // ============================================
 
-import { KpiCard, headlineFontClass, valueFontClass } from '../kpi-card'
+import { KpiCard, valueFontClass } from '../kpi-card'
 import { DataTable, SearchableTable, TableFilterSelect, type TableColumn } from '../data-table'
 import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
@@ -21,11 +30,15 @@ import {
 import {
   AlertTriangle,
   ChevronRight,
+  Clock,
   DollarSign,
   Download,
   FilePlus2,
   FileText,
+  Mail,
+  MapPin,
   MoreHorizontal,
+  Phone,
   Printer,
   Scale,
   Trash2,
@@ -115,9 +128,10 @@ export interface CustomerDetailViewProps {
 const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm'
 const outlineBtn =
-  'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] disabled:opacity-50'
+  'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors motion-reduce:transition-none hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] disabled:opacity-50'
 const primaryBtn =
-  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition hover:brightness-110'
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition motion-reduce:transition-none hover:brightness-110'
+const iconBtn = cn(outlineBtn, 'w-10 px-0')
 
 /** The caption over a supporting figure — the KPI card's caption, one step smaller. */
 const FIGURE_LABEL = 'truncate text-[11px] text-[hsl(var(--fg-tertiary))]'
@@ -142,6 +156,26 @@ function netChipTone(value: number): string {
     return 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]'
   if (value < 0) return 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
   return 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]'
+}
+
+/**
+ * The hero figure's size — one step larger than a KPI's, and still shrinking
+ * as the number grows so a nine-figure sum stays whole (never abbreviated).
+ */
+function heroFontClass(text: string): string {
+  const len = text.length
+  if (len <= 11) return 'text-2xl md:text-3xl min-[1200px]:text-[28px]'
+  if (len <= 15) return 'text-xl md:text-2xl'
+  if (len <= 20) return 'text-base md:text-lg'
+  return 'text-sm md:text-base'
+}
+
+/** The avatar's letters — the first letter of the first two words of the name. */
+function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  const first = words[0]?.[0] ?? ''
+  const second = words[1]?.[0] ?? ''
+  return first + second || first || '—'
 }
 
 // Statuses with a label under customer360.status (desktop's next-intl shim has no `t.has`).
@@ -213,15 +247,9 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
   const byCurrency = asList<PartySummary & { currency: string }>(summary?.byCurrency)
   const perCurrency = (summary?.currencies.length ?? 0) > 1 && byCurrency.length > 0
 
-  const balanceRows = !summary
-    ? []
-    : perCurrency
-      ? byCurrency.map((row) => ({ currency: row.currency, value: row.netBalance }))
-      : [{ currency: summaryCurrency, value: summary.netBalance }]
-
   /**
-   * The due-date and aging breakdown, one block per currency for the same
-   * reason: their totals are a sum of unlike things too.
+   * The balance hero and the aging breakdown, one block per currency for the
+   * same reason: their totals are a sum of unlike things too.
    */
   const owedByCurrency: Array<{ currency: string; figures: PartySummary }> = summary
     ? perCurrency
@@ -279,8 +307,11 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
   const netLabel =
     net === null ? '' : net > 0 ? t('netOwesUs') : net < 0 ? t('netWeOwe') : t('netSettled')
 
+  const canPrint = !!props.ledger && props.ledger.movements.length > 0
+  const showReceipt = !!summary && summary.receivable > 0 && props.openInvoices.length > 0
+
   return (
-    <div className="space-y-4 sm:space-y-5">
+    <div className="flex flex-col gap-4 md:gap-5 min-[1200px]:grid min-[1200px]:grid-cols-[344px_minmax(0,1fr)] min-[1200px]:grid-rows-[auto_minmax(0,1fr)] min-[1200px]:gap-[18px]">
       <PaymentModal
         open={props.payOpen}
         onClose={props.onClosePayment}
@@ -294,60 +325,84 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
         openInvoices={props.openInvoices}
       />
 
-      {/* ── 1. Who this customer is · the one action that matters ─────────── */}
-      <header className={cn(card, 'p-3 sm:p-5')}>
-        <div className="flex flex-wrap items-start gap-x-3 gap-y-3">
-          <button
-            type="button"
-            onClick={props.onBack}
-            aria-label={tc('customers.backToList')}
-            className={cn(GHOST_ICON_BUTTON, FOCUS_RING, 'mt-0.5 shrink-0')}
-          >
-            <ChevronRight className="size-5 ltr:rotate-180" aria-hidden="true" />
-          </button>
-
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
-              {customer.name}
-            </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[hsl(var(--fg-secondary))]">
-              {customer.phone && <span dir="ltr">{customer.phone}</span>}
-              {customer.email && <span dir="ltr">{customer.email}</span>}
-              {customer.address && <span>{customer.address}</span>}
-            </p>
-            <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))]">
-              <span>
-                {t('lastSale')}: {props.formatDate(summary?.lastSaleAt ?? null)}
-              </span>
-              <span>
-                {t('lastPayment')}: {props.formatDate(summary?.lastPaymentAt ?? null)}
-              </span>
-            </p>
-          </div>
-
-          {/* One primary action and one money action. Print, export and delete
-              used to sit beside them at the same weight, so nothing led. On a
-              phone the primary action takes the row and the rest lives behind
-              «بیشتر» — four buttons in a phone header is no header at all. */}
-          <div className="flex w-full flex-wrap items-center gap-2 print:hidden md:w-auto">
+      {/* ── The rail: identity + the money picture. On a phone or tablet its
+          cards flow in the single column (display:contents); from 1200px it
+          is a sticky column beside the statement. ─────────────────────────── */}
+      <div className="contents min-[1200px]:sticky min-[1200px]:top-6 min-[1200px]:col-start-1 min-[1200px]:row-span-2 min-[1200px]:row-start-1 min-[1200px]:grid min-[1200px]:gap-4 min-[1200px]:self-start print:hidden">
+        {/* ── 1. Who this customer is ─────────────────────────────────────── */}
+        <header className={cn(card, 'order-1 p-3.5 md:p-5 min-[1200px]:order-none')}>
+          <div className="flex items-start gap-3">
             <button
               type="button"
-              onClick={props.onNewInvoice}
-              className={cn(primaryBtn, 'flex-1 md:flex-none')}
+              onClick={props.onBack}
+              aria-label={tc('customers.backToList')}
+              className={cn(GHOST_ICON_BUTTON, FOCUS_RING, 'mt-0.5 shrink-0')}
             >
-              <FilePlus2 className="size-4" aria-hidden="true" />
-              {t('newInvoice')}
+              <ChevronRight className="size-5 ltr:rotate-180" aria-hidden="true" />
             </button>
-            {summary && summary.receivable > 0 && props.openInvoices.length > 0 && (
-              <button
-                type="button"
-                onClick={props.onOpenPayment}
-                className={cn(outlineBtn, 'flex-1 md:flex-none')}
-              >
-                <DollarSign className="size-4" aria-hidden="true" />
-                {t('recordReceipt')}
-              </button>
-            )}
+
+            <div
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.14)] text-base font-bold text-[hsl(var(--color-primary))]"
+            >
+              {initialsOf(customer.name)}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-lg font-bold text-[hsl(var(--fg-primary))] md:text-xl">
+                {customer.name}
+              </h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-[hsl(var(--fg-secondary))] md:text-[13px]">
+                {customer.phone && (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Phone
+                      className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                      aria-hidden="true"
+                    />
+                    <span dir="ltr" className="truncate">
+                      {customer.phone}
+                    </span>
+                  </span>
+                )}
+                {customer.email && (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Mail
+                      className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                      aria-hidden="true"
+                    />
+                    <span dir="ltr" className="truncate">
+                      {customer.email}
+                    </span>
+                  </span>
+                )}
+                {customer.address && (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <MapPin
+                      className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{customer.address}</span>
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-[hsl(var(--border-default)/0.6)] pt-2 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                <span>
+                  {t('lastSale')}:{' '}
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {props.formatDate(summary?.lastSaleAt ?? null)}
+                  </span>
+                </span>
+                <span>
+                  {t('lastPayment')}:{' '}
+                  <span className="text-[hsl(var(--fg-secondary))]">
+                    {props.formatDate(summary?.lastPaymentAt ?? null)}
+                  </span>
+                </span>
+              </p>
+            </div>
+
+            {/* Print, export and delete live here at every size — the action
+                row carries only the two money actions. */}
             <DropdownMenu>
               {/* A bare <button>: Radix's Slot clones exactly one element. */}
               <DropdownMenuTrigger asChild>
@@ -355,24 +410,17 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
                   type="button"
                   aria-label={tc('common.more')}
                   title={tc('common.more')}
-                  className={cn(outlineBtn, 'px-3')}
+                  className={cn(iconBtn, 'shrink-0')}
                 >
                   <MoreHorizontal className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{tc('common.more')}</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={!props.ledger || props.ledger.movements.length === 0}
-                  onSelect={printStatement}
-                >
+                <DropdownMenuItem disabled={!canPrint} onSelect={printStatement}>
                   <Printer className="size-4" aria-hidden="true" />
                   {t('printStatement')}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={!props.ledger || props.ledger.movements.length === 0}
-                  onSelect={props.onExport}
-                >
+                <DropdownMenuItem disabled={!canPrint} onSelect={props.onExport}>
                   <Download className="size-4" aria-hidden="true" />
                   {t('exportStatement')}
                 </DropdownMenuItem>
@@ -392,290 +440,471 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-      </header>
-      {props.deleteError ? (
-        <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
-          {props.deleteError}
-        </p>
-      ) : null}
+          {props.deleteError ? (
+            <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
+              {props.deleteError}
+            </p>
+          ) : null}
+        </header>
 
-      {props.summaryError && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.06)] p-3 text-sm text-[hsl(var(--color-destructive))]"
-        >
-          {t('loadError')}
-          <button type="button" onClick={props.onRetry} className={outlineBtn}>
-            {t('retry')}
-          </button>
-        </div>
-      )}
+        {props.summaryError && (
+          <div
+            role="alert"
+            className="order-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.06)] p-3 text-sm text-[hsl(var(--color-destructive))] min-[1200px]:order-none"
+          >
+            {t('loadError')}
+            <button type="button" onClick={props.onRetry} className={outlineBtn}>
+              {t('retry')}
+            </button>
+          </div>
+        )}
 
-      {/* ── 2. Several currencies — said once, compactly ──────────────────── */}
-      {summary && summary.currencies.length > 1 && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-[hsl(var(--color-warning)/0.35)] bg-[hsl(var(--color-warning)/0.07)] px-3 py-2.5">
-          <AlertTriangle
-            className="mt-0.5 size-4 shrink-0 text-[hsl(var(--color-warning))]"
-            aria-hidden="true"
-          />
-          <p className="min-w-0 text-xs leading-5 text-[hsl(var(--fg-secondary))] sm:text-sm">
-            <span className="font-semibold text-[hsl(var(--fg-primary))]">
-              {t('mixedCurrencyTitle')}
-            </span>
-            {' — '}
-            {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
-          </p>
-        </div>
-      )}
-
-      {/* ── 3. The balance — the one number this page is about ─────────────── */}
-      {summary && (
-        <section aria-labelledby="customer-net-balance" className={cn(card, 'overflow-hidden')}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--border-default))] px-4 py-3 sm:px-5">
-            <h2
-              id="customer-net-balance"
-              className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-secondary))]"
-            >
-              <Scale className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              {t('netBalance')}
-            </h2>
-            {net !== null ? (
-              <span
-                className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', netChipTone(net))}
-              >
-                {netLabel}
+        {/* ── 2. Several currencies — said once, compactly ────────────────── */}
+        {summary && summary.currencies.length > 1 && (
+          <div className="order-4 flex items-start gap-2.5 rounded-xl border border-[hsl(var(--color-warning)/0.35)] bg-[hsl(var(--color-warning)/0.07)] px-3 py-2.5 min-[1200px]:order-none">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-[hsl(var(--color-warning))]"
+              aria-hidden="true"
+            />
+            <p className="min-w-0 text-xs leading-5 text-[hsl(var(--fg-secondary))] sm:text-sm">
+              <span className="font-semibold text-[hsl(var(--fg-primary))]">
+                {t('mixedCurrencyTitle')}
               </span>
-            ) : null}
+              {' — '}
+              {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
+            </p>
           </div>
+        )}
 
-          {/* One line per currency. Two currencies are never added together;
-              with a single currency this is simply its net balance. */}
-          <dl className="divide-y divide-[hsl(var(--border-default))] px-4 sm:px-5">
-            {balanceRows.map((row) => {
-              const text = money(row.value, row.currency)
-              return (
-                <div
-                  key={row.currency || 'book'}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
+        {/* ── 3. The balance — the one number this page is about ──────────── */}
+        {summary && (
+          <section
+            aria-labelledby="customer-net-balance"
+            className={cn(card, 'order-5 overflow-hidden min-[1200px]:order-none')}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--border-default))] px-4 py-3">
+              <h2
+                id="customer-net-balance"
+                className="flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-secondary))]"
+              >
+                <Scale className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                {t('netBalance')}
+              </h2>
+              {net !== null ? (
+                <span
+                  className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', netChipTone(net))}
                 >
-                  <dt className="text-sm font-semibold text-[hsl(var(--fg-secondary))]" dir="ltr">
-                    {row.currency}
-                  </dt>
-                  <dd
-                    className={cn(
-                      'font-bold tabular-nums',
-                      headlineFontClass(text),
-                      netTone(row.value),
-                    )}
-                    title={text}
-                  >
-                    {text}
-                  </dd>
-                </div>
-              )
-            })}
-          </dl>
-        </section>
-      )}
+                  {netLabel}
+                </span>
+              ) : null}
+            </div>
 
-      {/* ── 4. What the balance is made of ─────────────────────────────────── */}
-      {summary && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            <KpiCard label={t('receivable')} value={figure((row) => row.receivable)} />
-            {(summary.totalPurchases > 0 || summary.weOwe > 0) && (
-              /* `weOwe` is the server's figure: purchase payable plus the credit a return on
-                 an already-paid invoice created. A return used to show only in the net card. */
+            {/* One block per currency. Two currencies are never added together;
+                with a single currency this is simply its net balance. The sign
+                colour and the chip above say the same thing in two channels. */}
+            <div className="divide-y divide-[hsl(var(--border-default))]">
+              {owedByCurrency.map(({ currency, figures }) => {
+                const text = money(figures.netBalance, currency)
+                return (
+                  <div key={currency || 'book'} className="px-4 py-4">
+                    {perCurrency && (
+                      <p
+                        className="mb-1 text-xs font-semibold text-[hsl(var(--fg-tertiary))]"
+                        dir="ltr"
+                      >
+                        {currency}
+                      </p>
+                    )}
+                    <p
+                      className={cn(
+                        'font-bold tabular-nums',
+                        heroFontClass(text),
+                        netTone(figures.netBalance),
+                      )}
+                      title={text}
+                    >
+                      {text}
+                    </p>
+
+                    {/* What the balance is made of — the two sides of it. */}
+                    <div className="mt-3.5 grid grid-cols-2 gap-2.5">
+                      <div className="min-w-0 rounded-xl bg-[hsl(var(--surface-muted)/0.55)] px-3 py-2">
+                        <p className="flex items-center gap-1.5 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                          <span
+                            aria-hidden="true"
+                            className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-destructive))]"
+                          />
+                          <span className="truncate">{t('receivable')}</span>
+                        </p>
+                        <p
+                          className="mt-0.5 truncate text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]"
+                          title={money(figures.receivable, currency)}
+                        >
+                          {money(figures.receivable, currency)}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-xl bg-[hsl(var(--surface-muted)/0.55)] px-3 py-2">
+                        <p className="flex items-center gap-1.5 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                          <span
+                            aria-hidden="true"
+                            className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-success))]"
+                          />
+                          <span className="truncate">{t('payable')}</span>
+                        </p>
+                        <p
+                          className="mt-0.5 truncate text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]"
+                          title={money(figures.weOwe, currency)}
+                        >
+                          {money(figures.weOwe, currency)}
+                        </p>
+                        {figures.returnCredit > 0 && (
+                          <p className="mt-0.5 truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
+                            {t('weOweIncludesReturns')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* What is owed, by due date — the three urgencies. */}
+                    {figures.receivable > 0 && (
+                      <div className="mt-3.5 grid grid-cols-3 border-t border-[hsl(var(--border-default))] pt-3">
+                        <div className="min-w-0 pe-2">
+                          <p className="flex items-center gap-1 text-[10px] text-[hsl(var(--fg-tertiary))]">
+                            <span
+                              aria-hidden="true"
+                              className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-destructive))]"
+                            />
+                            <span className="truncate">{t('overdue')}</span>
+                          </p>
+                          <p
+                            className="mt-1 truncate text-xs font-bold tabular-nums text-[hsl(var(--color-destructive))]"
+                            title={money(figures.overdue, currency)}
+                          >
+                            {money(figures.overdue, currency)}
+                          </p>
+                        </div>
+                        <div className="min-w-0 border-s border-[hsl(var(--border-default))] px-2">
+                          <p className="flex items-center gap-1 text-[10px] text-[hsl(var(--fg-tertiary))]">
+                            <span
+                              aria-hidden="true"
+                              className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-warning))]"
+                            />
+                            <span className="truncate">{t('dueToday')}</span>
+                          </p>
+                          <p
+                            className="mt-1 truncate text-xs font-bold tabular-nums text-[hsl(var(--color-warning))]"
+                            title={money(figures.dueToday, currency)}
+                          >
+                            {money(figures.dueToday, currency)}
+                          </p>
+                        </div>
+                        <div className="min-w-0 border-s border-[hsl(var(--border-default))] ps-2">
+                          <p className="flex items-center gap-1 text-[10px] text-[hsl(var(--fg-tertiary))]">
+                            <span
+                              aria-hidden="true"
+                              className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-success))]"
+                            />
+                            <span className="truncate">{t('dueLater')}</span>
+                          </p>
+                          <p
+                            className="mt-1 truncate text-xs font-bold tabular-nums text-[hsl(var(--fg-primary))]"
+                            title={money(figures.dueLater, currency)}
+                          >
+                            {money(figures.dueLater, currency)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── 4. The supporting figures ───────────────────────────────────── */}
+        {summary && (
+          <section className={cn(card, 'order-6 p-3.5 min-[1200px]:order-none')}>
+            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 min-[1200px]:grid-cols-2">
               <KpiCard
-                label={t('payable')}
-                value={figure((row) => row.weOwe)}
-                {...(summary.returnCredit > 0 ? { hint: t('weOweIncludesReturns') } : {})}
+                surface="none"
+                className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
+                label={t('totalSales')}
+                value={figure((row) => row.totalSales)}
               />
+              <KpiCard
+                surface="none"
+                className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
+                label={t('totalReceived')}
+                value={figure((row) => row.totalReceived)}
+              />
+              <KpiCard
+                surface="none"
+                className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
+                label={t('overdue')}
+                value={figure((row) => row.overdue, summary.overdue > 0)}
+                {...(summary.overdue > 0 ? { tone: 'destructive' as const } : {})}
+                {...(summary.overdueInvoiceCount > 0
+                  ? { hint: t('overdueInvoices', { count: summary.overdueInvoiceCount }) }
+                  : {})}
+              />
+              <KpiCard
+                surface="none"
+                className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
+                label={t('openInvoices')}
+                value={formatNumber(summary.openInvoiceCount, locale)}
+                hint={t('invoiceCount', { count: summary.invoiceCount })}
+              />
+            </div>
+
+            {/* The rest of the picture, one step down: it supports the four
+                above and does not need the same weight. */}
+            {(summary.totalPurchases > 0 || summary.openingBalance !== 0) && (
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[hsl(var(--border-default))] pt-3">
+                {summary.totalPurchases > 0 && (
+                  <div className="min-w-0">
+                    <dt className={FIGURE_LABEL}>{t('totalPurchases')}</dt>
+                    <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                      {figure((row) => row.totalPurchases)}
+                    </dd>
+                  </div>
+                )}
+                {summary.openingBalance !== 0 && (
+                  <div className="min-w-0">
+                    <dt className={FIGURE_LABEL}>{tc('customers.openingBalance')}</dt>
+                    <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                      {figure((row) => row.openingBalance)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
             )}
-            <KpiCard label={t('totalSales')} value={figure((row) => row.totalSales)} />
-            <KpiCard
-              label={t('overdue')}
-              value={figure((row) => row.overdue, summary.overdue > 0)}
-              {...(summary.overdueInvoiceCount > 0
-                ? { hint: t('overdueInvoices', { count: summary.overdueInvoiceCount }) }
-                : {})}
+          </section>
+        )}
+
+        {/* ── 5. What is owed, by age ─────────────────────────────────────── */}
+        {summary && summary.receivable > 0 && (
+          <section className={cn(card, 'order-7 space-y-5 p-4 min-[1200px]:order-none')}>
+            {owedByCurrency.map(({ currency, figures }) => (
+              <div key={currency || 'book'}>
+                {perCurrency && (
+                  <p
+                    className="mb-2 text-xs font-semibold text-[hsl(var(--fg-tertiary))]"
+                    dir="ltr"
+                  >
+                    {currency}
+                  </p>
+                )}
+                <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                  <Clock className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                  {t('aging')}
+                </h2>
+                <AgingBar figures={figures} />
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-5 min-[1200px]:grid-cols-1">
+                  <Row label={t('agingCurrent')} value={money(figures.aging.current, currency)} />
+                  <Row
+                    label={t('aging1to30')}
+                    value={money(figures.aging.days1to30, currency)}
+                    tone="warning"
+                  />
+                  <Row
+                    label={t('aging31to60')}
+                    value={money(figures.aging.days31to60, currency)}
+                    tone="danger"
+                  />
+                  <Row
+                    label={t('aging61to90')}
+                    value={money(figures.aging.days61to90, currency)}
+                    tone="danger"
+                  />
+                  <Row
+                    label={t('agingOver90')}
+                    value={money(figures.aging.over90, currency)}
+                    tone="danger"
+                  />
+                </dl>
+              </div>
+            ))}
+          </section>
+        )}
+      </div>
+
+      {/* ── 6. The two money actions (tablet and up; the phone has the sticky
+          bottom bar instead). Print and export are beside them as icons. ──── */}
+      <div className="order-3 hidden flex-wrap items-center gap-2 md:flex min-[1200px]:order-none min-[1200px]:col-start-2 min-[1200px]:row-start-1 print:hidden">
+        <button type="button" onClick={props.onNewInvoice} className={primaryBtn}>
+          <FilePlus2 className="size-4" aria-hidden="true" />
+          {t('newInvoice')}
+        </button>
+        {showReceipt && (
+          <button type="button" onClick={props.onOpenPayment} className={outlineBtn}>
+            <DollarSign className="size-4" aria-hidden="true" />
+            {t('recordReceipt')}
+          </button>
+        )}
+        <span className="flex-1" />
+        <button
+          type="button"
+          disabled={!canPrint}
+          onClick={printStatement}
+          aria-label={t('printStatement')}
+          title={t('printStatement')}
+          className={iconBtn}
+        >
+          <Printer className="size-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          disabled={!canPrint}
+          onClick={props.onExport}
+          aria-label={t('exportStatement')}
+          title={t('exportStatement')}
+          className={iconBtn}
+        >
+          <Download className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* ── 7. Statement / invoices / payments / the relationship parts ───── */}
+      <div className="order-8 flex min-w-0 flex-col min-[1200px]:order-none min-[1200px]:col-start-2 min-[1200px]:row-start-2">
+        <Tabs
+          value={tab}
+          onValueChange={setTab}
+          className={cn(card, 'flex-1 p-3 sm:p-4 print:border-0 print:p-0 print:shadow-none')}
+        >
+          <p className="mb-2 hidden text-base font-bold print:block">{t('statementTitle')}</p>
+          <div className="mb-3 space-y-3 print:hidden">
+            <HubTabs
+              label={t('groupsLabel')}
+              items={CUSTOMER_GROUPS.map((id) => ({ id, label: t(`groups.${id}`) }))}
+              active={group}
+              // Opening a group opens its first part.
+              onSelect={(next) => setTab(CUSTOMER_TAB_GROUPS[next][0])}
             />
-            <KpiCard
-              label={t('openInvoices')}
-              value={formatNumber(summary.openInvoiceCount, locale)}
-              hint={t('invoiceCount', { count: summary.invoiceCount })}
-              className="col-span-2 md:col-span-1"
+            <SegmentedControl
+              branch
+              label={t('groupsLabel')}
+              options={CUSTOMER_TAB_GROUPS[group].map((value) => ({
+                value,
+                label: t(TAB_LABEL[value]),
+              }))}
+              value={tab as (typeof CUSTOMER_TAB_GROUPS)[CustomerTabGroup][number]}
+              onChange={setTab}
             />
           </div>
 
-          {/* The rest of the picture, one step down: it supports the five above
-              and does not need the same weight. */}
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[hsl(var(--border-default))] pt-3 sm:grid-cols-3">
-            <div className="min-w-0">
-              <dt className={FIGURE_LABEL}>{t('totalReceived')}</dt>
-              <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-                {figure((row) => row.totalReceived)}
-              </dd>
-            </div>
-            {summary.totalPurchases > 0 && (
-              <div className="min-w-0">
-                <dt className={FIGURE_LABEL}>{t('totalPurchases')}</dt>
-                <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-                  {figure((row) => row.totalPurchases)}
-                </dd>
-              </div>
-            )}
-            {summary.openingBalance !== 0 && (
-              <div className="min-w-0">
-                <dt className={FIGURE_LABEL}>{tc('customers.openingBalance')}</dt>
-                <dd className="mt-0.5 font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
-                  {figure((row) => row.openingBalance)}
-                </dd>
-              </div>
-            )}
-          </dl>
-        </div>
-      )}
+          <TabsContent value="statement">
+            <Statement {...props} money={money} />
+          </TabsContent>
 
-      {/* ── What is owed: by due date and by age ─────────────────────────── */}
-      {summary && summary.receivable > 0 && (
-        <section className={cn(card, 'space-y-5 p-4')}>
-          {owedByCurrency.map(({ currency, figures }) => (
-            <div key={currency || 'book'}>
-              {perCurrency && (
-                <p className="mb-2 text-xs font-semibold text-[hsl(var(--fg-tertiary))]" dir="ltr">
-                  {currency}
-                </p>
-              )}
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                    {t('receivable')}
-                  </h2>
-                  <dl className="space-y-2 text-sm">
-                    <Row
-                      label={t('overdue')}
-                      value={money(figures.overdue, currency)}
-                      tone="danger"
-                    />
-                    <Row
-                      label={t('dueToday')}
-                      value={money(figures.dueToday, currency)}
-                      tone="warning"
-                    />
-                    <Row label={t('dueLater')} value={money(figures.dueLater, currency)} />
-                  </dl>
-                </div>
-                <div>
-                  <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                    {t('aging')}
-                  </h2>
-                  <dl className="space-y-2 text-sm">
-                    <Row label={t('agingCurrent')} value={money(figures.aging.current, currency)} />
-                    <Row
-                      label={t('aging1to30')}
-                      value={money(figures.aging.days1to30, currency)}
-                      tone="warning"
-                    />
-                    <Row
-                      label={t('aging31to60')}
-                      value={money(figures.aging.days31to60, currency)}
-                      tone="danger"
-                    />
-                    <Row
-                      label={t('aging61to90')}
-                      value={money(figures.aging.days61to90, currency)}
-                      tone="danger"
-                    />
-                    <Row
-                      label={t('agingOver90')}
-                      value={money(figures.aging.over90, currency)}
-                      tone="danger"
-                    />
-                  </dl>
-                </div>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
+          <TabsContent value="invoices">
+            <InvoicesTable {...props} money={money} />
+          </TabsContent>
 
-      {/* ── Statement / invoices / payments ─────────────────────────────── */}
-      <Tabs value={tab} onValueChange={setTab} className={cn(card, 'p-3 sm:p-4')}>
-        <p className="mb-2 hidden text-base font-bold print:block">{t('statementTitle')}</p>
-        <div className="mb-3 space-y-3 print:hidden">
-          <HubTabs
-            label={t('groupsLabel')}
-            items={CUSTOMER_GROUPS.map((id) => ({ id, label: t(`groups.${id}`) }))}
-            active={group}
-            // Opening a group opens its first part.
-            onSelect={(next) => setTab(CUSTOMER_TAB_GROUPS[next][0])}
-          />
-          <SegmentedControl
-            branch
-            label={t('groupsLabel')}
-            options={CUSTOMER_TAB_GROUPS[group].map((value) => ({
-              value,
-              label: t(TAB_LABEL[value]),
-            }))}
-            value={tab as (typeof CUSTOMER_TAB_GROUPS)[CustomerTabGroup][number]}
-            onChange={setTab}
-          />
-        </div>
+          <TabsContent value="payments">
+            <PaymentsTable {...props} money={money} />
+            {/* The money held BEFORE the invoice: advances this customer paid on an
+                order, with what is left of each and the two actions that move it. */}
+            <CustomerDepositsPanel customerId={customer.id} formatDate={props.formatDate} />
+          </TabsContent>
 
-        <TabsContent value="statement">
-          <Statement {...props} money={money} />
-        </TabsContent>
+          <TabsContent value="activity">
+            <Activity {...props} money={money} />
+          </TabsContent>
 
-        <TabsContent value="invoices">
-          <InvoicesTable {...props} money={money} />
-        </TabsContent>
+          <TabsContent value="insights">
+            <CustomerInsightsPanel
+              customerId={customer.id}
+              formatMoney={(value) => money(value)}
+              formatDate={props.formatDate}
+            />
+          </TabsContent>
 
-        <TabsContent value="payments">
-          <PaymentsTable {...props} money={money} />
-          {/* The money held BEFORE the invoice: advances this customer paid on an
-              order, with what is left of each and the two actions that move it. */}
-          <CustomerDepositsPanel customerId={customer.id} formatDate={props.formatDate} />
-        </TabsContent>
+          <TabsContent value="accounting">
+            <CustomerAccountingPanel
+              customerId={customer.id}
+              formatMoney={(value) => money(value)}
+              formatDate={props.formatDate}
+              onOpenInvoice={props.onOpenInvoice}
+            />
+          </TabsContent>
 
-        <TabsContent value="activity">
-          <Activity {...props} money={money} />
-        </TabsContent>
+          <TabsContent value="account">
+            <CustomerProfilePanel customerId={customer.id} formatMoney={(value) => money(value)} />
+            <CustomerPortalPanel customerId={customer.id} />
+          </TabsContent>
 
-        <TabsContent value="insights">
-          <CustomerInsightsPanel
-            customerId={customer.id}
-            formatMoney={(value) => money(value)}
-            formatDate={props.formatDate}
-          />
-        </TabsContent>
+          <TabsContent value="crm">
+            <CustomerCrmPanel customerId={customer.id} formatMoney={(value) => money(value)} />
+          </TabsContent>
 
-        <TabsContent value="accounting">
-          <CustomerAccountingPanel
-            customerId={customer.id}
-            formatMoney={(value) => money(value)}
-            formatDate={props.formatDate}
-            onOpenInvoice={props.onOpenInvoice}
-          />
-        </TabsContent>
+          <TabsContent value="history">{props.history}</TabsContent>
+        </Tabs>
+      </div>
 
-        <TabsContent value="account">
-          <CustomerProfilePanel customerId={customer.id} formatMoney={(value) => money(value)} />
-          <CustomerPortalPanel customerId={customer.id} />
-        </TabsContent>
-
-        <TabsContent value="crm">
-          <CustomerCrmPanel customerId={customer.id} formatMoney={(value) => money(value)} />
-        </TabsContent>
-
-        <TabsContent value="history">{props.history}</TabsContent>
-      </Tabs>
+      {/* ── 8. The phone's action bar — the two money actions within thumb
+          reach, stuck to the bottom of the scroll. ────────────────────────── */}
+      <div className="order-9 sticky bottom-0 z-10 flex gap-2.5 bg-gradient-to-t from-[hsl(var(--surface-base))] via-[hsl(var(--surface-base)/0.92)] to-transparent px-0.5 pb-[calc(10px+env(safe-area-inset-bottom))] pt-3 md:hidden print:hidden">
+        <button
+          type="button"
+          onClick={props.onNewInvoice}
+          className={cn(primaryBtn, 'min-h-11 flex-1', showReceipt && 'flex-[1.35]')}
+        >
+          <FilePlus2 className="size-4" aria-hidden="true" />
+          {t('newInvoice')}
+        </button>
+        {showReceipt && (
+          <button
+            type="button"
+            onClick={props.onOpenPayment}
+            className={cn(outlineBtn, 'min-h-11 flex-1 bg-[hsl(var(--surface-elevated))]')}
+          >
+            <DollarSign className="size-4" aria-hidden="true" />
+            {t('recordReceipt')}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
 
 type Money = (value: number, currency?: string) => string
+
+/**
+ * The aging picture as one stacked bar — each bucket's share of what is owed.
+ * Decorative: the labelled rows below carry every figure, so the bar is hidden
+ * from assistive tech and adds no numbers of its own.
+ */
+function AgingBar({ figures }: { figures: PartySummary }) {
+  const a = figures.aging
+  const parts = [
+    { value: a.current, cls: 'bg-[hsl(var(--color-success))]' },
+    { value: a.days1to30, cls: 'bg-[hsl(var(--color-warning))]' },
+    { value: a.days31to60, cls: 'bg-[hsl(var(--color-destructive)/0.85)]' },
+    { value: a.days61to90, cls: 'bg-[hsl(var(--color-destructive)/0.6)]' },
+    { value: a.over90, cls: 'bg-[hsl(var(--color-destructive))]' },
+  ]
+  const total =
+    Math.max(0, a.current) +
+    Math.max(0, a.days1to30) +
+    Math.max(0, a.days31to60) +
+    Math.max(0, a.days61to90) +
+    Math.max(0, a.over90)
+  if (total <= 0) return null
+  return (
+    <div aria-hidden="true" className="flex h-2.5 gap-0.5 overflow-hidden rounded-full">
+      {parts
+        .filter((part) => part.value > 0)
+        .map((part, index) => (
+          <span
+            key={index}
+            className={cn('h-full', part.cls)}
+            style={{ width: `${(part.value / total) * 100}%` }}
+          />
+        ))}
+    </div>
+  )
+}
 
 function Statement(props: CustomerDetailViewProps & { money: Money }) {
   const t = useTranslations('customer360')
@@ -880,7 +1109,7 @@ function Statement(props: CustomerDetailViewProps & { money: Money }) {
             <button
               type="button"
               onClick={props.onExport}
-              className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+              className="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 text-sm text-[hsl(var(--fg-secondary))] transition-colors motion-reduce:transition-none hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
             >
               <Download className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">{t('exportStatement')}</span>

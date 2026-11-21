@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>موکاپ بازطراحی — پرونده مشتری (حسابچه)</title>
+<style>
+@font-face{font-family:'Vazirmatn';src:url('fonts/Vazirmatn-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Vazirmatn';src:url('fonts/Vazirmatn-Bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
+
+/* ── توکن‌های رسمی packages/design-tokens (v3.1) ── */
+:root{
+  --color-primary:165 75% 51%; --color-primary-fg:210 40% 8%; --color-primary-light:166 76% 63%;
+  --color-success:142 72% 38%; --color-warning:38 92% 50%; --color-destructive:0 84% 60%;
+  --surface-base:210 33% 9%; --surface-muted:206 28% 15%; --surface-elevated:207 30% 12%;
+  --fg-primary:165 35% 97%; --fg-secondary:168 15% 65%; --fg-tertiary:168 10% 56%;
+  --border-default:206 26% 19%; --border-strong:206 26% 26%;
+  --radius-md:10px; --radius-lg:16px;
+}
+[data-theme="light"]{
+  --surface-base:40 16% 97%; --surface-muted:40 12% 94%; --surface-elevated:0 0% 100%;
+  --fg-primary:220 18% 13%; --fg-secondary:220 9% 40%; --fg-tertiary:220 7% 40%;
+  --border-default:40 10% 88%; --border-strong:40 10% 79%;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif;background:hsl(var(--surface-base));color:hsl(var(--fg-primary));line-height:1.6;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit}
+svg.ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── نوار ابزار موکاپ (در اسکرین‌شات‌ها پنهان است) ── */
+#toolbar{position:fixed;top:12px;left:12px;z-index:99;display:flex;align-items:center;gap:4px;background:hsl(var(--surface-elevated)/.92);border:1px solid hsl(var(--border-default));border-radius:999px;padding:5px 8px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#toolbar button{font-size:12px;padding:4px 10px;border-radius:999px;color:hsl(var(--fg-secondary))}
+#toolbar button.on{background:hsl(var(--color-primary)/.15);color:hsl(var(--color-primary));font-weight:700}
+#toolbar .sep{width:1px;height:18px;background:hsl(var(--border-default));margin:0 4px}
+#toolbar .tag{font-size:11px;color:hsl(var(--fg-tertiary));padding-inline-end:6px}
+body.clean #toolbar{display:none}
+
+#frame{container-type:inline-size;container-name:frame;max-width:1440px;margin:0 auto}
+body.framed{background:hsl(var(--surface-muted))}
+body.framed #frame{outline:1px dashed hsl(var(--border-strong));outline-offset:-1px;min-height:100vh;background:hsl(var(--surface-base))}
+body.clean #frame{outline:none}
+
+/* ── کارت پایه ── */
+.card{background:hsl(var(--surface-elevated));border:1px solid hsl(var(--border-default));border-radius:var(--radius-lg);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+/* ── چیدمان: موبایل (پایه) ── */
+.page{display:flex;flex-direction:column;gap:14px;padding:14px 14px 20px;max-width:1360px;margin:0 auto}
+.rail{display:contents}
+.identity{order:1}.balance{order:2}.kpis{order:3}.aging{order:4}.maincol{order:5}
+.actions{display:none}
+.mobilebar{order:6;display:flex;gap:10px;position:sticky;bottom:0;padding:10px 2px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,hsl(var(--surface-base)) 70%,transparent)}
+
+/* ── هویت ── */
+.identity{padding:14px}
+.id-top{display:flex;align-items:center;gap:12px}
+.back-btn{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:hsl(var(--fg-secondary));flex-shrink:0}
+.back-btn:hover{background:hsl(var(--surface-muted))}
+.avatar{width:48px;height:48px;border-radius:999px;background:hsl(var(--color-primary)/.14);color:hsl(var(--color-primary));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0}
+.id-name{min-width:0;flex:1}
+.id-name h1{font-size:17px;font-weight:700;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.id-name .sub{font-size:11px;color:hsl(var(--fg-tertiary))}
+.id-more-wrap{position:relative;flex-shrink:0}
+.id-more{width:36px;height:36px;border-radius:999px;border:1px solid hsl(var(--border-default));display:flex;align-items:center;justify-content:center;color:hsl(var(--fg-secondary));flex-shrink:0}
+.id-contact{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12.5px;color:hsl(var(--fg-secondary))}
+.id-contact span{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.id-contact .ic{width:14px;height:14px;color:hsl(var(--fg-tertiary))}
+.id-meta{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:10px;padding-top:10px;border-top:1px solid hsl(var(--border-default)/.6);font-size:11px;color:hsl(var(--fg-tertiary))}
+.id-meta b{color:hsl(var(--fg-secondary));font-weight:400}
+.menu{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;min-width:190px;background:hsl(var(--surface-elevated));border:1px solid hsl(var(--border-default));border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:6px;display:none}
+.menu.open{display:block}
+.menu button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;font-size:13px;color:hsl(var(--fg-secondary));text-align:start}
+.menu button:hover{background:hsl(var(--surface-muted));color:hsl(var(--fg-primary))}
+.menu button.danger{color:hsl(var(--color-destructive))}
+.menu hr{border:none;border-top:1px solid hsl(var(--border-default));margin:5px 4px}
+
+/* ── مانده‌ی خالص — قهرمان صفحه ── */
+.balance{overflow:hidden}
+.bal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid hsl(var(--border-default))}
+.bal-head h2{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:hsl(var(--fg-secondary))}
+.bal-head .ic{color:hsl(var(--color-primary))}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.chip.red{background:hsl(var(--color-destructive)/.12);color:hsl(var(--color-destructive))}
+.chip.green{background:hsl(var(--color-success)/.12);color:hsl(var(--color-success))}
+.chip.amber{background:hsl(var(--color-warning)/.14);color:hsl(var(--color-warning))}
+.chip.blue{background:hsl(var(--color-primary)/.12);color:hsl(var(--color-primary))}
+.bal-body{padding:16px}
+.bal-figure{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bal-figure .amount{font-size:30px;font-weight:700;color:hsl(var(--color-destructive));letter-spacing:-.5px}
+.bal-figure .unit{font-size:12px;color:hsl(var(--fg-tertiary))}
+.bal-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.bal-split .cell{background:hsl(var(--surface-muted)/.55);border-radius:12px;padding:9px 12px}
+.bal-split .lbl{font-size:10.5px;color:hsl(var(--fg-tertiary));display:flex;align-items:center;gap:5px}
+.bal-split .val{font-size:14.5px;font-weight:700;margin-top:2px}
+.dot{width:7px;height:7px;border-radius:999px;display:inline-block;flex-shrink:0}
+.dot.red{background:hsl(var(--color-destructive))}.dot.amber{background:hsl(var(--color-warning))}.dot.green{background:hsl(var(--color-success))}
+.due-strip{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid hsl(var(--border-default))}
+.due-strip .cell{padding:10px 12px;border-inline-start:1px solid hsl(var(--border-default))}
+.due-strip .cell:first-child{border-inline-start:none}
+.due-strip .lbl{font-size:10px;color:hsl(var(--fg-tertiary));display:flex;align-items:center;gap:5px;white-space:nowrap}
+.due-strip .val{font-size:12.5px;font-weight:700;margin-top:3px}
+.due-strip .val.red{color:hsl(var(--color-destructive))}
+.due-strip .val.amber{color:hsl(var(--color-warning))}
+
+/* ── شاخص‌ها ── */
+.kpis{padding:14px}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:hsl(var(--surface-muted)/.45);border:1px solid hsl(var(--border-default)/.6);border-radius:12px;padding:10px 12px;min-width:0}
+.kpi .lbl{font-size:11px;color:hsl(var(--fg-tertiary));display:flex;align-items:center;gap:5px}
+.kpi .lbl .ic{width:13px;height:13px;color:hsl(var(--color-primary))}
+.kpi .val{font-size:15px;font-weight:700;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi .hint{font-size:10px;color:hsl(var(--fg-tertiary));margin-top:2px}
+.kpi.danger{background:hsl(var(--color-destructive)/.07);border-color:hsl(var(--color-destructive)/.16)}
+.kpi.danger .val{color:hsl(var(--color-destructive))}
+.kpi.danger .lbl .ic{color:hsl(var(--color-destructive))}
+
+/* ── سنّ مطالبات ── */
+.aging{padding:14px 16px}
+.aging h2{font-size:13px;font-weight:700;color:hsl(var(--fg-secondary));margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.aging h2 .ic{color:hsl(var(--color-primary))}
+.age-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;gap:2px}
+.age-bar span{height:100%}
+.age-rows{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-top:12px}
+.age-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;min-width:0}
+.age-row .k{display:flex;align-items:center;gap:6px;color:hsl(var(--fg-secondary));min-width:0}
+.age-row .v{font-weight:700;font-size:11.5px;white-space:nowrap}
+
+/* ── کنش‌ها ── */
+.actions{align-items:center;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border-radius:999px;padding:0 18px;font-size:13.5px;font-weight:700;transition:filter .15s,background .15s}
+.btn.primary{background:hsl(var(--color-primary));color:hsl(var(--color-primary-fg));box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.outline{border:1px solid hsl(var(--border-default));color:hsl(var(--fg-secondary));font-weight:400;background:hsl(var(--surface-elevated))}
+.btn.outline:hover{background:hsl(var(--surface-muted));color:hsl(var(--fg-primary))}
+.btn.icon{width:40px;padding:0;border:1px solid hsl(var(--border-default));color:hsl(var(--fg-secondary));background:hsl(var(--surface-elevated))}
+.btn.icon:hover{background:hsl(var(--surface-muted))}
+.actions .grow{flex:1}
+.mobilebar .btn{flex:1;min-height:46px;font-size:14px}
+.mobilebar .btn.primary{flex:1.35}
+
+/* ── تب‌ها ── */
+.tabs-card{padding:14px}
+.groups{display:flex;gap:6px;margin-bottom:10px}
+.groups button{font-size:12.5px;font-weight:700;padding:5px 14px;border-radius:999px;color:hsl(var(--fg-tertiary))}
+.groups button.on{background:hsl(var(--color-primary)/.13);color:hsl(var(--color-primary))}
+.seg-wrap{overflow-x:auto;scrollbar-width:none;margin-bottom:12px}
+.seg-wrap::-webkit-scrollbar{display:none}
+.segmented{display:inline-flex;gap:2px;background:hsl(var(--surface-muted));border-radius:999px;padding:4px;min-width:100%}
+.segmented button{flex:1;white-space:nowrap;font-size:12.5px;padding:6px 14px;border-radius:999px;color:hsl(var(--fg-secondary))}
+.segmented button.on{background:hsl(var(--surface-elevated));color:hsl(var(--fg-primary));font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.tab-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search{display:flex;align-items:center;gap:7px;flex:1;min-width:150px;background:hsl(var(--surface-muted)/.7);border:1px solid hsl(var(--border-default)/.7);border-radius:999px;padding:0 12px;height:36px;color:hsl(var(--fg-tertiary))}
+.search input{border:none;background:none;outline:none;color:hsl(var(--fg-primary));font-size:12.5px;width:100%}
+.search input::placeholder{color:hsl(var(--fg-tertiary))}
+.filter{height:36px;border-radius:999px;border:1px solid hsl(var(--border-default));background:hsl(var(--surface-elevated));color:hsl(var(--fg-secondary));font-size:12px;padding:0 12px}
+.tool-btn{display:inline-flex;align-items:center;gap:6px;height:36px;border-radius:999px;border:1px solid hsl(var(--border-default));padding:0 12px;font-size:12px;color:hsl(var(--fg-secondary));background:hsl(var(--surface-elevated))}
+.tool-btn:hover{background:hsl(var(--surface-muted))}
+
+/* ── جدول گردش حساب ── */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{font-size:11px;font-weight:400;color:hsl(var(--fg-tertiary));text-align:start;padding:8px 10px;border-bottom:1px solid hsl(var(--border-default));white-space:nowrap}
+.tbl td{padding:11px 10px;border-bottom:1px solid hsl(var(--border-default)/.5);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover{background:hsl(var(--surface-muted)/.4)}
+.tbl .end{text-align:end}
+.tbl .ref{color:hsl(var(--color-primary));font-weight:700;white-space:nowrap}
+.tbl .bal-pos{color:hsl(var(--color-destructive));font-weight:700}
+.tbl .muted{color:hsl(var(--fg-tertiary))}
+.kind{display:inline-flex;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.kind.sale{background:hsl(var(--color-primary)/.12);color:hsl(var(--color-primary))}
+.kind.in{background:hsl(var(--color-success)/.13);color:hsl(var(--color-success))}
+.kind.ret{background:hsl(var(--color-warning)/.14);color:hsl(var(--color-warning))}
+.kind.out{background:hsl(var(--color-destructive)/.1);color:hsl(var(--color-destructive))}
+.opening{display:flex;justify-content:space-between;gap:10px;padding:10px 10px 0;font-size:12px;color:hsl(var(--fg-secondary))}
+.totals{margin-top:18px}
+.totals h3{font-size:12.5px;font-weight:700;margin-bottom:8px}
+.tbl-scroll{overflow-x:auto}
+.totals .tbl td,.totals .tbl th{padding:8px 10px}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;font-size:12px;color:hsl(var(--fg-secondary))}
+.pager .btn{min-height:34px;font-size:12px;padding:0 14px}
+.placeholder{padding:44px 16px;text-align:center;font-size:13px;color:hsl(var(--fg-tertiary))}
+
+/* ── کارت‌های گردش حساب (موبایل) ── */
+.statement-cards{display:flex;flex-direction:column;gap:8px}
+.tx{border:1px solid hsl(var(--border-default)/.7);border-radius:12px;padding:10px 12px;background:hsl(var(--surface-muted)/.3)}
+.tx-top{display:flex;align-items:center;gap:8px}
+.tx-top .ref{color:hsl(var(--color-primary));font-weight:700;font-size:12.5px}
+.tx-top .date{margin-inline-start:auto;font-size:11px;color:hsl(var(--fg-tertiary));white-space:nowrap}
+.tx-bottom{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:7px}
+.tx-amt{display:flex;align-items:baseline;gap:6px}
+.tx-amt .a{font-size:15px;font-weight:700}
+.tx-amt .a.credit{color:hsl(var(--color-success))}
+.tx-amt .l{font-size:10px;color:hsl(var(--fg-tertiary))}
+.tx-bal{font-size:11px;color:hsl(var(--fg-tertiary))}
+.tx-bal b{color:hsl(var(--color-destructive));font-weight:700;font-size:12px}
+.more-rows{align-self:center;margin-top:4px;font-size:12px;color:hsl(var(--fg-secondary));border:1px solid hsl(var(--border-default));border-radius:999px;padding:7px 18px;background:hsl(var(--surface-elevated))}
+.statement-table{display:none}
+
+/* ── فاکتورها ── */
+#panel-invoices{display:none}
+.status{display:inline-flex;border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.status.pending{background:hsl(var(--color-warning)/.14);color:hsl(var(--color-warning))}
+.status.paid{background:hsl(var(--color-success)/.13);color:hsl(var(--color-success))}
+.status.late{background:hsl(var(--color-destructive)/.1);color:hsl(var(--color-destructive))}
+
+/* ══ آیپد و بزرگ‌تر ══ */
+@container frame (min-width:768px){
+  .page{gap:16px;padding:20px 22px 28px}
+  .actions{display:flex;order:1}
+  .mobilebar{display:none}
+  .identity{padding:18px 20px}
+  .id-name h1{font-size:20px}
+  .avatar{width:54px;height:54px;font-size:19px}
+  .id-contact{font-size:13px}
+  .bal-body{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .bal-figure .amount{font-size:36px}
+  .bal-split{margin-top:0;min-width:300px;flex:1;max-width:420px}
+  .kpi-grid{grid-template-columns:repeat(4,1fr)}
+  .kpi .val{font-size:16px}
+  .age-rows{grid-template-columns:repeat(5,1fr);gap:10px}
+  .age-row{flex-direction:column;align-items:flex-start;gap:3px;background:hsl(var(--surface-muted)/.4);border-radius:10px;padding:8px 10px}
+  .age-row .v{font-size:12.5px}
+  .tabs-card{padding:18px}
+  .statement-table{display:block}
+  .statement-cards{display:none}
+  .tbl{font-size:13px}
+  .segmented{min-width:0}
+  .segmented button{flex:0 0 auto}
+}
+
+/* ══ دسکتاپ: دو ستون — ریل چسبان + محتوای اصلی ══ */
+@container frame (min-width:1200px){
+  .page{display:grid;grid-template-columns:344px minmax(0,1fr);grid-template-rows:auto 1fr;grid-template-areas:"rail actions" "rail main";gap:18px;align-items:start;padding:24px}
+  .rail{display:grid;gap:16px;grid-area:rail;position:sticky;top:24px}
+  .rail>*{order:0}
+  .actions{grid-area:actions}
+  .maincol{grid-area:main;min-width:0;align-self:stretch;display:flex;flex-direction:column}
+  .tabs-card{flex:1}
+  .identity{padding:18px}
+  .id-name h1{font-size:17px;white-space:normal}
+  .bal-body{display:block}
+  .bal-figure .amount{font-size:29px}
+  .bal-split{margin-top:14px;max-width:none;min-width:0}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .age-rows{grid-template-columns:1fr;gap:7px}
+  .age-row{flex-direction:row;align-items:center;background:none;padding:0;border-radius:0}
+  .age-row .v{font-size:12px}
+  .due-strip .val{font-size:12px}
+  .tabs-card{padding:20px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* تم روشن: سطح‌های کم‌رنگ‌تر روی سفید خوانا باشند */
+[data-theme="light"] .kpi{background:hsl(var(--surface-muted)/.8);border-color:hsl(var(--border-default))}
+[data-theme="light"] .bal-split .cell{background:hsl(var(--surface-muted)/.8)}
+[data-theme="light"] .tx{background:hsl(var(--surface-muted)/.6)}
+@container frame (max-width:1199px){[data-theme="light"] .age-row{background:hsl(var(--surface-muted)/.8)}}
+[data-theme="light"] .search{background:hsl(var(--surface-muted));border-color:hsl(var(--border-strong))}
+[data-theme="light"] .btn.icon,[data-theme="light"] .tool-btn,[data-theme="light"] .filter{border-color:hsl(var(--border-strong))}
+</style>
+</head>
+<body>
+
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-fileplus" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 18v-6"/></symbol>
+  <symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 8.5 4.5L12 11 3.5 6.5 12 2Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/><path d="m3.5 17.5 8.5 4.5 8.5-4.5"/></symbol>
+</svg>
+
+<div id="toolbar">
+  <span class="tag">موکاپ بازطراحی · داده‌ی نمونه</span>
+  <button data-w="390">موبایل ۳۹۰</button>
+  <button data-w="834">آیپد ۸۳۴</button>
+  <button data-w="1440" class="on">دسکتاپ ۱۴۴۰</button>
+  <button data-w="full">تمام‌عرض</button>
+  <span class="sep"></span>
+  <button id="theme-btn">تم روشن</button>
+</div>
+
+<div id="frame">
+<main class="page">
+
+  <div class="rail">
+
+    <!-- هویت مشتری -->
+    <section class="card identity">
+      <div class="id-top">
+        <button class="back-btn" aria-label="بازگشت به فهرست مشتریان"><svg class="ic" style="width:20px;height:20px"><use href="#i-back"/></svg></button>
+        <div class="avatar">آت</div>
+        <div class="id-name">
+          <h1>شرکت بازرگانی آریا تجارت</h1>
+          <div class="sub">پرونده مشتری · کد ۱۰۲۴</div>
+        </div>
+        <div class="id-more-wrap">
+          <button class="id-more" id="more-btn" aria-label="بیشتر" aria-haspopup="menu">
+            <svg class="ic"><use href="#i-more"/></svg>
+          </button>
+          <div class="menu" id="more-menu" role="menu">
+            <button role="menuitem"><svg class="ic"><use href="#i-printer"/></svg>چاپ / PDF صورت‌حساب</button>
+            <button role="menuitem"><svg class="ic"><use href="#i-download"/></svg>خروجی صورت‌حساب</button>
+            <hr>
+            <button role="menuitem" class="danger"><svg class="ic"><use href="#i-trash"/></svg>حذف طرف حساب</button>
+          </div>
+        </div>
+      </div>
+      <div class="id-contact">
+        <span><svg class="ic"><use href="#i-phone"/></svg><span dir="ltr" class="num">۰۹۱۲ ۳۴۵ ۶۷۸۹</span></span>
+        <span><svg class="ic"><use href="#i-mail"/></svg><span dir="ltr">info@ariya-tejarat.ir</span></span>
+        <span><svg class="ic"><use href="#i-pin"/></svg>تهران، بازار بزرگ</span>
+      </div>
+      <div class="id-meta">
+        <span>آخرین فروش: <b class="num">۱۴۰۵/۰۸/۲۵</b></span>
+        <span>آخرین دریافت: <b class="num">۱۴۰۵/۰۸/۲۸</b></span>
+      </div>
+    </section>
+
+    <!-- مانده‌ی خالص — عدد اصلی صفحه -->
+    <section class="card balance" aria-labelledby="bal-title">
+      <div class="bal-head">
+        <h2 id="bal-title"><svg class="ic"><use href="#i-scale"/></svg>مانده‌ی خالص حساب</h2>
+        <span class="chip red">به ما بدهکار است</span>
+      </div>
+      <div class="bal-body">
+        <div class="bal-figure">
+          <span class="amount num">۴۸۲٬۵۰۰٬۰۰۰</span>
+          <span class="unit">تومان</span>
+        </div>
+        <div class="bal-split">
+          <div class="cell">
+            <div class="lbl"><span class="dot red"></span>مطالبات از مشتری</div>
+            <div class="val num">۵۱۲٬۰۰۰٬۰۰۰</div>
+          </div>
+          <div class="cell">
+            <div class="lbl"><span class="dot green"></span>بدهی ما به مشتری</div>
+            <div class="val num">۲۹٬۵۰۰٬۰۰۰</div>
+          </div>
+        </div>
+      </div>
+      <div class="due-strip">
+        <div class="cell">
+          <div class="lbl"><span class="dot red"></span>سررسید گذشته</div>
+          <div class="val red num">۲۱۵٬۰۰۰٬۰۰۰</div>
+        </div>
+        <div class="cell">
+          <div class="lbl"><span class="dot amber"></span>سررسید امروز</div>
+          <div class="val amber num">۴۵٬۰۰۰٬۰۰۰</div>
+        </div>
+        <div class="cell">
+          <div class="lbl"><span class="dot green"></span>سررسید آینده</div>
+          <div class="val num">۲۵۲٬۰۰۰٬۰۰۰</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- شاخص‌های پشتیبان -->
+    <section class="card kpis">
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="lbl"><svg class="ic"><use href="#i-trend"/></svg>کل فروش</div>
+          <div class="val num" title="۱٬۸۴۰٬۰۰۰٬۰۰۰">۱٬۸۴۰٬۰۰۰٬۰۰۰</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl"><svg class="ic"><use href="#i-wallet"/></svg>کل دریافت</div>
+          <div class="val num">۱٬۳۲۸٬۰۰۰٬۰۰۰</div>
+        </div>
+        <div class="kpi danger">
+          <div class="lbl"><svg class="ic"><use href="#i-alert"/></svg>سررسید گذشته</div>
+          <div class="val num">۲۱۵٬۰۰۰٬۰۰۰</div>
+          <div class="hint">۳ سررسیدگذشته</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl"><svg class="ic"><use href="#i-receipt"/></svg>فاکتورهای باز</div>
+          <div class="val num">۷</div>
+          <div class="hint">از ۴۲ فاکتور</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- سنّ مطالبات -->
+    <section class="card aging">
+      <h2><svg class="ic"><use href="#i-clock"/></svg>وضعیت سررسید مطالبات</h2>
+      <div class="age-bar" role="img" aria-label="جاری ۲۹۷ میلیون، ۱ تا ۳۰ روز ۸۵ میلیون، ۳۱ تا ۶۰ روز ۶۰ میلیون، ۶۱ تا ۹۰ روز ۳۰ میلیون، بیش از ۹۰ روز ۴۰ میلیون تومان">
+        <span style="width:58%;background:hsl(var(--color-success))"></span>
+        <span style="width:16.6%;background:hsl(var(--color-warning))"></span>
+        <span style="width:11.7%;background:hsl(var(--color-destructive)/.85)"></span>
+        <span style="width:5.9%;background:hsl(var(--color-destructive)/.6)"></span>
+        <span style="width:7.8%;background:hsl(var(--color-destructive))"></span>
+      </div>
+      <div class="age-rows">
+        <div class="age-row"><span class="k"><span class="dot green"></span>جاری</span><span class="v num">۲۹۷٬۰۰۰٬۰۰۰</span></div>
+        <div class="age-row"><span class="k"><span class="dot amber"></span>۱ تا ۳۰ روز</span><span class="v num">۸۵٬۰۰۰٬۰۰۰</span></div>
+        <div class="age-row"><span class="k"><span class="dot red" style="opacity:.85"></span>۳۱ تا ۶۰ روز</span><span class="v num">۶۰٬۰۰۰٬۰۰۰</span></div>
+        <div class="age-row"><span class="k"><span class="dot red" style="opacity:.6"></span>۶۱ تا ۹۰ روز</span><span class="v num">۳۰٬۰۰۰٬۰۰۰</span></div>
+        <div class="age-row"><span class="k"><span class="dot red"></span>بیش از ۹۰ روز</span><span class="v num">۴۰٬۰۰۰٬۰۰۰</span></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- کنش‌های اصلی (دسکتاپ و آیپد) -->
+  <div class="actions">
+    <button class="btn primary"><svg class="ic"><use href="#i-fileplus"/></svg>فاکتور جدید</button>
+    <button class="btn outline"><svg class="ic"><use href="#i-banknote"/></svg>ثبت دریافت</button>
+    <span class="grow"></span>
+    <button class="btn icon" aria-label="چاپ / PDF صورت‌حساب" title="چاپ / PDF صورت‌حساب"><svg class="ic"><use href="#i-printer"/></svg></button>
+    <button class="btn icon" aria-label="خروجی صورت‌حساب" title="خروجی صورت‌حساب"><svg class="ic"><use href="#i-download"/></svg></button>
+  </div>
+
+  <div class="maincol">
+    <section class="card tabs-card">
+      <div class="groups" role="tablist" aria-label="بخش‌های مشتری">
+        <button class="on" data-group="money">مالی</button>
+        <button data-group="relationship">رابطه</button>
+      </div>
+      <div class="seg-wrap">
+        <div class="segmented" id="segmented" role="tablist"></div>
+      </div>
+
+      <!-- گردش حساب -->
+      <div id="panel-statement">
+        <div class="tab-toolbar">
+          <label class="search"><svg class="ic"><use href="#i-search"/></svg><input type="search" placeholder="جستجو در گردش حساب…" aria-label="جستجو در گردش حساب"></label>
+          <select class="filter" aria-label="نوع">
+            <option>همه‌ی انواع</option><option>فروش</option><option>دریافت</option><option>برگشت</option>
+          </select>
+          <button class="tool-btn"><svg class="ic"><use href="#i-download"/></svg><span class="tool-label">خروجی صورت‌حساب</span></button>
+        </div>
+
+        <div class="statement-table">
+          <table class="tbl">
+            <thead><tr>
+              <th>تاریخ</th><th>نوع</th><th>شماره</th>
+              <th class="end">بدهکار</th><th class="end">بستانکار</th><th class="end">مانده</th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۲۸</td><td><span class="kind in">دریافت</span></td><td class="ref">رسید #۱۲۰۴</td><td class="end muted">—</td><td class="end num">۵۰٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۴۸۲٬۵۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۲۵</td><td><span class="kind sale">فروش</span></td><td class="ref">فاکتور #۱۰۸۷</td><td class="end num">۱۲۰٬۰۰۰٬۰۰۰</td><td class="end muted">—</td><td class="end num bal-pos">۵۳۲٬۵۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۲۰</td><td><span class="kind in">دریافت</span></td><td class="ref">رسید #۱۱۹۸</td><td class="end muted">—</td><td class="end num">۸۰٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۴۱۲٬۵۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۱۵</td><td><span class="kind sale">فروش</span></td><td class="ref">فاکتور #۱۰۷۲</td><td class="end num">۹۵٬۰۰۰٬۰۰۰</td><td class="end muted">—</td><td class="end num bal-pos">۴۹۲٬۵۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۱۰</td><td><span class="kind ret">برگشت</span></td><td class="ref">مرجوعی #۳۴</td><td class="end muted">—</td><td class="end num">۱۲٬۵۰۰٬۰۰۰</td><td class="end num bal-pos">۳۹۷٬۵۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۸/۰۵</td><td><span class="kind sale">فروش</span></td><td class="ref">فاکتور #۱۰۶۱</td><td class="end num">۱۴۰٬۰۰۰٬۰۰۰</td><td class="end muted">—</td><td class="end num bal-pos">۴۱۰٬۰۰۰٬۰۰۰</td></tr>
+              <tr><td class="num muted">۱۴۰۵/۰۷/۲۸</td><td><span class="kind in">دریافت</span></td><td class="ref">رسید #۱۱۸۵</td><td class="end muted">—</td><td class="end num">۱۰۰٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۲۷۰٬۰۰۰٬۰۰۰</td></tr>
+            </tbody>
+          </table>
+          <div class="opening"><span>مانده‌ی پیش از این دوره</span><span class="num">۳۷۰٬۰۰۰٬۰۰۰</span></div>
+        </div>
+
+        <div class="statement-cards">
+          <div class="tx"><div class="tx-top"><span class="kind in">دریافت</span><span class="ref">رسید #۱۲۰۴</span><span class="date num">۱۴۰۵/۰۸/۲۸</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a credit num">۵۰٬۰۰۰٬۰۰۰</span><span class="l">بستانکار</span></span><span class="tx-bal">مانده <b class="num">۴۸۲٬۵۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="kind sale">فروش</span><span class="ref">فاکتور #۱۰۸۷</span><span class="date num">۱۴۰۵/۰۸/۲۵</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۱۲۰٬۰۰۰٬۰۰۰</span><span class="l">بدهکار</span></span><span class="tx-bal">مانده <b class="num">۵۳۲٬۵۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="kind in">دریافت</span><span class="ref">رسید #۱۱۹۸</span><span class="date num">۱۴۰۵/۰۸/۲۰</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a credit num">۸۰٬۰۰۰٬۰۰۰</span><span class="l">بستانکار</span></span><span class="tx-bal">مانده <b class="num">۴۱۲٬۵۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="kind sale">فروش</span><span class="ref">فاکتور #۱۰۷۲</span><span class="date num">۱۴۰۵/۰۸/۱۵</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۹۵٬۰۰۰٬۰۰۰</span><span class="l">بدهکار</span></span><span class="tx-bal">مانده <b class="num">۴۹۲٬۵۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="kind ret">برگشت</span><span class="ref">مرجوعی #۳۴</span><span class="date num">۱۴۰۵/۰۸/۱۰</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a credit num">۱۲٬۵۰۰٬۰۰۰</span><span class="l">بستانکار</span></span><span class="tx-bal">مانده <b class="num">۳۹۷٬۵۰۰٬۰۰۰</b></span></div></div>
+          <button class="more-rows">نمایش ردیف‌های بیشتر</button>
+        </div>
+
+        <div class="totals">
+          <h3>مجموع به تفکیک ارز</h3>
+          <div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr><th>ارز</th><th class="end">کل فروش</th><th class="end">کل دریافت</th><th class="end">مانده</th></tr></thead>
+            <tbody><tr><td>تومان</td><td class="end num">۱٬۸۴۰٬۰۰۰٬۰۰۰</td><td class="end num">۱٬۳۲۸٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۴۸۲٬۵۰۰٬۰۰۰</td></tr></tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- فاکتورها -->
+      <div id="panel-invoices">
+        <div class="tab-toolbar">
+          <label class="search"><svg class="ic"><use href="#i-search"/></svg><input type="search" placeholder="جستجو در فاکتورها…" aria-label="جستجو در فاکتورها"></label>
+        </div>
+        <div class="statement-table">
+          <table class="tbl">
+            <thead><tr><th>شماره</th><th>تاریخ</th><th>سررسید</th><th>وضعیت</th><th class="end">مبلغ</th><th class="end">پرداخت‌شده</th><th class="end">باقی‌مانده</th></tr></thead>
+            <tbody>
+              <tr><td class="ref">فروش #۱۰۸۷</td><td class="num muted">۱۴۰۵/۰۸/۲۵</td><td class="num muted">۱۴۰۵/۰۹/۲۵</td><td><span class="status pending">در انتظار</span></td><td class="end num">۱۲۰٬۰۰۰٬۰۰۰</td><td class="end num muted">۰</td><td class="end num bal-pos">۱۲۰٬۰۰۰٬۰۰۰</td></tr>
+              <tr><td class="ref">فروش #۱۰۷۲</td><td class="num muted">۱۴۰۵/۰۸/۱۵</td><td class="num muted">۱۴۰۵/۰۹/۱۵</td><td><span class="status pending">در انتظار</span></td><td class="end num">۹۵٬۰۰۰٬۰۰۰</td><td class="end num">۴۰٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۵۵٬۰۰۰٬۰۰۰</td></tr>
+              <tr><td class="ref">فروش #۱۰۶۱</td><td class="num muted">۱۴۰۵/۰۸/۰۵</td><td class="num muted">۱۴۰۵/۰۸/۲۰</td><td><span class="status late">سررسید گذشته</span></td><td class="end num">۱۴۰٬۰۰۰٬۰۰۰</td><td class="end num">۶۰٬۰۰۰٬۰۰۰</td><td class="end num bal-pos">۸۰٬۰۰۰٬۰۰۰</td></tr>
+              <tr><td class="ref">فروش #۱۰۴۳</td><td class="num muted">۱۴۰۵/۰۷/۲۰</td><td class="muted">—</td><td><span class="status paid">پرداخت‌شده</span></td><td class="end num">۸۵٬۰۰۰٬۰۰۰</td><td class="end num">۸۵٬۰۰۰٬۰۰۰</td><td class="end num muted">۰</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="statement-cards">
+          <div class="tx"><div class="tx-top"><span class="ref">فروش #۱۰۸۷</span><span class="status pending">در انتظار</span><span class="date num">۱۴۰۵/۰۸/۲۵</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۱۲۰٬۰۰۰٬۰۰۰</span><span class="l">مبلغ</span></span><span class="tx-bal">باقی‌مانده <b class="num">۱۲۰٬۰۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="ref">فروش #۱۰۷۲</span><span class="status pending">در انتظار</span><span class="date num">۱۴۰۵/۰۸/۱۵</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۹۵٬۰۰۰٬۰۰۰</span><span class="l">مبلغ</span></span><span class="tx-bal">باقی‌مانده <b class="num">۵۵٬۰۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="ref">فروش #۱۰۶۱</span><span class="status late">سررسید گذشته</span><span class="date num">۱۴۰۵/۰۸/۰۵</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۱۴۰٬۰۰۰٬۰۰۰</span><span class="l">مبلغ</span></span><span class="tx-bal">باقی‌مانده <b class="num">۸۰٬۰۰۰٬۰۰۰</b></span></div></div>
+          <div class="tx"><div class="tx-top"><span class="ref">فروش #۱۰۴۳</span><span class="status paid">پرداخت‌شده</span><span class="date num">۱۴۰۵/۰۷/۲۰</span></div><div class="tx-bottom"><span class="tx-amt"><span class="a num">۸۵٬۰۰۰٬۰۰۰</span><span class="l">مبلغ</span></span><span class="tx-bal">باقی‌مانده <b class="num" style="color:hsl(var(--fg-secondary))">۰</b></span></div></div>
+        </div>
+        <div class="pager">
+          <button class="btn outline" disabled style="opacity:.5">قبلی</button>
+          <span>صفحه‌ی ۱ از ۳</span>
+          <button class="btn outline">بعدی</button>
+        </div>
+      </div>
+
+      <!-- تب‌های طراحی‌نشده در موکاپ -->
+      <div id="panel-placeholder" style="display:none">
+        <p class="placeholder">این تب در موکاپ بازطراحی نشده است؛ ساختار و محتوای فعلی آن در پیاده‌سازی حفظ می‌شود.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- نوار کنش چسبان پایین (موبایل) -->
+  <div class="mobilebar">
+    <button class="btn primary"><svg class="ic"><use href="#i-fileplus"/></svg>فاکتور جدید</button>
+    <button class="btn outline"><svg class="ic"><use href="#i-banknote"/></svg>ثبت دریافت</button>
+  </div>
+
+</main>
+</div>
+
+<script>
+const GROUPS = {
+  money: [
+    {id:'statement', label:'گردش حساب'},
+    {id:'invoices', label:'فاکتورها'},
+    {id:'payments', label:'دریافت و پرداخت'},
+    {id:'accounting', label:'حسابداری'},
+  ],
+  relationship: [
+    {id:'activity', label:'فعالیت و کالاها'},
+    {id:'insights', label:'تحلیل'},
+    {id:'crm', label:'CRM'},
+    {id:'account', label:'اعتبار و مدارک'},
+    {id:'history', label:'تاریخچه‌ی تغییرات'},
+  ],
+};
+let group = 'money', tab = 'statement';
+const seg = document.getElementById('segmented');
+function renderTabs(){
+  seg.innerHTML = '';
+  for(const item of GROUPS[group]){
+    const b = document.createElement('button');
+    b.textContent = item.label;
+    b.setAttribute('role','tab');
+    if(item.id === tab) b.classList.add('on');
+    b.onclick = () => { tab = item.id; renderTabs(); showPanel(); };
+    seg.appendChild(b);
+  }
+}
+function showPanel(){
+  document.getElementById('panel-statement').style.display = tab === 'statement' ? '' : 'none';
+  document.getElementById('panel-invoices').style.display = tab === 'invoices' ? '' : 'none';
+  document.getElementById('panel-placeholder').style.display = (tab === 'statement' || tab === 'invoices') ? 'none' : '';
+}
+document.querySelectorAll('.groups button').forEach(b => {
+  b.onclick = () => {
+    group = b.dataset.group;
+    document.querySelectorAll('.groups button').forEach(x => x.classList.toggle('on', x === b));
+    tab = GROUPS[group][0].id;
+    renderTabs(); showPanel();
+  };
+});
+renderTabs(); showPanel();
+
+// منوی بیشتر
+const moreBtn = document.getElementById('more-btn'), moreMenu = document.getElementById('more-menu');
+moreBtn.onclick = e => { e.stopPropagation(); moreMenu.classList.toggle('open'); };
+document.addEventListener('click', () => moreMenu.classList.remove('open'));
+moreMenu.onclick = e => e.stopPropagation();
+
+// نوار ابزار موکاپ
+const frame = document.getElementById('frame');
+document.querySelectorAll('#toolbar [data-w]').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#toolbar [data-w]').forEach(x => x.classList.toggle('on', x === b));
+    const w = b.dataset.w;
+    if(w === 'full'){ frame.style.maxWidth = '1440px'; document.body.classList.remove('framed'); }
+    else { frame.style.maxWidth = w + 'px'; document.body.classList.add('framed'); }
+  };
+});
+const themeBtn = document.getElementById('theme-btn');
+themeBtn.onclick = () => {
+  const html = document.documentElement;
+  const light = html.dataset.theme !== 'light';
+  html.dataset.theme = light ? 'light' : 'dark';
+  themeBtn.textContent = light ? 'تم تاریک' : 'تم روشن';
+};
+if(new URLSearchParams(location.search).get('clean') === '1'){
+  document.body.classList.add('clean');
+  document.body.classList.remove('framed');
+  frame.style.maxWidth = '1440px';
+}
+</script>
+</body>
+</html>
