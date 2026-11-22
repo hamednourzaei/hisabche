@@ -1401,6 +1401,14 @@ export const onboardingProgressSchema = z
         storeSize: z.string().max(32).nullable().optional(),
         defaultCurrency: z.string().max(8).nullable().optional(),
         operating: operatingAnswersSchema.optional(),
+        // Forensic audit F-006/F-032/F-035 (22 Nov 2026): the explicit primary,
+        // the free-text note and the save time used to live only on the device,
+        // so a second device resumed a different primary and lost the note.
+        // Additive + optional: every draft written before this stays valid.
+        primaryTradeKey: z.string().max(64).nullable().optional(),
+        businessNote: z.string().max(2000).nullable().optional(),
+        /** Epoch ms of the save that produced this draft; recency reconciliation. */
+        savedAt: z.number().int().nonnegative().optional(),
       })
       .strict(),
   })

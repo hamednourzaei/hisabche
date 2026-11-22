@@ -16,14 +16,29 @@ import { sendFailure } from '../errors/http-failure'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { ContractsService } from '../services/contracts/contracts.service'
 
 const uuidParam = z.object({ id: z.string().uuid() })
 
 export async function contractsRoutes(fastify: FastifyInstance) {
   const service = new ContractsService()
-  const read = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
-  const write = [authenticate, requireWorkspaceContext, requireCapability('invoice.create')]
+  const read = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.read'),
+    // Contracts are a TRADE capability, not a core invoice feature. The
+    // customer hub already hides the section for a profile that does not ask
+    // for it; this makes the API refuse the same request, because a hidden tab
+    // is not authorization.
+    requireProfileCapability('contracts_recurring'),
+  ]
+  const write = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.create'),
+    requireProfileCapability('contracts_recurring'),
+  ]
 
   fastify.get(
     '/api/contracts',

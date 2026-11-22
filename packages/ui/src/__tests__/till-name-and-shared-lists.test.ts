@@ -134,20 +134,15 @@ describe('a till has a name — and only the name is editable', () => {
 })
 
 describe('lists that moved to the shared table', () => {
-  it('the customer page: statement, invoices, payments and products', () => {
+  it('the customer page: statement, invoices and payments', () => {
     const detail = ui('customers', 'customer-detail-view.tsx')
-    for (const id of [
-      'customer-statement',
-      'customer-invoices',
-      'customer-payments',
-      'customer-products',
-    ]) {
+    for (const id of ['customer-statement', 'customer-invoices', 'customer-payments']) {
       expect(detail, id).toContain(`tableId="${id}"`)
     }
     expect(detail).not.toContain('<table')
-    // The shared searchable table owns the search, so the four toolbars are
+    // The shared searchable table owns the search, so the three toolbars are
     // the same toolbar — and the page keeps no wrapper of its own.
-    expect(detail.split('<SearchableTable').length - 1).toBe(4)
+    expect(detail.split('<SearchableTable').length - 1).toBe(3)
     expect(detail).not.toContain('function DetailTable')
   })
 

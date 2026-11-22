@@ -102,8 +102,14 @@ describe('the invoice table', () => {
     // Owner request, 8 Nov 2026: status, branch and warehouse are one «فیلتر».
     expect(view.split('<TableFilterMenu').length - 1).toBe(1)
     expect(view).not.toContain('<TableFilterSelect')
-    expect(view).toContain('...(onBranchFilterChange && branches.length > 0')
-    expect(view).toContain('...(onWarehouseFilterChange && warehouses.length > 0')
+    // …and only while a handler and a choice exist. The advance group has no
+    // branch or warehouse of its own, so it does not offer them at all.
+    expect(view).toContain(
+      "...(typeFilter !== 'advances' && onBranchFilterChange && branches.length > 0",
+    )
+    expect(view).toMatch(
+      /\.\.\.\(typeFilter !== 'advances' &&\s*onWarehouseFilterChange &&\s*warehouses\.length > 0/,
+    )
     // Still ONE table.
     expect(view.split('<DataTable').length - 1).toBe(1)
   })

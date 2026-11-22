@@ -11,12 +11,15 @@ import {
   planServiceDelivery,
   planServiceDeliveryCancellation,
   planSessionStatusMove,
+  primaryAfterParticipantRemoval,
   type AttendanceDay,
   type PackageCreditEntry,
   type PackageCreditEntryType,
   type ServiceDeliverySession,
+  type ServiceDeliverySessionParticipant,
   type ServiceDeliverySettlementMethod,
   type ServiceDeliveryStatus,
+  type ServiceDeliverySubjectType,
 } from '@hisabche/validation'
 import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
@@ -29,6 +32,9 @@ interface ServiceDeliverySessionRow {
   id: string
   workspace_id: string
   customer_id: string
+  subject_type: string
+  employee_id: string | null
+  session_type: string | null
   service_offering_id: string
   practitioner_id: string | null
   branch_id: string | null
@@ -86,7 +92,12 @@ function rowToSession(row: ServiceDeliverySessionRow): ServiceDeliverySession {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
-    customerId: row.customer_id,
+    // SQLite keeps customer_id NOT NULL: '' is the employee-session marker,
+    // mapped back to null here so the domain never sees a fake customer id.
+    customerId: row.customer_id || null,
+    employeeId: row.employee_id,
+    subjectType: (row.subject_type as ServiceDeliverySubjectType) || 'customer',
+    sessionType: row.session_type,
     serviceOfferingId: row.service_offering_id,
     practitionerId: row.practitioner_id,
     branchId: row.branch_id,
@@ -105,6 +116,40 @@ function rowToSession(row: ServiceDeliverySessionRow): ServiceDeliverySession {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+interface ParticipantRow {
+  id: string
+  workspace_id: string
+  session_id: string
+  participant_type: string
+  customer_id: string | null
+  employee_id: string | null
+  created_at: string
+}
+
+function rowToParticipant(row: ParticipantRow): ServiceDeliverySessionParticipant {
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    sessionId: row.session_id,
+    participantType: row.participant_type as ServiceDeliverySubjectType,
+    customerId: row.customer_id,
+    employeeId: row.employee_id,
+    createdAt: row.created_at,
+  }
+}
+
+function participantsOf(
+  c: RouteHandlerContext,
+  sessionId: string,
+): ServiceDeliverySessionParticipant[] {
+  return c.db
+    .all<ParticipantRow>(
+      `SELECT * FROM service_delivery_session_participants WHERE session_id = ? AND workspace_id = ? ORDER BY created_at, id`,
+      [sessionId, c.ctx.workspaceId],
+    )
+    .map(rowToParticipant)
 }
 
 function rowToEntry(row: PackageCreditLedgerRow): PackageCreditEntry {
@@ -134,6 +179,7 @@ export function registerServiceDeliveryRoutes(router: Router): void {
   router.get('/service-delivery/sessions', (c: RouteHandlerContext) => {
     const date = c.query.date || c.query.sessionDate
     const customerId = c.query.customerId
+    const employeeId = c.query.employeeId
     const practitionerId = c.query.practitionerId
     const status = c.query.status
 
@@ -145,8 +191,14 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       params.push(String(date))
     }
     if (customerId) {
-      sql += ` AND customer_id = ?`
-      params.push(String(customerId))
+      // A customer «has» a session as primary OR participant: a group booking
+      // must not disappear from the customer's own list.
+      sql += ` AND (customer_id = ? OR id IN (SELECT session_id FROM service_delivery_session_participants WHERE customer_id = ? AND workspace_id = ?))`
+      params.push(String(customerId), String(customerId), c.ctx.workspaceId)
+    }
+    if (employeeId) {
+      sql += ` AND employee_id = ?`
+      params.push(String(employeeId))
     }
     if (practitionerId) {
       sql += ` AND practitioner_id = ?`
@@ -160,7 +212,9 @@ export function registerServiceDeliveryRoutes(router: Router): void {
     sql += ` ORDER BY session_date DESC, start_time DESC`
 
     const rows = c.db.all<ServiceDeliverySessionRow>(sql, params)
-    return { data: rows.map(rowToSession) }
+    return {
+      data: rows.map((row) => ({ ...rowToSession(row), participants: participantsOf(c, row.id) })),
+    }
   })
 
   // ─── 2. POST /service-delivery/sessions ────────────────────────
@@ -176,6 +230,12 @@ export function registerServiceDeliveryRoutes(router: Router): void {
     const durationMinutes = calculateSessionDurationMinutes(input.startTime, input.endTime)
     // A UUID, because the server's column is one: an id like `ses_123` would never sync.
     const id = input.id || randomUuid()
+    const isEmployee = input.subjectType === 'employee'
+    // SQLite's customer_id is NOT NULL: '' marks an employee session (rowToSession maps it back to null).
+    const primaryCustomerId = isEmployee ? '' : (input.customerId ?? '')
+    const extraCustomerIds = isEmployee
+      ? []
+      : input.customerIds.filter((cid) => cid !== primaryCustomerId)
 
     return c.db.transaction(() => {
       // The id is the idempotency key: the same request again is the same session.
@@ -185,26 +245,34 @@ export function registerServiceDeliveryRoutes(router: Router): void {
       )
       if (existing) {
         if (
-          existing.customer_id !== input.customerId ||
+          existing.customer_id !== primaryCustomerId ||
+          (existing.employee_id ?? null) !== (isEmployee ? (input.employeeId ?? null) : null) ||
           existing.service_offering_id !== input.serviceOfferingId ||
           existing.session_date !== input.sessionDate
         ) {
           throw new ConflictError('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
         }
-        return { __status: 200, __data: rowToSession(existing) }
+        // A retry completes any assignment the first attempt did not finish.
+        insertCustomerParticipants(c, id, extraCustomerIds)
+        const replayed = rowToSession(existing)
+        return { __status: 200, __data: { ...replayed, participants: participantsOf(c, id) } }
       }
 
       const now = new Date().toISOString()
       c.db.run(
         `INSERT INTO service_delivery_sessions (
-          id, workspace_id, customer_id, service_offering_id, practitioner_id, branch_id,
+          id, workspace_id, customer_id, subject_type, employee_id, session_type,
+          service_offering_id, practitioner_id, branch_id,
           session_date, start_time, end_time, duration_minutes, status, settlement_method,
           client_notes, internal_notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           c.ctx.workspaceId,
-          input.customerId,
+          primaryCustomerId,
+          input.subjectType,
+          isEmployee ? (input.employeeId ?? null) : null,
+          input.sessionType ?? null,
           input.serviceOfferingId,
           input.practitionerId || null,
           input.branchId || null,
@@ -221,21 +289,170 @@ export function registerServiceDeliveryRoutes(router: Router): void {
         ],
       )
 
+      // The primary person is in the relation too — one answer to «who is in
+      // this session». The id is derived from (session, person): a replay or
+      // the v37 backfill converges on the same row.
+      if (isEmployee) {
+        insertParticipant(c, {
+          id: `${id}:employee:${input.employeeId}`,
+          sessionId: id,
+          participantType: 'employee',
+          employeeId: input.employeeId ?? null,
+          createdAt: now,
+        })
+      } else {
+        insertParticipant(c, {
+          id: `${id}:customer:${primaryCustomerId}`,
+          sessionId: id,
+          participantType: 'customer',
+          customerId: primaryCustomerId,
+          createdAt: now,
+        })
+        insertCustomerParticipants(c, id, extraCustomerIds)
+      }
+
       const sessionRow = c.db.get<ServiceDeliverySessionRow>(
         `SELECT * FROM service_delivery_sessions WHERE id = ? AND workspace_id = ?`,
         [id, c.ctx.workspaceId],
       )
       if (!sessionRow) throw new Error('FAILED_TO_CREATE_SERVICE_DELIVERY_SESSION')
       const session = rowToSession(sessionRow)
+      const withParticipants = { ...session, participants: participantsOf(c, id) }
 
       if (c.headers?.['x-hisabche-queue'] === '1') {
-        // The shape the SERVER reads (camelCase) - the raw row was snake_case and the server refused it as empty.
-        enqueueSessionCommand(c, id, 'create', { ...session })
+        // The shape the SERVER reads (camelCase). customerIds travels with the
+        // create so the server names the same group in its own relation.
+        enqueueSessionCommand(c, id, 'create', {
+          ...withParticipants,
+          ...(isEmployee ? {} : { customerIds: input.customerIds }),
+        })
       }
 
-      return { __status: 201, __data: session }
+      return { __status: 201, __data: withParticipants }
     })
   })
+
+  // ─── 2b. POST /service-delivery/sessions/:id/participants ──────
+  // One person joins, offline. The server re-checks workspace and subject type
+  // when the command syncs; a person already in is a replay, not a second row.
+  router.post('/service-delivery/sessions/:id/participants', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+    const sessionId = c.params.id
+    if (!sessionId) throw new ValidationError('SESSION_ID_REQUIRED')
+    const body = (c.body || {}) as { customerId?: unknown; employeeId?: unknown }
+
+    return c.db.transaction(() => {
+      const sessionRow = c.db.get<ServiceDeliverySessionRow>(
+        `SELECT * FROM service_delivery_sessions WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+        [sessionId, c.ctx.workspaceId],
+      )
+      if (!sessionRow) throw new NotFoundError('Service delivery session', sessionId)
+      const subject = (sessionRow.subject_type as ServiceDeliverySubjectType) || 'customer'
+      const personId = subject === 'customer' ? body.customerId : body.employeeId
+      if (typeof personId !== 'string' || !personId) {
+        throw new ValidationError(
+          subject === 'customer' ? 'CUSTOMER_ID_REQUIRED' : 'EMPLOYEE_ID_REQUIRED',
+        )
+      }
+      const existing = participantsOf(c, sessionId).find((p) =>
+        subject === 'customer' ? p.customerId === personId : p.employeeId === personId,
+      )
+      if (existing) return { __status: 200, __data: { participant: existing, replayed: true } }
+
+      const participant: ServiceDeliverySessionParticipant = {
+        id: randomUuid(),
+        workspaceId: c.ctx.workspaceId,
+        sessionId,
+        participantType: subject,
+        ...(subject === 'customer' ? { customerId: personId } : { employeeId: personId }),
+        createdAt: new Date().toISOString(),
+      }
+      insertParticipant(c, {
+        id: participant.id,
+        sessionId,
+        participantType: subject,
+        ...(subject === 'customer' ? { customerId: personId } : { employeeId: personId }),
+        createdAt: participant.createdAt,
+      })
+      if (c.headers?.['x-hisabche-queue'] === '1') {
+        enqueueSessionCommand(c, `${sessionId}-participant-add-${personId}`, 'update', {
+          id: sessionId,
+          participantAdd:
+            subject === 'customer' ? { customerId: personId } : { employeeId: personId },
+        })
+      }
+      return { __status: 201, __data: { participant, replayed: false } }
+    })
+  })
+
+  // ─── 2c. DELETE /service-delivery/sessions/:id/participants/:participantId ───
+  // The primary leaving promotes the oldest remaining participant (the shared
+  // domain rule); the last person can never leave.
+  router.delete(
+    '/service-delivery/sessions/:id/participants/:participantId',
+    (c: RouteHandlerContext) => {
+      requireCapability(c.ctx, 'invoice.create')
+      const sessionId = c.params.id
+      const participantId = c.params.participantId
+      if (!sessionId || !participantId) throw new ValidationError('SESSION_ID_REQUIRED')
+
+      return c.db.transaction(() => {
+        const sessionRow = c.db.get<ServiceDeliverySessionRow>(
+          `SELECT * FROM service_delivery_sessions WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+          [sessionId, c.ctx.workspaceId],
+        )
+        if (!sessionRow) throw new NotFoundError('Service delivery session', sessionId)
+        const participants = participantsOf(c, sessionId)
+        const target = participants.find((p) => p.id === participantId)
+        if (!target) throw new NotFoundError('Session participant', participantId)
+
+        const subject = (sessionRow.subject_type as ServiceDeliverySubjectType) || 'customer'
+        const primaryPersonId =
+          subject === 'customer' ? sessionRow.customer_id || null : sessionRow.employee_id
+        const { nextPrimaryPersonId } = primaryAfterParticipantRemoval({
+          participants,
+          removedParticipantId: participantId,
+          primaryPersonId,
+        })
+        if (nextPrimaryPersonId === null)
+          throw new ConflictError('SESSION_PRIMARY_PARTICIPANT_REQUIRED')
+
+        c.db.run(
+          `DELETE FROM service_delivery_session_participants WHERE id = ? AND session_id = ? AND workspace_id = ?`,
+          [participantId, sessionId, c.ctx.workspaceId],
+        )
+        if (nextPrimaryPersonId !== primaryPersonId) {
+          if (subject === 'customer') {
+            c.db.run(
+              `UPDATE service_delivery_sessions SET customer_id = ?, updated_at = ? WHERE id = ? AND workspace_id = ?`,
+              [nextPrimaryPersonId, new Date().toISOString(), sessionId, c.ctx.workspaceId],
+            )
+          } else {
+            c.db.run(
+              `UPDATE service_delivery_sessions SET employee_id = ?, updated_at = ? WHERE id = ? AND workspace_id = ?`,
+              [nextPrimaryPersonId, new Date().toISOString(), sessionId, c.ctx.workspaceId],
+            )
+          }
+        }
+        if (c.headers?.['x-hisabche-queue'] === '1') {
+          enqueueSessionCommand(c, `${sessionId}-participant-remove-${participantId}`, 'update', {
+            id: sessionId,
+            participantRemove: { participantId },
+          })
+        }
+        const updated = c.db.get<ServiceDeliverySessionRow>(
+          `SELECT * FROM service_delivery_sessions WHERE id = ? AND workspace_id = ?`,
+          [sessionId, c.ctx.workspaceId],
+        )
+        return {
+          __status: 200,
+          __data: {
+            session: { ...rowToSession(updated!), participants: participantsOf(c, sessionId) },
+          },
+        }
+      })
+    },
+  )
 
   // ─── 3. POST /service-delivery/sessions/:id/deliver ─────────────
   router.post('/service-delivery/sessions/:id/deliver', (c: RouteHandlerContext) => {
@@ -567,6 +784,52 @@ function enqueueSessionCommand(
     workspaceId: c.ctx.workspaceId,
   })
   c.db.run(enqueue.sql, enqueue.params)
+}
+
+/** One assignment, idempotent: the unique index refuses a second row for the same person. */
+function insertParticipant(
+  c: RouteHandlerContext,
+  p: {
+    id: string
+    sessionId: string
+    participantType: ServiceDeliverySubjectType
+    customerId?: string | null | undefined
+    employeeId?: string | null | undefined
+    createdAt: string
+  },
+): void {
+  c.db.run(
+    `INSERT OR IGNORE INTO service_delivery_session_participants (
+       id, workspace_id, session_id, participant_type, customer_id, employee_id, created_at, created_by
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      p.id,
+      c.ctx.workspaceId,
+      p.sessionId,
+      p.participantType,
+      p.customerId ?? null,
+      p.employeeId ?? null,
+      p.createdAt,
+      c.ctx.userId ?? null,
+    ],
+  )
+}
+
+function insertCustomerParticipants(
+  c: RouteHandlerContext,
+  sessionId: string,
+  customerIds: readonly string[],
+): void {
+  const now = new Date().toISOString()
+  for (const customerId of customerIds) {
+    insertParticipant(c, {
+      id: `${sessionId}:customer:${customerId}`,
+      sessionId,
+      participantType: 'customer',
+      customerId,
+      createdAt: now,
+    })
+  }
 }
 
 function insertLedgerEntry(

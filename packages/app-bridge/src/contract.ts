@@ -137,6 +137,9 @@ export const localTableSchema = z.enum([
   'promotion',
   'package_credit_ledger',
   'service_delivery_sessions',
+  // v37 (M4.5): who is in a session — the pull writes it with the session,
+  // and an offline join/leave queues it with the session command.
+  'service_delivery_session_participants',
   // WP-19: courier deliveries with POD/COD/fleet data for offline dispatch
   'local_projects',
   'project_time_entries',

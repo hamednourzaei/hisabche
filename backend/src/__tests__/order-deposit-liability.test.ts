@@ -41,12 +41,16 @@ const state: {
 
 vi.mock('../db', () => ({
   supabase: {
-    from: () => ({
+    // The fake answers for EVERY table, but `state.inserted` counts the
+    // deposit rows only: the service now also writes the activity/audit rows
+    // that its event goes through, and those share this fake client. The
+    // assertion is still «exactly one deposit row was written».
+    from: (table: string) => ({
       insert: (values: Row) => ({
         select: () => ({
           single: async () => {
             if (state.insertError) return { data: null, error: state.insertError }
-            state.inserted.push(values)
+            if (table === 'order_deposits') state.inserted.push(values)
             const row = {
               ...values,
               id: 'dep-1',

@@ -20,6 +20,7 @@ import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { logBusinessEvent } from '../services/event-log.service'
+import { MAX_INDUSTRY_SELECTION } from '@hisabche/validation'
 import {
   operationalProfileOf,
   setOnboardingProgress,
@@ -30,7 +31,9 @@ import {
 } from '../services/workspace-profile'
 
 const putBody = z
-  .object({ businessTypes: z.array(z.string().trim().min(1).max(64)).min(1).max(12) })
+  .object({
+    businessTypes: z.array(z.string().trim().min(1).max(64)).min(1).max(MAX_INDUSTRY_SELECTION),
+  })
   .strict()
 
 // The DNA's own shape is checked by the service (operationalDnaSchema); here
@@ -47,6 +50,8 @@ function view(workspace: WorkspaceProfile) {
     partialCapabilities: profile.partialCapabilities,
     unsupported: profile.unsupported,
     diagnostics: profile.diagnostics,
+    unknownTypes: workspace.unknownTypes,
+    legacyTypes: workspace.legacyTypes,
   }
 }
 
@@ -139,7 +144,13 @@ export async function workspaceProfileRoutes(fastify: FastifyInstance) {
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        return reply.send(await setOnboardingProgress(request.tenancy.workspaceId, request.body))
+        return reply.send(
+          await setOnboardingProgress(
+            request.tenancy.workspaceId,
+            request.body,
+            request.tenancy.userId,
+          ),
+        )
       } catch (err) {
         return sendFailure(reply, request.log, err, 'Failed to store the onboarding progress')
       }

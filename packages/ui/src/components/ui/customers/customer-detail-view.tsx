@@ -16,7 +16,7 @@
 //
 // The money picture is unchanged in substance: net balance (sign is the
 // meaning), receivable/payable, what is owed by due date and by age, then the
-// nine parts in two groups. Two currencies are never added up.
+// four parts of the account. Two currencies are never added up.
 // ============================================
 
 import { KpiCard, valueFontClass } from '../kpi-card'
@@ -40,7 +40,7 @@ import {
   Scale,
   Trash2,
 } from 'lucide-react'
-import type { PartyActivity, PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
+import type { PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
 import { asList } from '@hisabche/api'
 import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 
@@ -54,16 +54,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../dropdown-menu'
-import { HubTabs } from '../hub-tabs'
 import { SegmentedControl } from '../segmented-control'
 import { Tabs, TabsContent } from '../tabs'
 import { PaymentModal } from './PaymentModal'
-import { CustomerCrmPanel } from '../crm/customer-crm-panel'
-import { CustomerProfilePanel } from './customer-profile-panel'
-import { CustomerPortalPanel } from './customer-portal-panel'
 import { CustomerDepositsPanel } from './customer-deposits-panel'
-import { CustomerAccountingPanel, CustomerInsightsPanel } from './customer-analysis-panels'
-import { translateOr } from '../../../lib/translate-or'
+import { CustomerAccountingPanel } from './customer-analysis-panels'
 
 export interface CustomerInvoiceRow {
   id: string
@@ -116,10 +111,6 @@ export interface CustomerDetailViewProps {
   deleteError?: string | null | undefined
   onOpenInvoice: (id: string) => void
   onExport: () => void
-  activity: PartyActivity | null
-  activityLoading: boolean
-  /** The record's audit trail, rendered by the container (RecordHistoryPanel). */
-  history: ReactNode
 }
 
 const card =
@@ -176,37 +167,22 @@ function initialsOf(name: string): string {
 const KNOWN_STATUS = new Set(['paid', 'pending', 'completed', 'cancelled', 'draft'])
 
 /**
- * The nine tabs of this page, in two groups — what was in a row of
- * nine is one of two tabs and a switch. The parts themselves are unchanged.
+ * The four parts of the customer's account, in one switch.
  *
- *   money          the account — صورت‌حساب · فاکتورها · پرداخت‌ها · حسابداری
- *   relationship   the customer — فعالیت · تحلیل · CRM · اعتبار و مدارک · تاریخچه
+ * This page used to carry a second group — رابطه — with five more parts
+ * (activity, insights, CRM, credit & documents, change history). The owner
+ * removed that whole group from this URL on 21 Nov 2026: this is the money
+ * page, and those views belong to their own screens.
  */
-export const CUSTOMER_TAB_GROUPS = {
-  money: ['statement', 'invoices', 'payments', 'accounting'],
-  relationship: ['activity', 'insights', 'crm', 'account', 'history'],
-} as const
-export type CustomerTabGroup = keyof typeof CUSTOMER_TAB_GROUPS
-const CUSTOMER_GROUPS: readonly CustomerTabGroup[] = ['money', 'relationship']
+export const CUSTOMER_TABS = ['statement', 'invoices', 'payments', 'accounting'] as const
+export type CustomerTab = (typeof CUSTOMER_TABS)[number]
 
-/** The label key of each part — the same words the nine tabs carried. */
-const TAB_LABEL = {
+/** The label key of each part. */
+const TAB_LABEL: Record<CustomerTab, string> = {
   statement: 'tabStatement',
   invoices: 'tabSales',
   payments: 'tabPayments',
   accounting: 'tabAccounting',
-  activity: 'tabActivity',
-  insights: 'tabInsights',
-  crm: 'tabCrm',
-  account: 'tabAccount',
-  history: 'tabHistory',
-} as const
-
-/** The group a part belongs to; an unknown value is the first group. */
-export function customerGroupOf(tab: string): CustomerTabGroup {
-  return (CUSTOMER_TAB_GROUPS.relationship as readonly string[]).includes(tab)
-    ? 'relationship'
-    : 'money'
 }
 
 function isKnown(currency: string): currency is KnownCurrency {
@@ -217,8 +193,7 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
   const t = useTranslations('customer360')
   const tc = useTranslations()
   const { customer, summary, locale } = props
-  const [tab, setTab] = useState('statement')
-  const group = customerGroupOf(tab)
+  const [tab, setTab] = useState<CustomerTab>('statement')
 
   // Print / «Save as PDF» prints the statement: switch to it, then print after the render.
   const printStatement = () => {
@@ -736,30 +711,22 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
         </button>
       </div>
 
-      {/* ── 7. Statement / invoices / payments / the relationship parts ───── */}
+      {/* ── 7. The account: statement, invoices, payments, accounting ─────── */}
       <div className="order-8 flex min-w-0 flex-col min-[1200px]:order-none min-[1200px]:col-start-2 min-[1200px]:row-start-2">
         <Tabs
           value={tab}
-          onValueChange={setTab}
+          onValueChange={(value) => setTab(value as CustomerTab)}
           className={cn(card, 'flex-1 p-3 sm:p-4 print:border-0 print:p-0 print:shadow-none')}
         >
           <p className="mb-2 hidden text-base font-bold print:block">{t('statementTitle')}</p>
-          <div className="mb-3 space-y-3 print:hidden">
-            <HubTabs
+          <div className="mb-3 print:hidden">
+            <SegmentedControl<CustomerTab>
               label={t('groupsLabel')}
-              items={CUSTOMER_GROUPS.map((id) => ({ id, label: t(`groups.${id}`) }))}
-              active={group}
-              // Opening a group opens its first part.
-              onSelect={(next) => setTab(CUSTOMER_TAB_GROUPS[next][0])}
-            />
-            <SegmentedControl
-              branch
-              label={t('groupsLabel')}
-              options={CUSTOMER_TAB_GROUPS[group].map((value) => ({
+              options={CUSTOMER_TABS.map((value) => ({
                 value,
                 label: t(TAB_LABEL[value]),
               }))}
-              value={tab as (typeof CUSTOMER_TAB_GROUPS)[CustomerTabGroup][number]}
+              value={tab}
               onChange={setTab}
             />
           </div>
@@ -779,18 +746,6 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
             <CustomerDepositsPanel customerId={customer.id} formatDate={props.formatDate} />
           </TabsContent>
 
-          <TabsContent value="activity">
-            <Activity {...props} money={money} />
-          </TabsContent>
-
-          <TabsContent value="insights">
-            <CustomerInsightsPanel
-              customerId={customer.id}
-              formatMoney={(value) => money(value)}
-              formatDate={props.formatDate}
-            />
-          </TabsContent>
-
           <TabsContent value="accounting">
             <CustomerAccountingPanel
               customerId={customer.id}
@@ -799,17 +754,6 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
               onOpenInvoice={props.onOpenInvoice}
             />
           </TabsContent>
-
-          <TabsContent value="account">
-            <CustomerProfilePanel customerId={customer.id} formatMoney={(value) => money(value)} />
-            <CustomerPortalPanel customerId={customer.id} />
-          </TabsContent>
-
-          <TabsContent value="crm">
-            <CustomerCrmPanel customerId={customer.id} formatMoney={(value) => money(value)} />
-          </TabsContent>
-
-          <TabsContent value="history">{props.history}</TabsContent>
         </Tabs>
       </div>
 
@@ -1320,141 +1264,6 @@ function Row({
       </dt>
       <dd className="font-medium tabular-nums text-[hsl(var(--fg-primary))]">{value}</dd>
     </div>
-  )
-}
-
-// One section, not two: how the last 12 months went and what they buy are the
-// same question about the same customer, so they share one card and one
-// divider — never two headings and two boxes repeating each other.
-function Activity(props: CustomerDetailViewProps & { money: Money }) {
-  const t = useTranslations('customer360')
-  const tc = useTranslations()
-  if (props.activityLoading) return <Empty text={tc('common.loading')} />
-  const monthly = props.activity?.monthly ?? []
-  const products = props.activity?.products ?? []
-  const peak = Math.max(0, ...monthly.map((m) => Math.max(m.sales, m.receipts)))
-
-  return (
-    <section
-      aria-label={t('tabActivity')}
-      className="overflow-hidden rounded-2xl border border-[hsl(var(--border-default))]"
-    >
-      <div className="p-3">
-        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('chartTitle')}</h3>
-          <p className="flex gap-4 text-xs text-[hsl(var(--fg-secondary))]">
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="size-2.5 rounded-sm bg-[hsl(var(--color-primary))]"
-              />
-              {t('chartSales')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="size-2.5 rounded-sm bg-[hsl(var(--color-success))]"
-              />
-              {t('chartReceipts')}
-            </span>
-          </p>
-        </div>
-        {peak === 0 ? (
-          <Empty text={t('chartEmpty')} />
-        ) : (
-          <div className="flex h-40 items-end gap-1.5 overflow-x-auto" role="list">
-            {monthly.map((m) => (
-              <div
-                key={m.month}
-                role="listitem"
-                aria-label={`${m.month}: ${t('chartSales')} ${props.money(m.sales)}, ${t('chartReceipts')} ${props.money(m.receipts)}`}
-                className="flex min-w-8 flex-1 flex-col items-center gap-1"
-              >
-                <div className="flex h-32 w-full items-end justify-center gap-0.5">
-                  <span
-                    className="w-2.5 rounded-t bg-[hsl(var(--color-primary))]"
-                    style={{ height: `${(m.sales / peak) * 100}%` }}
-                  />
-                  <span
-                    className="w-2.5 rounded-t bg-[hsl(var(--color-success))]"
-                    style={{ height: `${(m.receipts / peak) * 100}%` }}
-                  />
-                </div>
-                <span
-                  className="text-[0.625rem] tabular-nums text-[hsl(var(--fg-tertiary))]"
-                  dir="ltr"
-                >
-                  {m.month.slice(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-[hsl(var(--border-default))] p-3">
-        <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
-          {t('topProducts')}
-        </h3>
-        <SearchableTable
-          tableId="customer-products"
-          rows={products}
-          columns={[
-            {
-              id: 'name',
-              labelKey: 'customer360.colProduct',
-              labelFallback: t('colProduct'),
-              locked: true,
-              sortValue: (p) => p.name,
-              render: (p) => <span className="font-medium">{p.name}</span>,
-            },
-            {
-              id: 'quantity',
-              labelKey: 'customer360.colQuantity',
-              labelFallback: t('colQuantity'),
-              align: 'end',
-              sortValue: (p) => p.quantity,
-              render: (p) => (
-                <span className="tabular-nums">
-                  {formatNumber(p.quantity, props.locale)}{' '}
-                  {translateOr(tc, `unit.${p.unit}`, p.unit)}
-                </span>
-              ),
-            },
-            {
-              id: 'amount',
-              labelKey: 'customer360.colAmount',
-              labelFallback: t('colAmount'),
-              align: 'end',
-              sortValue: (p) => p.amount,
-              render: (p) => <span className="tabular-nums">{props.money(p.amount)}</span>,
-            },
-            {
-              id: 'invoices',
-              labelKey: 'customer360.colInvoices',
-              labelFallback: t('colInvoices'),
-              align: 'end',
-              showFrom: 'md',
-              sortValue: (p) => p.invoiceCount,
-              render: (p) => (
-                <span className="tabular-nums">{formatNumber(p.invoiceCount, props.locale)}</span>
-              ),
-            },
-            {
-              id: 'lastSold',
-              labelKey: 'customer360.colLastSold',
-              labelFallback: t('colLastSold'),
-              showFrom: 'md',
-              sortValue: (p) => p.lastSoldAt,
-              render: (p) => props.formatDate(p.lastSoldAt),
-            },
-          ]}
-          rowKey={(p) => p.productId ?? p.name}
-          words={(p) => [p.name]}
-          empty={t('noProducts')}
-        />
-      </div>
-    </section>
   )
 }
 

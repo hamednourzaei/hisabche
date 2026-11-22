@@ -34,6 +34,12 @@ export function requireProfileCapability(capability: CapabilityKey) {
 
     const workspace = await workspaceProfileOf(tenancy.workspaceId)
     if (!workspace.declared) return
+    // A generic trade says nothing about optional modules, so it is never
+    // restricted — the SAME rule the screens apply (`profile.isGeneric || …`).
+    // Before this, a generic profile resolved to zero capabilities, so adding a
+    // server-side guard would have locked a generic business out of a screen
+    // its own UI still showed.
+    if (workspace.profile.isGeneric) return
     if (workspace.profile.capabilities.includes(capability)) return
 
     return reply.status(403).send({

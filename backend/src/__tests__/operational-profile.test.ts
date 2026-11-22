@@ -15,6 +15,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 type DbError = { code?: string; message?: string } | null
 const state: {
   row: Record<string, unknown> | null
+  /** Per-table overrides (profiles activation read, workspaces recency read). */
+  rows: Record<string, Record<string, unknown> | null>
   readError: DbError
   rpcError: DbError
   rpcData: unknown
@@ -23,6 +25,7 @@ const state: {
   updateError: DbError
 } = {
   row: null,
+  rows: {},
   readError: null,
   rpcError: null,
   rpcData: null,
@@ -33,9 +36,14 @@ const state: {
 
 vi.mock('../db', () => ({
   supabase: {
-    from: () => ({
+    from: (table: string) => ({
       select: () => ({
-        eq: () => ({ maybeSingle: async () => ({ data: state.row, error: state.readError }) }),
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: table in state.rows ? state.rows[table] : state.row,
+            error: state.readError,
+          }),
+        }),
       }),
       update: (values: Record<string, unknown>) => ({
         eq: () => ({
@@ -61,6 +69,7 @@ const DNA = ARCHETYPE_PRESETS.NAIL_TECH_BEAUTY ?? Object.values(ARCHETYPE_PRESET
 
 beforeEach(() => {
   state.row = null
+  state.rows = {}
   state.readError = null
   state.rpcError = null
   state.rpcData = { version: 1, replayed: false }
@@ -78,6 +87,8 @@ describe('operationalProfileOf', () => {
       composition: null,
       version: 0,
       onboarding: null,
+      dnaInvalid: false,
+      onboardingInvalid: false,
     })
   })
 
@@ -86,7 +97,7 @@ describe('operationalProfileOf', () => {
     await expect(operationalProfileOf('ws')).rejects.toThrow()
   })
 
-  it('a stored value that no longer parses is reported as absent', async () => {
+  it('a stored value that no longer parses is reported as invalid, not silently absent', async () => {
     state.row = {
       operational_dna: { offering: 'x' },
       operational_dna_version: 3,
@@ -94,6 +105,7 @@ describe('operationalProfileOf', () => {
     }
     const view = await operationalProfileOf('ws')
     expect(view.dna).toBeNull()
+    expect(view.dnaInvalid).toBe(true)
     expect(view.version).toBe(3)
   })
 })
@@ -144,7 +156,7 @@ describe('setOnboardingProgress', () => {
       step: 2,
       answers: { businessType: 'barber', storeSize: null, defaultCurrency: 'AFN' },
     }
-    expect(await setOnboardingProgress('ws', progress)).toEqual(progress)
+    expect(await setOnboardingProgress('ws', progress, 'u1')).toEqual(progress)
     expect(state.updates).toEqual([{ onboarding_progress: progress }])
   })
 
@@ -154,8 +166,85 @@ describe('setOnboardingProgress', () => {
     { state: 'IN_PROGRESS', step: 1, answers: { secret: 'x' } },
     { state: 'IN_PROGRESS', step: 1, answers: {}, extra: true },
   ])('refuses %j without writing', async (bad) => {
-    await expect(setOnboardingProgress('ws', bad)).rejects.toThrow('ONBOARDING_PROGRESS_INVALID')
+    await expect(setOnboardingProgress('ws', bad, 'u1')).rejects.toThrow(
+      'ONBOARDING_PROGRESS_INVALID',
+    )
     expect(state.updates).toHaveLength(0)
+  })
+
+  // ─── Forensic remediation R1 (F-101/F-039) ───────────────────────────────
+
+  it('⚠️ a client cannot claim ACTIVE for an account the gate never completed', async () => {
+    state.rows['profiles'] = { onboarding_completed_at: null }
+    const progress = { state: 'ACTIVE' as const, step: 0, answers: {} }
+    await expect(setOnboardingProgress('ws', progress, 'u1')).rejects.toThrow(
+      'ONBOARDING_STATE_SERVER_ONLY',
+    )
+    expect(state.updates).toHaveLength(0)
+  })
+
+  it('⚠️ READY_TO_ACTIVATE is server-derived too', async () => {
+    state.rows['profiles'] = { onboarding_completed_at: null }
+    const progress = { state: 'READY_TO_ACTIVATE' as const, step: 5, answers: {} }
+    await expect(setOnboardingProgress('ws', progress, 'u1')).rejects.toThrow(
+      'ONBOARDING_STATE_SERVER_ONLY',
+    )
+    expect(state.updates).toHaveLength(0)
+  })
+
+  it('ACTIVE is recorded once the account IS activated', async () => {
+    state.rows['profiles'] = { onboarding_completed_at: '2026-11-22T00:00:00.000Z' }
+    const progress = { state: 'ACTIVE' as const, step: 0, answers: {} }
+    expect(await setOnboardingProgress('ws', progress, 'u1')).toEqual(progress)
+    expect(state.updates).toEqual([{ onboarding_progress: progress }])
+  })
+
+  it('⚠️ a strictly older draft never overwrites a newer one', async () => {
+    state.row = {
+      onboarding_progress: {
+        state: 'IN_PROGRESS',
+        step: 4,
+        answers: { savedAt: 2000 },
+      },
+    }
+    const older = {
+      state: 'IN_PROGRESS' as const,
+      step: 2,
+      answers: { savedAt: 1000 },
+    }
+    await expect(setOnboardingProgress('ws', older, 'u1')).rejects.toThrow(
+      'ONBOARDING_PROGRESS_STALE',
+    )
+    expect(state.updates).toHaveLength(0)
+  })
+
+  it('an equal-timestamp replay is idempotent, a newer draft wins', async () => {
+    state.row = {
+      onboarding_progress: {
+        state: 'IN_PROGRESS',
+        step: 4,
+        answers: { savedAt: 2000 },
+      },
+    }
+    const replay = { state: 'IN_PROGRESS' as const, step: 4, answers: { savedAt: 2000 } }
+    expect(await setOnboardingProgress('ws', replay, 'u1')).toEqual(replay)
+    const newer = { state: 'IN_PROGRESS' as const, step: 5, answers: { savedAt: 3000 } }
+    expect(await setOnboardingProgress('ws', newer, 'u1')).toEqual(newer)
+    expect(state.updates).toHaveLength(2)
+  })
+
+  it('the draft carries the note, the explicit primary and the save time', async () => {
+    const progress = {
+      state: 'IN_PROGRESS' as const,
+      step: 2,
+      answers: {
+        businessType: 'barber,grocery',
+        primaryTradeKey: 'barber',
+        businessNote: 'یک کسب‌وکار دو فعالیتی',
+        savedAt: 1234,
+      },
+    }
+    expect(await setOnboardingProgress('ws', progress, 'u1')).toEqual(progress)
   })
 
   it('operationalProfileOf returns the computed composition plan alongside stored DNA', async () => {

@@ -1429,15 +1429,24 @@ export interface PackageCreditLedgerItem {
   readonly createdAt: string
 }
 
-export function usePackageCreditBalance(customerId?: string, packageProductId?: string) {
+export function usePackageCreditBalance(
+  customerId?: string | null,
+  packageProductId?: string | null,
+) {
   const authReady = useAuthReady()
   return useQuery({
-    queryKey: universalCoreKeys.packageCredits(customerId, packageProductId),
+    queryKey: universalCoreKeys.packageCredits(
+      customerId ?? undefined,
+      packageProductId ?? undefined,
+    ),
     queryFn: async () => {
       const { data } = await apiClient.get<PackageCreditBalanceResponse>(
         '/package-credits/balance',
         {
-          params: { customerId, packageProductId },
+          params: {
+            customerId: customerId ?? undefined,
+            packageProductId: packageProductId ?? undefined,
+          },
         },
       )
       return data
@@ -1599,10 +1608,29 @@ export function useExpirePackageCredit() {
 
 // ─── Service Delivery Hooks (M4) ─────────────────────────────────
 
+export interface ServiceDeliverySessionParticipantItem {
+  id: string
+  workspaceId: string
+  sessionId: string
+  participantType: 'customer' | 'employee'
+  customerId?: string | null | undefined
+  employeeId?: string | null | undefined
+  createdAt: string
+}
+
 export interface ServiceDeliverySessionItem {
   id: string
   workspaceId: string
-  customerId: string
+  /** The primary customer; null for an employee session. */
+  customerId?: string | null | undefined
+  /** The primary employee subject; null for a customer session. */
+  employeeId?: string | null | undefined
+  /** Who the session is for; rows written before M4.5 read as customer. */
+  subjectType?: 'customer' | 'employee' | undefined
+  /** Free-text kind of session as the business names it. */
+  sessionType?: string | null | undefined
+  /** Everyone in the session, primary included (when the API loaded them). */
+  participants?: ServiceDeliverySessionParticipantItem[] | undefined
   serviceOfferingId: string
   practitionerId?: string | null | undefined
   branchId?: string | null | undefined
@@ -1629,6 +1657,7 @@ export interface ServiceDeliverySessionItem {
 export function useServiceDeliverySessions(filters?: {
   date?: string | undefined
   customerId?: string | undefined
+  employeeId?: string | undefined
   practitionerId?: string | undefined
   status?: string | undefined
 }) {
@@ -1650,7 +1679,15 @@ export function useCreateServiceDeliverySession() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
-      customerId: string
+      /** The primary customer (customer sessions). */
+      customerId?: string | null | undefined
+      /** Everyone in a customer session; the primary is included/deduplicated. */
+      customerIds?: readonly string[] | undefined
+      /** The subject of an employee session. */
+      employeeId?: string | null | undefined
+      subjectType?: 'customer' | 'employee' | undefined
+      /** Free-text kind of session, 1..120 chars after trim. */
+      sessionType?: string | null | undefined
       serviceOfferingId: string
       practitionerId?: string | null | undefined
       branchId?: string | null | undefined
@@ -1747,6 +1784,46 @@ export function useCancelServiceDeliverySession() {
         session: ServiceDeliverySessionItem
         reversalEntry: unknown | null
       }>(`/service-delivery/sessions/${id}/cancel`, { reason })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
+/** One person joins a session (M4.5). A person already in is a replay. */
+export function useAddServiceSessionParticipant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...body
+    }: {
+      id: string
+      customerId?: string | undefined
+      employeeId?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{
+        participant: ServiceDeliverySessionParticipantItem
+        replayed: boolean
+      }>(`/service-delivery/sessions/${id}/participants`, body)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: universalCoreKeys.all })
+    },
+  })
+}
+
+/** One person leaves; the primary leaving promotes the oldest remaining one. */
+export function useRemoveServiceSessionParticipant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, participantId }: { id: string; participantId: string }) => {
+      const { data } = await apiClient.delete<{ session: ServiceDeliverySessionItem }>(
+        `/service-delivery/sessions/${id}/participants/${participantId}`,
+      )
       return data
     },
     onSuccess: () => {

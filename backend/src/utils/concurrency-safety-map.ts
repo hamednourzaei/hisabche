@@ -1618,6 +1618,40 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       },
     ],
   },
+  {
+    // service-delivery-05: one person joins. The partial unique index refuses a
+    // second assignment of the same person; a retry reads the winner back.
+    routeFile: 'service-delivery.routes.ts',
+    route: 'POST /api/service-delivery/sessions/:id/participants',
+    mechanisms: ['unique-constraint', 'state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: 'async addParticipant(',
+      },
+      {
+        file: 'docs/service-delivery-05-session-subject-participants-migration.sql',
+        text: 'uq_sd_participant_customer',
+      },
+    ],
+  },
+  {
+    // service-delivery-05: the delete trigger promotes the oldest remaining
+    // participant when the primary leaves and refuses to remove the last one.
+    routeFile: 'service-delivery.routes.ts',
+    route: 'DELETE /api/service-delivery/sessions/:id/participants/:participantId',
+    mechanisms: ['db-function', 'state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/service-delivery/service-delivery.service.ts`,
+        text: 'async removeParticipant(',
+      },
+      {
+        file: 'docs/service-delivery-05-session-subject-participants-migration.sql',
+        text: 'SESSION_PRIMARY_PARTICIPANT_REQUIRED',
+      },
+    ],
+  },
 
   // ─── QA document business packs (10 Nov 2026) ──────────────────────────
   {

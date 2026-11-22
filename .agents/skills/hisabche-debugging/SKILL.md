@@ -1,0 +1,97 @@
+---
+name: hisabche-debugging
+description: Investigating a bug, a failing request, a 500, a crash, or behaviour that does not match expectations. Use before changing code in response to an error.
+---
+
+# Debugging
+
+## Error-first rule — binding, read this before the method below
+
+AGENTS.md §0.5 applies. When the task arrives as a failure, the failure chooses the first file:
+open the reported file/line — or the highest-confidence hit for the exact error string, symbol or
+stack frame — before anything else. Then expand one edge at a time
+(function → caller/dependency → data contract → test) and stop as soon as the cause is
+established. Debugging has no file-read budget, but «no budget» is not permission to read a
+domain; the repository index is for understanding what surrounds the failure, never for a tour.
+
+## Method
+
+1. **Reproduce** — get the actual error, status code, stack or log line.
+2. **Read around it** — the failing line is often not the cause.
+3. **Confirm the cause** before editing. State it in one sentence; if you can't,
+   you have not found it.
+4. **Smallest fix** at the root.
+5. **Regression test** that fails without the fix.
+6. **Verify**: targeted test → `pnpm type-check` → `pnpm test` → the affected build.
+
+Never mask an error with a fallback, a try/catch that swallows, or a UI guard
+that hides a broken request.
+
+## Cases from this codebase, and what they teach
+
+**A 500 that is really a 404.** Workflow actions returned 500 for "instance not
+found" because the service threw `DatabaseError` for client conditions, and the
+route mapped everything else to 500. _When a status code looks wrong, check the
+error class and the route's catch block._
+
+**A route that could never resolve.** The admin panel redirected to
+`/admin/login` while the page was at `/login` — `(admin)` is a Next.js route
+group, so the parentheses keep it out of the URL. `next build` prints the real
+routes. _Verify the URL a router actually produces._
+
+**A client that lost its privileges.** `42501` on insert while the boot log said
+`service_role`: `signInWithPassword` on the shared client had attached a user
+session in memory. The tell was that reads succeeded and writes failed. _When
+permissions differ between read and write on the same client, suspect the
+identity the client is using._
+
+**Text that would not translate.** Keys existed in the code but not in the
+catalogue, so `t('key', 'فارسی')` returned the fallback forever. _Check the data
+before changing the code._
+
+**A crash from one row.** `Avatar` called `.length` on a name typed `string` but
+absent at runtime, taking down the whole list. _Server data is optional whatever
+the type says._
+
+**A login that succeeds and bounces.** The admin page authenticated against the
+backend and got a JWT; `apps/admin/proxy.ts` authorizes from a Supabase cookie
+nobody had set, so it redirected to `/login` forever with no error. _When a
+redirect loop follows a successful sign-in, check that the thing issuing the
+credential and the thing checking it are the same system._
+
+**"Missing authorization header" on login.** `NEXT_PUBLIC_API_URL` lacked the
+`/api` suffix, so the request went to an unrelated protected route. _An auth
+error can be a routing error; print the URL that was actually requested._
+
+**A page whose `<head>` was perfect and whose `<body>` was empty.** `ssr: false`
+in the root layout. _Metadata is generated separately from the tree, so it keeps
+looking right while nothing renders. Inspect the rendered `<body>`._
+
+**A URL with `%20` in it.** Windows `set VAR=value && cmd` puts the space before
+`&&` inside the value. _Print the value, don't assume it._
+
+## Useful probes
+
+```bash
+# does this translation key exist?
+node -e "const m=require('./packages/i18n/messages/en/common.json');console.log(m.some?.key ?? 'MISSING')"
+
+# what does the page actually render? (grep -c counts lines; HTML is one line)
+export MSYS_NO_PATHCONV=1
+curl -s http://localhost:3039/fa/about | sed -n '/<body/,/<\/body>/p' | head -40
+
+# what routes does the app actually serve?
+cd apps/web && npx next build | grep -E '^[├└]'
+
+# is this module resolvable from mobile?
+cd apps/mobile && node -e "console.log(require.resolve('some-package'))"
+
+# what does the endpoint really return?
+curl -s -i -X POST http://127.0.0.1:10000/api/... -H 'Content-Type: application/json' -d '{}'
+```
+
+## Reporting
+
+Say what the cause was, not just what you changed. If you could not confirm the
+cause, say that too and give the evidence you do have — a confident wrong
+diagnosis costs more than an honest uncertain one.

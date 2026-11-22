@@ -227,10 +227,16 @@ function useRedirectGuard(currentLang: string) {
   // the server says the wizard never finished, a local «completed» is a
   // leftover (an older account, or a completion that never reached the
   // server) — it must not be allowed to skip the wizard.
+  //
+  // ⚠️ ONLY A FRESH ONLINE ANSWER MAY RESET (forensic audit F-108). Offline,
+  // `serverCompleted === false` can be a stale cached user; the offline-first
+  // rule (offline-onboarding.domain.ts) says a stale server answer must never
+  // take locally completed work away.
   useEffect(() => {
     if (!userId) return
     claimForUser(userId)
-    if (serverCompleted === false && useOnboardingStore.getState().isCompleted) {
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false
+    if (online && serverCompleted === false && useOnboardingStore.getState().isCompleted) {
       useOnboardingStore.getState().reset()
     }
   }, [userId, serverCompleted, claimForUser])

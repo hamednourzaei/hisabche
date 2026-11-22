@@ -20,6 +20,7 @@ import {
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { readClientRequestId } from '../utils/client-request'
 import { invalidateMoneyCaches } from '../utils/money-cache'
@@ -30,8 +31,21 @@ const isUuid = (v: string) => z.string().uuid().safeParse(v).success
 
 export async function repairRoutes(fastify: FastifyInstance) {
   const service = new RepairTicketService()
-  const read = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
-  const write = [authenticate, requireWorkspaceContext, requireCapability('invoice.create')]
+  const read = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.read'),
+    // A repair workflow is the `work_queue_sla` trade capability. The customer
+    // hub hides the part for a trade that does not use it; the API refuses it
+    // too, because a hidden tab is not authorization.
+    requireProfileCapability('work_queue_sla'),
+  ]
+  const write = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.create'),
+    requireProfileCapability('work_queue_sla'),
+  ]
 
   fastify.get(
     '/api/repair-tickets',

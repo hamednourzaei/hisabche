@@ -27,6 +27,7 @@ import {
 
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useActiveWorkspaceId } from './useRealtime'
 
 export interface WorkspaceProfileView {
   declared: boolean
@@ -34,6 +35,9 @@ export interface WorkspaceProfileView {
   businessTypes: string[]
   capabilities: string[]
   partialCapabilities: string[]
+  /** Stored values the registry does not recognise — reported, never hidden (F-018). */
+  unknownTypes: string[]
+  legacyTypes: string[]
 }
 
 export const workspaceProfileKeys = {
@@ -53,14 +57,20 @@ function parseView(value: unknown): WorkspaceProfileView | null {
     businessTypes: strings(record.businessTypes),
     capabilities: strings(record.capabilities),
     partialCapabilities: strings(record.partialCapabilities),
+    unknownTypes: strings(record.unknownTypes),
+    legacyTypes: strings(record.legacyTypes),
   }
 }
 
 export function useWorkspaceProfile() {
   const ready = useAuthReady()
+  // ⚠️ WORKSPACE-SCOPED KEY (forensic audit F-102). The profile belongs to one
+  // workspace; a workspace-agnostic key lets a cached answer leak across a
+  // switch. Same pattern as the dashboard/base-currency hooks.
+  const workspaceId = useActiveWorkspaceId()
   return useQuery({
-    queryKey: workspaceProfileKeys.all,
-    enabled: ready,
+    queryKey: [...workspaceProfileKeys.all, workspaceId],
+    enabled: ready && !!workspaceId,
     queryFn: async (): Promise<WorkspaceProfileView | null> => {
       const { data } = await apiClient.get('/workspace/profile')
       return parseView(data)
@@ -117,10 +127,31 @@ export interface OperationalProfileView {
   composition: CompositionPlan | null
   version: number
   onboarding: OnboardingProgress | null
+  /** A stored value exists but no longer parses — surfaced, never silent (F-099). */
+  dnaInvalid: boolean
+  onboardingInvalid: boolean
 }
 
 export const operationalProfileKeys = {
   all: ['workspace-operational-profile'] as const,
+}
+
+/**
+ * Structural boundary check for the composition (F-104). The server computes
+ * it from a validated DNA; a reply whose shape does not hold is refused to
+ * null instead of being cast into a typed object consumers would trust.
+ */
+function parseComposition(value: unknown): CompositionPlan | null {
+  if (typeof value !== 'object' || value === null) return null
+  const record = value as Record<string, unknown>
+  if (!operationalDnaSchema.safeParse(record.dna).success) return null
+  if (!Array.isArray(record.problems)) return null
+  if (!Array.isArray(record.requirements)) return null
+  if (!Array.isArray(record.gaps)) return null
+  if (!Array.isArray(record.nextQuestions)) return null
+  if (typeof record.plan !== 'object' || record.plan === null) return null
+  if (typeof record.presentation !== 'object' || record.presentation === null) return null
+  return value as CompositionPlan
 }
 
 function parseOperationalView(value: unknown): OperationalProfileView | null {
@@ -129,25 +160,24 @@ function parseOperationalView(value: unknown): OperationalProfileView | null {
   if (typeof record.configurable !== 'boolean') return null
   const dna = operationalDnaSchema.safeParse(record.dna)
   const onboarding = onboardingProgressSchema.safeParse(record.onboarding)
-  const rawComposition = record.composition
-  const composition =
-    rawComposition && typeof rawComposition === 'object'
-      ? (rawComposition as CompositionPlan)
-      : null
   return {
     configurable: record.configurable,
     dna: record.dna != null && dna.success ? dna.data : null,
-    composition,
+    composition: parseComposition(record.composition),
     version: typeof record.version === 'number' ? record.version : 0,
     onboarding: record.onboarding != null && onboarding.success ? onboarding.data : null,
+    dnaInvalid: record.dna != null && !dna.success,
+    onboardingInvalid: record.onboarding != null && !onboarding.success,
   }
 }
 
 export function useOperationalProfile() {
   const ready = useAuthReady()
+  // Workspace-scoped key — same rule as the business profile above (F-102).
+  const workspaceId = useActiveWorkspaceId()
   return useQuery({
-    queryKey: operationalProfileKeys.all,
-    enabled: ready,
+    queryKey: [...operationalProfileKeys.all, workspaceId],
+    enabled: ready && !!workspaceId,
     queryFn: async (): Promise<OperationalProfileView | null> => {
       const { data } = await apiClient.get('/workspace/operational-profile')
       return parseOperationalView(data)

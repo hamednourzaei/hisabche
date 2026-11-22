@@ -18,8 +18,10 @@ import {
   type AttendanceDay,
   type SessionStatusMove,
   type ServiceDeliverySession,
+  type ServiceDeliverySessionParticipant,
   type ServiceDeliverySettlementMethod,
   type ServiceDeliveryStatus,
+  type ServiceDeliverySubjectType,
 } from '@hisabche/validation'
 import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
@@ -29,7 +31,15 @@ import { logBusinessEvent } from '../event-log.service'
 
 export interface CreateSessionInput {
   id?: string | undefined
-  customerId: string
+  /** The primary customer (customer sessions). */
+  customerId?: string | null | undefined
+  /** Everyone in a customer session; the primary is included/deduplicated. */
+  customerIds?: readonly string[] | undefined
+  /** The subject of an employee session. Never a customer id. */
+  employeeId?: string | null | undefined
+  subjectType?: ServiceDeliverySubjectType | undefined
+  /** Free-text kind of session, trimmed, 1..120 chars. */
+  sessionType?: string | null | undefined
   serviceOfferingId: string
   practitionerId?: string | null | undefined
   branchId?: string | null | undefined
@@ -70,7 +80,10 @@ export interface DeliverSessionInput {
 interface ServiceDeliveryDbRow {
   id: string
   workspace_id: string
-  customer_id: string
+  customer_id: string | null
+  employee_id?: string | null
+  subject_type?: string | null
+  session_type?: string | null
   service_offering_id: string
   practitioner_id: string | null
   branch_id: string | null
@@ -98,6 +111,9 @@ function mapDbRowToSession(row: ServiceDeliveryDbRow): ServiceDeliverySession {
     id: row.id,
     workspaceId: row.workspace_id,
     customerId: row.customer_id,
+    employeeId: row.employee_id ?? null,
+    subjectType: (row.subject_type as ServiceDeliverySubjectType | null) ?? 'customer',
+    sessionType: row.session_type ?? null,
     serviceOfferingId: row.service_offering_id,
     practitionerId: row.practitioner_id,
     branchId: row.branch_id,
@@ -120,6 +136,28 @@ function mapDbRowToSession(row: ServiceDeliveryDbRow): ServiceDeliverySession {
   }
 }
 
+interface ParticipantDbRow {
+  id: string
+  workspace_id: string
+  session_id: string
+  participant_type: string
+  customer_id: string | null
+  employee_id: string | null
+  created_at: string
+}
+
+function mapDbRowToParticipant(row: ParticipantDbRow): ServiceDeliverySessionParticipant {
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    sessionId: row.session_id,
+    participantType: row.participant_type as ServiceDeliverySubjectType,
+    customerId: row.customer_id,
+    employeeId: row.employee_id,
+    createdAt: row.created_at,
+  }
+}
+
 export class ServiceDeliveryService {
   private readonly db: SupabaseClient
 
@@ -132,6 +170,7 @@ export class ServiceDeliveryService {
     filters?: {
       date?: string | undefined
       customerId?: string | undefined
+      employeeId?: string | undefined
       practitionerId?: string | undefined
       status?: string | undefined
     },
@@ -147,7 +186,24 @@ export class ServiceDeliveryService {
       .order('start_time', { ascending: false })
 
     if (filters?.date) query = query.eq('session_date', filters.date)
-    if (filters?.customerId) query = query.eq('customer_id', filters.customerId)
+    if (filters?.customerId) {
+      // A customer «has» a session when they are the primary OR a participant:
+      // a group booking must not disappear from the customer's own list.
+      const { data: memberRows, error: mErr } = await this.db
+        .from('service_delivery_session_participants')
+        .select('session_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('customer_id', filters.customerId)
+      if (mErr && mErr.code !== '42P01' && mErr.code !== 'PGRST205') {
+        throw new DatabaseError('Failed to read session participants', mErr)
+      }
+      const memberIds = [...new Set((memberRows ?? []).map((r) => r.session_id as string))]
+      query =
+        memberIds.length > 0
+          ? query.or(`customer_id.eq.${filters.customerId},id.in.(${memberIds.join(',')})`)
+          : query.eq('customer_id', filters.customerId)
+    }
+    if (filters?.employeeId) query = query.eq('employee_id', filters.employeeId)
     if (filters?.practitionerId) query = query.eq('practitioner_id', filters.practitionerId)
     if (filters?.status) query = query.eq('status', filters.status)
 
@@ -156,7 +212,32 @@ export class ServiceDeliveryService {
       throw new DatabaseError('Failed to fetch service delivery sessions', error)
     }
 
-    return (data ?? []).map(mapDbRowToSession)
+    const sessions = (data ?? []).map(mapDbRowToSession)
+    // One scoped read for the whole page, not one per session.
+    if (sessions.length > 0) {
+      const { data: participantRows, error: pErr } = await this.db
+        .from('service_delivery_session_participants')
+        .select('*')
+        .eq('workspace_id', ctx.workspaceId)
+        .in(
+          'session_id',
+          sessions.map((s) => s.id),
+        )
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+      if (pErr && pErr.code !== '42P01' && pErr.code !== 'PGRST205') {
+        throw new DatabaseError('Failed to read session participants', pErr)
+      }
+      const bySession = new Map<string, ServiceDeliverySessionParticipant[]>()
+      for (const row of participantRows ?? []) {
+        const participant = mapDbRowToParticipant(row)
+        const list = bySession.get(participant.sessionId) ?? []
+        list.push(participant)
+        bySession.set(participant.sessionId, list)
+      }
+      return sessions.map((s) => ({ ...s, participants: bySession.get(s.id) ?? [] }))
+    }
+    return sessions
   }
 
   async getById(ctx: TenancyContext, id: string): Promise<ServiceDeliverySession> {
@@ -174,12 +255,12 @@ export class ServiceDeliveryService {
     if (error) throw new DatabaseError('Failed to fetch service delivery session', error)
     if (!data) throw new NotFoundError(`Service delivery session not found: ${id}`)
 
-    return mapDbRowToSession(data)
+    const session = mapDbRowToSession(data)
+    return { ...session, participants: await this.participantsOf(ctx, id) }
   }
 
   async create(ctx: TenancyContext, input: CreateSessionInput): Promise<ServiceDeliverySession> {
     if (!ctx.workspaceId) throw new ValidationError('WORKSPACE_REQUIRED')
-    if (!input.customerId) throw new ValidationError('CUSTOMER_ID_REQUIRED')
     if (!input.serviceOfferingId) throw new ValidationError('SERVICE_OFFERING_ID_REQUIRED')
     if (!input.sessionDate) throw new ValidationError('SESSION_DATE_REQUIRED')
     if (!input.startTime || !input.endTime) throw new ValidationError('SESSION_TIMES_REQUIRED')
@@ -188,18 +269,61 @@ export class ServiceDeliveryService {
       throw new ValidationError('SESSION_MUST_START_SCHEDULED')
     }
 
+    // WHO the session is for — a real domain distinction, not a UI switch.
+    const subjectType: ServiceDeliverySubjectType = input.subjectType ?? 'customer'
+    let primaryCustomerId: string | null = null
+    let extraCustomerIds: string[] = []
+    if (subjectType === 'employee') {
+      if (!input.employeeId) throw new ValidationError('EMPLOYEE_ID_REQUIRED')
+      if (input.customerId || (input.customerIds && input.customerIds.length > 0)) {
+        throw new ValidationError('EMPLOYEE_SESSION_HAS_CUSTOMER')
+      }
+    } else {
+      const seen = new Set<string>()
+      const ids: string[] = []
+      for (const id of [input.customerId, ...(input.customerIds ?? [])]) {
+        if (typeof id === 'string' && id && !seen.has(id)) {
+          seen.add(id)
+          ids.push(id)
+        }
+      }
+      if (ids.length === 0) throw new ValidationError('CUSTOMER_ID_REQUIRED')
+      if (input.employeeId) throw new ValidationError('CUSTOMER_SESSION_HAS_EMPLOYEE')
+      primaryCustomerId = ids[0] ?? null
+      extraCustomerIds = ids.slice(1)
+    }
+
+    // Free text, trimmed; a blank label is not a label. The exact words are kept.
+    let sessionType: string | null = null
+    if (input.sessionType != null) {
+      const trimmed = input.sessionType.trim()
+      if (trimmed.length === 0) throw new ValidationError('SESSION_TYPE_REQUIRED')
+      if (trimmed.length > 120) throw new ValidationError('SESSION_TYPE_TOO_LONG')
+      sessionType = trimmed
+    }
+
     const durationMinutes = calculateSessionDurationMinutes(input.startTime, input.endTime)
     const newId = input.id || randomUUID()
 
     // The id is the idempotency key: the same request again is the same session, not a database error.
-    const replay = await this.findForReplay(ctx, newId, input)
-    if (replay) return replay
+    const replay = await this.findForReplay(ctx, newId, {
+      customerId: primaryCustomerId,
+      employeeId: subjectType === 'employee' ? (input.employeeId ?? null) : null,
+      serviceOfferingId: input.serviceOfferingId,
+      sessionDate: input.sessionDate,
+    })
+    if (replay) {
+      // A retried create completes any participant assignment the first attempt
+      // did not finish — each insert is idempotent on (session, customer).
+      await this.ensureAdditionalParticipants(ctx, newId, extraCustomerIds)
+      return this.getById(ctx, newId)
+    }
 
     const now = new Date().toISOString()
     const row: Record<string, unknown> = {
       id: newId,
       workspace_id: ctx.workspaceId,
-      customer_id: input.customerId,
+      customer_id: primaryCustomerId,
       service_offering_id: input.serviceOfferingId,
       practitioner_id: input.practitionerId ?? null,
       branch_id: input.branchId ?? null,
@@ -207,12 +331,21 @@ export class ServiceDeliveryService {
       // the same way before the migration.
       ...(input.resourceId ? { resource_id: input.resourceId } : {}),
       ...(input.departmentId ? { department_id: input.departmentId } : {}),
+      // service-delivery-05: named only when they differ from the historical
+      // shape, so a customer session with no type writes the pre-05 way too.
+      ...(subjectType === 'employee'
+        ? { subject_type: 'employee', employee_id: input.employeeId }
+        : {}),
+      ...(sessionType ? { session_type: sessionType } : {}),
       session_date: input.sessionDate,
       start_time: input.startTime,
       end_time: input.endTime,
       duration_minutes: durationMinutes,
       status: 'scheduled',
-      settlement_method: input.settlementMethod ?? 'package_credit',
+      // A BOOKING IS NOT A SETTLEMENT. Until the deliver action names a method,
+      // the row says `undecided`; defaulting to `package_credit` recorded a
+      // settlement nobody chose and made an un-delivered session look paid.
+      settlement_method: input.settlementMethod ?? 'undecided',
       client_notes: input.clientNotes ?? null,
       internal_notes: input.internalNotes ?? null,
       created_at: now,
@@ -230,21 +363,77 @@ export class ServiceDeliveryService {
       if ((error.message ?? '').includes('SERVICE_RESOURCE_BUSY')) {
         throw new ConflictError('SERVICE_RESOURCE_BUSY')
       }
+      // service-delivery-05's trigger: the primary person is not of this workspace.
+      if ((error.message ?? '').includes('PARTICIPANT_WORKSPACE_MISMATCH')) {
+        throw new ValidationError('PARTICIPANT_WORKSPACE_MISMATCH')
+      }
       // A twin request committed first: answer with the session it made.
       if (error.code === '23505') {
-        const winner = await this.findForReplay(ctx, newId, input)
-        if (winner) return winner
+        const winner = await this.findForReplay(ctx, newId, {
+          customerId: primaryCustomerId,
+          employeeId: subjectType === 'employee' ? (input.employeeId ?? null) : null,
+          serviceOfferingId: input.serviceOfferingId,
+          sessionDate: input.sessionDate,
+        })
+        if (winner) {
+          await this.ensureAdditionalParticipants(ctx, newId, extraCustomerIds)
+          return this.getById(ctx, newId)
+        }
       }
       throw new DatabaseError('Failed to create service delivery session', error)
     }
 
-    return mapDbRowToSession(data)
+    const created = mapDbRowToSession(data)
+    // The primary participant row is written by the database trigger; the rest
+    // are one idempotent insert each (a retry never assigns a person twice).
+    await this.ensureAdditionalParticipants(ctx, newId, extraCustomerIds)
+    // Only the FIRST write is an event: a replayed create returned above.
+    this.logSession(
+      ctx,
+      created.id,
+      'service_session_created',
+      `Service session booked: ${created.sessionDate} ${created.startTime}`,
+      {
+        serviceOfferingId: created.serviceOfferingId,
+        customerId: created.customerId ?? null,
+        employeeId: created.employeeId ?? null,
+        subjectType,
+        sessionType,
+        practitionerId: created.practitionerId ?? null,
+        participantCount: 1 + extraCustomerIds.length,
+      },
+    )
+    return this.getById(ctx, newId)
+  }
+
+  /** One idempotent insert per extra customer; a duplicate assignment is the answer, not an error. */
+  private async ensureAdditionalParticipants(
+    ctx: TenancyContext,
+    sessionId: string,
+    customerIds: readonly string[],
+  ): Promise<void> {
+    for (const customerId of customerIds) {
+      const { error } = await this.db.from('service_delivery_session_participants').insert({
+        workspace_id: ctx.workspaceId,
+        session_id: sessionId,
+        participant_type: 'customer',
+        customer_id: customerId,
+        created_by: ctx.userId ?? null,
+      })
+      if (!error || error.code === '23505') continue
+      throw this.failureOf(error, 'Failed to add session participant')
+    }
   }
 
   private async findForReplay(
     ctx: TenancyContext,
     id: string,
-    input: CreateSessionInput,
+    identity: {
+      customerId: string | null
+      employeeId: string | null
+      serviceOfferingId: string
+      sessionDate: string
+    },
   ): Promise<ServiceDeliverySession | null> {
     const { data, error } = await this.db
       .from('service_delivery_sessions')
@@ -256,13 +445,122 @@ export class ServiceDeliveryService {
     if (!data) return null
     const existing = mapDbRowToSession(data)
     if (
-      existing.customerId !== input.customerId ||
-      existing.serviceOfferingId !== input.serviceOfferingId ||
-      existing.sessionDate !== input.sessionDate
+      (existing.customerId ?? null) !== identity.customerId ||
+      (existing.employeeId ?? null) !== identity.employeeId ||
+      existing.serviceOfferingId !== identity.serviceOfferingId ||
+      existing.sessionDate !== identity.sessionDate
     ) {
       throw new ConflictError('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
     }
     return existing
+  }
+
+  /** Everyone in one session, primary included. Empty when the table is not there yet (pre-05). */
+  private async participantsOf(
+    ctx: TenancyContext,
+    sessionId: string,
+  ): Promise<ServiceDeliverySessionParticipant[]> {
+    const { data, error } = await this.db
+      .from('service_delivery_session_participants')
+      .select('*')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+    if (error && (error.code === '42P01' || error.code === 'PGRST205')) return []
+    if (error) throw new DatabaseError('Failed to read session participants', error)
+    return (data ?? []).map(mapDbRowToParticipant)
+  }
+
+  /**
+   * Add one person to a session. The person must be of the session's subject
+   * type and workspace (the database trigger is the authority); a person who is
+   * already in the session is a replay, not a second assignment.
+   */
+  async addParticipant(
+    ctx: TenancyContext,
+    sessionId: string,
+    input: { customerId?: string | undefined; employeeId?: string | undefined },
+  ): Promise<{ participant: ServiceDeliverySessionParticipant; replayed: boolean }> {
+    const session = await this.getById(ctx, sessionId)
+    const subject = session.subjectType ?? 'customer'
+    const personId = subject === 'customer' ? input.customerId : input.employeeId
+    if (!personId) {
+      throw new ValidationError(
+        subject === 'customer' ? 'CUSTOMER_ID_REQUIRED' : 'EMPLOYEE_ID_REQUIRED',
+      )
+    }
+    const existing = (session.participants ?? []).find((p) =>
+      subject === 'customer' ? p.customerId === personId : p.employeeId === personId,
+    )
+    if (existing) return { participant: existing, replayed: true }
+
+    const { data, error } = await this.db
+      .from('service_delivery_session_participants')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        session_id: sessionId,
+        participant_type: subject,
+        ...(subject === 'customer' ? { customer_id: personId } : { employee_id: personId }),
+        created_by: ctx.userId ?? null,
+      })
+      .select('*')
+      .single()
+    if (error) {
+      if (error.code === '23505') {
+        const now = await this.participantsOf(ctx, sessionId)
+        const winner = now.find((p) =>
+          subject === 'customer' ? p.customerId === personId : p.employeeId === personId,
+        )
+        if (winner) return { participant: winner, replayed: true }
+      }
+      throw this.failureOf(error, 'Failed to add session participant')
+    }
+    const participant = mapDbRowToParticipant(data)
+    this.logSession(
+      ctx,
+      sessionId,
+      'service_session_participant_added',
+      'Session participant added',
+      {
+        participantId: participant.id,
+        participantType: subject,
+      },
+    )
+    return { participant, replayed: false }
+  }
+
+  /**
+   * Remove one person. The database promotes the oldest remaining participant
+   * when the primary leaves, and refuses to remove the last one. Financial and
+   * historical rows are never touched.
+   */
+  async removeParticipant(
+    ctx: TenancyContext,
+    sessionId: string,
+    participantId: string,
+  ): Promise<{ session: ServiceDeliverySession }> {
+    await this.getById(ctx, sessionId)
+    const { data, error } = await this.db
+      .from('service_delivery_session_participants')
+      .delete()
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('session_id', sessionId)
+      .eq('id', participantId)
+      .select('id')
+    if (error) throw this.failureOf(error, 'Failed to remove session participant')
+    if (!data || data.length === 0)
+      throw new NotFoundError(`Session participant not found: ${participantId}`)
+    this.logSession(
+      ctx,
+      sessionId,
+      'service_session_participant_removed',
+      'Session participant removed',
+      {
+        participantId,
+      },
+    )
+    return { session: await this.getById(ctx, sessionId) }
   }
 
   /**
@@ -312,6 +610,13 @@ export class ServiceDeliveryService {
     }
 
     const settlement = input.settlementMethod ?? session.settlementMethod
+    // A session created without a chosen method must not be delivered by
+    // falling back to something: the person has to say how it is settled.
+    if (settlement === 'undecided') throw new ValidationError('SETTLEMENT_METHOD_REQUIRED')
+    // A package is a CUSTOMER account; an employee session has none to spend.
+    if ((session.subjectType ?? 'customer') === 'employee' && settlement === 'package_credit') {
+      throw new ValidationError('SETTLEMENT_PACKAGE_REQUIRES_CUSTOMER')
+    }
     const { data, error } = await this.db.rpc('service_delivery_deliver', {
       p_workspace_id: ctx.workspaceId,
       p_session_id: id,
@@ -334,6 +639,20 @@ export class ServiceDeliveryService {
     }
 
     const delivered = await this.getById(ctx, id)
+    // A replay of a delivery writes nothing new, so it is not a second event.
+    if (session.status !== 'delivered') {
+      this.logSession(
+        ctx,
+        id,
+        'service_session_delivered',
+        `Service session delivered: ${delivered.settlementMethod}`,
+        {
+          settlementMethod: delivered.settlementMethod,
+          invoiceId: delivered.invoiceId ?? null,
+          packageCreditId: result.package_credit_id ?? null,
+        },
+      )
+    }
     return {
       session: delivered,
       consumptionEntry: result.package_credit_id
@@ -358,7 +677,7 @@ export class ServiceDeliveryService {
     session: ServiceDeliverySession
     reversalEntry: unknown | null
   }> {
-    await this.getById(ctx, id)
+    const before = await this.getById(ctx, id)
 
     const { data, error } = await this.db.rpc('service_delivery_cancel', {
       p_workspace_id: ctx.workspaceId,
@@ -369,12 +688,48 @@ export class ServiceDeliveryService {
     if (error) throw this.failureOf(error, 'Failed to cancel service session')
 
     const result = (data ?? {}) as { reversal_entry_id?: string | null }
+    const cancelled = await this.getById(ctx, id)
+    // A retry that finds an already-cancelled session repeats the answer; it
+    // does not write a second event for one cancellation.
+    if (before.status !== 'cancelled' && cancelled.status === 'cancelled') {
+      this.logSession(ctx, id, 'service_session_cancelled', 'Service session cancelled', {
+        reason: options.reason?.trim() ?? null,
+        reversalEntryId: result.reversal_entry_id ?? null,
+      })
+    }
     return {
-      session: await this.getById(ctx, id),
+      session: cancelled,
       reversalEntry: result.reversal_entry_id
         ? await this.ledgerRow(ctx, result.reversal_entry_id)
         : null,
     }
+  }
+
+  /**
+   * The activity/audit row for a session mutation.
+   *
+   * Fire-and-forget: the session is already stored, and a logging failure must
+   * never turn a written session into an HTTP error. `notify: false` — the
+   * person who just acted does not need a bell for their own action.
+   */
+  private logSession(
+    ctx: TenancyContext,
+    id: string,
+    action: string,
+    title: string,
+    metadata: Record<string, unknown>,
+  ): void {
+    if (!ctx.userId) return
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'service_delivery_session',
+      entityId: id,
+      action,
+      title,
+      metadata,
+      notify: false,
+    }).catch((err) => console.error('[ServiceDeliveryService] logBusinessEvent failed:', err))
   }
 
   /**
@@ -591,9 +946,16 @@ export class ServiceDeliveryService {
     if (
       code.startsWith('SETTLEMENT_') ||
       code === 'CONSUMPTION_QUANTITY_MUST_BE_POSITIVE' ||
-      code === 'CANCELLATION_REASON_REQUIRED'
+      code === 'CANCELLATION_REASON_REQUIRED' ||
+      code === 'PARTICIPANT_WORKSPACE_MISMATCH' ||
+      code === 'PARTICIPANT_TYPE_MISMATCH' ||
+      code === 'PARTICIPANT_PERSON_NOT_FOUND' ||
+      code === 'PARTICIPANT_SESSION_NOT_FOUND'
     ) {
       return new ValidationError(code)
+    }
+    if (code === 'SESSION_PRIMARY_PARTICIPANT_REQUIRED') {
+      return new ConflictError(code)
     }
     return new DatabaseError(fallback, error)
   }

@@ -39,6 +39,7 @@ import {
   SERVICE_CANCELLATION_REASON_ALTERS,
   SERVICE_DELIVERY_AUDIT_ALTERS,
   SERVICE_DELIVERY_STATEMENTS,
+  SESSION_SUBJECT_PARTICIPANT_ALTERS,
   UNIVERSAL_CORE_ALTERS,
   UNIVERSAL_CORE_STATEMENTS,
 } from './local-universal-core-schema'
@@ -943,6 +944,17 @@ const V36_SYNC_ENTITY_COVERAGE: LocalMigration = {
   ],
 }
 
+/**
+ * v36 -> v37 (M4.5): a session knows WHO it is for (customer or employee), its
+ * free-text type, and everyone in it. The same facts the server's
+ * docs/service-delivery-05-session-subject-participants-migration.sql adds; the
+ * backfill names each historical session's customer in the relation too.
+ */
+const V37_SESSION_SUBJECT_PARTICIPANTS: LocalMigration = {
+  to: 37,
+  statements: [...SESSION_SUBJECT_PARTICIPANT_ALTERS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -979,6 +991,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V34_FX_TRADE_DRAFTS,
   V35_CONTRACTS,
   V36_SYNC_ENTITY_COVERAGE,
+  V37_SESSION_SUBJECT_PARTICIPANTS,
 ]
 
 /**

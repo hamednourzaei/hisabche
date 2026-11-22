@@ -45,18 +45,72 @@ export type ServiceDeliveryStatus = (typeof SERVICE_DELIVERY_STATUSES)[number]
 export const serviceDeliveryStatusSchema = z.enum(SERVICE_DELIVERY_STATUSES)
 
 export const SERVICE_DELIVERY_SETTLEMENT_METHODS = [
+  /**
+   * A booking is not a settlement. A session created before delivery has no
+   * chosen method; the deliver action must ask for one. It used to default to
+   * `package_credit`, which recorded a settlement nobody had made.
+   */
+  'undecided',
   'package_credit',
   'invoice',
   'complementary',
 ] as const
 
+/** The methods a DELIVERY may choose — never `undecided`. */
+export const SERVICE_DELIVERY_DELIVERY_METHODS = SERVICE_DELIVERY_SETTLEMENT_METHODS.filter(
+  (method): method is Exclude<ServiceDeliverySettlementMethod, 'undecided'> =>
+    method !== 'undecided',
+)
+
 export type ServiceDeliverySettlementMethod = (typeof SERVICE_DELIVERY_SETTLEMENT_METHODS)[number]
 export const serviceDeliverySettlementMethodSchema = z.enum(SERVICE_DELIVERY_SETTLEMENT_METHODS)
+
+/**
+ * WHO the session is for. `customer` is every historical row; `employee` is a
+ * session for the business's own staff (training, an internal meeting).
+ * `practitionerId` stays the person who PERFORMS the service — a different fact,
+ * never repurposed as the subject.
+ */
+export const SERVICE_DELIVERY_SUBJECT_TYPES = ['customer', 'employee'] as const
+export type ServiceDeliverySubjectType = (typeof SERVICE_DELIVERY_SUBJECT_TYPES)[number]
+export const serviceDeliverySubjectTypeSchema = z.enum(SERVICE_DELIVERY_SUBJECT_TYPES)
+
+/**
+ * The kind of session as the business names it — FREE TEXT, not an enum.
+ * Normalization is trim only: the exact words the person typed are kept
+ * (Persian, Dari, English). A blank label is not a label.
+ */
+export const SESSION_TYPE_MAX_LENGTH = 120
+export const sessionTypeSchema = z
+  .string()
+  .trim()
+  .min(1, 'SESSION_TYPE_REQUIRED')
+  .max(SESSION_TYPE_MAX_LENGTH, 'SESSION_TYPE_TOO_LONG')
+
+/** One person in a session. The primary person always has a row here too. */
+export interface ServiceDeliverySessionParticipant {
+  readonly id: string
+  readonly workspaceId: string
+  readonly sessionId: string
+  readonly participantType: ServiceDeliverySubjectType
+  readonly customerId?: string | null | undefined
+  readonly employeeId?: string | null | undefined
+  readonly createdAt: string
+}
 
 export interface ServiceDeliverySession {
   readonly id: string
   readonly workspaceId: string
-  readonly customerId: string
+  /** The PRIMARY customer. NULL only for an employee session — never a guess. */
+  readonly customerId?: string | null | undefined
+  /** The PRIMARY employee subject. NULL for customer sessions. */
+  readonly employeeId?: string | null | undefined
+  /** Who the session is for; absent on rows written before the subject existed = customer. */
+  readonly subjectType?: ServiceDeliverySubjectType | undefined
+  /** Free-text kind of session; NULL = not stated. */
+  readonly sessionType?: string | null | undefined
+  /** Everyone in the session, when the caller loaded them (the primary included). */
+  readonly participants?: readonly ServiceDeliverySessionParticipant[] | undefined
   readonly serviceOfferingId: string
   readonly practitionerId?: string | null | undefined
   readonly branchId?: string | null | undefined
@@ -86,7 +140,10 @@ export interface ServiceDeliverySession {
 export const serviceDeliverySessionSchema = z.object({
   id: z.string().min(1),
   workspaceId: z.string().min(1),
-  customerId: z.string().min(1),
+  customerId: z.string().nullable().optional(),
+  employeeId: z.string().nullable().optional(),
+  subjectType: serviceDeliverySubjectTypeSchema.optional(),
+  sessionType: sessionTypeSchema.nullable().optional(),
   serviceOfferingId: z.string().min(1),
   practitionerId: z.string().nullable().optional(),
   branchId: z.string().nullable().optional(),
@@ -104,23 +161,84 @@ export const serviceDeliverySessionSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
-export const createServiceDeliverySessionSchema = z.object({
-  id: z.string().optional(),
-  workspaceId: z.string().min(1),
-  customerId: z.string().min(1),
-  serviceOfferingId: z.string().min(1),
-  practitionerId: z.string().nullable().optional(),
-  branchId: z.string().nullable().optional(),
-  sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  startTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  // A session is BORN scheduled. «delivered» is reached only through the deliver action (settlement + credit in one step);
-  // a create that could say `delivered` would be a delivery with no settlement at all.
-  status: z.literal('scheduled').default('scheduled'),
-  settlementMethod: serviceDeliverySettlementMethodSchema.default('package_credit'),
-  clientNotes: z.string().nullable().optional(),
-  internalNotes: z.string().nullable().optional(),
-})
+export const createServiceDeliverySessionSchema = z
+  .object({
+    id: z.string().optional(),
+    workspaceId: z.string().min(1),
+    /** The primary customer. For a customer session, this or customerIds[0]. */
+    customerId: z.string().min(1).nullable().optional(),
+    /** Everyone in a customer session (the primary included). Deduplicated below. */
+    customerIds: z.array(z.string().min(1)).max(100).optional(),
+    /** The subject of an EMPLOYEE session. Never a customer id. */
+    employeeId: z.string().min(1).nullable().optional(),
+    subjectType: serviceDeliverySubjectTypeSchema.default('customer'),
+    sessionType: sessionTypeSchema.nullable().optional(),
+    serviceOfferingId: z.string().min(1),
+    practitionerId: z.string().nullable().optional(),
+    branchId: z.string().nullable().optional(),
+    sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    startTime: z.string().regex(/^\d{1,2}:\d{2}$/),
+    endTime: z.string().regex(/^\d{1,2}:\d{2}$/),
+    // A session is BORN scheduled. «delivered» is reached only through the deliver action (settlement + credit in one step);
+    // a create that could say `delivered` would be a delivery with no settlement at all.
+    status: z.literal('scheduled').default('scheduled'),
+    // NOT chosen at booking time: the deliver action asks, and `undecided` is
+    // refused there. The database default follows this (service-delivery-04).
+    settlementMethod: serviceDeliverySettlementMethodSchema.default('undecided'),
+    clientNotes: z.string().nullable().optional(),
+    internalNotes: z.string().nullable().optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.subjectType === 'employee') {
+      if (!input.employeeId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['employeeId'],
+          message: 'EMPLOYEE_ID_REQUIRED',
+        })
+      }
+      if (input.customerId || (input.customerIds && input.customerIds.length > 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customerId'],
+          message: 'EMPLOYEE_SESSION_HAS_CUSTOMER',
+        })
+      }
+      return
+    }
+    const hasCustomer =
+      Boolean(input.customerId) || (input.customerIds && input.customerIds.length > 0)
+    if (!hasCustomer) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customerId'],
+        message: 'CUSTOMER_ID_REQUIRED',
+      })
+    }
+    if (input.employeeId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['employeeId'],
+        message: 'CUSTOMER_SESSION_HAS_EMPLOYEE',
+      })
+    }
+  })
+  .transform((input) => {
+    if (input.subjectType === 'employee') {
+      return { ...input, customerId: null, customerIds: [] as string[] }
+    }
+    // One assignment per person: the primary first, then the rest, deduplicated
+    // in the order they were given. The database's unique index is the authority.
+    const seen = new Set<string>()
+    const ids: string[] = []
+    for (const id of [input.customerId, ...(input.customerIds ?? [])]) {
+      if (typeof id === 'string' && id && !seen.has(id)) {
+        seen.add(id)
+        ids.push(id)
+      }
+    }
+    return { ...input, customerId: ids[0] ?? null, customerIds: ids }
+  })
 
 export type CreateServiceDeliverySessionInput = z.infer<typeof createServiceDeliverySessionSchema>
 
@@ -360,6 +478,10 @@ export function planServiceDelivery(params: PlanServiceDeliveryParams): PlanServ
   const method = requestedSettlementMethod ?? session.settlementMethod
   const now = new Date().toISOString()
 
+  // A booking with no chosen settlement cannot be delivered: silently treating
+  // it as a package credit is the bug this state exists to stop.
+  if (method === 'undecided') throw new Error('SETTLEMENT_METHOD_REQUIRED')
+
   if (method === 'complementary') {
     const why = reason?.trim()
     if (!why) throw new Error('SETTLEMENT_REASON_REQUIRED')
@@ -391,7 +513,12 @@ export function planServiceDelivery(params: PlanServiceDeliveryParams): PlanServ
     }
   }
 
-  // package_credit
+  // package_credit — a package is a CUSTOMER account. An employee session has
+  // no customer, so it can never spend one (the database check refuses the row
+  // state too; this is the same rule on the device).
+  if (session.subjectType === 'employee' || !session.customerId) {
+    throw new Error('SETTLEMENT_PACKAGE_REQUIRES_CUSTOMER')
+  }
   if (!packageProductId) throw new Error('SETTLEMENT_PACKAGE_REQUIRED')
   const balance = derivePackageBalance(
     filterEntriesForAccount(creditEntries, session.customerId, packageProductId),
@@ -507,5 +634,37 @@ export function canonicalSessionStageLabelKey(status: ServiceDeliveryStatus): st
       return 'serviceDelivery.status.noShow'
     case 'cancelled':
       return 'serviceDelivery.status.cancelled'
+  }
+}
+
+/**
+ * Removing a participant: when the PRIMARY person leaves, the oldest remaining
+ * participant becomes the primary (deterministic: createdAt, then id). When the
+ * LAST person leaves, the removal is refused — a session without a subject is
+ * not a session. The server's delete trigger and the device both use this rule.
+ * Returns the person id to promote, or null when the removal must be refused.
+ */
+export function primaryAfterParticipantRemoval(params: {
+  readonly participants: readonly ServiceDeliverySessionParticipant[]
+  readonly removedParticipantId: string
+  readonly primaryPersonId: string | null | undefined
+}): { readonly nextPrimaryPersonId: string | null } {
+  const removed = params.participants.find((p) => p.id === params.removedParticipantId)
+  if (!removed) return { nextPrimaryPersonId: params.primaryPersonId ?? null }
+  const removedPersonId =
+    removed.participantType === 'customer' ? removed.customerId : removed.employeeId
+  if (removedPersonId !== params.primaryPersonId) {
+    return { nextPrimaryPersonId: params.primaryPersonId ?? null }
+  }
+  const remaining = params.participants
+    .filter((p) => p.id !== params.removedParticipantId)
+    .sort((a, b) =>
+      a.createdAt === b.createdAt ? a.id.localeCompare(b.id) : a.createdAt < b.createdAt ? -1 : 1,
+    )
+  const next = remaining[0]
+  if (!next) return { nextPrimaryPersonId: null }
+  return {
+    nextPrimaryPersonId:
+      (next.participantType === 'customer' ? next.customerId : next.employeeId) ?? null,
   }
 }

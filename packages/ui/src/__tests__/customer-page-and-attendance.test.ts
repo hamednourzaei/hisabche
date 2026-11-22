@@ -1,22 +1,19 @@
 // ============================================
-// The customer page's tabs, its accounting documents, the attendance sheet and
-// the month-end run time of an automatic close that is already on (5 Oct 2026).
+// The customer page's money parts, its accounting documents, the attendance
+// sheet and the month-end run time of an automatic close that is already on
+// (5 Oct 2026).
 //
-// What can go wrong: nine tabs in a row in «after»; a part of the page left out
-// of both groups (it would become unreachable); «before» losing its tabs; the
-// accounting documents or the attendance sheet drawn by hand again; a time
-// typed for one day showing on another; a saved row keeping its stale draft;
-// having to turn the automatic close off and on to change its time.
+// What can go wrong: the removed «رابطه» group (activity, insights, CRM,
+// credit & documents, change history) creeping back onto this URL; a money
+// part going missing; the accounting documents or the attendance sheet drawn
+// by hand again; a time typed for one day showing on another; a saved row
+// keeping its stale draft; having to turn the automatic close off and on to
+// change its time.
 // ============================================
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-
-import {
-  CUSTOMER_TAB_GROUPS,
-  customerGroupOf,
-} from '../components/ui/customers/customer-detail-view'
 
 const ROOT = join(__dirname, '..', '..', '..', '..')
 const read = (...parts: string[]) => readFileSync(join(ROOT, ...parts), 'utf8')
@@ -28,28 +25,37 @@ const code = (source: string) =>
     .join('\n')
 const ui = (...parts: string[]) => code(read('packages', 'ui', 'src', 'components', 'ui', ...parts))
 
-describe('the customer page: two tabs and a switch', () => {
+describe('the customer page: four money parts, and no relationship group', () => {
   const view = ui('customers', 'customer-detail-view.tsx')
 
-  it('every part of the page is in exactly one group — none became unreachable', () => {
-    const parts = [...CUSTOMER_TAB_GROUPS.money, ...CUSTOMER_TAB_GROUPS.relationship]
-    expect(new Set(parts).size).toBe(parts.length)
+  it('renders exactly the four parts of the account, in order', () => {
     const contents = [...view.matchAll(/<TabsContent value="(\w+)"/g)].map((match) => match[1])
-    expect([...contents].sort()).toEqual([...parts].sort())
+    expect(contents).toEqual(['statement', 'invoices', 'payments', 'accounting'])
   })
 
-  it('a part knows its group, and an unknown value is the first group', () => {
-    expect(customerGroupOf('payments')).toBe('money')
-    expect(customerGroupOf('crm')).toBe('relationship')
-    expect(customerGroupOf('nonsense')).toBe('money')
+  it('the removed relationship group stays off this URL', () => {
+    // Owner, 21 Nov 2026: فعالیت و کالاها، تحلیل، CRM، اعتبار و مدارک and
+    // تاریخچه‌ی تغییرات are gone from the customer page — not hidden, not a
+    // second group bar.
+    expect(view).not.toContain('<HubTabs')
+    expect(view).not.toContain('<CustomerCrmPanel')
+    expect(view).not.toContain('<CustomerProfilePanel')
+    expect(view).not.toContain('<CustomerPortalPanel')
+    expect(view).not.toContain('<CustomerInsightsPanel')
+    for (const part of ['activity', 'insights', 'crm', 'account', 'history']) {
+      expect(view, part).not.toContain(`value="${part}"`)
+    }
+    // One switch for what is left.
+    expect(view).toContain('<SegmentedControl')
   })
 
   it('every label exists in all three languages', () => {
     for (const lang of ['fa', 'af', 'en']) {
       const all = JSON.parse(read('packages', 'i18n', 'messages', lang, 'common.json'))
       expect(all.customer360.groupsLabel, lang).toEqual(expect.any(String))
-      expect(all.customer360.groups.money, lang).toEqual(expect.any(String))
-      expect(all.customer360.groups.relationship, lang).toEqual(expect.any(String))
+      for (const key of ['tabStatement', 'tabSales', 'tabPayments', 'tabAccounting']) {
+        expect(all.customer360[key], `${lang} customer360.${key}`).toEqual(expect.any(String))
+      }
       for (const key of ['filterAll', 'posted', 'colAmount', 'noMatch', 'openDocument']) {
         expect(all.customerAnalysis[key], `${lang} customerAnalysis.${key}`).toEqual(
           expect.any(String),

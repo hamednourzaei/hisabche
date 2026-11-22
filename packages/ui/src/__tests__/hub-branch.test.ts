@@ -141,7 +141,8 @@ describe('every hub, with one word', () => {
     // Three tabs, one switch each (customers' roles, outreach, and since 10 Nov
     // 2026 the sessions tab: sessions | repairs | salon | commission).
     ['customers/containers/customers-hub-container.tsx', 3],
-    ['customers/customer-detail-view.tsx', 1],
+    // The customer page has no group tab bar any more (owner, 21 Nov 2026):
+    // its one switch is not a `branch` of a hub tab.
     ['team-and-payroll/containers/team-and-payroll-container.tsx', 2],
     ['manufacturing/manufacturing-view.tsx', 1],
     ['analysis/analysis-container.tsx', 1],

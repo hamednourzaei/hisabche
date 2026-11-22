@@ -259,6 +259,40 @@ describe('resolveBusinessProfile', () => {
     expect(profile.productDefaults.unit).toBe('gram')
   })
 
+  it('a DECLARED trade names the parts it uses — clothing has no contracts and no booking resources', () => {
+    // The screens gate a part on `primaryDefinition.requestedCapabilities`
+    // (customers hub). This pins the data that gate reads: a clothing shop is
+    // a declared profile, so «no profile = never restricted» does not apply,
+    // and it must not be offered contracts, repair tickets or chairs/rooms.
+    const clothing = resolveBusinessProfile(['clothing'])
+    expect(clothing.isGeneric).toBe(false)
+    for (const capability of [
+      'contracts_recurring',
+      'work_queue_sla',
+      'resource_capacity',
+    ] as const) {
+      expect(clothing.primaryDefinition.requestedCapabilities).not.toContain(capability)
+    }
+
+    // The same gate must KEEP the part for trades that do use it: this is not a
+    // global ban, and no capability is removed from the registry.
+    expect(
+      resolveBusinessProfile(['itServices']).primaryDefinition.requestedCapabilities,
+    ).toContain('contracts_recurring')
+    expect(
+      resolveBusinessProfile(['itServices']).primaryDefinition.requestedCapabilities,
+    ).toContain('work_queue_sla')
+    expect(
+      resolveBusinessProfile(['beautySalon']).primaryDefinition.requestedCapabilities,
+    ).toContain('resource_capacity')
+    // A phone shop REPAIRS phones: its dashboard has always shown the open
+    // repair board, so the capability the board and the API gate on must be
+    // requested too. This pinned the missing one.
+    expect(
+      resolveBusinessProfile(['mobilePhones']).primaryDefinition.requestedCapabilities,
+    ).toContain('work_queue_sla')
+  })
+
   it('capabilities union is permutation invariant, idempotent and monotonic', () => {
     const base = ['jewellery', 'fabric']
     const union = resolveBusinessProfile(base).capabilities

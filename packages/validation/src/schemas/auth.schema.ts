@@ -4,6 +4,7 @@
 
 import { z } from 'zod'
 import { emailSchema, nonEmptyStringSchema } from './common.schema'
+import { canonicalIndustryTypes, MAX_INDUSTRY_SELECTION } from './industry-profiles'
 
 // ============================================
 // Login
@@ -104,7 +105,27 @@ export const updateProfileSchema = z.object({
   // Clearing site data used to replay the wizard to someone who had already
   // finished it. See docs/onboarding-server-state-migration.sql.
   onboardingCompleted: z.boolean().optional(),
-  businessTypes: z.array(z.string().max(64)).max(20).optional(),
+  // ⚠️ THE ACCOUNT WRITE APPLIES THE SAME CANONICAL RULE AS THE WORKSPACE WRITE
+  // (forensic audit F-007/F-018/F-097). Raw strings («foo», «SERVICE», duplicates)
+  // used to land in `profiles.business_types` here while `setWorkspaceProfile`
+  // refused them — the two copies of the industry then disagreed. Unknown and
+  // legacy values are refused with the exact list; duplicates/casing/order are
+  // normalised by the ONE canonicaliser. An empty array still clears the field.
+  businessTypes: z
+    .array(z.string().max(64))
+    .max(MAX_INDUSTRY_SELECTION)
+    .transform((values, ctx) => {
+      const canonical = canonicalIndustryTypes(values)
+      if (canonical.unknown.length > 0 || canonical.legacy.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `BUSINESS_TYPE_UNKNOWN: ${[...canonical.unknown, ...canonical.legacy].join(', ')}`,
+        })
+        return z.NEVER
+      }
+      return [...canonical.known]
+    })
+    .optional(),
   // `solo` («کار انفرادی، ۱ نفر») is the first card the onboarding screen offers; refusing it
   // left an owner who works alone stuck on «ورود به حسابچه» (400 on every press). Accepted on
   // the owner's instruction (15 Nov 2026); the headcount mapping of the other three stays

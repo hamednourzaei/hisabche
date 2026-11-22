@@ -803,7 +803,19 @@ export class CustomerService {
     // ✅ Clear cache
     await this.invalidateCache(workspaceId, id)
 
-    return mapCustomer(rawCustomer)
+    const result = mapCustomer(rawCustomer)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'customer',
+      entityId: id,
+      action: 'updated',
+      title: `ویرایش مشتری: ${result.fullName}`,
+      description: result.phone || result.email || undefined,
+      notify: false,
+    }).catch((err) => console.error('[CustomerService] logBusinessEvent failed:', err))
+
+    return result
   }
 
   // ─── Delete ──────────────────────────────────────────────
@@ -873,6 +885,16 @@ export class CustomerService {
 
     // ✅ Clear cache
     await this.invalidateCache(workspaceId, id)
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'customer',
+      entityId: id,
+      action: 'deleted',
+      title: 'حذف مشتری',
+      notify: false,
+    }).catch((err) => console.error('[CustomerService] logBusinessEvent failed:', err))
   }
 
   // ─── Get Balance ─────────────────────────────────────────

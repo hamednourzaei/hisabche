@@ -640,6 +640,56 @@ async function attachInvoiceItems(invoices: Record<string, unknown>[]): Promise<
   for (const row of invoices) row.items = byInvoice.get(String(row.id)) ?? []
 }
 
+/**
+ * Attach each session's subject fields and participants (M4.5,
+ * docs/service-delivery-05-session-subject-participants-migration.sql).
+ * A separate query, not a PostgREST embed, for the same reason as invoice
+ * items. A server that has not run 05 keeps pulling the old shape: the extra
+ * columns and the relation are read defensively, and the session itself still
+ * lands on the device. A REAL read failure throws (P0) — never a session that
+ * looks like it has no participants.
+ */
+async function attachSessionParticipants(sessions: Record<string, unknown>[]): Promise<void> {
+  const ids = sessions.map((row) => row.id).filter((id): id is string => typeof id === 'string')
+  if (ids.length === 0) return
+
+  const { data: extra, error: extraErr } = await supabase
+    .from('service_delivery_sessions')
+    .select('id, subject_type, employee_id, session_type')
+    .in('id', ids)
+  if (extraErr && !isMissingColumn(extraErr)) {
+    throw new Error(`sync session subject failed: ${extraErr.message}`)
+  }
+  if (!extraErr) {
+    const byId = new Map<string, Record<string, unknown>>()
+    for (const row of (extra ?? []) as unknown as Record<string, unknown>[]) {
+      byId.set(String(row.id), row)
+    }
+    for (const row of sessions) {
+      const e = byId.get(String(row.id))
+      if (!e) continue
+      row.subject_type = e.subject_type
+      row.employee_id = e.employee_id
+      row.session_type = e.session_type
+    }
+  }
+
+  const { data: parts, error } = await supabase
+    .from('service_delivery_session_participants')
+    .select('id, session_id, participant_type, customer_id, employee_id, created_at')
+    .in('session_id', ids)
+  if (error && (error.code === '42P01' || error.code === 'PGRST205')) return
+  if (error) throw new Error(`sync session participants failed: ${error.message}`)
+  const bySession = new Map<string, Record<string, unknown>[]>()
+  for (const part of (parts ?? []) as unknown as Record<string, unknown>[]) {
+    const key = String(part.session_id)
+    const list = bySession.get(key) ?? []
+    list.push(part)
+    bySession.set(key, list)
+  }
+  for (const row of sessions) row.participants = bySession.get(String(row.id)) ?? []
+}
+
 export interface SyncActor {
   userId: string
   workspaceId: string
@@ -1294,6 +1344,7 @@ export class SyncService {
     const hasMore = rows.length > limit
     const page = hasMore ? rows.slice(0, limit) : rows
     if (entity === 'invoice') await attachInvoiceItems(page)
+    if (entity === 'service_delivery_sessions') await attachSessionParticipants(page)
     return {
       rows: page,
       nextAfter: hasMore ? String(page[page.length - 1]?.id ?? '') || null : null,
@@ -1365,6 +1416,7 @@ export class SyncService {
       // plain records either way.
       const rows = (data ?? []) as unknown as Record<string, unknown>[]
       if (type === 'invoice') await attachInvoiceItems(rows)
+      if (type === 'service_delivery_sessions') await attachSessionParticipants(rows)
       for (const row of rows) {
         loaded.set(`${type}:${row.id as string}`, row)
       }

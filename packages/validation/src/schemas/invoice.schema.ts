@@ -314,7 +314,7 @@ export const invoiceSchema = z.object({
   dueDate: z.string().optional(),
 
   // Customer/Supplier
-  customerId: uuidSchema.optional(),
+  customerId: uuidSchema.nullable().optional(),
   /** Multi-warehouse: the warehouse this invoice's goods leave (sale) or arrive at (purchase). */
   warehouseId: uuidSchema.nullable().optional(),
   /**
@@ -489,7 +489,7 @@ export const invoiceFiltersSchema = z.object({
   warehouseId: uuidSchema.optional(),
   type: z.enum(['sale', 'purchase']).optional(),
   status: invoiceStatusSchema.optional(), // ✅ استفاده از invoiceStatusSchema
-  customerId: uuidSchema.optional(),
+  customerId: uuidSchema.nullable().optional(),
   supplierId: uuidSchema.optional(),
   currency: currencyCodeSchema.optional(),
   /**

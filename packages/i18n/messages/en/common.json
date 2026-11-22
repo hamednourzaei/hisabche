@@ -1686,6 +1686,7 @@
     "offlineEditionFailed": "The offline edition could not be prepared",
     "localUser": "Local user",
     "offlineFirstRun": {
+      "emailInvalid": "Enter a valid email address.",
       "title": "Create your business",
       "description": "This business is created on this device and needs no internet.",
       "name": "Business name",
@@ -2048,6 +2049,17 @@
       "sale": "Sale",
       "purchase": "Purchase"
     },
+    "filterTrading": "Purchases & sales",
+    "filterAdvances": "Advance purchases & sales",
+    "finalize": "Finalize",
+    "finalizing": "Finalizing…",
+    "finalizeTitle": "Finalize this advance?",
+    "finalizeBody": "The received amount is booked once. Running it again adds nothing and changes no stock or sale.",
+    "finalizeFailed": "It was not booked. Try again.",
+    "openParty": "Open party",
+    "noAdvances": "No advance purchase or advance sale found",
+    "noAdvancesDesc": "Advance purchases and sales are recorded here with “New invoice”.",
+
     "filterAll": "All",
     "saleInvoice": "Sales Invoice",
     "purchaseInvoice": "Purchase Invoice",
@@ -2485,6 +2497,10 @@
     "label": "Warehouse"
   },
   "customers": {
+    "cols": {
+      "name": "Name",
+      "role": "Role"
+    },
     "creditor": "Creditor",
     "title": "Customers",
     "subtitle": "Manage customer credits and debts",
@@ -4516,6 +4532,36 @@
     "minChars": "Type at least two characters"
   },
   "onboarding": {
+    "businessTypeRequired": "Select at least one business activity.",
+    "sizeRequired": "Select your business size.",
+    "otherDescriptionRequired": "For \"Other\", a short description of your business is required.",
+    "selectionLimit": "You can select up to 12 activities.",
+    "unknownActivity": "Unknown activity",
+    "unknownCurrency": "Unknown currency",
+    "autosaveFailed": "Progress could not be autosaved; check your connection. Your answers are safe on this device.",
+    "autosaveUnavailable": "Cloud progress saving is not enabled on this database yet; answers are kept on this device only.",
+    "saving": "Saving…",
+    "progressLabel": "Setup progress",
+    "salesModel": "Sales model",
+    "trades": "Business activities",
+    "recovery": {
+      "invalidProfile": "The stored profile of this business could not be read (invalid data). Save it again from Settings.",
+      "degraded": "Your business was activated, but the working profile was not saved on the server (the database is not ready yet). Save it again from Settings once it is.",
+      "prerequisites": "Activation did not complete; these prerequisites are missing:",
+      "activeDraft": "This business was already activated but your account is not confirmed yet; press \"Enter Hisabche\" again.",
+      "draftNotSaved": "The business was activated but progress was not recorded on the server; another device may start setup from the beginning."
+    },
+    "prerequisite": {
+      "identity": "Your name or business name",
+      "workspace": "A business workspace",
+      "workspaceProfile": "The business name in the profile",
+      "defaultCurrency": "The books currency"
+    },
+    "completionFailed": {
+      "workspace": "The workspace could not be created; try again.",
+      "profile": "The business profile was not saved; try again.",
+      "dna": "The working profile (DNA) was not saved; try again."
+    },
     "welcome": "Welcome to Hisabche",
     "welcomeDesc": "Let's configure your workspace in a few simple steps.",
     "start": "Get Started",
@@ -12443,6 +12489,7 @@
       "checked_in": "Checked in"
     },
     "settlement": {
+      "undecided": "Not decided",
       "package_credit": "Package credit",
       "invoice": "Invoice",
       "complementary": "Free of charge"
@@ -12484,13 +12531,26 @@
       "noResults": "Nothing found",
       "pickCustomer": "Choose a customer",
       "pickService": "Choose a service",
+      "subjectType": "Session for",
+      "subjectCustomer": "Customer",
+      "subjectEmployee": "Employee",
+      "employee": "Employee",
+      "pickEmployee": "Choose an employee",
+      "sessionType": "Session type",
+      "sessionTypePlaceholder": "e.g. Consultation, Training, Styling",
       "resource": "Chair / room",
       "noResource": "No specific chair/room"
     },
     "create": {
       "title": "New session",
       "help": "Book a service for one customer. Settlement is chosen at delivery, not here.",
+      "stepSubject": "Participant type",
       "customerRequired": "Choose a customer",
+      "employeeRequired": "Choose an employee",
+      "sessionTypeRequired": "Enter session type",
+      "sessionTypeTooLong": "Session type cannot exceed 120 characters",
+      "employeeHasCustomer": "Employee session cannot have customers",
+      "customerHasEmployee": "Customer session cannot have an employee subject",
       "serviceRequired": "Choose a service",
       "dateRequired": "Enter the session date",
       "timeRequired": "Enter the start and end time",

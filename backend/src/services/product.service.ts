@@ -795,7 +795,18 @@ export class ProductService {
 
     await this.invalidateWorkspaceCache(workspaceId)
 
-    return mapProduct(product)
+    const result = mapProduct(product)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'product',
+      entityId: id,
+      action: 'updated',
+      title: `ویرایش کالا: ${(product as { name?: string }).name || id}`,
+      notify: false,
+    }).catch((err) => console.error('[ProductService] logBusinessEvent failed:', err))
+
+    return result
   }
 
   // ─── Delete ──────────────────────────────────────────────────
@@ -816,7 +827,7 @@ export class ProductService {
     // existence oracle in front of it.
     const { data: owned, error: ownedError } = await supabase
       .from('products')
-      .select('id')
+      .select('id, name')
       .eq('id', id)
       .eq('workspace_id', workspaceId)
       .maybeSingle()
@@ -866,6 +877,16 @@ export class ProductService {
     if (error) throw new DatabaseError('Failed to delete product', error)
 
     await this.invalidateWorkspaceCache(workspaceId)
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'product',
+      entityId: id,
+      action: 'deleted',
+      title: `حذف کالا: ${(owned as { name?: string }).name || id}`,
+      notify: false,
+    }).catch((err) => console.error('[ProductService] logBusinessEvent failed:', err))
   }
 
   // ─── Get Low Stock ───────────────────────────────────────────

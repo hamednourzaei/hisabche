@@ -277,15 +277,28 @@ export const useAuthStore = create<AuthState>()(
 
           if (!res.ok) {
             const detail = await res.json().catch(() => null)
-            throw new Error(detail?.error || 'PROFILE_UPDATE_FAILED')
+            const failure = new Error(detail?.error || 'PROFILE_UPDATE_FAILED')
+            // Keep the activation gate's exact prerequisite list so the wizard
+            // can name what is missing instead of a generic refusal (F-054).
+            if (detail && Array.isArray(detail.missing)) {
+              Object.assign(failure, { missing: detail.missing })
+            }
+            throw failure
           }
 
-          // پاسخ سرور ممکن است کاربر کامل را برنگرداند؛ مقادیر ارسالی را
-          // روی کاربر فعلی merge می‌کنیم تا UI بلافاصله به‌روز شود.
+          // ⚠️ ONLY THE SERVER'S ANSWER IS ADOPTED (forensic audit F-105).
+          // This used to merge `{ ...user, ...input, ...updated }` — when the
+          // payload was unreadable, `input.onboardingCompleted: true` became the
+          // local truth with no server proof. A 200 without a readable user is
+          // not verification; the caller must treat it as a failed write.
           const payload = await res.json().catch(() => null)
-          const updated = payload && payload.user ? payload.user : {}
+          const updated = payload && payload.user ? payload.user : null
+          if (!updated) {
+            set({ isLoading: false })
+            throw new Error('PROFILE_UPDATE_UNVERIFIED')
+          }
           set({
-            user: { ...user, ...input, ...updated },
+            user: { ...user, ...updated },
             isLoading: false,
           })
         } catch (err) {

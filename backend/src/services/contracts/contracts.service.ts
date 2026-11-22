@@ -120,6 +120,17 @@ export class ContractsService {
 
     if (error) throw new DatabaseError('Failed to create contract', error)
 
+    await logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'contract',
+      entityId: String((data as { id: string }).id),
+      action: 'contract_created',
+      title: `قرارداد ثبت شد: ${input.title}`,
+      metadata: { contractType: input.contractType, amountMinor: input.amountMinor, currency },
+      notify: false,
+    }).catch((err) => console.error('[ContractsService] logBusinessEvent failed:', err))
+
     if (input.depositMinor > 0) {
       await logBusinessEvent({
         userId: ctx.userId,
@@ -245,6 +256,23 @@ export class ContractsService {
     if (closeErr) throw new DatabaseError('Failed to close the billing period', closeErr)
 
     await invalidateMoneyCaches(ctx.workspaceId)
+
+    await logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'contract',
+      entityId: contractId,
+      action: 'contract_period_billed',
+      title: `دوره صورتحساب قرارداد صادر شد: ${contract.title} (${input.periodKey})`,
+      metadata: {
+        invoiceId,
+        periodKey: input.periodKey,
+        amountMinor: contract.amount_minor,
+        currency: contract.currency,
+      },
+      notify: false,
+    }).catch((err) => console.error('[ContractsService] logBusinessEvent failed:', err))
+
     return { replayed: false, invoiceId, periodKey: input.periodKey }
   }
 
@@ -272,6 +300,17 @@ export class ContractsService {
       .eq('contract_id', contractId)
       .eq('status', 'pending')
     if (cancelErr) throw new DatabaseError('Failed to cancel pending obligations', cancelErr)
+
+    await logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'contract',
+      entityId: contractId,
+      action: 'contract_terminated',
+      title: `قرارداد خاتمه یافت: ${(data as ContractRow).title || contractId}`,
+      metadata: { terminatedAt: (data as ContractRow).terminated_at },
+      notify: false,
+    }).catch((err) => console.error('[ContractsService] logBusinessEvent failed:', err))
 
     return data as ContractRow
   }

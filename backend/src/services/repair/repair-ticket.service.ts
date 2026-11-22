@@ -35,6 +35,7 @@ import { baseCurrencyOf } from '../base-currency'
 import { costing } from '../inventory-costing'
 import { InventoryReservationService } from '../inventory/reservation.service'
 import { qualityService } from '../quality/quality.service'
+import { logBusinessEvent } from '../event-log.service'
 import type { TenancyContext } from '../tenancy.service'
 
 const LEGACY_TICKET_COLUMNS =
@@ -227,6 +228,20 @@ export class RepairTicketService {
       quantity: 1,
       ...(input.notes ? { notes: input.notes } : {}),
     })
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'repair_ticket',
+      entityId: id,
+      action: 'repair_ticket_quality_checked',
+      title: `کنترل کیفی تعمیر #${ticket.number}: ${input.result === 'pass' ? 'تأیید شد' : 'رد شد'}`,
+      metadata: {
+        number: ticket.number,
+        result: input.result,
+        notes: input.notes ?? null,
+      },
+      notify: false,
+    }).catch((err) => console.error('[RepairTicketService] logBusinessEvent failed:', err))
     if (input.result === 'fail') {
       return this.move(ctx, id, { status: 'repairing', note: input.notes })
     }
@@ -330,6 +345,21 @@ export class RepairTicketService {
       .single()
     if (isNotReady(error)) throw new ValidationError('REPAIR_NOT_READY')
     if (error || !data) throw new DatabaseError('Failed to open the repair ticket', error)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'repair_ticket',
+      entityId: data.id,
+      action: 'repair_ticket_created',
+      title: `قبض تعمیر ثبت شد: #${data.number} (${input.deviceLabel})`,
+      metadata: {
+        number: data.number,
+        customerId: input.customerId,
+        deviceLabel: input.deviceLabel,
+        underWarranty: warranty === 'active',
+      },
+      notify: false,
+    }).catch((err) => console.error('[RepairTicketService] logBusinessEvent failed:', err))
     return { ...mapTicket(data), warranty }
   }
 
@@ -365,6 +395,21 @@ export class RepairTicketService {
     })
     if (moveError) throw new DatabaseError('Failed to move the repair ticket', moveError)
     if (moved !== true) throw new ConflictError('REPAIR_TICKET_CHANGED')
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'repair_ticket',
+      entityId: id,
+      action: 'repair_ticket_moved',
+      title: `تغییر وضعیت تعمیر #${current.number}: ${current.status} ➔ ${input.status}`,
+      metadata: {
+        number: current.number,
+        fromStatus: current.status,
+        toStatus: input.status,
+        invoiceId: input.invoiceId ?? null,
+      },
+      notify: false,
+    }).catch((err) => console.error('[RepairTicketService] logBusinessEvent failed:', err))
     return this.get(ctx, id)
   }
 
@@ -461,6 +506,21 @@ export class RepairTicketService {
       await this.reservations.release(ctx, { reservationId: reservation.reservationId })
       throw new DatabaseError('Failed to save repair part line', insertErr)
     }
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'repair_ticket',
+      entityId: ticketId,
+      action: 'repair_part_reserved',
+      title: `رزرو قطعه برای تعمیر #${ticket.number}: ${product.name}`,
+      metadata: {
+        partId: (partRow as PartRow).id,
+        productId: input.productId,
+        quantity: input.quantity,
+        reservationId: reservation.reservationId,
+      },
+      notify: false,
+    }).catch((err) => console.error('[RepairTicketService] logBusinessEvent failed:', err))
     return mapPart(partRow as PartRow)
   }
 
@@ -713,6 +773,20 @@ export class RepairTicketService {
         note: `Billed via invoice ${invoice.id}`,
       })
     }
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'repair_ticket',
+      entityId: ticketId,
+      action: 'repair_ticket_billed',
+      title: `صدور فاکتور نهایی تعمیر #${ticket.number}`,
+      metadata: {
+        invoiceId: invoice.id,
+        revenueSplit,
+      },
+      notify: false,
+    }).catch((err) => console.error('[RepairTicketService] logBusinessEvent failed:', err))
 
     return {
       invoice,

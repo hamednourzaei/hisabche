@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   calculateSessionDurationMinutes,
+  createServiceDeliverySessionSchema,
   isValidSessionStatusTransition,
   planServiceDelivery,
   planServiceDeliveryCancellation,
@@ -281,5 +282,48 @@ describe('M4: Service Delivery Domain Core', () => {
       expect(res.reversalEntry?.quantity).toBe(1)
       expect(res.reversalEntry?.referenceEntryId).toBe('pce-consume-1')
     })
+  })
+})
+
+describe('a booking has no settlement until delivery (M4.3)', () => {
+  const booking = (settlementMethod: ServiceDeliverySession['settlementMethod']) => ({
+    id: 'ses-undecided',
+    workspaceId: 'ws-1',
+    customerId: 'cust-1',
+    serviceOfferingId: 'srv-1',
+    sessionDate: '2026-11-01',
+    startTime: '10:00',
+    endTime: '11:00',
+    durationMinutes: 60,
+    status: 'scheduled' as const,
+    settlementMethod,
+    packageCreditId: null,
+    invoiceId: null,
+    createdAt: '2026-11-01T08:00:00Z',
+    updatedAt: '2026-11-01T08:00:00Z',
+  })
+
+  it('the create payload carries no chosen method', () => {
+    const parsed = createServiceDeliverySessionSchema.parse({
+      workspaceId: 'ws-1',
+      customerId: 'cust-1',
+      serviceOfferingId: 'srv-1',
+      sessionDate: '2026-11-01',
+      startTime: '10:00',
+      endTime: '11:00',
+    })
+    expect(parsed.settlementMethod).toBe('undecided')
+    // Never a money method the person did not choose.
+    expect(['package_credit', 'invoice', 'complementary']).not.toContain(parsed.settlementMethod)
+  })
+
+  it('an undecided session cannot be delivered - no silent fallback to package credit', () => {
+    expect(() =>
+      planServiceDelivery({
+        session: booking('undecided'),
+        creditEntries: [],
+        quantity: 1,
+      }),
+    ).toThrow('SETTLEMENT_METHOD_REQUIRED')
   })
 })

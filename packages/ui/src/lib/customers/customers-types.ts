@@ -1,5 +1,7 @@
 // packages/ui/src/lib/customers/customers-types.ts
 
+import type { PartyRole } from '@hisabche/validation'
+
 export interface Customer {
   id: string
   fullName?: string
@@ -15,6 +17,17 @@ export interface Customer {
   userId?: string
   notes?: string
   type?: 'cash' | 'credit'
+  /**
+   * What the party declared when it was created (buyer/seller/both). Legacy
+   * rows may still say `both`; new records are created as one of the two.
+   */
+  declaredRole?: 'buyer' | 'seller' | 'both' | null
+  /**
+   * The resolved role the server returns: `declared_role` merged with the
+   * direction of the invoices the party actually appears on. Read, never
+   * recomputed here — the role column must show the server's answer.
+   */
+  role?: PartyRole
 }
 
 export interface CustomerWithDebt extends Customer {

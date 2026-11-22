@@ -28,7 +28,7 @@ export { useCartStore, type CartItem } from './slices/cart.slice'
 export { useWarehouseStore } from './slices/warehouse.slice'
 // packages/store/src/index.ts
 export * from './slices/onboarding.slice'
-export type { BusinessType, StoreSize, Currency, Language } from './slices/onboarding.slice'
+export type { StoreSize, Currency, Language } from './slices/onboarding.slice'
 export { usePreferencesStore } from './slices/preferences.slice'
 export {
   useInvoiceDraftStore,

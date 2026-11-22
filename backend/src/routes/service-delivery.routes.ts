@@ -26,6 +26,7 @@ export async function serviceDeliveryRoutes(fastify: FastifyInstance) {
         const query = (request.query || {}) as {
           date?: string
           customerId?: string
+          employeeId?: string
           practitionerId?: string
           status?: string
         }
@@ -123,6 +124,44 @@ export async function serviceDeliveryRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to cancel service delivery session')
+      }
+    },
+  )
+
+  // ─── 6. POST /api/service-delivery/sessions/:id/participants ───
+  // One person joins the session. The database refuses a person of another
+  // workspace or another subject type; a person already in is a replay.
+  fastify.post(
+    '/api/service-delivery/sessions/:id/participants',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = (request.body || {}) as { customerId?: string; employeeId?: string }
+        const result = await service.addParticipant(request.tenancy, id, {
+          customerId: body.customerId,
+          employeeId: body.employeeId,
+        })
+        return reply.send(result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to add session participant')
+      }
+    },
+  )
+
+  // ─── 7. DELETE /api/service-delivery/sessions/:id/participants/:participantId ───
+  // The primary leaving promotes the oldest remaining participant; the last
+  // person can never leave (the session would have no subject).
+  fastify.delete(
+    '/api/service-delivery/sessions/:id/participants/:participantId',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id, participantId } = request.params as { id: string; participantId: string }
+        const result = await service.removeParticipant(request.tenancy, id, participantId)
+        return reply.send(result)
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to remove session participant')
       }
     },
   )

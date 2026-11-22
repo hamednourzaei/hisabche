@@ -19,6 +19,7 @@ import type { CustomerWithDebt } from '../../../lib/customers/customers-types'
 // Components
 import { customersStats } from './customer-stats'
 import { BulkActionBar, DataTable, useRowSelection, type TableColumn } from '../data-table'
+import { Button } from '../button'
 
 // Lazy load modals (برای کاهش bundle size)
 // Import عادی (بدون lazy)
@@ -120,14 +121,12 @@ function CustomersHeader({
           {t('customers.subtitle', 'مدیریت بدهی‌ها و پرداخت‌ها')}
         </p>
       </div>
-      <button
-        onClick={onOpenAddModal}
-        className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-all duration-150"
-        aria-label={buttonLabel}
-      >
-        <Plus className="size-4" />
+      {/* The same primary treatment as «صورت‌حساب جدید»: this is the create
+          action of the page, not a neutral toolbar button. */}
+      <Button size="sm" onClick={onOpenAddModal} aria-label={buttonLabel}>
+        <Plus className="size-4" aria-hidden="true" />
         <span className={cn(isMobile && 'hidden sm:inline')}>{buttonLabel}</span>
-      </button>
+      </Button>
     </div>
   )
 }
@@ -215,9 +214,9 @@ function useCustomerColumns(
   return useMemo(
     () => [
       {
-        id: 'customer',
-        labelKey: 'customers.customer',
-        labelFallback: 'مشتری',
+        id: 'name',
+        labelKey: 'customers.cols.name',
+        labelFallback: 'نام',
         locked: true,
         sortValue: (c) => c.fullName || c.name || '',
         render: (c) => {
@@ -231,6 +230,32 @@ function useCustomerColumns(
               </div>
               <p className="font-semibold text-[hsl(var(--fg-primary))]">{name}</p>
             </div>
+          )
+        },
+      },
+      {
+        // The role the SERVER resolved (`declared_role` merged with invoice
+        // direction), not one inferred here. It is its own column so the name
+        // column can be a name in every tab.
+        id: 'role',
+        labelKey: 'customers.cols.role',
+        labelFallback: 'نقش',
+        sortValue: (c) => c.role ?? c.declaredRole ?? 'none',
+        render: (c) => {
+          const role = c.role ?? c.declaredRole ?? 'none'
+          return (
+            <span
+              className={cn(
+                'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold',
+                role === 'seller'
+                  ? 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]'
+                  : role === 'buyer'
+                    ? 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] border-[hsl(var(--color-primary)/0.2)]'
+                    : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]',
+              )}
+            >
+              {t(`customers.role.${role}`)}
+            </span>
           )
         },
       },

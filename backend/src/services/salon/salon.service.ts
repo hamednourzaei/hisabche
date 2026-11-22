@@ -37,6 +37,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { selectAllPages } from '../../utils/fetch-all-pages'
 import { baseCurrencyOf } from '../base-currency'
+import { logBusinessEvent } from '../event-log.service'
 import type { TenancyContext } from '../tenancy.service'
 
 const isNotReady = (error: { code?: string } | null) =>
@@ -113,6 +114,16 @@ export class SalonService {
       .single()
     if (isNotReady(error)) throw new ValidationError('SALON_NOT_READY')
     if (error || !data) throw new DatabaseError('Failed to add the resource', error)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'salon_resource',
+      entityId: data.id as string,
+      action: 'salon_resource_created',
+      title: `منبع سالن ثبت شد: ${input.name}`,
+      metadata: { kind: input.kind, branchId: input.branchId ?? null },
+      notify: false,
+    }).catch((err) => console.error('[SalonService] logBusinessEvent failed:', err))
     return mapResource(data)
   }
 
@@ -140,6 +151,16 @@ export class SalonService {
       .maybeSingle()
     if (error) throw new DatabaseError('Failed to update the resource', error)
     if (!data) throw new NotFoundError('Resource')
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'salon_resource',
+      entityId: id,
+      action: 'salon_resource_updated',
+      title: `منبع سالن ویرایش شد: ${(data as { name?: string }).name ?? id}`,
+      metadata: patch,
+      notify: false,
+    }).catch((err) => console.error('[SalonService] logBusinessEvent failed:', err))
     return mapResource(data)
   }
 
@@ -262,6 +283,16 @@ export class SalonService {
     )
     if (isNotReady(error)) throw new ValidationError('COMMISSION_NOT_READY')
     if (error) throw new DatabaseError('Failed to save the commission rate', error)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'salon_commission_rate',
+      entityId: input.employeeId,
+      action: 'salon_commission_rate_set',
+      title: `درصد کمیسیون پرسنل تنظیم شد`,
+      metadata: { employeeId: input.employeeId, rateBp: input.rateBp },
+      notify: false,
+    }).catch((err) => console.error('[SalonService] logBusinessEvent failed:', err))
     return this.commissionRates(ctx)
   }
 
@@ -470,6 +501,20 @@ export class SalonService {
 
     const row = data as Record<string, unknown>
     const range = this.parseTstzRange(row.during)
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'resource_booking',
+      entityId: row.id as string,
+      action: 'salon_resource_booked',
+      title: `رزرو منبع سالن انجام شد`,
+      metadata: {
+        resourceId: input.resourceId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId ?? null,
+      },
+      notify: false,
+    }).catch((err) => console.error('[SalonService] logBusinessEvent failed:', err))
     return {
       id: row.id as string,
       resourceId: row.resource_id as string,
@@ -495,6 +540,16 @@ export class SalonService {
 
     if (error) throw new DatabaseError('Failed to release booking', error)
     if (!data) throw new NotFoundError('Resource booking')
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'resource_booking',
+      entityId: bookingId,
+      action: 'salon_resource_released',
+      title: `آزادسازی رزرو منبع سالن`,
+      metadata: { bookingId },
+      notify: false,
+    }).catch((err) => console.error('[SalonService] logBusinessEvent failed:', err))
     return data
   }
 

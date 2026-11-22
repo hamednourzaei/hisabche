@@ -20,6 +20,7 @@
 // ============================================
 
 import { isMetal } from '@hisabche/formatting'
+import { emailSchema } from '@hisabche/validation'
 import { MetalUnitPicker } from '../settings/metal-unit-section'
 import { SelectField } from '../select-field'
 import { memo } from 'react'
@@ -87,7 +88,12 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
   lang,
   t,
 }: LocalFirstRunFormProps) {
-  const canSubmit = name.trim().length > 0 && Boolean(currency) && !isSubmitting
+  // The email is OPTIONAL — but when one is typed it must be a real address
+  // (forensic audit F-069): «abc» used to be stored as the owner email of an
+  // offline business. The same shared schema the online signup uses decides.
+  const emailInvalid =
+    ownerEmail.trim().length > 0 && !emailSchema.safeParse(ownerEmail.trim()).success
+  const canSubmit = name.trim().length > 0 && Boolean(currency) && !isSubmitting && !emailInvalid
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -155,11 +161,12 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
           </label>
           <input
             id="offline-first-run-owner-email"
-            type="text"
+            type="email"
             dir="ltr"
             value={ownerEmail}
             onChange={(event) => onOwnerEmailChange(event.target.value)}
             placeholder={t('auth.offlineFirstRun.ownerEmailPlaceholder')}
+            aria-invalid={emailInvalid}
             className={cn(
               'w-full rounded-xl border p-3 text-sm outline-none text-start',
               'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
@@ -167,6 +174,11 @@ export const LocalFirstRunForm = memo(function LocalFirstRunForm({
               'focus:border-[hsl(var(--color-primary))]',
             )}
           />
+          {emailInvalid ? (
+            <p className="mt-1.5 text-xs text-[hsl(var(--color-destructive))]">
+              {t('auth.offlineFirstRun.emailInvalid')}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

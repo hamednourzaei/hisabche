@@ -29,8 +29,10 @@ import { Suspense, lazy } from 'react'
 import { useTranslations } from 'next-intl'
 import { CalendarClock, Megaphone, Users } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
+import type { CapabilityKey } from '@hisabche/validation'
 import { isNavLocked } from '@hisabche/ui-contract'
 import { useActionAvailability } from '../../../../lib/capability/use-action-availability'
+import { useBusinessProfile } from '../../../../hooks/use-business-profile'
 import { usePageLook } from '../../../../lib/page-look'
 import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
@@ -112,6 +114,12 @@ export function CustomersHubContainer() {
 function CustomersHub() {
   const t = useTranslations()
   const capabilities = useMyCapabilities()
+  const { profile } = useBusinessProfile()
+  // A part belongs to a trade, not to a permission. The canonical profile is
+  // the only authority: a business that never declared one (generic) keeps
+  // every part, exactly as before this gate existed.
+  const profileAllows = (capability: CapabilityKey): boolean =>
+    profile.isGeneric || profile.primaryDefinition.requestedCapabilities.includes(capability)
   const blocked = capabilities.data?.blockedModules ?? []
   // The offline edition (Windows, mobile) has no follow-up, campaign or stale-sale
   // engine, so the whole tab is not offered there — same rule as a locked module.
@@ -132,21 +140,36 @@ function CustomersHub() {
   const look = usePageLook('hub:customers')
 
   const sections = allowedSections.filter((sec) => look.shows(hubLookId('outreach', sec)))
+  // Each extra part follows the capability its module serves — repairs the
+  // work queue, chairs/rooms and provider commission the booking model. A part
+  // whose trade does not use it is not offered; no module is deleted.
+  const profileSessionSections = SESSION_SECTIONS.filter((sec) => {
+    if (sec === 'repairs') return profileAllows('work_queue_sla')
+    if (sec === 'salonSetup') return profileAllows('resource_capacity')
+    if (sec === 'commission') return profileAllows('resource_capacity')
+    return true
+  })
   const offered = allowedTabs.filter((tab) => {
     if (tab === 'outreach') return sections.length > 0
     if (tab === 'sessions')
-      return SESSION_SECTIONS.some((sec) => look.shows(hubLookId('sessions', sec)))
+      return profileSessionSections.some((sec) => look.shows(hubLookId('sessions', sec)))
     return look.shows(hubLookId(tab, tab))
   })
 
   const [active, select] = useHubTab(offered)
   const [role, selectRole] = useHubSection(CUSTOMER_ROLES)
+  // «قراردادها و اجاره» is a trade capability (`contracts_recurring`), not an
+  // invoice permission: a clothing shop has `invoice.read` and no contracts.
+  // The address `?view=contracts` is read, then ignored when the profile does
+  // not offer it, so a bookmarked link lands on the list instead of a section
+  // this business does not have.
   const [contractsView, selectContractsView] = useHubSection(['all', 'contracts'] as const)
   const [section, selectSection] = useHubSection(sections)
-  const mayReadContracts = capabilities.can('invoice.read') !== false
+  const mayReadContracts =
+    capabilities.can('invoice.read') !== false && profileAllows('contracts_recurring')
   const isContractsView = mayReadContracts && contractsView === 'contracts'
   const mayReadPay = capabilities.can('payroll.read') !== false
-  const sessionSections = SESSION_SECTIONS.filter(
+  const sessionSections = profileSessionSections.filter(
     (sec) => look.shows(hubLookId('sessions', sec)) && (sec !== 'commission' || mayReadPay),
   )
   const [sessionSection, selectSessionSection] = useHubSection(sessionSections)
@@ -167,7 +190,7 @@ function CustomersHub() {
                   label: t(`customersHub.tabs.${tab}`),
                 })),
               ...(allowedTabs.includes('sessions')
-                ? SESSION_SECTIONS.map((sec) => ({
+                ? sessionSections.map((sec) => ({
                     id: hubLookId('sessions', sec),
                     label: t(`customersHub.sessionSections.${sec}`),
                   }))

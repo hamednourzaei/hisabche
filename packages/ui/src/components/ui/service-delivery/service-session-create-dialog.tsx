@@ -8,9 +8,10 @@
 // linked, or a reason for a free service). The API refuses any other status on
 // create (`SESSION_MUST_START_SCHEDULED`), and this form offers none.
 //
-// ⚠️ THE SETTLEMENT HERE IS ONLY A DEFAULT. The real choice — which package,
-// which invoice, why it is free — is made at delivery, by the person who sees
-// the customer in front of them.
+// ⚠️ NO SETTLEMENT IS CHOSEN HERE. A booking is not a payment: the session is
+// stored with `undecided`, and the deliver dialog — the moment someone sees the
+// customer and the money — is the only place that picks a method. This form
+// used to preselect «اعتبار بسته», which recorded a settlement nobody made.
 //
 // ⚠️ THE DURATION IS THE DOMAIN'S. The end time shown is derived by the local
 // `endTimeFor`, and the legality of the pair is then asked of
@@ -40,9 +41,11 @@ import {
 } from '../dialog'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { NumberField } from '../capability/capability-kit'
+import { SegmentedControl } from '../segmented-control'
+import { CustomerMultiPicker, type CustomerOption } from '../crm/customer-multi-picker'
 import type { SelectFieldOption } from '../select-field'
 import { Labeled, SelectInput, TimeInput } from './service-delivery-fields'
-import { endTimeFor, SETTLEMENT_METHODS, type SettlementMethod } from './service-delivery-model'
+import { endTimeFor } from './service-delivery-model'
 import { serviceDeliveryErrorCode, serviceDeliveryErrorKey } from './service-delivery-errors'
 
 export interface ServiceSessionCreateDialogProps {
@@ -51,6 +54,7 @@ export interface ServiceSessionCreateDialogProps {
   customerOptions: readonly SelectFieldOption[]
   serviceOptions: readonly SelectFieldOption[]
   practitionerOptions: readonly SelectFieldOption[]
+  employeeOptions?: readonly SelectFieldOption[] | undefined
   branchOptions: readonly SelectFieldOption[]
   /** salon-01: chairs / rooms; empty = the business tracks none and no field shows. */
   resourceOptions?: readonly SelectFieldOption[] | undefined
@@ -68,16 +72,23 @@ export interface ServiceSessionCreateDialogProps {
 }
 
 interface FieldErrors {
-  customerId?: string
-  serviceOfferingId?: string
-  sessionDate?: string
-  startTime?: string
-  durationMinutes?: string
+  customerId?: string | undefined
+  employeeId?: string | undefined
+  sessionType?: string | undefined
+  serviceOfferingId?: string | undefined
+  sessionDate?: string | undefined
+  startTime?: string | undefined
+  durationMinutes?: string | undefined
 }
 
 /** The field a refusal belongs to. Placement only — the sentence is ours. */
 const FIELD_BY_CODE: Record<string, keyof FieldErrors> = {
   CUSTOMER_ID_REQUIRED: 'customerId',
+  EMPLOYEE_ID_REQUIRED: 'employeeId',
+  SESSION_TYPE_REQUIRED: 'sessionType',
+  SESSION_TYPE_TOO_LONG: 'sessionType',
+  EMPLOYEE_SESSION_HAS_CUSTOMER: 'employeeId',
+  CUSTOMER_SESSION_HAS_EMPLOYEE: 'customerId',
   SERVICE_OFFERING_ID_REQUIRED: 'serviceOfferingId',
   SESSION_DATE_REQUIRED: 'sessionDate',
   SESSION_TIMES_REQUIRED: 'startTime',
@@ -111,6 +122,7 @@ function CreateBody({
   customerOptions,
   serviceOptions,
   practitionerOptions,
+  employeeOptions,
   branchOptions,
   resourceOptions = [],
   hasBranches,
@@ -131,7 +143,15 @@ function CreateBody({
 
   const create = useCreateServiceDeliverySession()
 
-  const [customerId, setCustomerId] = useState(presetCustomerId ?? '')
+  const [subjectType, setSubjectType] = useState<'customer' | 'employee'>('customer')
+  const presetOpt = customerOptions.find((o) => o.value === presetCustomerId)
+  const [selectedCustomers, setSelectedCustomers] = useState<CustomerOption[]>(() =>
+    presetCustomerId && presetOpt
+      ? [{ id: presetCustomerId, name: String(presetOpt.label), phone: presetOpt.keywords ?? '' }]
+      : [],
+  )
+  const [employeeId, setEmployeeId] = useState('')
+  const [sessionType, setSessionType] = useState('')
   const [serviceOfferingId, setServiceOfferingId] = useState('')
   const [practitionerId, setPractitionerId] = useState('')
   const [branchId, setBranchId] = useState('')
@@ -139,7 +159,6 @@ function CreateBody({
   const [sessionDate, setSessionDate] = useState(() => toIsoDay(new Date()))
   const [startTime, setStartTime] = useState('09:00')
   const [durationMinutes, setDurationMinutes] = useState(DEFAULT_DURATION)
-  const [settlementMethod, setSettlementMethod] = useState<SettlementMethod>('package_credit')
   const [clientNotes, setClientNotes] = useState('')
 
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -165,8 +184,21 @@ function CreateBody({
 
   const submit = () => {
     const next: FieldErrors = {}
-    if (!customerId)
-      next.customerId = tr('serviceDelivery.create.customerRequired', 'مشتری را انتخاب کنید')
+    if (subjectType === 'customer') {
+      if (selectedCustomers.length === 0) {
+        next.customerId = tr('serviceDelivery.create.customerRequired', 'مشتری را انتخاب کنید')
+      }
+    } else {
+      if (!employeeId) {
+        next.employeeId = tr('serviceDelivery.create.employeeRequired', 'کارمند را انتخاب کنید')
+      }
+    }
+    if (sessionType.trim().length > 120) {
+      next.sessionType = tr(
+        'serviceDelivery.create.sessionTypeTooLong',
+        'عنوان جلسه نمی‌تواند بیش از ۱۲۰ نویسه باشد',
+      )
+    }
     if (!serviceOfferingId) {
       next.serviceOfferingId = tr('serviceDelivery.create.serviceRequired', 'خدمت را انتخاب کنید')
     }
@@ -186,12 +218,20 @@ function CreateBody({
 
     create.mutate(
       {
-        customerId,
+        subjectType,
+        ...(subjectType === 'customer'
+          ? {
+              customerId: selectedCustomers[0]?.id ?? null,
+              customerIds: selectedCustomers.map((c) => c.id),
+            }
+          : {
+              employeeId: employeeId || null,
+            }),
+        sessionType: sessionType.trim() || null,
         serviceOfferingId,
         sessionDate,
         startTime,
         endTime,
-        settlementMethod,
         practitionerId: practitionerId || null,
         branchId: branchId || null,
         ...(resourceId ? { resourceId } : {}),
@@ -214,11 +254,6 @@ function CreateBody({
     )
   }
 
-  const settlementOptions = SETTLEMENT_METHODS.map((method) => ({
-    value: method,
-    label: tr(`serviceDelivery.settlement.${method}`, method),
-  }))
-
   return (
     <>
       <DialogHeader>
@@ -237,23 +272,71 @@ function CreateBody({
             settlement into one scroll is what made the dialog feel like it had
             nowhere to choose from. */}
         <fieldset className="space-y-2.5">
-          <legend className="text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
-            {tr('serviceDelivery.create.stepCustomerService', 'مشتری و خدمت')}
+          <legend className="w-full border-b border-[hsl(var(--border-default))] pb-1.5 text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
+            {tr('serviceDelivery.create.stepSubject', 'مخاطب جلسه')}
           </legend>
-          <SelectInput
-            label={tr('serviceDelivery.fields.customer', 'مشتری')}
-            name="customerId"
-            value={customerId}
-            onChange={setCustomerId}
-            options={customerOptions}
-            error={invalid('customerId')}
-            searchable
-            searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
-            noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
-            placeholder={tr('serviceDelivery.fields.pickCustomer', 'یک مشتری انتخاب کنید')}
-            {...(customerHint ? { hint: customerHint } : {})}
-          />
+          <div className="space-y-3">
+            <SegmentedControl
+              branch
+              label={tr('serviceDelivery.create.stepSubject', 'مخاطب جلسه')}
+              value={subjectType}
+              onChange={(v) => {
+                setSubjectType(v as 'customer' | 'employee')
+                setErrors((prev) => ({ ...prev, customerId: undefined, employeeId: undefined }))
+              }}
+              options={[
+                { value: 'customer', label: tr('serviceDelivery.fields.subjectCustomer', 'مشتری') },
+                { value: 'employee', label: tr('serviceDelivery.fields.subjectEmployee', 'پرسنل') },
+              ]}
+            />
 
+            {subjectType === 'customer' ? (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+                  {tr('serviceDelivery.fields.customer', 'مشتریان')}
+                </label>
+                <CustomerMultiPicker
+                  value={selectedCustomers}
+                  onChange={(nextCustomers) => {
+                    setSelectedCustomers(nextCustomers)
+                    if (nextCustomers.length > 0) {
+                      setErrors((prev) => ({ ...prev, customerId: undefined }))
+                    }
+                  }}
+                  placeholder={tr(
+                    'serviceDelivery.fields.pickCustomer',
+                    'یک یا چند مشتری انتخاب کنید',
+                  )}
+                />
+                {invalid('customerId') ? (
+                  <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+                    {invalid('customerId')}
+                  </p>
+                ) : customerHint ? (
+                  <p className="text-xs text-[hsl(var(--fg-tertiary))]">{customerHint}</p>
+                ) : null}
+              </div>
+            ) : (
+              <SelectInput
+                label={tr('serviceDelivery.fields.employee', 'کارمند')}
+                name="employeeId"
+                value={employeeId}
+                onChange={setEmployeeId}
+                options={employeeOptions ?? practitionerOptions}
+                error={invalid('employeeId')}
+                searchable
+                searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
+                noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
+                placeholder={tr('serviceDelivery.fields.pickEmployee', 'یک کارمند انتخاب کنید')}
+              />
+            )}
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-2.5">
+          <legend className="w-full border-b border-[hsl(var(--border-default))] pb-1.5 text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
+            {tr('serviceDelivery.create.stepCustomerService', 'خدمت و نوع جلسه')}
+          </legend>
           <SelectInput
             label={tr('serviceDelivery.fields.service', 'خدمت')}
             name="serviceOfferingId"
@@ -267,6 +350,23 @@ function CreateBody({
             placeholder={tr('serviceDelivery.fields.pickService', 'یک خدمت انتخاب کنید')}
             {...(serviceHint ? { hint: serviceHint } : {})}
           />
+
+          <Labeled
+            label={tr('serviceDelivery.fields.sessionType', 'عنوان / نوع جلسه')}
+            error={invalid('sessionType')}
+          >
+            <input
+              type="text"
+              value={sessionType}
+              onChange={(e) => setSessionType(e.target.value)}
+              maxLength={120}
+              placeholder={tr(
+                'serviceDelivery.fields.sessionTypePlaceholder',
+                'مثلاً: مشاوره، آموزش، کوتاهی، معاینه',
+              )}
+              className="h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 text-sm text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]"
+            />
+          </Labeled>
         </fieldset>
 
         <fieldset className="space-y-2.5">
@@ -329,12 +429,7 @@ function CreateBody({
             that actually have to be made the ones on screen. */}
         <details className="group rounded-xl border border-[hsl(var(--border-default))]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))]">
-            <span>
-              {tr(
-                'serviceDelivery.create.moreSummary',
-                'بیشتر — مجری، شعبه، تسویه‌ی پیش‌فرض، یادداشت',
-              )}
-            </span>
+            <span>{tr('serviceDelivery.create.moreSummary', 'بیشتر — مجری، شعبه، یادداشت')}</span>
             <ChevronDown
               aria-hidden="true"
               className="size-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
@@ -373,14 +468,6 @@ function CreateBody({
                 />
               ) : null}
             </div>
-
-            <SelectInput
-              label={tr('serviceDelivery.fields.defaultSettlement', 'تسویه‌ی پیش‌فرض')}
-              name="settlementMethod"
-              value={settlementMethod}
-              onChange={(value) => setSettlementMethod(value as SettlementMethod)}
-              options={settlementOptions}
-            />
 
             <Labeled label={tr('serviceDelivery.fields.clientNotes', 'یادداشت برای مشتری')}>
               <textarea

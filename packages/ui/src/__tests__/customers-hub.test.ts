@@ -20,6 +20,7 @@ import {
   CUSTOMERS_HUB_TABS,
   OUTREACH_SECTIONS,
   OUTREACH_SOURCE,
+  SESSION_SECTIONS,
 } from '../components/ui/customers/containers/customers-hub-container'
 import { ROUTE_DOCS_MAP } from '../components/ui/docs/docs-help-link'
 import { findArticle } from '../lib/docs/docs-content'
@@ -112,6 +113,37 @@ describe('the sessions tab is a tab, not a route', () => {
     // capability read is in flight, and the container decides with its own
     // loading state.
     expect(hub).not.toContain("capabilities.can('invoice.read') === true")
+  })
+})
+
+describe('a trade part follows the business profile, not a permission', () => {
+  it('contracts are a capability gate — `invoice.read` alone offered them to a clothing shop', () => {
+    expect(hub).toContain("profileAllows('contracts_recurring')")
+    expect(hub).toContain(
+      "capabilities.can('invoice.read') !== false && profileAllows('contracts_recurring')",
+    )
+    // A bookmarked `?view=contracts` falls back to the list, not to a section
+    // this business does not have.
+    expect(hub).toContain(
+      "const isContractsView = mayReadContracts && contractsView === 'contracts'",
+    )
+  })
+
+  it('repairs need the work queue; chairs/rooms and commission the booking model', () => {
+    expect(hub).toContain("if (sec === 'repairs') return profileAllows('work_queue_sla')")
+    expect(hub).toContain("if (sec === 'salonSetup') return profileAllows('resource_capacity')")
+    expect(hub).toContain("if (sec === 'commission') return profileAllows('resource_capacity')")
+    // The screen filters the OFFERING; it does not delete the modules.
+    expect([...SESSION_SECTIONS]).toEqual(['sessions', 'repairs', 'salonSetup', 'commission'])
+  })
+
+  it('a workspace that never declared a profile is never restricted', () => {
+    expect(hub).toContain(
+      'profile.isGeneric || profile.primaryDefinition.requestedCapabilities.includes(capability)',
+    )
+    // No industry name is compared anywhere: the gate reads the profile.
+    expect(hub).not.toContain("=== 'clothing'")
+    expect(hub).not.toContain("=== 'barber'")
   })
 })
 

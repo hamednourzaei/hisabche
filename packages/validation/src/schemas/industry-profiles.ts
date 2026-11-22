@@ -215,6 +215,14 @@ export const INDUSTRY_OPERATOR: Record<IndustryKey, OperatorKey> = {
 export const SALES_MODEL_KEYS: readonly IndustryKey[] = ['retail', 'wholesale']
 
 /**
+ * ONE selection limit for every layer (forensic audit F-017, 22 Nov 2026).
+ * The wizard, the account profile write and the workspace profile write used to
+ * enforce three different caps (none / 20 / 12), so a 13-trade selection passed
+ * the account write and failed the workspace write mid-completion.
+ */
+export const MAX_INDUSTRY_SELECTION = 12
+
+/**
  * Values written by the previous onboarding wizard. Kept so an existing
  * workspace is recognised as legacy rather than treated as unknown — but they
  * never authorise a specialised profile.
@@ -434,7 +442,11 @@ const OVERRIDES: Partial<Record<IndustryKey, ProfileOverride>> = {
   },
   mobilePhones: {
     capabilities: ['serialized_items', 'variants'],
-    requested: ['warranty_claims'],
+    // The dashboard has always shown `openRepairTickets`, and the comment on
+    // it says the board is the repairs spec — but the capability the board and
+    // the API gate on was missing, so the workflow was hidden from the very
+    // trade it was written for. A phone repair IS a work queue.
+    requested: ['warranty_claims', 'work_queue_sla'],
     unit: 'piece',
     emphasizedFields: ['name', 'sellPrice'],
     // Reads the repairs spec; the open-ticket board is the same one.

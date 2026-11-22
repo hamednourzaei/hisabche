@@ -1,6 +1,7 @@
 'use client'
 
 import { useNumberFormat } from '../../../hooks/use-number-format'
+import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -38,7 +39,11 @@ interface AddCustomerModalProps {
   open: boolean
   onClose: () => void
   onCreated?: () => void
-  initialRole?: 'buyer' | 'seller' | 'both' | undefined
+  /**
+   * Only two roles exist at creation. `both` stays readable on legacy rows
+   * (the server still returns it) but can no longer be chosen here.
+   */
+  initialRole?: 'buyer' | 'seller' | undefined
 }
 
 const inputBase =
@@ -56,6 +61,7 @@ export function AddCustomerModal({
 }: AddCustomerModalProps) {
   const t = useTranslations()
   const fmt = useNumberFormat()
+  const bookCurrency = useBookCurrency()
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
   const { setSaveStatus } = useSyncStore()
@@ -69,7 +75,7 @@ export function AddCustomerModal({
   const [showSaved, setShowSaved] = useState(false)
   const [phoneValue, setPhoneValue] = useState('')
   const [prevOpen, setPrevOpen] = useState(open)
-  const [role, setRole] = useState<'buyer' | 'seller' | 'both'>(initialRole)
+  const [role, setRole] = useState<'buyer' | 'seller'>(initialRole)
 
   if (open !== prevOpen) {
     setPrevOpen(open)
@@ -206,10 +212,9 @@ export function AddCustomerModal({
             options={[
               { value: 'buyer', label: t('customers.role.buyer') },
               { value: 'seller', label: t('customers.role.seller') },
-              { value: 'both', label: t('customers.role.both') },
             ]}
             value={role}
-            onChange={(next) => setRole(next as 'buyer' | 'seller' | 'both')}
+            onChange={(next) => setRole(next as 'buyer' | 'seller')}
           />
           {/* Name */}
           <div>
@@ -305,7 +310,7 @@ export function AddCustomerModal({
 
               {total > 0 && (
                 <p className="text-center text-lg font-bold tabular-nums text-[hsl(var(--color-primary))]">
-                  {t('customers.form.total')}: {fmt(total)} AFN
+                  {t('customers.form.total')}: {fmt(total)} {bookCurrency ?? ''}
                 </p>
               )}
             </div>

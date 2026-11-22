@@ -66,6 +66,9 @@ export async function setupServiceDelivery(run: Run): Promise<void> {
   const cancellation = doc('service-delivery-03-cancellation-reason-migration.sql')
   await run(cancellation)
   await run(cancellation)
+  const undecided = doc('service-delivery-04-settlement-undecided-migration.sql')
+  await run(undecided)
+  await run(undecided) // idempotent: DROP + ADD converges, VALIDATE is a no-op
 }
 
 let seq = 100
@@ -398,6 +401,56 @@ export const scenarios: Scenario[] = [
       )
       await refuses(cancel(run, id, OTHER_WS), 'SERVICE_DELIVERY_SESSION_NOT_FOUND')
       assert.equal((await session(run, id)).status, 'scheduled')
+    },
+  },
+  {
+    name: 'a booking is born undecided: it cannot be delivered until a method is chosen, then it can',
+    run: async (run) => {
+      const id = await newSession(run)
+      // The write it must allow: a booking with no settlement.
+      assert.equal((await session(run, id)).settlement_method, 'undecided')
+
+      // The write it must refuse: a delivery that names no real settlement.
+      await refuses(deliver(run, id, { settlement: 'undecided' }), 'SETTLEMENT_METHOD_REQUIRED')
+      assert.equal((await session(run, id)).status, 'scheduled')
+      assert.equal((await ledgerFor(run, id)).length, 0)
+
+      // The same session delivers once the person chooses.
+      await deliver(run, id, { settlement: 'complementary', reason: 'goodwill' })
+      const delivered = await session(run, id)
+      assert.equal(delivered.status, 'delivered')
+      assert.equal(delivered.settlement_method, 'complementary')
+    },
+  },
+  {
+    name: 'the settlement column refuses a value outside the four and accepts undecided',
+    run: async (run) => {
+      const bad = sid()
+      await refuses(
+        run(
+          `INSERT INTO public.service_delivery_sessions (id, workspace_id, customer_id, service_offering_id,
+             session_date, start_time, end_time, duration_minutes, settlement_method)
+           VALUES ($1, $2, $3, $4, '2026-11-02', '10:00', '11:00', 60, 'barter')`,
+          [bad, WS, CUST, SERVICE],
+        ),
+        'chk_service_delivery_settlement',
+      )
+      const good = await newSession(run)
+      assert.equal((await session(run, good)).settlement_method, 'undecided')
+    },
+  },
+  {
+    name: 're-running migration 04 keeps the undecided default and the widened check',
+    run: async (run) => {
+      await run(doc('service-delivery-04-settlement-undecided-migration.sql'))
+      const column = await run(
+        `SELECT column_default FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'service_delivery_sessions'
+            AND column_name = 'settlement_method'`,
+      )
+      assert.match(String(column[0]!.column_default), /undecided/)
+      const id = await newSession(run)
+      assert.equal((await session(run, id)).settlement_method, 'undecided')
     },
   },
 ]

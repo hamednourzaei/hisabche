@@ -98,11 +98,64 @@ async function dbGauge(): Promise<CoreGaugeSample['db']> {
   }
 }
 
+async function outboxQueueGauge(now: Date): Promise<CoreGaugeSample['cores'][number]> {
+  const nowIso = now.toISOString()
+  const [pendingRes, deliveringRes, stuckRes] = await Promise.all([
+    supabase
+      .from('webhook_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabase
+      .from('webhook_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'delivering'),
+    supabase
+      .from('webhook_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'delivering')
+      .lt('claim_expires_at', nowIso),
+  ])
+  const pending = countOf(pendingRes)
+  const delivering = countOf(deliveringRes)
+  const stuck = countOf(stuckRes)
+
+  let retryCount: number | null = null
+  if (pending !== null || delivering !== null) {
+    const { data, error } = await supabase
+      .from('webhook_deliveries')
+      .select('attempts')
+      .in('status', ['pending', 'delivering'])
+    if (!error && Array.isArray(data)) {
+      retryCount = data.reduce((sum, row) => {
+        const value = (row as { attempts?: unknown }).attempts
+        return sum + (typeof value === 'number' && Number.isFinite(value) ? value : 0)
+      }, 0)
+    }
+  }
+
+  return {
+    coreId: 'notifications',
+    queueDepth: pending,
+    processingCount: delivering,
+    stuckCount: stuck,
+    retryCount,
+    queueWaitTotalMs: null,
+  }
+}
+
 /** One sample for the collector flush. Partial failure degrades to null, never throws. */
 export async function sampleCoreGauges(now: Date = new Date()): Promise<CoreGaugeSample> {
-  const [jobs, db] = await Promise.all([
+  const [jobs, outbox, db] = await Promise.all([
     jobQueueGauge(now).catch(() => ({
       coreId: 'jobs',
+      queueDepth: null,
+      processingCount: null,
+      stuckCount: null,
+      retryCount: null,
+      queueWaitTotalMs: null,
+    })),
+    outboxQueueGauge(now).catch(() => ({
+      coreId: 'notifications',
       queueDepth: null,
       processingCount: null,
       stuckCount: null,
@@ -112,9 +165,12 @@ export async function sampleCoreGauges(now: Date = new Date()): Promise<CoreGaug
     dbGauge().catch(() => null),
   ])
   // A gauge that measured nothing is not written as a row of zeros.
-  const cores =
-    jobs.queueDepth === null && jobs.processingCount === null && jobs.stuckCount === null
-      ? []
-      : [jobs]
+  const cores: CoreGaugeSample['cores'] = []
+  if (jobs.queueDepth !== null || jobs.processingCount !== null || jobs.stuckCount !== null) {
+    cores.push(jobs)
+  }
+  if (outbox.queueDepth !== null || outbox.processingCount !== null || outbox.stuckCount !== null) {
+    cores.push(outbox)
+  }
   return { cores, db }
 }

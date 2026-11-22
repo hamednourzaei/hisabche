@@ -25,6 +25,7 @@ import {
   operatingQuestionsFor,
   type OperatingAnswers,
   type OperatingQuestion,
+  type YesNoQuestion,
 } from '@hisabche/validation'
 import { useTerminology } from '../../../hooks/use-terminology'
 import { SegmentedControl } from '../segmented-control'
@@ -38,10 +39,17 @@ const optionsOf = (values: readonly string[], prefix: string): readonly AnswerOp
   values.map((value) => ({ value, labelKey: `${prefix}.${value}` }))
 
 const YES_NO = optionsOf(['yes', 'no', 'unknown'], 'onboarding.operating.answers')
-const BRANCHES = optionsOf(['single', 'multiple', 'unknown'], 'onboarding.operating.answers.branch')
-const WAREHOUSES = optionsOf(
-  ['none', 'single', 'multiple', 'unknown'],
-  'onboarding.operating.answers.warehouse',
+// ⚠️ The catalog names these answers with UNDERSCORES (`branch_single`,
+// `warehouse_none`) in all three locales. The component used to build dotted
+// keys (`branch.single`) that exist nowhere, so every branch/warehouse answer
+// rendered its raw English value in the Persian/Dari wizard (forensic audit
+// F-073, measured 22 Nov 2026). One key shape, the one the catalogs carry.
+const BRANCHES: readonly AnswerOption[] = ['single', 'multiple', 'unknown'].map((value) => ({
+  value,
+  labelKey: `onboarding.operating.answers.branch_${value}`,
+}))
+const WAREHOUSES: readonly AnswerOption[] = ['none', 'single', 'multiple', 'unknown'].map(
+  (value) => ({ value, labelKey: `onboarding.operating.answers.warehouse_${value}` }),
 )
 const STAFF_ARRANGEMENTS = optionsOf(
   ['fixed_salary', 'hourly', 'commission', 'shift', 'mixed', 'unknown'],
@@ -50,10 +58,22 @@ const STAFF_ARRANGEMENTS = optionsOf(
 
 function optionsFor(question: OperatingQuestion): readonly AnswerOption[] {
   // `locations` is the legacy name of `branches`; a stored answer still reads.
-  if (question === 'branches' || question === 'locations') return BRANCHES
-  if (question === 'warehouses') return WAREHOUSES
-  if (question === 'staffArrangement') return STAFF_ARRANGEMENTS
-  return YES_NO
+  switch (question) {
+    case 'branches':
+    case 'locations':
+      return BRANCHES
+    case 'warehouses':
+      return WAREHOUSES
+    case 'staffArrangement':
+      return STAFF_ARRANGEMENTS
+    default: {
+      // Exhaustiveness guard (F-080): a NEW question type that is not yes/no
+      // fails to compile here instead of silently rendering wrong options.
+      const yesNo: YesNoQuestion = question
+      void yesNo
+      return YES_NO
+    }
+  }
 }
 
 export interface OperatingQuestionsProps {
@@ -87,14 +107,14 @@ export function OperatingQuestions({ answers, onAnswer, t }: OperatingQuestionsP
             className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <span className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-              {t(`onboarding.operating.questions.${question}`, question)}
+              {t(`onboarding.operating.questions.${question}`)}
               {terminologySuffix}
             </span>
             <SegmentedControl
-              label={t(`onboarding.operating.questions.${question}`, question)}
+              label={t(`onboarding.operating.questions.${question}`)}
               options={options.map((option) => ({
                 value: option.value,
-                label: t(option.labelKey, option.value),
+                label: t(option.labelKey),
               }))}
               value={current}
               onChange={(value) => onAnswer(question, value)}

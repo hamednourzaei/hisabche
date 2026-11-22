@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 36
+export const SCHEMA_VERSION = 37
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -1176,6 +1176,9 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'id',
     'workspace_id',
     'customer_id',
+    'subject_type',
+    'employee_id',
+    'session_type',
     'service_offering_id',
     'practitioner_id',
     'branch_id',
@@ -1194,6 +1197,20 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'created_at',
     'updated_at',
     'deleted_at',
+    'origin',
+    'sync_state',
+  ],
+  // v37 (M4.5): who is in a session. Rides with the session pull; the device
+  // writes it when a person joins or leaves offline.
+  service_delivery_session_participants: [
+    'id',
+    'workspace_id',
+    'session_id',
+    'participant_type',
+    'customer_id',
+    'employee_id',
+    'created_at',
+    'created_by',
     'origin',
     'sync_state',
   ],

@@ -1,7 +1,7 @@
 // ============================================
 // The customer portal on screen: the public page on every host, hidden from
-// crawlers; the panel on the customer's account tab; every sentence in three
-// languages; and the «latest 100» line equal to the server's real limit.
+// crawlers; every sentence in three languages; and the «latest 100» line equal
+// to the server's real limit.
 // ============================================
 
 import { readFileSync } from 'node:fs'
@@ -28,12 +28,6 @@ describe('the customer portal', () => {
     const robots = readFileSync(join(ROOT, 'apps/web/app/robots.ts'), 'utf8')
     expect(robots).toContain("'/portal/'")
     expect(robots).toContain("'/*/portal/'")
-  })
-
-  it('the panel is on the customer’s account tab', () => {
-    const view = read('packages/ui/src/components/ui/customers/customer-detail-view.tsx')
-    const account = view.slice(view.indexOf('<TabsContent value="account">'))
-    expect(account.slice(0, 300)).toContain('<CustomerPortalPanel customerId={customer.id} />')
   })
 
   it('a dead link and a failed request are different sentences', () => {

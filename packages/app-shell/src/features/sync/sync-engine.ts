@@ -327,6 +327,9 @@ const FROM_LOG: Record<DeltaEntity, (r: Record<string, unknown>) => Record<strin
     id: r.id,
     workspace_id: str(r.workspace_id) ?? '',
     customer_id: str(r.customer_id) ?? '',
+    subject_type: str(r.subject_type) ?? 'customer',
+    employee_id: str(r.employee_id),
+    session_type: str(r.session_type),
     service_offering_id: str(r.service_offering_id) ?? '',
     practitioner_id: str(r.practitioner_id),
     branch_id: str(r.branch_id),
@@ -718,6 +721,41 @@ async function markCreditStatus(
 }
 
 /** Every row of one entity, walking /sync/snapshot to the end. */
+/**
+ * Who is in a session (M4.5). The server attaches each session's participants
+ * to its pull row; the device stores them in its own relation so an offline
+ * screen reads the same group the server knows. Rows without the attachment
+ * (a server that has not run service-delivery-05) write nothing — the session
+ * itself still lands.
+ */
+async function storeSessionParticipants(rawRows: Array<Record<string, unknown>>): Promise<number> {
+  const desktop = bridge()
+  if (!desktop) return 0
+  const rows: Array<Record<string, unknown>> = []
+  for (const raw of rawRows) {
+    const parts = raw.participants
+    if (!Array.isArray(parts)) continue
+    for (const entry of parts) {
+      const part = entry as Record<string, unknown>
+      const id = str(part.id)
+      if (!id) continue
+      rows.push({
+        id,
+        workspace_id: str(raw.workspace_id) ?? '',
+        session_id: str(raw.id) ?? '',
+        participant_type: str(part.participant_type) ?? 'customer',
+        customer_id: str(part.customer_id),
+        employee_id: str(part.employee_id),
+        created_at: str(part.created_at) ?? nowIso(),
+        origin: 'server',
+        sync_state: 'synced',
+      })
+    }
+  }
+  if (rows.length === 0) return 0
+  return desktop.db.upsertMany('service_delivery_session_participants', rows)
+}
+
 async function snapshotEntity(entity: DeltaEntity): Promise<number> {
   const desktop = bridge()
   if (!desktop) return 0
@@ -733,6 +771,7 @@ async function snapshotEntity(entity: DeltaEntity): Promise<number> {
     if (entity === 'invoice') await attachCustomerNames(rows)
     if (rows.length > 0) written += await desktop.db.upsertMany(entity, rows)
     if (entity === 'invoice') written += await storeInvoiceItems(body.rows)
+    if (entity === 'service_delivery_sessions') written += await storeSessionParticipants(body.rows)
     if (!body.hasMore || !body.nextAfter) break
     after = body.nextAfter
   }
@@ -874,6 +913,13 @@ export async function applyChanges(page: PullPage): Promise<number> {
     if (upserts.length > 0) written += await desktop.db.upsertMany(entity, upserts)
     if (entity === 'invoice') {
       written += await storeInvoiceItems(
+        mine
+          .filter((change) => change.operation !== 'delete' && change.data)
+          .map((change) => change.data as Record<string, unknown>),
+      )
+    }
+    if (entity === 'service_delivery_sessions') {
+      written += await storeSessionParticipants(
         mine
           .filter((change) => change.operation !== 'delete' && change.data)
           .map((change) => change.data as Record<string, unknown>),
@@ -1136,6 +1182,21 @@ async function pushEntry(entry: QueueEntry): Promise<unknown> {
   if (entry.entity === 'service_delivery_sessions') {
     const payload = entry.payload as Record<string, unknown>
     const sessionId = String(payload.id ?? '')
+    // M4.5: a person joined or left offline. These ride the session entity (no
+    // second sync engine); the server re-checks workspace and subject type.
+    const add = payload.participantAdd as Record<string, unknown> | undefined
+    if (add) {
+      await apiClient.post(`/service-delivery/sessions/${sessionId}/participants`, add, { headers })
+      return
+    }
+    const remove = payload.participantRemove as Record<string, unknown> | undefined
+    if (remove) {
+      await apiClient.delete(
+        `/service-delivery/sessions/${sessionId}/participants/${String(remove.participantId ?? '')}`,
+        { headers },
+      )
+      return
+    }
     if (payload.status === 'delivered') {
       await apiClient.post(`/service-delivery/sessions/${sessionId}/deliver`, entry.payload, {
         headers,

@@ -16,6 +16,7 @@
 // ============================================
 
 import type { EntitySyncState, ServiceDeliverySessionItem } from '@hisabche/api'
+import { SERVICE_DELIVERY_DELIVERY_METHODS } from '@hisabche/validation'
 
 export const SERVICE_SESSION_STATUSES = [
   'scheduled',
@@ -26,8 +27,12 @@ export const SERVICE_SESSION_STATUSES = [
   'no_show',
 ] as const
 
-/** The settlements the delivery dialog offers. «free» is `complementary` in the domain. */
-export const SETTLEMENT_METHODS = ['package_credit', 'invoice', 'complementary'] as const
+/**
+ * The settlements the delivery dialog offers. «free» is `complementary` in the
+ * domain, and `undecided` is never offered: it is the absence of a settlement,
+ * not one of the choices. Derived from the domain list so the two cannot drift.
+ */
+export const SETTLEMENT_METHODS = SERVICE_DELIVERY_DELIVERY_METHODS
 export type SettlementMethod = (typeof SETTLEMENT_METHODS)[number]
 
 /** A session plus the names the list needs — resolved by the container, never guessed. */

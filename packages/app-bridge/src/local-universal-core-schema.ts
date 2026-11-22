@@ -108,11 +108,47 @@ export const PACKAGE_DEFERRED_REVENUE_ALTERS: readonly string[] = [
   ...PACKAGE_ALLOCATION_STATEMENTS,
 ]
 
+/**
+ * Who is in a session (v37, M4.5) — the device's copy of
+ * `service_delivery_session_participants`. The primary person always has a row
+ * here too. Declared BEFORE `SERVICE_DELIVERY_STATEMENTS`, which spreads it.
+ */
+export const SESSION_PARTICIPANT_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS service_delivery_session_participants (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    session_id TEXT NOT NULL,
+    participant_type TEXT NOT NULL CHECK (participant_type IN ('customer', 'employee')),
+    customer_id TEXT,
+    employee_id TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    created_by TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only',
+    CHECK (
+      (participant_type = 'customer' AND customer_id IS NOT NULL AND employee_id IS NULL)
+      OR
+      (participant_type = 'employee' AND employee_id IS NOT NULL AND customer_id IS NULL)
+    )
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_sd_participant_customer ON service_delivery_session_participants(session_id, customer_id) WHERE customer_id IS NOT NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_sd_participant_employee ON service_delivery_session_participants(session_id, employee_id) WHERE employee_id IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_sd_participant_session ON service_delivery_session_participants(session_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_sd_participant_customer ON service_delivery_session_participants(workspace_id, customer_id) WHERE customer_id IS NOT NULL`,
+]
+
 export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
+  // customer_id stays NOT NULL in SQLite (the column cannot be widened by
+  // ALTER): an EMPLOYEE session stores '' here and every reader maps '' back
+  // to null — the domain never sees a fake customer id. The server's column is
+  // nullable (docs/service-delivery-05-session-subject-participants-migration.sql).
   `CREATE TABLE IF NOT EXISTS service_delivery_sessions (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
     customer_id TEXT NOT NULL,
+    subject_type TEXT NOT NULL DEFAULT 'customer',
+    employee_id TEXT,
+    session_type TEXT,
     service_offering_id TEXT NOT NULL,
     practitioner_id TEXT,
     branch_id TEXT,
@@ -137,6 +173,7 @@ export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_workspace_date ON service_delivery_sessions(workspace_id, session_date)`,
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_customer ON service_delivery_sessions(workspace_id, customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_practitioner ON service_delivery_sessions(workspace_id, practitioner_id)`,
+  ...SESSION_PARTICIPANT_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS service_delivery_status_audit (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
@@ -147,6 +184,23 @@ export const SERVICE_DELIVERY_STATEMENTS: readonly string[] = [
     changed_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS idx_service_delivery_audit_session ON service_delivery_status_audit(workspace_id, session_id, changed_at DESC)`,
+]
+
+/**
+ * v37 on an existing cache: the session subject, the free-text type, and the
+ * participant relation — the same facts the server's service-delivery-05 adds.
+ * The backfill id is derived from (session, person), so a second run converges.
+ */
+export const SESSION_SUBJECT_PARTICIPANT_ALTERS: readonly string[] = [
+  `ALTER TABLE service_delivery_sessions ADD COLUMN subject_type TEXT NOT NULL DEFAULT 'customer'`,
+  `ALTER TABLE service_delivery_sessions ADD COLUMN employee_id TEXT`,
+  `ALTER TABLE service_delivery_sessions ADD COLUMN session_type TEXT`,
+  ...SESSION_PARTICIPANT_STATEMENTS,
+  `INSERT OR IGNORE INTO service_delivery_session_participants
+     (id, workspace_id, session_id, participant_type, customer_id, created_at)
+   SELECT id || ':customer:' || customer_id, workspace_id, id, 'customer', customer_id, created_at
+     FROM service_delivery_sessions
+    WHERE customer_id IS NOT NULL AND customer_id <> ''`,
 ]
 
 export const COURIER_DELIVERY_STATEMENTS: readonly string[] = [

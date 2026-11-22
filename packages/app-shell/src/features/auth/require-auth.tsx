@@ -31,6 +31,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const sharedUser = useSharedAuthStore((s) => s.user)
   const hasNoWorkspace = useWorkspaceStore((s) => s.hasNoWorkspace)
   const localCompleted = useOnboardingStore((s) => s.isCompleted)
+  const localCompletedAt = useOnboardingStore((s) => s.completedAt)
   const localStep = useOnboardingStore((s) => s.step)
   const claimForUser = useOnboardingStore((s) => s.claimForUser)
   const resetOnboarding = useOnboardingStore((s) => s.reset)
@@ -38,10 +39,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const serverCompleted = sharedUser?.onboardingCompleted
 
   // The wizard's answers belong to one account — see the web's useRedirectGuard.
+  // ⚠️ Only a FRESH ONLINE «false» resets local completion (F-108): offline,
+  // the cached user can be stale, and the offline-first rule says a stale
+  // server answer must never take locally completed work away.
   useEffect(() => {
     if (!sharedUser?.id) return
     claimForUser(sharedUser.id)
-    if (serverCompleted === false && useOnboardingStore.getState().isCompleted) {
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false
+    if (online && serverCompleted === false && useOnboardingStore.getState().isCompleted) {
       resetOnboarding()
     }
   }, [sharedUser?.id, serverCompleted, claimForUser, resetOnboarding])
@@ -50,14 +55,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   // ONE offline/onboarding decision, shared with the server-side gate's rules:
   // a locally completed business keeps working offline even when no cloud
-  // answer is available; an incomplete one resumes at its actual step. A stale
-  // «server says false» never takes completed local work away.
+  // answer is available; an incomplete one resumes at its actual step.
+  // `cloudActivated` is the VERIFIED server answer (F-100) — a positive
+  // `onboardingCompleted` from the server is the activation record; the local
+  // timestamp is a real instant, not a boolean proxy (F-109).
   const decision = evaluateOfflineOnboarding({
-    localCompletedAt: localCompleted ? 'local' : null,
+    localCompletedAt: localCompleted ? (localCompletedAt ?? 'local') : null,
     localStep,
-    // An offline desktop session has no verified cloud activation; the server
-    // answer only tells us onboarding finished there, not that sync is active.
-    cloudActivated: false,
+    cloudActivated: serverCompleted === true,
     nextRequiredStep: null,
   })
   // Keep the established shell semantics when the SERVER positively says the

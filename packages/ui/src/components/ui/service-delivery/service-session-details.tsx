@@ -227,7 +227,7 @@ export function ServiceSessionDetails({
           </dl>
         ) : null}
 
-        {session && session.status !== 'cancelled' ? (
+        {session && session.customerId && session.status !== 'cancelled' ? (
           <div className="border-t border-[hsl(var(--border-default))] pt-4">
             <SessionDepositPanel
               sessionId={session.id}
@@ -237,7 +237,7 @@ export function ServiceSessionDetails({
           </div>
         ) : null}
 
-        {session ? (
+        {session && session.customerId ? (
           <div className="border-t border-[hsl(var(--border-default))] pt-4">
             <PackageGrantsPanel customerId={session.customerId} maySuspend={maySuspendPackage} />
           </div>

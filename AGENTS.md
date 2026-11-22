@@ -285,6 +285,41 @@ Access interfaces:
 
 ---
 
+## 0.7. MANDATORY OUTCOME-DRIVEN SYSTEM INTEGRITY STANDARD
+
+> **PERMANENT ARCHITECTURAL LAW:** Every operational core, feature, onboarding step, and background workflow in Hisabche is evaluated strictly by its **real operational outcome** — never by process health, HTTP 200, green test badges, or dashboard status alone.
+> Canonical Skill: `.agents/skills/outcome-driven-system-integrity/SKILL.md` (and `.claude/skills/...`).
+> Detailed Protocol: `docs/architecture/OUTCOME-DRIVEN-INTEGRITY-STANDARD.md`.
+
+### The Five-Layer Invariant Mandate
+
+Every feature or operational capability must prove:
+
+1. **Layer 1 — Availability:** Handlers, database connections, and endpoints exist and respond.
+2. **Layer 2 — Execution:** The intended domain handler ran, committed, and prevented duplicate/replay actions.
+3. **Layer 3 — Outcome Correctness:** Records, computed minor units, accounting entries, and stock effects match domain invariants.
+4. **Layer 4 — Durability & Consistency:** Persistence in PostgreSQL with tenancy, FK constraints, outbox queues, and offline sync integrity.
+5. **Layer 5 — User-Visible Proof:** The result is accurately rendered in the UI with correct numbers, states, and permissions.
+
+### Capability Outcome Registration Table
+
+In every development mission and audit, each capability must be documented with this exact record:
+
+| Field                 | Description & Example                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| **Capability**        | Exact feature name (e.g., `Invoice Finalization`)                                               |
+| **Owner Core**        | Canonical domain core (e.g., `Sales`)                                                           |
+| **Dependencies**      | Downstream cores (e.g., `Accounting, Inventory, Payments`)                                      |
+| **Expected Outcome**  | Real business effect (e.g., finalized invoice committed, inventory deducted, receivable posted) |
+| **Persistence Proof** | PostgreSQL records, FKs, and tenancy verified in database                                       |
+| **Replay Proof**      | Idempotency key / state checks prevent duplicate execution/logging                              |
+| **Offline Proof**     | Seamless local-engine persistence and post-sync convergence                                     |
+| **User Proof**        | Rendered on screen with correct state, amounts, and localization                                |
+| **Failure Recovery**  | Detectable partial failure and safe deterministic recovery                                      |
+| **Alert Owner**       | Dedicated operational core owner responsible for alerting                                       |
+
+---
+
 ## 1. Five rules everything rests on
 
 1. **`workspace_id` is the only security boundary.** `user_id` says who did something; it is never
@@ -432,9 +467,12 @@ A web page file is `metadata + <XContainer />` — no `'use client'`, no second 
 - Do not edit backend source while a `vitest run` is in progress.
 - `embedded-postgres` tests occasionally fail to bind a port (`EACCES` / `ECONNREFUSED`); rerun
   that one file before concluding anything.
-- The code graph is in `graphify-out/`. Query it before a wide grep:
-  `C:/Users/hamed/AppData/Local/Programs/Python/Python313/Scripts/graphify.exe explain "<Symbol>"`
-  (always that full path — a bare `graphify` on PATH resolves to the infected install).
+- The code graph is in `graphify-out/` (graphifyy 0.9.115, code + SQL, rebuilt 22 Nov 2026).
+  Query it before a wide grep:
+  `C:/Users/hamed/.qwenwork/bin/python/Scripts/graphify.exe explain "<Symbol>"`
+  (always that full path — a bare `graphify` on PATH may resolve to the infected legacy install).
+  Rebuild after code changes: `graphify.exe . --update --code-only` (docs/media need an LLM key;
+  the graph is code-only by policy).
 
 ---
 

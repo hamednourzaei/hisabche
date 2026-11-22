@@ -12,8 +12,14 @@ import {
   Building2 as BuildingIcon,
   ShoppingBag,
 } from 'lucide-react'
-import { memo, useCallback, useMemo } from 'react'
-import { BUSINESS_MODELS, BUSINESS_TYPE_OTHER, filterBusinessTypes } from '@hisabche/ui-contract'
+import { memo, useCallback, useMemo, useState } from 'react'
+import {
+  BUSINESS_MODELS,
+  BUSINESS_TYPES,
+  BUSINESS_TYPE_OTHER,
+  filterBusinessTypes,
+} from '@hisabche/ui-contract'
+import { primaryIndustryKeyOf } from '@hisabche/validation'
 import { industrySupportNoteKey } from '../../../lib/industry-support-note'
 import { CurrencyPicker } from './currency-picker'
 import { SearchableOptionList } from './searchable-option-list'
@@ -22,8 +28,12 @@ import { CompositionPlanSummary } from './composition-plan-summary'
 import type { OperatingAnswers, OperatingQuestion } from '@hisabche/validation'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   OnboardingPage v4 — Memoized · Performance Optimized
-   ✅ memo · useCallback · Row جدا شده
+   OnboardingPage — forensic remediation R2/R5 (22 Nov 2026)
+   • the displayed primary is the ONE canonical decision (ADR-001)
+   • selection cap shared with both server writes
+   • «other» requires a description before Next
+   • review answers sales-model and trades separately; no raw ids/codes
+   • RTL-correct arrows, progressbar semantics, single-flight finish button
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface OnboardingPageProps {
@@ -31,13 +41,14 @@ export interface OnboardingPageProps {
   businessType: string | null
   primaryTradeKey?: string | null | undefined
   storeSize: string | null
-  /** Optional free text; never gates progress. */
+  /** Free text; mandatory when «other» is selected, optional otherwise. */
   businessNote: string
   defaultCurrency: string
   /** Interface language, for the currency cards. */
   lang: string
   t: (key: string, fallback?: string) => string
-  businessTypeLabel: string
+  salesModelLabel: string
+  tradesLabel: string
   storeSizeLabel: string
   currencyLabel: string
   onSetStep: (step: number) => void
@@ -50,12 +61,25 @@ export interface OnboardingPageProps {
   operatingAnswers: OperatingAnswers
   onSetOperatingAnswer: (question: OperatingQuestion, answer: string) => void
   onComplete: () => void
+  /** True while the completion chain runs — the finish button is single-flight. */
+  submitting: boolean
+  /** Visible autosave failure/degraded notice (never silent). */
+  autosaveNotice: string | null
+  /** Recovery information after a partial completion or an ACTIVE draft. */
+  completionNotice: string | null
+  /** «other» is selected — the note gates Next. */
+  noteRequired: boolean
+  /** The ONE selection limit, shared with both server writes. */
+  selectionLimit: number
 }
 
 const selectedClasses =
   'border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.08)] shadow-[0_0_0_2px_hsl(var(--color-primary)/0.3)]'
 const unselectedClasses =
   'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] hover:border-[hsl(var(--color-primary)/0.4)]'
+
+/** Directional icons follow the reading direction (fa/af are RTL). */
+const directionalIconClass = 'rtl:-scale-x-100'
 
 // ─── Row ────────────────────────────────────────────────────────────────────
 
@@ -105,7 +129,7 @@ const WelcomeStep = memo(function WelcomeStep({
           'motion-reduce:transition-none',
         )}
       >
-        <ArrowRight className="size-5" aria-hidden="true" />
+        <ArrowRight className={cn('size-5', directionalIconClass)} aria-hidden="true" />
         {t('onboarding.start')}
       </button>
     </div>
@@ -122,6 +146,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
   onSetPrimaryTradeKey,
   onBack,
   onNext,
+  selectionLimit,
   t,
 }: {
   businessType: string | null
@@ -130,34 +155,59 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
   onSetPrimaryTradeKey?: ((key: string | null) => void) | undefined
   onBack: () => void
   onNext: () => void
+  selectionLimit: number
   t: (key: string, fallback?: string) => string
 }) {
   // Selection is a set: someone may genuinely run more than one business.
-  // `businessType` stays a single string on the workspace, so the parent keeps
-  // the primary choice and this step reports the whole selection.
   const selectedIds = useMemo(
     () => new Set(businessType ? businessType.split(',').filter(Boolean) : []),
     [businessType],
   )
+  const [limitHit, setLimitHit] = useState(false)
 
   const trades = useMemo(
     () =>
       filterBusinessTypes('', t).map((option) => ({
         id: option.id,
-        label: t(option.labelKey),
+        label: t(option.labelKey, option.labelFa),
       })),
+    [t],
+  )
+
+  // ONE catalogue for chip labels — models included, so a selected
+  // «retail»/«wholesale» never renders as a raw id (F-113).
+  const labelOf = useCallback(
+    (id: string): string => {
+      const option = [...BUSINESS_MODELS, ...BUSINESS_TYPES, BUSINESS_TYPE_OTHER].find(
+        (entry) => entry.id === id,
+      )
+      return option ? t(option.labelKey, option.labelFa) : t('onboarding.unknownActivity')
+    },
     [t],
   )
 
   const handleToggle = useCallback(
     (id: string) => {
       const next = new Set(selectedIds)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        // The SAME cap both server writes enforce (F-017).
+        if (next.size >= selectionLimit) {
+          setLimitHit(true)
+          return
+        }
+        next.add(id)
+      }
+      setLimitHit(false)
       onSetBusinessType([...next].join(','))
     },
-    [selectedIds, onSetBusinessType],
+    [selectedIds, onSetBusinessType, selectionLimit],
   )
+
+  // The displayed primary is the canonical decision — registry order, explicit
+  // primary wins — never the insertion order of the selection set (F-005).
+  const displayPrimary = primaryIndustryKeyOf(businessType, primaryTradeKey)
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
@@ -168,8 +218,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
         data-onboarding-body=""
         className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
       >
-        {/* Sales model: two cards, side by side at every width. Almost every
-          business is one of the two, so they stay cards rather than list rows. */}
+        {/* Sales model: two cards, side by side at every width. */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {BUSINESS_MODELS.map((item) => {
             const Icon = item.id === 'wholesale' ? Building2 : Store
@@ -192,15 +241,14 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
                   aria-hidden="true"
                 />
                 <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
-                  {t(item.labelKey)}
+                  {t(item.labelKey, item.labelFa)}
                 </h3>
               </button>
             )
           })}
         </div>
 
-        {/* The actual trade, searchable. The old five-card set forced most shops
-          to answer "other", which told us nothing about them. */}
+        {/* The actual trade, searchable. */}
         <div className="mt-4">
           <SearchableOptionList
             options={trades}
@@ -215,6 +263,12 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
           />
         </div>
 
+        {limitHit && (
+          <p role="alert" className="mt-3 text-sm text-[hsl(var(--color-destructive))]">
+            {t('onboarding.selectionLimit')}
+          </p>
+        )}
+
         {selectedIds.size > 1 && (
           <div className="mt-4 rounded-2xl border border-[hsl(var(--border-default))] p-4 bg-[hsl(var(--surface-elevated))]">
             <h4 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
@@ -225,12 +279,12 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {[...selectedIds].map((id) => {
-                const label = trades.find((tr) => tr.id === id)?.label ?? id
-                const isPrimary = (primaryTradeKey || [...selectedIds][0]) === id
+                const isPrimary = displayPrimary === id
                 return (
                   <button
                     key={id}
                     type="button"
+                    aria-pressed={isPrimary}
                     onClick={() => onSetPrimaryTradeKey?.(id)}
                     className={cn(
                       'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -239,7 +293,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
                         : 'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] hover:border-[hsl(var(--color-primary)/0.4)]',
                     )}
                   >
-                    {label}
+                    {labelOf(id)}
                   </button>
                 )
               })}
@@ -259,7 +313,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
             'motion-reduce:transition-none',
           )}
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className={cn('size-4', directionalIconClass)} aria-hidden="true" />
           {t('action.back')}
         </button>
         <button
@@ -290,6 +344,7 @@ const StoreSizeStep = memo(function StoreSizeStep({
   onSetStoreSize,
   businessNote,
   onSetBusinessNote,
+  noteRequired,
   onBack,
   onNext,
   t,
@@ -298,36 +353,21 @@ const StoreSizeStep = memo(function StoreSizeStep({
   onSetStoreSize: (size: string) => void
   businessNote: string
   onSetBusinessNote: (note: string) => void
+  noteRequired: boolean
   onBack: () => void
   onNext: () => void
   t: (key: string, fallback?: string) => string
 }) {
+  // The label already carries the headcount — the old second line repeated
+  // the same key and printed every label twice (F-066).
   const storeSizes = [
-    {
-      id: 'solo',
-      icon: StoreIcon,
-      labelKey: 'onboarding.scaleSolo',
-      descKey: 'onboarding.scaleSolo',
-    },
-    {
-      id: 'small',
-      icon: StoreIcon,
-      labelKey: 'onboarding.scaleSmall',
-      descKey: 'onboarding.scaleSmall',
-    },
-    {
-      id: 'medium',
-      icon: BuildingIcon,
-      labelKey: 'onboarding.scaleMedium',
-      descKey: 'onboarding.scaleMedium',
-    },
-    {
-      id: 'large',
-      icon: ShoppingBag,
-      labelKey: 'onboarding.scaleLarge',
-      descKey: 'onboarding.scaleLarge',
-    },
+    { id: 'solo', icon: StoreIcon, labelKey: 'onboarding.scaleSolo' },
+    { id: 'small', icon: StoreIcon, labelKey: 'onboarding.scaleSmall' },
+    { id: 'medium', icon: BuildingIcon, labelKey: 'onboarding.scaleMedium' },
+    { id: 'large', icon: ShoppingBag, labelKey: 'onboarding.scaleLarge' },
   ]
+
+  const noteMissing = noteRequired && !businessNote.trim()
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
@@ -338,8 +378,6 @@ const StoreSizeStep = memo(function StoreSizeStep({
         data-onboarding-body=""
         className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
       >
-        {/* Two per row rather than a vertical stack, so the three sizes and the
-          free-text card below form one 2x2 block instead of a long column. */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
           {storeSizes.map((item) => (
             <button
@@ -359,11 +397,8 @@ const StoreSizeStep = memo(function StoreSizeStep({
               />
               <div className="min-w-0">
                 <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
-                  {t(item.labelKey, item.id)}
+                  {t(item.labelKey)}
                 </h3>
-                <p className="text-xs text-[hsl(var(--fg-secondary))] sm:text-sm">
-                  {t(item.descKey, '')}
-                </p>
               </div>
               {storeSize === item.id && (
                 <Check
@@ -374,8 +409,9 @@ const StoreSizeStep = memo(function StoreSizeStep({
             </button>
           ))}
 
-          {/* Fourth cell: free text, completing the 2x2 block. Purely optional —
-            it never gates the Next button, so leaving it blank costs nothing. */}
+          {/* Fourth cell: free text. Optional — UNLESS «other» was selected,
+            when a description is the only thing that tells us the business
+            (F-011). The note is persisted, so a refresh keeps it (F-031). */}
           <div
             className={cn(
               'flex flex-col rounded-2xl border-2 p-3.5 sm:p-5',
@@ -387,12 +423,16 @@ const StoreSizeStep = memo(function StoreSizeStep({
               className="mb-1.5 text-sm font-semibold text-[hsl(var(--fg-primary))]"
             >
               {t('onboarding.aboutBusiness')}
+              {noteRequired ? ' *' : ''}
             </label>
             <textarea
               id="onboarding-business-note"
               value={businessNote}
               onChange={(event) => onSetBusinessNote(event.target.value)}
               rows={3}
+              maxLength={2000}
+              required={noteRequired}
+              aria-required={noteRequired}
               placeholder={t('onboarding.aboutBusinessPlaceholder')}
               className={cn(
                 'w-full flex-1 resize-none rounded-xl border p-2.5 text-sm outline-none',
@@ -401,6 +441,11 @@ const StoreSizeStep = memo(function StoreSizeStep({
                 'focus:border-[hsl(var(--color-primary))]',
               )}
             />
+            {noteMissing && (
+              <p className="mt-1.5 text-xs text-[hsl(var(--color-destructive))]">
+                {t('onboarding.otherDescriptionRequired')}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -416,12 +461,12 @@ const StoreSizeStep = memo(function StoreSizeStep({
             'motion-reduce:transition-none',
           )}
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className={cn('size-4', directionalIconClass)} aria-hidden="true" />
           {t('action.back')}
         </button>
         <button
           type="button"
-          disabled={!storeSize}
+          disabled={!storeSize || noteMissing}
           onClick={onNext}
           className={cn(
             'inline-flex items-center justify-center rounded-full px-6 py-2.5',
@@ -451,7 +496,6 @@ const CurrencyStep = memo(function CurrencyStep({
   t,
 }: {
   defaultCurrency: string
-  /** Interface language — decides which two currencies are offered as cards. */
   lang: string
   onSetCurrency: (currency: string) => void
   onBack: () => void
@@ -467,7 +511,7 @@ const CurrencyStep = memo(function CurrencyStep({
         data-onboarding-body=""
         className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1"
       >
-        {/* The picker itself is shared with the offline first run — one control,
+        {/* The picker is shared with the offline first run — one control,
           one list of codes, one place where a code can be refused. */}
         <CurrencyPicker
           value={defaultCurrency || null}
@@ -488,7 +532,7 @@ const CurrencyStep = memo(function CurrencyStep({
             'motion-reduce:transition-none',
           )}
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className={cn('size-4', directionalIconClass)} aria-hidden="true" />
           {t('action.back')}
         </button>
         <button
@@ -556,7 +600,7 @@ const OperatingStep = memo(function OperatingStep({
             'motion-reduce:transition-none',
           )}
         >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+          <ArrowLeft className={cn('size-4', directionalIconClass)} aria-hidden="true" />
           {t('action.back')}
         </button>
         <button
@@ -582,17 +626,21 @@ OperatingStep.displayName = 'OperatingStep'
 
 const CompleteStep = memo(function CompleteStep({
   businessType,
-  businessTypeLabel,
+  salesModelLabel,
+  tradesLabel,
   storeSizeLabel,
   currencyLabel,
   onComplete,
+  submitting,
   t,
 }: {
   businessType: string
-  businessTypeLabel: string
+  salesModelLabel: string
+  tradesLabel: string
   storeSizeLabel: string
   currencyLabel: string
   onComplete: () => void
+  submitting: boolean
   t: (key: string, fallback?: string) => string
 }) {
   const noteKey = industrySupportNoteKey(businessType)
@@ -614,7 +662,12 @@ const CompleteStep = memo(function CompleteStep({
       </p>
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] mb-5 sm:mb-8">
         <div className="p-4 space-y-3 text-start sm:p-6 sm:space-y-4">
-          <Row label={t('onboarding.businessType')} value={businessTypeLabel} />
+          {/* Sales model and trades answer different questions — separate rows
+            (F-003/F-009). Currency is named, not coded (F-064). */}
+          {salesModelLabel ? (
+            <Row label={t('onboarding.salesModel')} value={salesModelLabel} />
+          ) : null}
+          <Row label={t('onboarding.trades')} value={tradesLabel} />
           <Row label={t('onboarding.size')} value={storeSizeLabel} />
           <Row label={t('onboarding.currency')} value={currencyLabel} />
         </div>
@@ -630,17 +683,20 @@ const CompleteStep = memo(function CompleteStep({
       <button
         type="button"
         onClick={onComplete}
+        disabled={submitting}
+        aria-busy={submitting}
         className={cn(
           'w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-3.5',
           'text-base font-bold text-white',
           'bg-[image:var(--gradient-brand)]',
           'shadow-md shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
+          'disabled:opacity-60 disabled:cursor-wait',
           'motion-reduce:transition-none',
         )}
       >
-        <ArrowRight className="size-5" aria-hidden="true" />
-        {t('onboarding.enter')}
+        <ArrowRight className={cn('size-5', directionalIconClass)} aria-hidden="true" />
+        {submitting ? t('onboarding.saving') : t('onboarding.enter')}
       </button>
     </div>
   )
@@ -658,7 +714,8 @@ export const OnboardingPage = memo(function OnboardingPage({
   defaultCurrency,
   lang,
   t,
-  businessTypeLabel,
+  salesModelLabel,
+  tradesLabel,
   storeSizeLabel,
   currencyLabel,
   onSetStep,
@@ -670,6 +727,11 @@ export const OnboardingPage = memo(function OnboardingPage({
   operatingAnswers,
   onSetOperatingAnswer,
   onComplete,
+  submitting,
+  autosaveNotice,
+  completionNotice,
+  noteRequired,
+  selectionLimit,
 }: OnboardingPageProps) {
   const handleStart = useCallback(() => onSetStep(1), [onSetStep])
   const handleBack1 = useCallback(() => onSetStep(0), [onSetStep])
@@ -687,7 +749,14 @@ export const OnboardingPage = memo(function OnboardingPage({
       data-onboarding-screen=""
     >
       <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-4 sm:py-6">
-        <div className="mb-4 flex shrink-0 items-center justify-center gap-1.5 sm:mb-6 sm:gap-2">
+        <div
+          className="mb-4 flex shrink-0 items-center justify-center gap-1.5 sm:mb-6 sm:gap-2"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={5}
+          aria-valuenow={Math.min(Math.max(step, 1), 5)}
+          aria-label={t('onboarding.progressLabel')}
+        >
           {[1, 2, 3, 4, 5].map((s) => (
             <div
               key={s}
@@ -699,6 +768,24 @@ export const OnboardingPage = memo(function OnboardingPage({
           ))}
         </div>
 
+        {/* Failures are said, never swallowed (F-037/F-055). */}
+        {autosaveNotice && (
+          <p
+            role="status"
+            className="mb-3 shrink-0 rounded-xl bg-[hsl(var(--color-warning)/0.1)] px-4 py-2.5 text-start text-xs text-[hsl(var(--fg-secondary))] sm:text-sm"
+          >
+            {autosaveNotice}
+          </p>
+        )}
+        {completionNotice && (
+          <p
+            role="alert"
+            className="mb-3 shrink-0 rounded-xl bg-[hsl(var(--color-destructive)/0.1)] px-4 py-2.5 text-start text-xs text-[hsl(var(--fg-primary))] sm:text-sm"
+          >
+            {completionNotice}
+          </p>
+        )}
+
         {step === 0 && <WelcomeStep onStart={handleStart} t={t} />}
         {step === 1 && (
           <BusinessTypeStep
@@ -708,6 +795,7 @@ export const OnboardingPage = memo(function OnboardingPage({
             onSetPrimaryTradeKey={onSetPrimaryTradeKey}
             onBack={handleBack1}
             onNext={handleNext1}
+            selectionLimit={selectionLimit}
             t={t}
           />
         )}
@@ -717,6 +805,7 @@ export const OnboardingPage = memo(function OnboardingPage({
             onSetStoreSize={onSetStoreSize}
             businessNote={businessNote}
             onSetBusinessNote={onSetBusinessNote}
+            noteRequired={noteRequired}
             onBack={handleBack2}
             onNext={handleNext2}
             t={t}
@@ -745,10 +834,12 @@ export const OnboardingPage = memo(function OnboardingPage({
         {step === 5 && (
           <CompleteStep
             businessType={businessType ?? ''}
-            businessTypeLabel={businessTypeLabel}
+            salesModelLabel={salesModelLabel}
+            tradesLabel={tradesLabel}
             storeSizeLabel={storeSizeLabel}
             currencyLabel={currencyLabel}
             onComplete={onComplete}
+            submitting={submitting}
             t={t}
           />
         )}

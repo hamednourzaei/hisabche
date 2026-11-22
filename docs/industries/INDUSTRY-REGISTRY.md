@@ -40,7 +40,7 @@
 | 18 | `shoes` | کفش / کفش / Shoes | صنف | `RETAIL_STORE` | `RETAIL_STORE` | partial: variants | — | `core` | `sku_serial` |
 | 19 | `carpet` | فرش و قالین / فرش و قالین / Carpets and rugs | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: variants | partial: area_pricing · planned: roll_cutting | `core` | `wholesale_measurement` |
 | 20 | `tailoring` | خیاطی / خیاطی / Tailoring | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement | available: length_pricing | `core` | `wholesale_measurement` |
-| 21 | `mobilePhones` | موبایل و لوازم جانبی / موبایل و لوازم جانبی / Mobile phones and accessories | صنف | `RETAIL_STORE` | `RETAIL_STORE` | partial: serialized_items, variants | partial: warranty_claims | `core` | `sku_serial` |
+| 21 | `mobilePhones` | موبایل و لوازم جانبی / موبایل و لوازم جانبی / Mobile phones and accessories | صنف | `RETAIL_STORE` | `RETAIL_STORE` | partial: serialized_items, variants | partial: warranty_claims, work_queue_sla | `core` | `sku_serial` |
 | 22 | `computers` | کامپیوتر و لپ‌تاپ / کامپیوتر و لپ‌تاپ / Computers and laptops | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | partial: serialized_items, variants | partial: warranty_claims | `core` | `sku_serial` |
 | 23 | `computerComponents` | قطعات کامپیوتر / قطعات کمپیوتر / Computer components | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | partial: serialized_items, variants | partial: warranty_claims | `core` | `sku_serial` |
 | 24 | `electronics` | لوازم برقی و الکترونیک / لوازم برقی و الکترونیک / Electronics and appliances | صنف | `RETAIL_STORE` | `RETAIL_STORE` | partial: serialized_items, variants | partial: warranty_claims | `core` | `sku_serial` |
@@ -116,7 +116,7 @@
 | :--- | :--- | ---: | :--- | :--- | ---: |
 | `everyday_sales` | فروش روزمره و پیشخوان | 10 | `retail`، `grocery`، `fruitVegetable`، `nuts`، `spices`، `kitchenware`، `stationery`، `giftShop`، `cosmetics`، `flowers` | `inventory_catalog`, `sales_invoice` | 5 از 10 |
 | `wholesale_measurement` | عمده‌فروشی و فروش اندازه‌ای | 12 | `wholesale`، `fabric`، `fabricRoll`، `carpet`، `tailoring`، `hardware`، `buildingMaterials`، `paint`، `timber`، `glass`، `fuel`، `seedsFertilizer` | `inventory_catalog`, `pricing_rates`, `sales_invoice` | 10 از 12 |
-| `sku_serial` | SKU، سایز و سریال | 12 | `watches`، `clothing`، `shoes`، `mobilePhones`، `computers`، `computerComponents`، `electronics`، `autoParts`، `carDealer`، `furniture`، `homeAppliances`، `toys` | `inventory_catalog`, `quality_claims`, `sales_invoice` | 12 از 12 |
+| `sku_serial` | SKU، سایز و سریال | 12 | `watches`، `clothing`، `shoes`، `mobilePhones`، `computers`، `computerComponents`، `electronics`، `autoParts`، `carDealer`، `furniture`، `homeAppliances`، `toys` | `inventory_catalog`, `quality_claims`, `sales_invoice`, `work_orders_repair` | 12 از 12 |
 | `value_trade` | معاملات ارزش‌محور | 2 | `jewellery`، `currencyExchange` | `exchange`, `pricing_rates`, `sales_invoice` | 2 از 2 |
 | `food_recipe` | غذا و دستور تهیه | 5 | `bakery`، `butcher`، `restaurant`، `cafe`، `dairy` | `inventory_catalog`, `production_bom`, `sales_invoice`, `sales_orders` | 5 از 5 |
 | `health` | سلامت | 3 | `pharmacy`، `clinic`، `optician` | `appointments_resources`, `inventory_catalog`, `sales_invoice` | 3 از 3 |

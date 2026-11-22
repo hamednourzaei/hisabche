@@ -53,6 +53,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { invalidateMoneyCaches } from '../../utils/money-cache'
+import { logBusinessEvent } from '../event-log.service'
 import { ledger } from '../accounting'
 import { domainErrorCode } from '../accounting/accounting.repository'
 import type { LedgerPort, LedgerPostingOutcome } from '../accounting/ledger.port'
@@ -541,14 +542,14 @@ export class OrderDepositService {
           ) {
             throw new ConflictError('DEPOSIT_IDEMPOTENCY_CONFLICT')
           }
-          return this.recordReceiptState(ctx, replay, input.date)
+          return this.recorded(ctx, await this.recordReceiptState(ctx, replay, input.date))
         }
       }
       throw error
     }
     const deposit = data as OrderDepositRow
 
-    return this.recordReceiptState(ctx, deposit, input.date)
+    return this.recorded(ctx, await this.recordReceiptState(ctx, deposit, input.date))
   }
 
   /**
@@ -565,7 +566,94 @@ export class OrderDepositService {
     date?: string,
   ): Promise<CreatedOrderDeposit> {
     const deposit = await this.requireDeposit(ctx, orderId, depositId)
-    return this.recordReceiptState(ctx, deposit, date)
+    const posted = await this.recordReceiptState(ctx, deposit, date)
+    // Only the FIRST write is an event. `already_posted` means a retry asked
+    // for the same entry and the ledger returned it; logging that again would
+    // fill the activity feed with duplicates of one action.
+    if (posted.posting.status === 'posted') {
+      this.logDeposit(ctx, posted.deposit, 'receipt_posted')
+    }
+    return posted
+  }
+
+  /**
+   * The activity/audit row for a deposit that was just recorded.
+   *
+   * Fire-and-forget on purpose: the money is already stored and booked, and a
+   * logging failure must never turn a recorded receipt into an HTTP error.
+   * `notify: false` — the person who just took the money does not need a bell
+   * for their own action.
+   */
+  private recorded(ctx: TenancyContext, created: CreatedOrderDeposit): CreatedOrderDeposit {
+    this.logDeposit(ctx, created.deposit, `${sourceTypeOf(created.deposit.source_type)}_recorded`)
+    return created
+  }
+
+  private logDeposit(ctx: TenancyContext, deposit: OrderDepositRow, action: string): void {
+    const kind = sourceTypeOf(deposit.source_type)
+    const isAdvance = kind === 'pre_sale' || kind === 'pre_purchase'
+    const title =
+      action === 'receipt_posted'
+        ? isAdvance
+          ? 'دریافت پیش‌پرداخت قطعی شد'
+          : 'دریافت بیعانه قطعی شد'
+        : kind === 'pre_sale'
+          ? 'پیش‌فروش ثبت شد'
+          : kind === 'pre_purchase'
+            ? 'پیش‌خرید ثبت شد'
+            : kind === 'service_session'
+              ? 'بیعانه جلسه ثبت شد'
+              : 'بیعانه ثبت شد'
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: isAdvance ? 'advance' : 'deposit',
+      entityId: deposit.id,
+      action,
+      title,
+      metadata: {
+        kind,
+        amountMinor: Number(deposit.amount_minor),
+        currency: deposit.currency,
+        postingStatus: deposit.posting_status,
+      },
+      notify: false,
+      branchId: null,
+    }).catch((err) => console.error('[OrderDepositService] logBusinessEvent failed:', err))
+  }
+
+  private logDepositAction(
+    ctx: TenancyContext,
+    deposit: OrderDepositRow,
+    action: string,
+    extraMeta?: Record<string, unknown>,
+  ): void {
+    const kind = sourceTypeOf(deposit.source_type)
+    const isAdvance = kind === 'pre_sale' || kind === 'pre_purchase'
+    const title = action.includes('applied')
+      ? isAdvance
+        ? 'اعمال پیش‌پرداخت به فاکتور'
+        : 'اعمال بیعانه به فاکتور'
+      : action.includes('refunded')
+        ? isAdvance
+          ? 'استرداد پیش‌پرداخت'
+          : 'استرداد بیعانه'
+        : action
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: isAdvance ? 'advance' : 'deposit',
+      entityId: deposit.id,
+      action,
+      title,
+      metadata: {
+        kind,
+        currency: deposit.currency,
+        ...extraMeta,
+      },
+      notify: false,
+      branchId: null,
+    }).catch((err) => console.error('[OrderDepositService] logBusinessEvent failed:', err))
   }
 
   /**
@@ -616,6 +704,10 @@ export class OrderDepositService {
       })
       if (applied.error) throw this.rpcError(applied.error, 'apply the supplier advance')
       await invalidateMoneyCaches(ctx.workspaceId)
+      this.logDepositAction(ctx, deposit, 'advance_applied', {
+        invoiceId: input.invoiceId,
+        amountMinor: input.amountMinor,
+      })
       return mapApplication(applied.data)
     }
 
@@ -643,6 +735,10 @@ export class OrderDepositService {
 
     if (error) throw this.rpcError(error, 'apply the order deposit')
     await invalidateMoneyCaches(ctx.workspaceId)
+    this.logDepositAction(ctx, deposit, 'deposit_applied', {
+      invoiceId: input.invoiceId,
+      amountMinor: input.amountMinor,
+    })
     return mapApplication(data)
   }
 
@@ -700,6 +796,15 @@ export class OrderDepositService {
 
     if (error) throw this.rpcError(error, 'refund the order deposit')
     await invalidateMoneyCaches(ctx.workspaceId)
+    this.logDepositAction(
+      ctx,
+      deposit,
+      kind === 'pre_purchase' ? 'advance_refunded' : 'deposit_refunded',
+      {
+        amountMinor: input.amountMinor,
+        reason: input.reason,
+      },
+    )
     return mapRefund(data)
   }
 

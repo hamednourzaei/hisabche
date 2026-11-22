@@ -20,6 +20,7 @@ import {
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireProfileCapability } from '../middleware/profile-capability.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { SalonService } from '../services/salon/salon.service'
 
@@ -28,10 +29,33 @@ const isUuid = (v: string) => z.string().uuid().safeParse(v).success
 
 export async function salonRoutes(fastify: FastifyInstance) {
   const service = new SalonService()
-  const read = [authenticate, requireWorkspaceContext, requireCapability('invoice.read')]
-  const setup = [authenticate, requireWorkspaceContext, requireCapability('product.write')]
-  const payRead = [authenticate, requireWorkspaceContext, requireCapability('payroll.read')]
-  const payWrite = [authenticate, requireWorkspaceContext, requireCapability('payroll.write')]
+  const read = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('invoice.read'),
+    // Chairs, service stations and provider commission belong to the
+    // `resource_capacity` trade capability; the UI already hides the parts for
+    // a trade that does not use them, and the API must answer the same.
+    requireProfileCapability('resource_capacity'),
+  ]
+  const setup = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('product.write'),
+    requireProfileCapability('resource_capacity'),
+  ]
+  const payRead = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('payroll.read'),
+    requireProfileCapability('resource_capacity'),
+  ]
+  const payWrite = [
+    authenticate,
+    requireWorkspaceContext,
+    requireCapability('payroll.write'),
+    requireProfileCapability('resource_capacity'),
+  ]
 
   const handle =
     (what: string, run: (request: FastifyRequest) => Promise<unknown>, status = 200) =>

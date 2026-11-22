@@ -48,12 +48,16 @@ describe('three tabs, built from shared parts', () => {
       pricing: '/promotions',
     })
     expect(hub).not.toContain('AdvancesContainer')
-    // …they live inside the invoices page, under its own lock.
+    // …they live inside the invoices page, merged into its ONE table: the
+    // container fetches both advance kinds and hands the rows to the view.
+    // There is no second advances container to swap in.
     const container = readFileSync(
       join(__dirname, '..', 'components', 'ui', 'invoices', 'containers', 'invoices-container.tsx'),
       'utf8',
     )
-    expect(container).toContain('<AdvancesContainer')
+    expect(container).toContain("useAdvances('pre_sale')")
+    expect(container).toContain("useAdvances('pre_purchase')")
+    expect(container).toContain('advanceRows={visibleAdvanceRows}')
     expect(container).toContain('push(`/invoices/new?type=${kind}`)')
   })
 
@@ -109,7 +113,9 @@ describe('one table for every invoice', () => {
     expect(view).toContain('<TableFilterMenu')
     expect(view).not.toContain('<TableFilterSelect')
     for (const id of ["id: 'status'", "id: 'branch'", "id: 'warehouse'"]) expect(view).toContain(id)
-    expect(view).toMatch(/actions=\{\s*onStatusFilterChange \?/)
+    // The status entry exists only when a handler was passed; the advance
+    // group swaps in its own status vocabulary through the same entry.
+    expect(view).toMatch(/actions=\{\s*onStatusValueChange \?/)
   })
 
   it('offers only statuses an invoice can have', () => {

@@ -52,6 +52,13 @@ export interface WorkspaceProfile {
   readonly profile: BusinessProfile
   /** False until docs/business-profile-01-migration.sql has run. */
   readonly configurable: boolean
+  /**
+   * Stored values the registry does not recognise (forensic audit F-018).
+   * Reported, never silently dropped: a malformed row must not look like a
+   * clean generic profile.
+   */
+  readonly unknownTypes: readonly string[]
+  readonly legacyTypes: readonly string[]
 }
 
 const UNDECLARED = (configurable: boolean): WorkspaceProfile => ({
@@ -59,6 +66,8 @@ const UNDECLARED = (configurable: boolean): WorkspaceProfile => ({
   types: [],
   profile: resolveBusinessProfile([]),
   configurable,
+  unknownTypes: [],
+  legacyTypes: [],
 })
 
 export async function workspaceProfileOf(workspaceId: string): Promise<WorkspaceProfile> {
@@ -74,14 +83,18 @@ export async function workspaceProfileOf(workspaceId: string): Promise<Workspace
   }
 
   const stored = (data as { business_types?: string[] | null } | null)?.business_types
-  const { known } = canonicalIndustryTypes(stored ?? [])
-  if (known.length === 0) return UNDECLARED(true)
+  const canonical = canonicalIndustryTypes(stored ?? [])
+  if (canonical.known.length === 0) {
+    return { ...UNDECLARED(true), unknownTypes: canonical.unknown, legacyTypes: canonical.legacy }
+  }
 
   return {
     declared: true,
-    types: known,
-    profile: resolveBusinessProfile(known),
+    types: canonical.known,
+    profile: resolveBusinessProfile(canonical.known),
     configurable: true,
+    unknownTypes: canonical.unknown,
+    legacyTypes: canonical.legacy,
   }
 }
 
@@ -127,6 +140,8 @@ export async function setWorkspaceProfile(
     types: canonical.known,
     profile: resolveBusinessProfile(canonical.known),
     configurable: true,
+    unknownTypes: [],
+    legacyTypes: [],
   }
 }
 
@@ -146,6 +161,13 @@ export interface WorkspaceOperationalProfile {
   /** 0 = never declared. The next save must name this number. */
   readonly version: number
   readonly onboarding: OnboardingProgress | null
+  /**
+   * A stored value exists but no longer parses (forensic audit F-099).
+   * Reported explicitly so a corrupt row is never mistaken for «never
+   * configured» — the person is told, instead of silently re-onboarding.
+   */
+  readonly dnaInvalid: boolean
+  readonly onboardingInvalid: boolean
 }
 
 const NOT_CONFIGURED: WorkspaceOperationalProfile = {
@@ -154,6 +176,8 @@ const NOT_CONFIGURED: WorkspaceOperationalProfile = {
   composition: null,
   version: 0,
   onboarding: null,
+  dnaInvalid: false,
+  onboardingInvalid: false,
 }
 
 const isMissingFunction = (error: { code?: string; message?: string }) =>
@@ -178,7 +202,8 @@ export async function operationalProfileOf(
     operational_dna_version?: number | null
     onboarding_progress?: unknown
   }
-  // A stored value that no longer parses is reported as absent, not repaired.
+  // A stored value that no longer parses is reported as invalid — explicitly,
+  // not as a silent «absent» (F-099). It is still not repaired here.
   const dna = operationalDnaSchema.safeParse(row.operational_dna)
   const onboarding = onboardingProgressSchema.safeParse(row.onboarding_progress)
   const validDna = row.operational_dna == null || !dna.success ? null : dna.data
@@ -188,6 +213,8 @@ export async function operationalProfileOf(
     composition: validDna ? composeBusinessSolution(validDna) : null,
     version: row.operational_dna_version ?? 0,
     onboarding: row.onboarding_progress == null || !onboarding.success ? null : onboarding.data,
+    dnaInvalid: row.operational_dna != null && !dna.success,
+    onboardingInvalid: row.onboarding_progress != null && !onboarding.success,
   }
 }
 
@@ -222,9 +249,57 @@ export async function setOperationalDna(
 export async function setOnboardingProgress(
   workspaceId: string,
   input: unknown,
+  actorUserId: string,
 ): Promise<OnboardingProgress> {
   const parsed = onboardingProgressSchema.safeParse(input)
   if (!parsed.success) throw new ValidationError('ONBOARDING_PROGRESS_INVALID')
+
+  // ⚠️ STATE-MACHINE GUARD (forensic audit F-101). READY_TO_ACTIVATE and ACTIVE
+  // are SERVER-derived states: they may be recorded only for an account the
+  // activation gate has already completed. A client used to be able to PUT
+  // `state: 'ACTIVE'` directly, making the workspace draft claim an activation
+  // the profile timestamp never confirmed.
+  if (parsed.data.state === 'ACTIVE' || parsed.data.state === 'READY_TO_ACTIVATE') {
+    const { data: profileRow, error: profileError } = await supabase
+      .from('profiles')
+      .select('onboarding_completed_at')
+      .eq('id', actorUserId)
+      .maybeSingle()
+    if (profileError && !isMissingColumn(profileError.code)) {
+      throw new DatabaseError('Failed to read the activation state', profileError)
+    }
+    const completedAt = (profileRow as { onboarding_completed_at?: string | null } | null)
+      ?.onboarding_completed_at
+    if (typeof completedAt !== 'string' || completedAt.length === 0) {
+      throw new ValidationError('ONBOARDING_STATE_SERVER_ONLY')
+    }
+  }
+
+  // ⚠️ RECENCY GUARD (forensic audit F-039). A slow earlier autosave must not
+  // overwrite a newer draft from this or another device. Both sides carry
+  // `savedAt` (epoch ms); a strictly older payload is refused, equal replays
+  // are idempotent. Drafts without the field (pre-migration) keep last-write.
+  const incomingAt = parsed.data.answers.savedAt
+  if (typeof incomingAt === 'number') {
+    const { data: currentRow, error: currentError } = await supabase
+      .from('workspaces')
+      .select('onboarding_progress')
+      .eq('id', workspaceId)
+      .maybeSingle()
+    if (currentError) {
+      if (!isMissingColumn(currentError.code)) {
+        throw new DatabaseError('Failed to read the onboarding progress', currentError)
+      }
+    } else {
+      const stored = onboardingProgressSchema.safeParse(
+        (currentRow as { onboarding_progress?: unknown } | null)?.onboarding_progress,
+      )
+      const storedAt = stored.success ? stored.data.answers.savedAt : undefined
+      if (typeof storedAt === 'number' && incomingAt < storedAt) {
+        throw new ConflictError('ONBOARDING_PROGRESS_STALE')
+      }
+    }
+  }
 
   const { data, error } = await supabase
     .from('workspaces')

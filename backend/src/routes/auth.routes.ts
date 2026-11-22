@@ -927,7 +927,29 @@ export async function authRoutes(fastify: FastifyInstance) {
               unreadable: gate.unreadable,
             })
           }
-          profileUpdate.onboarding_completed_at = new Date().toISOString()
+          // ⚠️ IDEMPOTENT ACTIVATION (forensic audit F-052). The FIRST completion
+          // timestamp is the product's record; a replayed or double-clicked
+          // completion must not move it. A missing column reads as «never
+          // completed» (the write path reports it); any other read failure
+          // throws and NO timestamp is written.
+          const { data: existingCompletion, error: completionReadError } = await supabase
+            .from('profiles')
+            .select('onboarding_completed_at')
+            .eq('id', userId)
+            .maybeSingle()
+          if (
+            completionReadError &&
+            completionReadError.code !== '42703' &&
+            completionReadError.code !== 'PGRST204'
+          ) {
+            throw completionReadError
+          }
+          const alreadyCompletedAt = (
+            existingCompletion as { onboarding_completed_at?: string | null } | null
+          )?.onboarding_completed_at
+          if (typeof alreadyCompletedAt !== 'string' || alreadyCompletedAt.length === 0) {
+            profileUpdate.onboarding_completed_at = new Date().toISOString()
+          }
         }
         if (body.businessTypes !== undefined) profileUpdate.business_types = body.businessTypes
         if (body.storeSize !== undefined) profileUpdate.store_size = body.storeSize

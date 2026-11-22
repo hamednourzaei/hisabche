@@ -202,7 +202,11 @@ function ServiceDeliveryContent() {
         const state = syncStateOf(sync.entries, session.id, sync.available)
         return {
           ...session,
-          customerName: customerById.get(session.customerId) ?? null,
+          customerName:
+            session.subjectType === 'employee'
+              ? (practitionerById.get(session.employeeId ?? '') ??
+                t('serviceDelivery.unknown.employee', 'پرسنل'))
+              : (customerById.get(session.customerId ?? '') ?? null),
           serviceName: productById.get(session.serviceOfferingId)?.name ?? null,
           practitionerName: session.practitionerId
             ? (practitionerById.get(session.practitionerId) ?? null)
@@ -379,6 +383,7 @@ function ServiceDeliveryContent() {
         customerOptions={customerOptions}
         serviceOptions={serviceOptions}
         practitionerOptions={practitionerOptions}
+        employeeOptions={practitionerOptions}
         branchOptions={branchOptions}
         resourceOptions={(resources.data?.resources ?? [])
           .filter((r) => r.isActive)

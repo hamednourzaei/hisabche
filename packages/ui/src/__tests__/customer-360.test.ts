@@ -48,28 +48,28 @@ describe('customer360 strings exist in every locale', () => {
   }
 })
 
-describe('customer 360 phase 2 — activity, CRM core panel, history', () => {
+describe('customer 360 phase 2 — the relationship group is off this URL', () => {
   const panel = readFileSync(join(__dirname, '../components/ui/crm/customer-crm-panel.tsx'), 'utf8')
   const invoiceHooks = readFileSync(join(__dirname, '../../../api/src/hooks/invoices.ts'), 'utf8')
 
-  it('activity and history come from the server', () => {
-    expect(container).toContain("usePartyActivity('customer', customerId)")
-    expect(container.replace(/\s+/g, '')).toContain("useRecordHistory('customer',customerId")
+  it('the five relationship parts are neither fetched nor mounted here', () => {
+    // Owner, 21 Nov 2026: the customer page is the money page. Activity,
+    // insights, CRM, credit & documents and change history used to form the
+    // «رابطه» group; they must not creep back onto this URL.
+    for (const hook of ['usePartyActivity', 'useRecordHistory']) {
+      expect(container, hook).not.toContain(hook)
+    }
+    for (const mounted of [
+      '<CustomerCrmPanel',
+      '<CustomerProfilePanel',
+      '<CustomerPortalPanel',
+      '<CustomerInsightsPanel',
+    ]) {
+      expect(code(view), mounted).not.toContain(mounted)
+    }
   })
 
-  it('the activity tab is ONE section: the 12-month chart and the products together', () => {
-    // It used to be two headings and two boxes («فروش و دریافت» and
-    // «کالاهای پرخرید») saying the same thing about the same customer.
-    const flat = code(view).replace(/\s+/g, ' ')
-    const activity = flat.slice(flat.indexOf('function Activity('), flat.indexOf('function Empty('))
-    expect(activity.match(/<section/g)?.length).toBe(1)
-    expect(activity).toContain("aria-label={t('tabActivity')}")
-    expect(activity).toContain("t('chartTitle')")
-    expect(activity).toContain('tableId="customer-products"')
-  })
-
-  it('CRM tab uses the shared panel, which reads only the CRM core port', () => {
-    expect(code(view)).toContain('<CustomerCrmPanel customerId={customer.id}')
+  it('the CRM panel itself still reads only the CRM core port', () => {
     expect(code(panel)).toContain('useCustomerCrm(customerId)')
     expect(code(panel)).not.toMatch(/useInteractions|useOpportunities|\.reduce\(/)
   })
@@ -100,7 +100,6 @@ describe('customer 360 phase 3 — credit, terms, linked supplier, documents', (
     expect(code(panel)).toContain('useCustomerProfile(customerId)')
     expect(code(panel)).toContain('useCustomerDocuments(customerId)')
     expect(code(panel)).not.toMatch(/\.reduce\(/)
-    expect(code(view)).toContain('<CustomerProfilePanel customerId={customer.id}')
   })
 
   it('says «not configured» instead of offering a form that cannot save', () => {
@@ -125,7 +124,6 @@ describe('customer 360 phase 3 — credit, terms, linked supplier, documents', (
           )
         expect(value, `${locale}.customerProfile.${key}`).toBeTruthy()
       }
-      expect(bundle.customer360.tabAccount).toBeTruthy()
     }
   })
 })
@@ -141,12 +139,11 @@ describe('customer 360 phase 4 — accounting view and insights', () => {
     .map((m) => m[1]!)
     .filter((c) => !c.startsWith('CUSTOMER_'))
 
-  it('reads the server, adds nothing up in the browser, and is on the page', () => {
+  it('the accounting panel is on the page and totals nothing in the browser', () => {
     expect(code(panels)).toContain('useCustomerAccounting(customerId)')
-    expect(code(panels)).toContain('useCustomerInsights(customerId)')
     expect(code(panels)).not.toMatch(/\.reduce\(/)
     expect(code(view)).toContain('<CustomerAccountingPanel')
-    expect(code(view)).toContain('<CustomerInsightsPanel')
+    expect(code(view)).not.toContain('<CustomerInsightsPanel')
   })
 
   it('every insight code the server can send has a title and body in every locale', () => {
@@ -166,7 +163,7 @@ describe('customer 360 phase 4 — accounting view and insights', () => {
       for (const kind of ['sale', 'purchase', 'payment_in', 'payment_out']) {
         expect(bundle.customer360.kind[kind], `${locale}.customer360.kind.${kind}`).toBeTruthy()
       }
-      expect(bundle.customer360.tabAccounting && bundle.customer360.tabInsights).toBeTruthy()
+      expect(bundle.customer360.tabAccounting).toBeTruthy()
     }
   })
 

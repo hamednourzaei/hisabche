@@ -204,12 +204,12 @@ describe('nothing «بعد» needs went with «قبل»', () => {
     for (const mount of mounts) expect(source, `${file} → ${mount}`).toContain(mount)
   })
 
-  it('the customer page still has all nine parts', () => {
+  it('the customer page keeps its four money parts, with no relationship group', () => {
     const view = ui('customers', 'customer-detail-view.tsx')
     const parts = [...view.matchAll(/<TabsContent value="(\w+)"/g)].map((match) => match[1])
-    expect(parts).toHaveLength(9)
-    expect(view).toContain('<HubTabs')
+    expect(parts).toEqual(['statement', 'invoices', 'payments', 'accounting'])
     expect(view).toContain('<SegmentedControl')
+    expect(view).not.toContain('<HubTabs')
   })
 
   it('both shells still mount the hubs', () => {

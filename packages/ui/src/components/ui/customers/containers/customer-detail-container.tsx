@@ -17,9 +17,9 @@
 //   open invoices       GET /payments/open-invoices/customer/:id (payment modal targets)
 //   invoices tab        GET /invoices?customerId=…            (paginated)
 //   payments tab        GET /payments?partyId=…
-//   activity tab        GET /payments/activity/customer/:id
-//   CRM tab             GET /crm/customers/:id   (CustomerCrmPanel, CRM Core port)
-//   history tab         GET record history (useRecordHistory)
+//
+// The relationship group (activity, insights, CRM, credit & documents, change
+// history) is not part of this URL — removed by the owner on 21 Nov 2026.
 // ============================================
 
 import { useCallback, useMemo, useState } from 'react'
@@ -31,11 +31,9 @@ import {
   useDeleteCustomer,
   useInvoices,
   useOpenInvoices,
-  usePartyActivity,
   usePartyLedger,
   usePartySummary,
   usePayments,
-  useRecordHistory,
 } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 
@@ -44,7 +42,6 @@ import { getStatementTotals } from '../../../../lib/customers/statement-totals'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { CustomerDetailView } from '../customer-detail-view'
-import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useActionAvailability } from '../../../../lib/capability'
 
@@ -82,21 +79,6 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
     customerId,
   })
   const paymentsQuery = usePayments({ partyId: customerId, limit: 100 })
-  const activityQuery = usePartyActivity('customer', customerId)
-  const { data: recordHistory, isLoading: historyLoading } = useRecordHistory(
-    'customer',
-    customerId,
-  )
-  const safeT = useCallback(
-    (key: string, fallback?: string) => {
-      try {
-        return t(key)
-      } catch {
-        return fallback ?? key
-      }
-    },
-    [t],
-  )
 
   const customer = useMemo(() => {
     const raw = customerQuery.data as
@@ -254,8 +236,7 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
     void openInvoicesQuery.refetch()
     void invoicesQuery.refetch()
     void paymentsQuery.refetch()
-    void activityQuery.refetch()
-  }, [summaryQuery, ledgerQuery, openInvoicesQuery, invoicesQuery, paymentsQuery, activityQuery])
+  }, [summaryQuery, ledgerQuery, openInvoicesQuery, invoicesQuery, paymentsQuery])
 
   return (
     <CustomerDetailView
@@ -307,20 +288,6 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
       deleteError={deleteError}
       onOpenInvoice={(id) => push(`/invoices/${id}`)}
       onExport={handleExport}
-      activity={activityQuery.data ?? null}
-      activityLoading={activityQuery.isLoading}
-      history={
-        <RecordHistoryPanel
-          t={safeT}
-          isLoading={historyLoading}
-          entries={(recordHistory ?? []).map((entry) => ({
-            id: entry.id,
-            action: entry.action,
-            createdAt: entry.created_at,
-            userId: entry.user_id ?? null,
-          }))}
-        />
-      }
     />
   )
 }
