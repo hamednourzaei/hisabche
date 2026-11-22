@@ -73,8 +73,13 @@ describe('Postgres: session subject, participants & free-text type (service-deli
   })
 
   for (const scenario of scenarios05) {
-    it(scenario.name, async () => {
-      if (!started) return
+    it(scenario.name, async (ctx) => {
+      if (!started) {
+        ctx.skip(
+          'PostgreSQL embedded engine unavailable on this host (Win32 shared memory code 1314) - skipped pending live DB or Linux CI',
+        )
+        return
+      }
       await scenario.run(run)
     })
   }

@@ -65,8 +65,13 @@ describe('Postgres: service delivery is atomic (service-delivery-02)', () => {
   })
 
   for (const scenario of scenarios) {
-    it(scenario.name, async () => {
-      if (!started) return
+    it(scenario.name, async (ctx) => {
+      if (!started) {
+        ctx.skip(
+          'PostgreSQL embedded engine unavailable on this host (Win32 shared memory code 1314) - skipped pending live DB or Linux CI',
+        )
+        return
+      }
       await scenario.run(run)
     })
   }

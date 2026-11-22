@@ -173,16 +173,20 @@ Trace: Signup → Profile → Workspace Creation → Industry Selection → Trad
 
 ## 11. Regression Test Evidence
 
-| Target Suite                   | Test Command                                                                        | Result               |
-| ------------------------------ | ----------------------------------------------------------------------------------- | -------------------- |
-| **Service Delivery 05 PG**     | `pnpm --filter @hisabche/backend test src/__tests__/service-delivery-05.pg.test.ts` | **13 passed (100%)** |
-| **Service Delivery UI Screen** | `pnpm --filter @hisabche/ui test src/__tests__/service-delivery-screen.test.tsx`    | **36 passed (100%)** |
-| **Validation Package**         | `pnpm --filter @hisabche/validation exec tsc --noEmit`                              | **0 errors**         |
-| **UI Package**                 | `pnpm --filter @hisabche/ui exec tsc --noEmit`                                      | **0 errors**         |
-| **Backend Package**            | `pnpm --filter @hisabche/backend exec tsc --noEmit`                                 | **0 errors**         |
-| **Web Package**                | `pnpm --filter @hisabche/web exec tsc --noEmit`                                     | **0 errors**         |
-| **Backend ESLint**             | `cd backend ; npx eslint src/services/...`                                          | **0 errors**         |
-| **UI ESLint**                  | `cd packages/ui ; npx eslint src/components/ui/service-delivery/...`                | **0 errors**         |
+| Target Suite                    | Test Command                                                                              | Result                                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Onboarding 10 Scenarios E2E** | `pnpm --filter @hisabche/backend test src/__tests__/onboarding-ten-scenarios.e2e.test.ts` | **12 passed (100%)** (all 10 trades + unknown fallback + activation gate)  |
+| **Restore Invariants Harness**  | `pnpm --filter @hisabche/backend test src/__tests__/restore-invariants.test.ts`           | **3 passed (100%)** (ledger double-entry balance, FK & workspace tenancy)  |
+| **Core Gauges & Queue Wait**    | `pnpm --filter @hisabche/backend test src/__tests__/core-gauges.test.ts`                  | **2 passed (100%)** (queue wait 0 on empty, oldest wait latency, bounded)  |
+| **Service Delivery 05 PG**      | `pnpm --filter @hisabche/backend test src/__tests__/service-delivery-05.pg.test.ts`       | **13 skipped honestly** (replaces false-green Vitest return on Win32 host) |
+| **Service Delivery 02 PG**      | `pnpm --filter @hisabche/backend test src/__tests__/service-delivery-02.pg.test.ts`       | **17 skipped honestly** (replaces false-green Vitest return on Win32 host) |
+| **Service Delivery UI Screen**  | `pnpm --filter @hisabche/ui test src/__tests__/service-delivery-screen.test.tsx`          | **36 passed (100%)**                                                       |
+| **Validation Package**          | `pnpm --filter @hisabche/validation exec tsc --noEmit`                                    | **0 errors**                                                               |
+| **UI Package**                  | `pnpm --filter @hisabche/ui exec tsc --noEmit`                                            | **0 errors**                                                               |
+| **Backend Package**             | `pnpm --filter @hisabche/backend exec tsc --noEmit`                                       | **0 errors**                                                               |
+| **Web Package**                 | `pnpm --filter @hisabche/web exec tsc --noEmit`                                           | **0 errors**                                                               |
+| **Backend ESLint**              | `cd backend ; npx eslint src/services/...`                                                | **0 errors**                                                               |
+| **UI ESLint**                   | `cd packages/ui ; npx eslint src/components/ui/service-delivery/...`                      | **0 errors**                                                               |
 
 ---
 

@@ -49,19 +49,43 @@ async function jobQueueGauge(now: Date): Promise<CoreGaugeSample['cores'][number
   const processing = countOf(processingRes)
   const stuck = countOf(stuckRes)
 
-  // Retries already spent by jobs that are still queued or running. A sum of
-  // a stored counter — measured, not inferred. Null when the read fails.
+  // Retries already spent by jobs that are still queued or running. Bounded to 1000 items
+  // to prevent memory exhaustion on high-volume queues. Null when the read fails.
   let retryCount: number | null = null
   if (pending !== null || processing !== null) {
     const { data, error } = await supabase
       .from('background_jobs')
       .select('retry_count')
       .in('status', ['pending', 'processing'])
+      .limit(1000)
     if (!error && Array.isArray(data)) {
       retryCount = data.reduce((sum, row) => {
         const value = (row as { retry_count?: unknown }).retry_count
         return sum + (typeof value === 'number' && Number.isFinite(value) ? value : 0)
       }, 0)
+    }
+  }
+
+  // Queue latency: 0 ms when empty; age of oldest waiting item when pending > 0.
+  let queueWaitTotalMs: number | null = null
+  if (pending !== null) {
+    if (pending === 0) {
+      queueWaitTotalMs = 0
+    } else {
+      const { data: oldestJob, error: oldestErr } = await supabase
+        .from('background_jobs')
+        .select('created_at, scheduled_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (!oldestErr && oldestJob) {
+        const row = oldestJob as { created_at?: string; scheduled_at?: string | null }
+        const waitStart = new Date(row.scheduled_at || row.created_at || '').getTime()
+        if (!Number.isNaN(waitStart)) {
+          queueWaitTotalMs = Math.max(0, now.getTime() - waitStart)
+        }
+      }
     }
   }
 
@@ -71,8 +95,7 @@ async function jobQueueGauge(now: Date): Promise<CoreGaugeSample['cores'][number
     processingCount: processing,
     stuckCount: stuck,
     retryCount,
-    // Wait time per job is not recorded; the queue depth trend is the signal.
-    queueWaitTotalMs: null,
+    queueWaitTotalMs,
   }
 }
 
@@ -125,11 +148,35 @@ async function outboxQueueGauge(now: Date): Promise<CoreGaugeSample['cores'][num
       .from('webhook_deliveries')
       .select('attempts')
       .in('status', ['pending', 'delivering'])
+      .limit(1000)
     if (!error && Array.isArray(data)) {
       retryCount = data.reduce((sum, row) => {
         const value = (row as { attempts?: unknown }).attempts
         return sum + (typeof value === 'number' && Number.isFinite(value) ? value : 0)
       }, 0)
+    }
+  }
+
+  // Outbox latency: 0 ms when empty; age of oldest waiting delivery when pending > 0.
+  let queueWaitTotalMs: number | null = null
+  if (pending !== null) {
+    if (pending === 0) {
+      queueWaitTotalMs = 0
+    } else {
+      const { data: oldestDelivery, error: oldestErr } = await supabase
+        .from('webhook_deliveries')
+        .select('created_at, next_attempt_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (!oldestErr && oldestDelivery) {
+        const row = oldestDelivery as { created_at?: string; next_attempt_at?: string | null }
+        const waitStart = new Date(row.next_attempt_at || row.created_at || '').getTime()
+        if (!Number.isNaN(waitStart)) {
+          queueWaitTotalMs = Math.max(0, now.getTime() - waitStart)
+        }
+      }
     }
   }
 
@@ -139,7 +186,7 @@ async function outboxQueueGauge(now: Date): Promise<CoreGaugeSample['cores'][num
     processingCount: delivering,
     stuckCount: stuck,
     retryCount,
-    queueWaitTotalMs: null,
+    queueWaitTotalMs,
   }
 }
 
