@@ -5,8 +5,9 @@
 // left of it. This is the read the customer page's payments tab calls, so what
 // matters here is what that screen receives:
 //
-//   · the remainder comes from the DATABASE's `order_deposit_balance`, the same
-//     function apply/refund validate against — not a sum made up in the service;
+//   · the remainder comes from the DATABASE, one batched call to
+//     `order_deposit_balances` (the same arithmetic apply/refund validate
+//     against) — not a sum made up in the service;
 //   · a row written before `posting_status` existed is «unknown», never «posted»;
 //   · a failed balance read is a 500, NOT «no deposits» (error and empty are two
 //     different answers);
@@ -51,6 +52,14 @@ vi.mock('../db', () => ({
     from: () => fromChain(),
     rpc: async (name: string, params: Row) => {
       state.rpcCalls.push({ name, params })
+      if (name === 'order_deposit_balances') {
+        if (state.balanceError) return { data: null, error: state.balanceError }
+        const ids = (params.p_deposit_ids as string[] | undefined) ?? []
+        return {
+          data: ids.map((id) => ({ ...(state.balance as Row), deposit_id: id })),
+          error: null,
+        }
+      }
       return { data: state.balance, error: state.balanceError }
     },
   },
@@ -140,6 +149,9 @@ describe('GET /api/customers/:id/deposits', () => {
         id: '20000000-0000-4000-8000-000000000001',
         orderId: '00000000-0000-4000-8000-0000000000aa',
         customerId: CUSTOMER,
+        // advances-04: an order deposit has no supplier side.
+        supplierId: null,
+        appliedInvoiceId: null,
         currency: 'AFN',
         paymentMethod: 'cash',
         postingStatus: 'posted',
@@ -154,18 +166,21 @@ describe('GET /api/customers/:id/deposits', () => {
         appliedMinor: 40_000,
         refundedMinor: 10_000,
         remainingMinor: 50_000,
+        // WP-05: 40,000 of 100,000 applied, 50,000 still held.
+        usage: 'partially_applied',
         status: 'partially_used',
         pendingSync: false,
       },
     ])
 
-    // The remainder is the database's count, not a subtraction this service made.
+    // The remainder is the database's count, one call for the page — not a
+    // subtraction this service made and not one round trip per row.
     expect(state.rpcCalls).toEqual([
       {
-        name: 'order_deposit_balance',
+        name: 'order_deposit_balances',
         params: {
           p_workspace_id: 'ws-1',
-          p_deposit_id: '20000000-0000-4000-8000-000000000001',
+          p_deposit_ids: ['20000000-0000-4000-8000-000000000001'],
         },
       },
     ])

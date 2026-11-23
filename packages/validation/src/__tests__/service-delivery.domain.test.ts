@@ -326,4 +326,32 @@ describe('a booking has no settlement until delivery (M4.3)', () => {
       }),
     ).toThrow('SETTLEMENT_METHOD_REQUIRED')
   })
+
+  it('allows creating a session with free-text sessionType and without serviceOfferingId', () => {
+    const parsed = createServiceDeliverySessionSchema.parse({
+      workspaceId: 'ws-1',
+      customerId: 'cust-1',
+      sessionType: 'مشاوره اختصاصی کسب‌وکار',
+      sessionDate: '2026-11-01',
+      startTime: '10:00',
+      endTime: '11:00',
+    })
+    expect(parsed.sessionType).toBe('مشاوره اختصاصی کسب‌وکار')
+    expect(parsed.serviceOfferingId).toBeUndefined()
+  })
+
+  it('rejects creating a session when neither serviceOfferingId nor sessionType is provided', () => {
+    const result = createServiceDeliverySessionSchema.safeParse({
+      workspaceId: 'ws-1',
+      customerId: 'cust-1',
+      sessionDate: '2026-11-01',
+      startTime: '10:00',
+      endTime: '11:00',
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.message === 'SERVICE_OR_TITLE_REQUIRED')
+      expect(issue).toBeDefined()
+    }
+  })
 })

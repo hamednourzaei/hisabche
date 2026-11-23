@@ -111,7 +111,7 @@ export interface ServiceDeliverySession {
   readonly sessionType?: string | null | undefined
   /** Everyone in the session, when the caller loaded them (the primary included). */
   readonly participants?: readonly ServiceDeliverySessionParticipant[] | undefined
-  readonly serviceOfferingId: string
+  readonly serviceOfferingId?: string | null | undefined
   readonly practitionerId?: string | null | undefined
   readonly branchId?: string | null | undefined
   /** salon-01: the chair/room it occupies. */
@@ -144,7 +144,7 @@ export const serviceDeliverySessionSchema = z.object({
   employeeId: z.string().nullable().optional(),
   subjectType: serviceDeliverySubjectTypeSchema.optional(),
   sessionType: sessionTypeSchema.nullable().optional(),
-  serviceOfferingId: z.string().min(1),
+  serviceOfferingId: z.string().nullable().optional(),
   practitionerId: z.string().nullable().optional(),
   branchId: z.string().nullable().optional(),
   sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -173,7 +173,7 @@ export const createServiceDeliverySessionSchema = z
     employeeId: z.string().min(1).nullable().optional(),
     subjectType: serviceDeliverySubjectTypeSchema.default('customer'),
     sessionType: sessionTypeSchema.nullable().optional(),
-    serviceOfferingId: z.string().min(1),
+    serviceOfferingId: z.string().min(1).nullable().optional(),
     practitionerId: z.string().nullable().optional(),
     branchId: z.string().nullable().optional(),
     sessionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -189,6 +189,17 @@ export const createServiceDeliverySessionSchema = z
     internalNotes: z.string().nullable().optional(),
   })
   .superRefine((input, ctx) => {
+    const hasService =
+      (typeof input.serviceOfferingId === 'string' && input.serviceOfferingId.trim().length > 0) ||
+      (typeof input.sessionType === 'string' && input.sessionType.trim().length > 0)
+    if (!hasService) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sessionType'],
+        message: 'SERVICE_OR_TITLE_REQUIRED',
+      })
+    }
+
     if (input.subjectType === 'employee') {
       if (!input.employeeId) {
         ctx.addIssue({
@@ -517,7 +528,7 @@ export function planServiceDelivery(params: PlanServiceDeliveryParams): PlanServ
   // no customer, so it can never spend one (the database check refuses the row
   // state too; this is the same rule on the device).
   if (session.subjectType === 'employee' || !session.customerId) {
-    throw new Error('SETTLEMENT_PACKAGE_REQUIRES_CUSTOMER')
+    throw new Error('SETTLEMENT_CUSTOMER_REQUIRED')
   }
   if (!packageProductId) throw new Error('SETTLEMENT_PACKAGE_REQUIRED')
   const balance = derivePackageBalance(

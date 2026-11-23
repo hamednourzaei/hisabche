@@ -955,6 +955,34 @@ const V37_SESSION_SUBJECT_PARTICIPANTS: LocalMigration = {
   statements: [...SESSION_SUBJECT_PARTICIPANT_ALTERS],
 }
 
+/**
+ * v38 — order_deposits party identity (supplier advances / pre_purchase).
+ *
+ * Adds supplier_id so pre_purchase records store the real supplier ID instead
+ * of placing it in customer_id.
+ */
+const V38_ORDER_DEPOSIT_PARTY_IDENTITY: LocalMigration = {
+  to: 38,
+  statements: [`ALTER TABLE order_deposits ADD COLUMN supplier_id TEXT;`],
+}
+
+/**
+ * v39 — the KIND of an order deposit.
+ *
+ * `order_deposits` is a pulled table, and the pull can only write the columns
+ * it knows about. Without `source_type` a supplier advance (pre_purchase) came
+ * down as a plain sales deposit with `customer_id = NULL`, and the customer
+ * screen could offer it to an invoice whose customer is also NULL — a walk-in.
+ * The device cannot MOVE a supplier advance (that needs the `supplier_advances`
+ * account and the server's apply/refund), so it refuses it explicitly instead.
+ */
+const V39_ORDER_DEPOSIT_SOURCE_TYPE: LocalMigration = {
+  to: 39,
+  statements: [
+    `ALTER TABLE order_deposits ADD COLUMN source_type TEXT NOT NULL DEFAULT 'sales_order';`,
+  ],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -992,6 +1020,8 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V35_CONTRACTS,
   V36_SYNC_ENTITY_COVERAGE,
   V37_SESSION_SUBJECT_PARTICIPANTS,
+  V38_ORDER_DEPOSIT_PARTY_IDENTITY,
+  V39_ORDER_DEPOSIT_SOURCE_TYPE,
 ]
 
 /**

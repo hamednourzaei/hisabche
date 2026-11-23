@@ -40,7 +40,7 @@ export interface CreateSessionInput {
   subjectType?: ServiceDeliverySubjectType | undefined
   /** Free-text kind of session, trimmed, 1..120 chars. */
   sessionType?: string | null | undefined
-  serviceOfferingId: string
+  serviceOfferingId?: string | null | undefined
   practitionerId?: string | null | undefined
   branchId?: string | null | undefined
   /** salon-01: the chair/room the session occupies; two sessions never hold one at once. */
@@ -84,7 +84,7 @@ interface ServiceDeliveryDbRow {
   employee_id?: string | null
   subject_type?: string | null
   session_type?: string | null
-  service_offering_id: string
+  service_offering_id: string | null
   practitioner_id: string | null
   branch_id: string | null
   resource_id?: string | null
@@ -114,7 +114,7 @@ function mapDbRowToSession(row: ServiceDeliveryDbRow): ServiceDeliverySession {
     employeeId: row.employee_id ?? null,
     subjectType: (row.subject_type as ServiceDeliverySubjectType | null) ?? 'customer',
     sessionType: row.session_type ?? null,
-    serviceOfferingId: row.service_offering_id,
+    serviceOfferingId: row.service_offering_id ?? null,
     practitionerId: row.practitioner_id,
     branchId: row.branch_id,
     resourceId: row.resource_id ?? null,
@@ -261,7 +261,6 @@ export class ServiceDeliveryService {
 
   async create(ctx: TenancyContext, input: CreateSessionInput): Promise<ServiceDeliverySession> {
     if (!ctx.workspaceId) throw new ValidationError('WORKSPACE_REQUIRED')
-    if (!input.serviceOfferingId) throw new ValidationError('SERVICE_OFFERING_ID_REQUIRED')
     if (!input.sessionDate) throw new ValidationError('SESSION_DATE_REQUIRED')
     if (!input.startTime || !input.endTime) throw new ValidationError('SESSION_TIMES_REQUIRED')
     // A session is BORN scheduled. «delivered» is reached only by `deliver` (settlement + credit in one step).
@@ -302,6 +301,15 @@ export class ServiceDeliveryService {
       sessionType = trimmed
     }
 
+    const serviceOfferingId =
+      typeof input.serviceOfferingId === 'string' && input.serviceOfferingId.trim().length > 0
+        ? input.serviceOfferingId.trim()
+        : null
+
+    if (!serviceOfferingId && !sessionType) {
+      throw new ValidationError('SERVICE_OR_TITLE_REQUIRED')
+    }
+
     const durationMinutes = calculateSessionDurationMinutes(input.startTime, input.endTime)
     const newId = input.id || randomUUID()
 
@@ -309,7 +317,7 @@ export class ServiceDeliveryService {
     const replay = await this.findForReplay(ctx, newId, {
       customerId: primaryCustomerId,
       employeeId: subjectType === 'employee' ? (input.employeeId ?? null) : null,
-      serviceOfferingId: input.serviceOfferingId,
+      serviceOfferingId,
       sessionDate: input.sessionDate,
     })
     if (replay) {
@@ -324,7 +332,7 @@ export class ServiceDeliveryService {
       id: newId,
       workspace_id: ctx.workspaceId,
       customer_id: primaryCustomerId,
-      service_offering_id: input.serviceOfferingId,
+      service_offering_id: serviceOfferingId,
       practitioner_id: input.practitionerId ?? null,
       branch_id: input.branchId ?? null,
       // salon-01: named only when set, so a session without them is written
@@ -372,7 +380,7 @@ export class ServiceDeliveryService {
         const winner = await this.findForReplay(ctx, newId, {
           customerId: primaryCustomerId,
           employeeId: subjectType === 'employee' ? (input.employeeId ?? null) : null,
-          serviceOfferingId: input.serviceOfferingId,
+          serviceOfferingId,
           sessionDate: input.sessionDate,
         })
         if (winner) {
@@ -431,7 +439,7 @@ export class ServiceDeliveryService {
     identity: {
       customerId: string | null
       employeeId: string | null
-      serviceOfferingId: string
+      serviceOfferingId: string | null
       sessionDate: string
     },
   ): Promise<ServiceDeliverySession | null> {
@@ -447,7 +455,7 @@ export class ServiceDeliveryService {
     if (
       (existing.customerId ?? null) !== identity.customerId ||
       (existing.employeeId ?? null) !== identity.employeeId ||
-      existing.serviceOfferingId !== identity.serviceOfferingId ||
+      (existing.serviceOfferingId ?? null) !== identity.serviceOfferingId ||
       existing.sessionDate !== identity.sessionDate
     ) {
       throw new ConflictError('IDEMPOTENCY_KEY_PAYLOAD_MISMATCH')
@@ -615,7 +623,7 @@ export class ServiceDeliveryService {
     if (settlement === 'undecided') throw new ValidationError('SETTLEMENT_METHOD_REQUIRED')
     // A package is a CUSTOMER account; an employee session has none to spend.
     if ((session.subjectType ?? 'customer') === 'employee' && settlement === 'package_credit') {
-      throw new ValidationError('SETTLEMENT_PACKAGE_REQUIRES_CUSTOMER')
+      throw new ValidationError('SETTLEMENT_CUSTOMER_REQUIRED')
     }
     const { data, error } = await this.db.rpc('service_delivery_deliver', {
       p_workspace_id: ctx.workspaceId,
@@ -633,7 +641,9 @@ export class ServiceDeliveryService {
     const result = (data ?? {}) as { package_credit_id?: string | null }
     // The screen's list when it sent one; otherwise the service's recipe
     // (salon-01 service_catalog). An explicit empty list means «none used».
-    const materials = input.consumables ?? (await this.recipeOf(ctx, session.serviceOfferingId))
+    const materials =
+      input.consumables ??
+      (session.serviceOfferingId ? await this.recipeOf(ctx, session.serviceOfferingId) : [])
     if (materials.length > 0) {
       await this.consumeMaterials(ctx, session, materials)
     }

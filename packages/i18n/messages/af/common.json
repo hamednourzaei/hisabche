@@ -2006,7 +2006,7 @@
     "generatedBy": "ایجاد شده توسط",
     "copiedToClipboard": "متن بل کپی شد",
     "completed": "تکمیل شده",
-    "pending": "پرداخت‌نشده",
+    "pending": "تأییدنشده",
     "cancelled": "لغو شده",
     "downloadPDF": "دانلود PDF",
     "downloading": "در حال دانلود...",
@@ -2059,7 +2059,6 @@
     "openParty": "مشاهده طرف حساب",
     "noAdvances": "هیچ پیش‌خرید یا پیش‌فروشی یافت نشد",
     "noAdvancesDesc": "پیش‌خرید و پیش‌فروش از همین صفحه با «صورت‌حساب جدید» ثبت می‌شود.",
-
     "filterAll": "همه",
     "saleInvoice": "بل فروش",
     "purchaseInvoice": "بل خرید",
@@ -2166,7 +2165,14 @@
     "exchangeOnlineOnly": "تبدیل جنس فقط آنلاین انجام می‌شود؛ مسترد عادی همچنان ثبت می‌شود.",
     "exchangeNote": "در تبدیل، اعتبار جنس مسترد شده صرف جنس جایگزین می‌شود؛ کسورات و بازپرداخت نقدی اعمال نمی‌شود.",
     "exchangeDone": "تبدیل ثبت شد: جنس مسترد به حساب مشتری برگشت و بل جنس جایگزین با همان مبلغ صادر شد.",
-    "submitExchange": "ثبت تبدیل"
+    "submitExchange": "ثبت تبدیل",
+    "finalizeInvoice": "ثبت نهایی فاکتور",
+    "finalizeInvoiceFailed": "ثبت نهایی فاکتور ناموفق بود. دوباره تلاش کنید.",
+    "finalizePurchaseTitle": "ثبت نهایی فاکتور خرید",
+    "finalizePurchaseBody": "با ثبت نهایی، فاکتور خرید رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای خریداری‌شده به انبار اضافه خواهد شد.",
+    "finalizeSaleTitle": "ثبت نهایی فاکتور فروش",
+    "finalizeSaleBody": "با ثبت نهایی، فاکتور فروش رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای تحویل‌شده از انبار کسر خواهد شد.",
+    "finalized": "نهایی‌شده"
   },
   "warehouse": {
     "deleteWarehouse": "حذف انبار",
@@ -5564,7 +5570,8 @@
       "remove": "حذف از بل",
       "addAnother": "افزودن مشتری دیگر…",
       "otherParties": "سایر طرف‌های بل",
-      "multiNote": "حساب این بل به نام مشتری «اصلی» ثبت می‌شود؛ بقیه به‌عنوان طرف‌های همراه روی بل می‌آیند."
+      "multiNote": "حساب این بل به نام مشتری «اصلی» ثبت می‌شود؛ بقیه به‌عنوان طرف‌های همراه روی بل می‌آیند.",
+      "addAnotherSupplier": "افزودن تأمین‌کننده دیگر…"
     },
     "summary": {
       "title": "خلاصه بل",
@@ -9657,6 +9664,13 @@
       "partially_used": "بخشی استفاده شده",
       "fully_used": "تمام‌شده"
     },
+    "usage": {
+      "unused": "استفاده‌نشده",
+      "partially_applied": "بخشی روی فاکتور اعمال شده",
+      "fully_applied": "کاملاً روی فاکتور اعمال شده",
+      "partially_refunded": "بخشی بازگردانده شده",
+      "fully_refunded": "کاملاً بازگردانده شده"
+    },
     "applyTitle": "اعمال بیعانه روی فاکتور",
     "applyRemaining": "فقط تا باقی‌مانده‌ی همین بیعانه می‌توانید اعمال کنید.",
     "applyInvoice": "فاکتور",
@@ -12538,6 +12552,9 @@
       "pickEmployee": "یک کارمند انتخاب کنید",
       "sessionType": "عنوان / نوع جلسه",
       "sessionTypePlaceholder": "مثلاً: مشوره، آموزش، اصلاح، معاینه",
+      "serviceOrTitle": "خدمت / عنوان جلسه",
+      "serviceOrTitlePlaceholder": "مثلاً: مشوره، آموزش، اصلاح مو، ترمیم، معاینه...",
+      "serviceOrTitleHint": "نام خدمت یا موضوع جلسه را وارد کنید.",
       "resource": "صندلی / اتاق",
       "noResource": "بدون صندلی/اتاق مشخص"
     },
@@ -12644,6 +12661,9 @@
       "SESSION_END_BEFORE_START": "ساعت پایان باید بعد از ساعت شروع باشد.",
       "CUSTOMER_ID_REQUIRED": "مشتری را انتخاب کنید.",
       "SERVICE_OFFERING_ID_REQUIRED": "خدمت را انتخاب کنید.",
+      "SERVICE_OR_TITLE_REQUIRED": "نام خدمت یا موضوع جلسه را بنویسید.",
+      "SESSION_TYPE_REQUIRED": "نام خدمت یا موضوع جلسه را بنویسید.",
+      "SESSION_TYPE_TOO_LONG": "عنوان جلسه نمی‌تواند بیش از ۱۲۰ نویسه باشد.",
       "SESSION_DATE_REQUIRED": "تاریخ جلسه را بنویسید.",
       "SESSION_TIMES_REQUIRED": "ساعت شروع و پایان را بنویسید.",
       "CONSUMPTION_QUANTITY_MUST_BE_POSITIVE": "تعداد باید بزرگ‌تر از صفر باشد.",
@@ -15208,5 +15228,13 @@
       "loadFailed": "خوانده نشد.",
       "retry": "کوشش دوباره"
     }
+  },
+  "party": {
+    "pickSupplier": "انتخاب تأمین‌کننده",
+    "quickCreateSupplier": "ایجاد سریع تأمین‌کننده",
+    "noSuppliers": "تأمین‌کننده‌ای پیدا نشد"
+  },
+  "supplier": {
+    "createError": "خطا در ایجاد تأمین‌کننده"
   }
 }

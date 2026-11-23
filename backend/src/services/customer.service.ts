@@ -325,27 +325,48 @@ export class CustomerService {
     // Every invoice of these parties, not the first thousand: one busy customer
     // on the page used to fill the response and leave the others «no dealings».
     // And a failed read is a failure — it was read as «nobody has a role».
-    const { data, error } = await selectAllPages<
-      { customer_id: string | null; type?: string | null },
-      { message: string; code?: string }
-    >((from, to) =>
-      supabase
-        .from('invoices')
-        .select('customer_id, type')
-        .eq('workspace_id', workspaceId)
-        .in('customer_id', customerIds)
-        .order('id', { ascending: true })
-        .range(from, to),
-    )
-    if (error) throw new DatabaseError('Failed to read party roles', error)
+    const [{ data: salesData, error: salesError }, { data: purchasesData, error: purchasesError }] =
+      await Promise.all([
+        selectAllPages<
+          { customer_id: string | null; type?: string | null },
+          { message: string; code?: string }
+        >((from, to) =>
+          supabase
+            .from('invoices')
+            .select('customer_id, type')
+            .eq('workspace_id', workspaceId)
+            .in('customer_id', customerIds)
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
+        selectAllPages<
+          { supplier_id: string | null; type?: string | null },
+          { message: string; code?: string }
+        >((from, to) =>
+          supabase
+            .from('invoices')
+            .select('supplier_id, type')
+            .eq('workspace_id', workspaceId)
+            .in('supplier_id', customerIds)
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
+      ])
+    if (salesError) throw new DatabaseError('Failed to read party sales roles', salesError)
+    if (purchasesError)
+      throw new DatabaseError('Failed to read party purchase roles', purchasesError)
 
-    for (const row of data ?? []) {
+    for (const row of salesData ?? []) {
       const id = (row as { customer_id: string | null }).customer_id
       if (!id) continue
-      // A missing type means a pre-existing invoice, which was always a sale.
-      const isPurchase = (row as { type?: string | null }).type === 'purchase'
       const seen = roles.get(id) ?? 'none'
-      roles.set(id, mergeRole(seen, isPurchase ? 'seller' : 'buyer'))
+      roles.set(id, mergeRole(seen, 'buyer'))
+    }
+    for (const row of purchasesData ?? []) {
+      const id = (row as { supplier_id: string | null }).supplier_id
+      if (!id) continue
+      const seen = roles.get(id) ?? 'none'
+      roles.set(id, mergeRole(seen, 'seller'))
     }
 
     return roles
@@ -945,7 +966,7 @@ export class CustomerService {
       const { data: page, error } = await supabase
         .from('transactions_view')
         .select('type, amount, currency')
-        .eq('customer_id', customerId)
+        .or(`customer_id.eq.${customerId},supplier_id.eq.${customerId}`)
         // Ordered, so paging is deterministic. Without it PostgreSQL may
         // return rows in any order and a row can be seen twice or never.
         .order('id', { ascending: true })
@@ -989,11 +1010,13 @@ export class CustomerService {
           kind:
             tx.type === 'sale'
               ? ('sale' as const)
-              : tx.type === 'receipt'
-                ? ('payment_in' as const)
-                : tx.type === 'payment'
-                  ? ('payment_out' as const)
-                  : ('return' as const),
+              : tx.type === 'purchase'
+                ? ('purchase' as const)
+                : tx.type === 'receipt'
+                  ? ('payment_in' as const)
+                  : tx.type === 'payment'
+                    ? ('payment_out' as const)
+                    : ('return' as const),
         })),
         ...returnMovements,
       ],

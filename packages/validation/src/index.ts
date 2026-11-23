@@ -189,6 +189,8 @@ export {
   outstandingOf,
   partyBalance,
   partyBalancesByCurrency,
+  sumMoneyByCurrency,
+  bookCurrencyTotalOf,
   paymentPosting,
   rankPartyProducts,
   runningLedger,

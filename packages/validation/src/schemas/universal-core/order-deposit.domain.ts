@@ -152,6 +152,67 @@ export function canDrawFromDeposit(remainingMinor: number, requestedMinor: numbe
   )
 }
 
+// ─── Usage lifecycle (WP-05) ────────────────────────────────────────────────
+
+/**
+ * What an ADVANCE has done with the money it holds.
+ *
+ * ⚠️ THREE STATE MODELS, KEPT APART ON PURPOSE:
+ *
+ *   document_status    draft | posted | cancelled      — the DOCUMENT
+ *   settlement_status  unpaid | partially_paid | paid  — an INVOICE's money
+ *   usage (this)       how much of an ADVANCE was applied or given back
+ *
+ * None of them is derived from another. In particular, «posted» does not mean
+ * «unused», and «paid» does not mean «fully applied».
+ */
+export const ADVANCE_USAGE_STATES = [
+  'unused',
+  'partially_applied',
+  'fully_applied',
+  'partially_refunded',
+  'fully_refunded',
+] as const
+export type AdvanceUsageState = (typeof ADVANCE_USAGE_STATES)[number]
+
+export interface AdvanceUsageInput {
+  /** What the party handed over (customer) or was paid (supplier). */
+  amountMinor: number
+  /** Sum of live applications; `null` when they could not be read. */
+  appliedMinor: number | null
+  /** Sum of live refunds; `null` when they could not be read. */
+  refundedMinor: number | null
+}
+
+/**
+ * The usage state, or `null` when a figure could not be read.
+ *
+ * ⚠️ UNKNOWN IS NOT «unused». A failed read is answered with `null` and the
+ * screen says it could not be stated; a zero would claim nothing has moved.
+ *
+ * When both applications and refunds exist the money's own position decides:
+ * while something is left an application names the state (the advance is still
+ * being settled); with nothing left the larger side names it. An overspent
+ * advance keeps its dominant label — `depositBalanceOf` reports the fault
+ * separately, and this function must not hide it behind `null`.
+ */
+export function advanceUsageOf(input: AdvanceUsageInput): AdvanceUsageState | null {
+  const { amountMinor, appliedMinor, refundedMinor } = input
+  if (appliedMinor === null || refundedMinor === null) return null
+  if (!Number.isSafeInteger(amountMinor) || amountMinor < 0) return null
+  if (!Number.isSafeInteger(appliedMinor) || appliedMinor < 0) return null
+  if (!Number.isSafeInteger(refundedMinor) || refundedMinor < 0) return null
+
+  const remainingMinor = amountMinor - appliedMinor - refundedMinor
+  if (remainingMinor > 0) {
+    if (appliedMinor > 0) return 'partially_applied'
+    if (refundedMinor > 0) return 'partially_refunded'
+    return 'unused'
+  }
+  if (appliedMinor === 0 && refundedMinor === 0) return 'unused'
+  return refundedMinor > appliedMinor ? 'fully_refunded' : 'fully_applied'
+}
+
 // ─── Requests ───────────────────────────────────────────────────────────────
 
 export interface ApplyDepositRequest {

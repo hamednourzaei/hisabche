@@ -104,6 +104,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             : undefined,
           customerId: q.customerId || undefined,
           supplierId: q.supplierId || undefined,
+          partyId: q.partyId || undefined,
           currency: (q.currency as 'AFN' | 'USD' | 'PKR' | 'IRR') || undefined,
           dateFrom: q.dateFrom || undefined,
           dateTo: q.dateTo || undefined,

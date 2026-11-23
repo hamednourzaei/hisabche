@@ -491,6 +491,7 @@ export const invoiceFiltersSchema = z.object({
   status: invoiceStatusSchema.optional(), // ✅ استفاده از invoiceStatusSchema
   customerId: uuidSchema.nullable().optional(),
   supplierId: uuidSchema.optional(),
+  partyId: uuidSchema.optional(),
   currency: currencyCodeSchema.optional(),
   /**
    * Units of the BOOKS currency per one unit of this invoice's currency, on the

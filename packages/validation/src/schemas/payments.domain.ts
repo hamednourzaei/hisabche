@@ -389,6 +389,50 @@ export function partyBalancesByCurrency(
 }
 
 /**
+ * Add up money amounts currency by currency — never one figure across them.
+ *
+ * A row that names no currency is in the books currency. The books currency is
+ * always present (a zero there is an answer, not "no data") and always first,
+ * so a screen can show it without checking whether anything happened in it.
+ *
+ * Why this exists: a supplier invoiced 1,000 AFN and 100 USD was reported as
+ * "1,100" by a `Σ total` over every row. That number belongs to no currency
+ * and cannot be paid, reconciled or audited.
+ */
+export function sumMoneyByCurrency(
+  entries: ReadonlyArray<{ currency?: string | null | undefined; amount: number }>,
+  bookCurrency: string,
+): Array<{ currency: string; total: number }> {
+  const sums = new Map<string, number>([[bookCurrency, 0]])
+  for (const entry of entries) {
+    const currency = entry.currency || bookCurrency
+    sums.set(currency, (sums.get(currency) ?? 0) + entry.amount)
+  }
+
+  return [...sums.entries()]
+    .map(([currency, total]) => ({ currency, total: round2(total) }))
+    .sort((a, b) =>
+      a.currency === b.currency
+        ? 0
+        : a.currency === bookCurrency
+          ? -1
+          : b.currency === bookCurrency
+            ? 1
+            : a.currency < b.currency
+              ? -1
+              : 1,
+    )
+}
+
+/** The books-currency figure out of `sumMoneyByCurrency`'s answer. */
+export function bookCurrencyTotalOf(
+  buckets: ReadonlyArray<{ currency: string; total: number }>,
+  bookCurrency: string,
+): number {
+  return buckets.find((bucket) => bucket.currency === bookCurrency)?.total ?? 0
+}
+
+/**
  * The ledger with a running balance on each row, oldest first.
  *
  * The balance on a row runs over the rows of ITS OWN currency: a dollar

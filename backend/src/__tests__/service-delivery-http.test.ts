@@ -178,6 +178,73 @@ describe('Service Delivery HTTP Routes', () => {
     expect(body.status).toBe('scheduled')
   })
 
+  it('POST /api/service-delivery/sessions with free-text sessionType (no serviceOfferingId) returns 201 and persists title', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/service-delivery/sessions',
+      headers: asUserA,
+      payload: {
+        customerId: CUST_A,
+        sessionType: 'مشاوره اختصاصی کسب‌وکار',
+        practitionerId: EMP_DOC_A,
+        sessionDate: '2026-11-03',
+        startTime: '11:00',
+        endTime: '12:00',
+      },
+    })
+
+    expect(res.statusCode).toBe(201)
+    const body = res.json()
+    expect(body.id).toBeDefined()
+    expect(body.sessionType).toBe('مشاوره اختصاصی کسب‌وکار')
+    expect(body.serviceOfferingId).toBeNull()
+
+    // Verify GET retrieves the free-text session correctly
+    const getRes = await app.inject({
+      method: 'GET',
+      url: `/api/service-delivery/sessions/${body.id}`,
+      headers: asUserA,
+    })
+    expect(getRes.statusCode).toBe(200)
+    expect(getRes.json().data.sessionType).toBe('مشاوره اختصاصی کسب‌وکار')
+    expect(getRes.json().data.serviceOfferingId).toBeNull()
+  })
+
+  it('POST /api/service-delivery/sessions refuses creation when neither serviceOfferingId nor sessionType is given', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/service-delivery/sessions',
+      headers: asUserA,
+      payload: {
+        customerId: CUST_A,
+        sessionDate: '2026-11-03',
+        startTime: '13:00',
+        endTime: '14:00',
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('SERVICE_OR_TITLE_REQUIRED')
+  })
+
+  it('POST /api/service-delivery/sessions rejects whitespace-only sessionType', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/service-delivery/sessions',
+      headers: asUserA,
+      payload: {
+        customerId: CUST_A,
+        sessionType: '    ',
+        sessionDate: '2026-11-03',
+        startTime: '14:00',
+        endTime: '15:00',
+      },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.json().code).toBe('SESSION_TYPE_REQUIRED')
+  })
+
   it('POST .../deliver hands the WHOLE intent to the one atomic function and answers in the device shape', async () => {
     const sessionId = (await schedule()).json().id
     const entryId = fakeId('entry')

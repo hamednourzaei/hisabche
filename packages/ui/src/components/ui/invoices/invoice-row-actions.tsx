@@ -27,12 +27,18 @@ import {
   Mail,
   Trash2,
   LockKeyhole,
+  FileCheck,
 } from 'lucide-react'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 import type { AdvanceListRow } from '../../../lib/invoices/invoice-list-row'
 import { buildInvoiceShareUrl } from '../invoice-detail/invoice-document'
 import { buildInvoiceShareMessage } from '@hisabche/ui-contract'
-import { apiErrorMessage, useMyCapabilities, usePostOrderDepositReceipt } from '@hisabche/api'
+import {
+  apiErrorMessage,
+  useMyCapabilities,
+  usePostOrderDepositReceipt,
+  useFinalizeAdvance,
+} from '@hisabche/api'
 import { Button } from '../button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../dialog'
 import { UndoDisclosure } from '../undo-disclosure'
@@ -338,19 +344,26 @@ export const AdvanceRowActions = memo(function AdvanceRowActions({
   target,
   t,
   onOpenParty,
+  onOpenInvoice,
 }: {
   target: AdvanceListRow
   t: (key: string, fallback?: string) => string
   onOpenParty?: ((id: string) => void) | undefined
+  onOpenInvoice?: ((id: string) => void) | undefined
 }) {
   const menu = useActionMenu()
   const capabilities = useMyCapabilities()
   const postReceipt = usePostOrderDepositReceipt()
+  const finalizeAdvanceMutation = useFinalizeAdvance()
   const [confirming, setConfirming] = useState(false)
+  const [confirmingFinalizeInvoice, setConfirmingFinalizeInvoice] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [finalizeInvoiceError, setFinalizeInvoiceError] = useState<string | null>(null)
   const advance = target.advance
 
   const needsFinalize = advance.status === 'pending_posting' || advance.status === 'posting_unknown'
+  const isAlreadyFinalized = Boolean(advance.appliedInvoiceId)
+  const isPurchase = advance.sourceType === 'pre_purchase'
   // The route asks for `invoice.create`. The capability is not authorization;
   // the server checks it again — this only keeps a refused button off screen.
   const canFinalize = capabilities.can('invoice.create') === true
@@ -362,13 +375,31 @@ export const AdvanceRowActions = memo(function AdvanceRowActions({
         // An advance names itself as its document: `order_id = id`.
         orderId: advance.id,
         depositId: advance.id,
-        customerId: advance.customerId,
+        customerId: advance.customerId ?? '',
       })
       setConfirming(false)
     } catch (err) {
       setError(apiErrorMessage(err, t('invoices.finalizeFailed', 'ثبت نشد. دوباره تلاش کنید.')))
     }
   }, [advance.customerId, advance.id, postReceipt, t])
+
+  const handleFinalizeInvoice = useCallback(async () => {
+    setFinalizeInvoiceError(null)
+    try {
+      const res = await finalizeAdvanceMutation.mutateAsync(advance.id)
+      setConfirmingFinalizeInvoice(false)
+      if (res?.invoice && typeof res.invoice === 'object' && 'id' in res.invoice) {
+        onOpenInvoice?.(String(res.invoice.id))
+      }
+    } catch (err) {
+      setFinalizeInvoiceError(
+        apiErrorMessage(
+          err,
+          t('invoices.finalizeInvoiceFailed', 'ثبت نهایی فاکتور ناموفق بود. دوباره تلاش کنید.'),
+        ),
+      )
+    }
+  }, [advance.id, finalizeAdvanceMutation, onOpenInvoice, t])
 
   return (
     <>
@@ -385,12 +416,25 @@ export const AdvanceRowActions = memo(function AdvanceRowActions({
           className={item}
           onClick={() => {
             menu.setOpen(false)
-            onOpenParty?.(advance.customerId)
+            onOpenParty?.(advance.customerId ?? '')
           }}
           disabled={!onOpenParty}
         >
           <Eye className="size-4" /> {t('invoices.openParty', 'مشاهده طرف حساب')}
         </button>
+        {!isAlreadyFinalized && canFinalize ? (
+          <button
+            type="button"
+            className={item}
+            onClick={() => {
+              menu.setOpen(false)
+              setFinalizeInvoiceError(null)
+              setConfirmingFinalizeInvoice(true)
+            }}
+          >
+            <FileCheck className="size-4" /> {t('invoices.finalizeInvoice', 'ثبت نهایی فاکتور')}
+          </button>
+        ) : null}
         {needsFinalize && canFinalize ? (
           <button
             type="button"
@@ -405,6 +449,60 @@ export const AdvanceRowActions = memo(function AdvanceRowActions({
           </button>
         ) : null}
       </ActionMenu>
+
+      <Dialog
+        open={confirmingFinalizeInvoice}
+        onOpenChange={(open) => {
+          if (finalizeAdvanceMutation.isPending) return
+          setConfirmingFinalizeInvoice(open)
+          if (!open) setFinalizeInvoiceError(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isPurchase
+                ? t('invoices.finalizePurchaseTitle', 'ثبت نهایی فاکتور خرید')
+                : t('invoices.finalizeSaleTitle', 'ثبت نهایی فاکتور فروش')}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
+            {isPurchase
+              ? t(
+                  'invoices.finalizePurchaseBody',
+                  'با ثبت نهایی، فاکتور خرید رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای خریداری‌شده به انبار اضافه خواهد شد.',
+                )
+              : t(
+                  'invoices.finalizeSaleBody',
+                  'با ثبت نهایی، فاکتور فروش رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای تحویل‌شده از انبار کسر خواهد شد.',
+                )}
+          </p>
+          {finalizeInvoiceError ? (
+            <p role="alert" className="text-sm text-[hsl(var(--color-destructive))]">
+              {finalizeInvoiceError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmingFinalizeInvoice(false)}
+              disabled={finalizeAdvanceMutation.isPending}
+            >
+              {t('action.cancel', 'انصراف')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleFinalizeInvoice()}
+              disabled={finalizeAdvanceMutation.isPending}
+            >
+              {finalizeAdvanceMutation.isPending
+                ? t('invoices.finalizing', 'در حال ثبت…')
+                : t('invoices.finalizeInvoice', 'ثبت نهایی فاکتور')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={confirming}

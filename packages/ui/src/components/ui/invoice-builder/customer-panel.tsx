@@ -182,13 +182,16 @@ export const CustomerPanel = memo(function CustomerPanel({
               stays on "nothing selected" so it always reads as "add another". */}
           <CustomerPicker
             value={null}
+            partyType={isPurchase ? 'supplier' : 'customer'}
             onChange={(next) => {
               if (!next) return
               onAddCustomer({ id: next.id, name: next.name, phone: next.phone })
             }}
             placeholder={
               parties.length
-                ? t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
+                ? isPurchase
+                  ? t('invoiceBuilder.customer.addAnotherSupplier', 'افزودن تأمین‌کننده دیگر…')
+                  : t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
                 : isPurchase
                   ? t('invoiceBuilder.customer.supplier', 'انتخاب تأمین‌کننده')
                   : t('invoiceBuilder.customer.select', 'انتخاب مشتری')

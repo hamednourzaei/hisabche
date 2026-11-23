@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, forwardRef, useEffect, useRef, memo } f
 import { useTranslations } from 'next-intl'
 import * as Select from '@radix-ui/react-select'
 import { Check, ChevronsUpDown, Plus, User, Loader2 } from 'lucide-react'
-import { useCustomers, useCreateCustomer } from '@hisabche/api'
+import { useCustomers, useCreateCustomer, useSuppliers, useCreateSupplier } from '@hisabche/api'
 import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -25,11 +25,15 @@ interface CustomerPickerProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  partyType?: 'customer' | 'supplier'
 }
 
 export const CustomerPicker = memo(
   forwardRef<HTMLButtonElement, CustomerPickerProps>(
-    ({ value, onChange, onQuickCreate, placeholder, disabled, className }, _ref) => {
+    (
+      { value, onChange, onQuickCreate, placeholder, disabled, className, partyType = 'customer' },
+      _ref,
+    ) => {
       const tOriginal = useTranslations()
 
       const t = useCallback(
@@ -43,6 +47,7 @@ export const CustomerPicker = memo(
 
       // ✅ safeT wrapper
 
+      const isSupplier = partyType === 'supplier'
       const [open, setOpen] = useState(false)
       const [search, setSearch] = useState('')
       const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -57,25 +62,40 @@ export const CustomerPicker = memo(
         return () => clearTimeout(timer)
       }, [search])
 
-      const { data, isLoading } = useCustomers({
+      const { data: customerData, isLoading: isCustomersLoading } = useCustomers({
         page: 1,
         limit: 25,
         sortDirection: 'desc',
-        search: debouncedSearch || undefined,
+        ...(!isSupplier && debouncedSearch ? { search: debouncedSearch } : {}),
+      })
+      const { data: supplierData, isLoading: isSuppliersLoading } = useSuppliers({
+        ...(isSupplier && debouncedSearch ? { search: debouncedSearch } : {}),
       })
       const createCustomer = useCreateCustomer()
+      const createSupplier = useCreateSupplier()
 
-      const filtered = useMemo(() => (data?.customers || []).slice(0, 25), [data])
+      const isLoading = isSupplier ? isSuppliersLoading : isCustomersLoading
+
+      const filtered: CustomerOption[] = useMemo(() => {
+        if (isSupplier) {
+          return (supplierData || []).slice(0, 25).map((s) => ({
+            id: s.id,
+            name: s.name,
+            phone: s.phone ?? '',
+          }))
+        }
+        return (customerData?.customers || []).slice(0, 25).map((c) => ({
+          id: c.id ?? '',
+          name: c.fullName,
+          phone: c.phone ?? '',
+        }))
+      }, [isSupplier, supplierData, customerData])
 
       const handleSelect = useCallback(
-        (customerId: string) => {
-          const customer = filtered.find((c) => c.id === customerId)
-          if (customer) {
-            onChange({
-              id: customer.id ?? '',
-              name: customer.fullName,
-              phone: customer.phone ?? '',
-            })
+        (partyId: string) => {
+          const party = filtered.find((p) => p.id === partyId)
+          if (party) {
+            onChange(party)
             setOpen(false)
             setSearch('')
             setCreateError(null)
@@ -89,27 +109,54 @@ export const CustomerPicker = memo(
         if (!trimmed) return
         setCreateError(null)
         try {
-          const nc = await createCustomer.mutateAsync({
-            type: 'cash',
-            fullName: trimmed,
-            ...(quickPhone.trim() && { phone: quickPhone.trim() }),
-            openingBalance: 0,
-            isActive: true,
-          })
-          const opt: CustomerOption = {
-            id: nc.id ?? '',
-            name: nc.fullName,
-            phone: nc.phone ?? '',
+          if (isSupplier) {
+            const ns = await createSupplier.mutateAsync({
+              name: trimmed,
+              ...(quickPhone.trim() ? { phone: quickPhone.trim() } : {}),
+            })
+            const opt: CustomerOption = {
+              id: ns.id,
+              name: ns.name,
+              phone: ns.phone ?? '',
+            }
+            onQuickCreate?.(opt)
+            onChange(opt)
+          } else {
+            const nc = await createCustomer.mutateAsync({
+              type: 'cash',
+              fullName: trimmed,
+              ...(quickPhone.trim() && { phone: quickPhone.trim() }),
+              openingBalance: 0,
+              isActive: true,
+            })
+            const opt: CustomerOption = {
+              id: nc.id ?? '',
+              name: nc.fullName,
+              phone: nc.phone ?? '',
+            }
+            onQuickCreate?.(opt)
+            onChange(opt)
           }
-          onQuickCreate?.(opt)
-          onChange(opt)
           setQuickName('')
           setQuickPhone('')
           setOpen(false)
         } catch {
-          setCreateError(t('customer.createError', 'خطا در ایجاد مشتری'))
+          setCreateError(
+            isSupplier
+              ? t('supplier.createError', 'خطا در ایجاد تأمین‌کننده')
+              : t('customer.createError', 'خطا در ایجاد مشتری'),
+          )
         }
-      }, [quickName, quickPhone, createCustomer, onChange, onQuickCreate, t])
+      }, [
+        quickName,
+        quickPhone,
+        isSupplier,
+        createSupplier,
+        createCustomer,
+        onChange,
+        onQuickCreate,
+        t,
+      ])
 
       const handleNameKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -153,7 +200,11 @@ export const CustomerPicker = memo(
                 'motion-reduce:transition-none',
                 disabled && 'cursor-not-allowed opacity-40',
               )}
-              aria-label={t('customer.pickPlaceholder', 'انتخاب مشتری')}
+              aria-label={
+                isSupplier
+                  ? t('party.pickSupplier', 'انتخاب تأمین‌کننده')
+                  : t('customer.pickPlaceholder', 'انتخاب مشتری')
+              }
             >
               <span className="flex items-center gap-2 truncate text-start">
                 <User
@@ -164,7 +215,10 @@ export const CustomerPicker = memo(
                   <span className="font-medium">{value.name}</span>
                 ) : (
                   <span className="text-[hsl(var(--fg-tertiary))]">
-                    {placeholder || t('customer.pickPlaceholder', 'انتخاب مشتری...')}
+                    {placeholder ||
+                      (isSupplier
+                        ? t('party.pickSupplier', 'انتخاب تأمین‌کننده...')
+                        : t('customer.pickPlaceholder', 'انتخاب مشتری...'))}
                   </span>
                 )}
               </span>
@@ -219,7 +273,9 @@ export const CustomerPicker = memo(
                     </div>
                   ) : filtered.length === 0 ? (
                     <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-                      {t('customer.noCustomers', 'مشتری‌ای پیدا نشد')}
+                      {isSupplier
+                        ? t('party.noSuppliers', 'تأمین‌کننده‌ای پیدا نشد')
+                        : t('customer.noCustomers', 'مشتری‌ای پیدا نشد')}
                     </p>
                   ) : (
                     filtered.map((customer) => (
@@ -237,7 +293,7 @@ export const CustomerPicker = memo(
                       >
                         <Select.ItemText>
                           <div>
-                            <p className="font-medium">{customer.fullName}</p>
+                            <p className="font-medium">{customer.name}</p>
                             {customer.phone && (
                               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                                 {customer.phone}
@@ -267,7 +323,11 @@ export const CustomerPicker = memo(
                             setQuickName(e.target.value)
                             setCreateError(null)
                           }}
-                          placeholder={t('customer.quickCreate', 'ایجاد سریع مشتری')}
+                          placeholder={
+                            isSupplier
+                              ? t('party.quickCreateSupplier', 'ایجاد سریع تأمین‌کننده')
+                              : t('customer.quickCreate', 'ایجاد سریع مشتری')
+                          }
                           className={cn(
                             'flex-1 rounded-lg px-3 py-2 text-sm',
                             'border border-[hsl(var(--border-default))]',
@@ -300,7 +360,10 @@ export const CustomerPicker = memo(
                       <button
                         type="button"
                         onClick={handleQuickCreate}
-                        disabled={!quickName.trim() || createCustomer.isPending}
+                        disabled={
+                          !quickName.trim() ||
+                          (isSupplier ? createSupplier.isPending : createCustomer.isPending)
+                        }
                         className={cn(
                           'flex shrink-0 items-center gap-1 rounded-lg px-3 py-2',
                           'text-sm font-medium text-white',
@@ -311,7 +374,7 @@ export const CustomerPicker = memo(
                           'motion-reduce:transition-none',
                         )}
                       >
-                        {createCustomer.isPending ? (
+                        {(isSupplier ? createSupplier.isPending : createCustomer.isPending) ? (
                           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         ) : (
                           <Plus className="size-4" aria-hidden="true" />

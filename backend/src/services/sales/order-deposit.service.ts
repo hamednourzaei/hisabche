@@ -38,6 +38,8 @@ import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   advanceDocumentFrom,
+  advanceUsageOf,
+  ledgerAmountOf,
   ledgerFractionDigitsOf,
   moneyAccountRole,
   tillMinorToMajor,
@@ -46,6 +48,7 @@ import {
   type AccountRole,
   type AdvanceDocument,
   type AdvanceDocumentInput,
+  type AdvanceUsageState,
   type OrderDepositRuleCode,
 } from '@hisabche/validation'
 
@@ -65,7 +68,8 @@ export interface OrderDepositRow {
   id: string
   workspace_id: string
   order_id: string
-  customer_id: string
+  customer_id: string | null
+  supplier_id?: string | null
   amount_minor: number
   payment_method: string
   applied_invoice_id: string | null
@@ -109,7 +113,8 @@ export interface CreateOrderDepositInput {
   /** The client's own id, when it already recorded the receipt offline. */
   id?: string | undefined
   orderId: string
-  customerId: string
+  customerId?: string | undefined
+  supplierId?: string | undefined
   /** Integer minor units of the books currency — never a float major amount. */
   amountMinor: number
   paymentMethod?: string | undefined
@@ -202,7 +207,9 @@ export type DepositUsageStatus =
 export interface CustomerDepositView extends DepositBalanceView {
   id: string
   orderId: string
-  customerId: string
+  customerId: string | null
+  supplierId?: string | null
+  appliedInvoiceId: string | null
   currency: string | null
   paymentMethod: string
   postingStatus: string | null
@@ -211,6 +218,12 @@ export interface CustomerDepositView extends DepositBalanceView {
   note: string | null
   /** advances-03: the lines it was taken for; null on an advance written without them. */
   document: AdvanceDocument | null
+  /**
+   * WP-05: how much of the money was applied or refunded — its own model,
+   * beside (never instead of) the receipt state and the document status.
+   * `null` = the applications or refunds could not be read.
+   */
+  usage: AdvanceUsageState | null
   status: DepositUsageStatus
   /** On the server nothing is waiting to be sent; the device fills this in. */
   pendingSync: boolean
@@ -424,21 +437,36 @@ export class OrderDepositService {
     ctx: TenancyContext,
     rows: OrderDepositRow[],
   ): Promise<CustomerDepositView[]> {
+    if (rows.length === 0) return []
+
+    // ⚠️ THE BALANCE IS THE DATABASE'S, COUNTED ONCE FOR THE WHOLE PAGE.
+    // WP-10 removed the per-row `order_deposit_balance` call (N+1) by summing
+    // applications and refunds in Node — which put the figure a person reads
+    // back into a second implementation, beside the one apply/refund refuse
+    // against. `order_deposit_balances` does the same SQL arithmetic for every
+    // id in one call.
+    const balances = await this.balancesOf(
+      ctx,
+      rows.map((row) => row.id),
+    )
+
     const deposits: CustomerDepositView[] = []
     for (const row of rows) {
-      const { data: balance, error: balanceError } = await this.db.rpc('order_deposit_balance', {
-        p_workspace_id: ctx.workspaceId,
-        p_deposit_id: row.id,
-      })
-      // A balance that cannot be read is a failed read, not «zero left»: the
-      // screen must not offer to refund money it could not count.
-      if (balanceError) throw balanceError
+      const balance = balances.get(row.id)
+      if (!balance) {
+        throw new DatabaseError(
+          'Failed to read the deposit balance',
+          new Error(`order_deposit_balances returned no row for deposit ${row.id}`),
+        )
+      }
+      const view: DepositBalanceView = balance
 
-      const view = balanceOf(balance)
       deposits.push({
         id: row.id,
         orderId: row.order_id,
         customerId: row.customer_id,
+        supplierId: row.supplier_id ?? null,
+        appliedInvoiceId: row.applied_invoice_id,
         currency: row.currency,
         paymentMethod: row.payment_method,
         postingStatus: row.posting_status,
@@ -449,10 +477,53 @@ export class OrderDepositService {
         createdAt: row.created_at,
         ...view,
         status: depositStatusOf(row.posting_status, view),
+        usage: advanceUsageOf(view),
         pendingSync: false,
       })
     }
     return deposits
+  }
+
+  /**
+   * The balance of every deposit in ONE database call — or, on a deployment
+   * that has not run docs/order-deposit-balances-01-migration.sql yet, one
+   * call per deposit to the older `order_deposit_balance`. Both answer with
+   * the database's own arithmetic; Node never subtracts.
+   */
+  private async balancesOf(
+    ctx: TenancyContext,
+    depositIds: string[],
+  ): Promise<Map<string, DepositBalanceView>> {
+    const balances = new Map<string, DepositBalanceView>()
+
+    const batched = await this.db.rpc('order_deposit_balances', {
+      p_workspace_id: ctx.workspaceId,
+      p_deposit_ids: depositIds,
+    })
+    if (!batched.error) {
+      for (const raw of (batched.data ?? []) as unknown[]) {
+        const row = (raw ?? {}) as Record<string, unknown>
+        if (!row.deposit_id) continue
+        balances.set(String(row.deposit_id), balanceOf(raw))
+      }
+      return balances
+    }
+
+    // PGRST202 / 42883: the batched function is not installed yet. The
+    // fallback is deliberately slower and deliberately NOT a Node subtraction.
+    const missing = batched.error.code === 'PGRST202' || batched.error.code === '42883'
+    if (!missing) {
+      throw new DatabaseError('Failed to read the deposit balances', batched.error)
+    }
+    for (const depositId of depositIds) {
+      const single = await this.db.rpc('order_deposit_balance', {
+        p_workspace_id: ctx.workspaceId,
+        p_deposit_id: depositId,
+      })
+      if (single.error) throw new DatabaseError('Failed to read the deposit balance', single.error)
+      balances.set(depositId, balanceOf(single.data))
+    }
+    return balances
   }
 
   /**
@@ -465,7 +536,13 @@ export class OrderDepositService {
     ctx: TenancyContext,
     input: CreateOrderDepositInput,
   ): Promise<CreatedOrderDeposit> {
-    if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor <= 0) {
+    const kind = input.sourceType ?? 'sales_order'
+    const isAdvance = kind === 'pre_sale' || kind === 'pre_purchase'
+    if (
+      !Number.isSafeInteger(input.amountMinor) ||
+      input.amountMinor < 0 ||
+      (!isAdvance && input.amountMinor === 0)
+    ) {
       throw new ValidationError('DEPOSIT_AMOUNT_INVALID')
     }
 
@@ -473,8 +550,6 @@ export class OrderDepositService {
     // the deposit so that an apply can later refuse an invoice in another one
     // instead of treating 100 dollars as 100 afghani.
     const currency = await this.booksCurrencyOf(ctx.workspaceId)
-    const kind = input.sourceType ?? 'sales_order'
-    const isAdvance = kind === 'pre_sale' || kind === 'pre_purchase'
     // An advance names itself as its document; the id is fixed BEFORE the
     // insert so a retry with the same id is the same advance.
     const id = input.id ?? (isAdvance ? randomUUID() : undefined)
@@ -488,13 +563,18 @@ export class OrderDepositService {
       document = built.document
     }
 
+    const customerId = kind === 'pre_purchase' ? null : (input.customerId ?? null)
+    const supplierId =
+      kind === 'pre_purchase' ? (input.supplierId ?? input.customerId ?? null) : null
+
     const { data, error } = await this.db
       .from('order_deposits')
       .insert({
         ...(id ? { id } : {}),
         workspace_id: ctx.workspaceId,
         order_id: isAdvance ? id : input.orderId,
-        customer_id: input.customerId,
+        customer_id: customerId,
+        ...(supplierId ? { supplier_id: supplierId } : {}),
         amount_minor: input.amountMinor,
         payment_method: input.paymentMethod ?? 'cash',
         currency,
@@ -535,9 +615,19 @@ export class OrderDepositService {
         if (existing.data) {
           const replay = existing.data as OrderDepositRow
           // A retry must not re-send different money under the same id.
+          //
+          // The party is compared in its NORMALISED form. A pre_purchase row
+          // stores `customer_id = NULL` and `supplier_id = <id>`, while the
+          // request carries `customerId: undefined`; comparing the raw fields
+          // made a legitimate retry look like a conflict (`null !== undefined`)
+          // and, worse, let a retry naming a DIFFERENT supplier pass because the
+          // supplier column was never compared at all.
+          const replayCustomer = replay.customer_id ?? null
+          const replaySupplier = replay.supplier_id ?? null
           if (
             (!isAdvance && replay.order_id !== input.orderId) ||
-            replay.customer_id !== input.customerId ||
+            replayCustomer !== customerId ||
+            replaySupplier !== supplierId ||
             Number(replay.amount_minor) !== input.amountMinor
           ) {
             throw new ConflictError('DEPOSIT_IDEMPOTENCY_CONFLICT')
@@ -548,6 +638,21 @@ export class OrderDepositService {
       throw error
     }
     const deposit = data as OrderDepositRow
+
+    if (isAdvance && input.amountMinor === 0) {
+      const { data: updated, error: updateErr } = await this.db
+        .from('order_deposits')
+        .update({ posting_status: 'posted' })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', deposit.id)
+        .select()
+        .single()
+      if (updateErr) throw updateErr
+      return this.recorded(ctx, {
+        deposit: updated as OrderDepositRow,
+        posting: { status: 'skipped', reason: 'missing_accounts', missing: [] },
+      })
+    }
 
     return this.recorded(ctx, await this.recordReceiptState(ctx, deposit, input.date))
   }
@@ -906,6 +1011,103 @@ export class OrderDepositService {
   }
 
   /**
+   * Finalize an advance into a real, posted sale or purchase invoice.
+   * Defect 3 & 4: Automatically moves stock and creates journal entries via InvoiceService.create().
+   */
+  async finalizeAdvance(ctx: TenancyContext, advanceId: string) {
+    const advance = await this.requireDeposit(ctx, advanceId, advanceId)
+    const kind = sourceTypeOf(advance.source_type)
+    if (kind !== 'pre_sale' && kind !== 'pre_purchase') {
+      throw new ValidationError('ADVANCE_KIND_REQUIRED')
+    }
+
+    if (advance.applied_invoice_id) {
+      const { InvoiceService } = await import('../invoice.service')
+      const invoiceService = new InvoiceService()
+      const invoice = await invoiceService.getById(advance.applied_invoice_id, ctx)
+      return { invoice, advance }
+    }
+
+    const isPurchase = kind === 'pre_purchase'
+    const { InvoiceService } = await import('../invoice.service')
+    const invoiceService = new InvoiceService()
+
+    const rawLines = advance.document?.lines ?? []
+    // ⚠️ MINOR → MAJOR WITH THE DEPOSIT'S OWN PRECISION. This was `/ 100`,
+    // which is only right for a two-decimal currency: AFN has none, so a
+    // 2,000 AFN advance became a 20 AFN invoice line. An unknown currency is a
+    // refusal, never «assume two decimals».
+    const currency = advance.currency?.trim() ? advance.currency : null
+    if (!currency) throw new ValidationError('DEPOSIT_CURRENCY_UNKNOWN')
+    const digits = this.fractionDigitsOf(advance)
+    const majorOf = (minor: number): number => {
+      if (minor === 0) return 0
+      const amount = ledgerAmountOf(minor, digits)
+      if (amount === null) throw new ValidationError('DEPOSIT_CURRENCY_PRECISION_UNSUPPORTED')
+      return amount
+    }
+    const items = rawLines.map((line, idx) => ({
+      productName: line.name || `Line ${idx + 1}`,
+      quantity: line.quantity,
+      unitPrice: line.unitPriceMinor
+        ? majorOf(line.unitPriceMinor)
+        : majorOf(line.totalMinor) / Math.max(1, line.quantity),
+      productId: line.productId ?? undefined,
+    }))
+
+    const partyId = isPurchase ? advance.supplier_id || advance.customer_id : advance.customer_id
+
+    // ⚠️ ONE KEY FOR THIS ADVANCE, NOT A FRESH UUID PER ATTEMPT. The invoice
+    // creation and the settlement are two calls, so a failure between them
+    // used to leave an invoice and an unapplied advance — and a retry made a
+    // SECOND invoice. With the advance's own key both halves replay, so a
+    // retry converges on one invoice, one payment, one application.
+    const finalizeKey = `advance-finalize:${advance.id}`
+    const invoice = await invoiceService.create(
+      ctx,
+      {
+        type: isPurchase ? 'purchase' : 'sale',
+        customerId: isPurchase ? undefined : (partyId ?? undefined),
+        supplierId: isPurchase ? (partyId ?? undefined) : undefined,
+        items:
+          items.length > 0
+            ? items
+            : [
+                {
+                  productName: advance.note || (isPurchase ? 'پیش‌خرید' : 'پیش‌فروش'),
+                  quantity: 1,
+                  unitPrice: advance.amount_minor > 0 ? majorOf(advance.amount_minor) : 0,
+                },
+              ],
+        currency: currency as (typeof import('@hisabche/validation').CURRENCY_CODES)[number],
+        paymentMethod: 'credit',
+      },
+      null,
+      { clientRequestId: finalizeKey },
+    )
+
+    if (advance.amount_minor > 0) {
+      await this.applyDeposit(ctx, advance.order_id, advance.id, {
+        invoiceId: invoice.id,
+        amountMinor: advance.amount_minor,
+        idempotencyKey: finalizeKey,
+      })
+    }
+
+    await this.db
+      .from('order_deposits')
+      .update({ applied_invoice_id: invoice.id })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', advance.id)
+
+    await invalidateMoneyCaches(ctx.workspaceId)
+    this.logDepositAction(ctx, advance, 'advance_finalized', { invoiceId: invoice.id })
+
+    const updatedAdvance = await this.requireDeposit(ctx, advanceId, advanceId)
+    return { invoice, advance: updatedAdvance }
+  }
+
+  /**
    * Dr cash|bank, Cr customer advances — the money is held, not earned.
    *
    * The amount is converted from the stored minor units with the workspace's
@@ -918,6 +1120,9 @@ export class OrderDepositService {
     date: string | undefined,
     currency: string,
   ): Promise<LedgerPostingOutcome> {
+    if (deposit.amount_minor <= 0) {
+      return { status: 'skipped', reason: 'missing_accounts', missing: [] }
+    }
     const amount = tillMinorToMajor(deposit.amount_minor, currency)
     const moneyRole = moneyAccountRole(deposit.payment_method)
     const kind = sourceTypeOf(deposit.source_type)

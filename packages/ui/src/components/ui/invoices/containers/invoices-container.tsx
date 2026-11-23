@@ -8,6 +8,7 @@ import {
   useAdvances,
   useBranches,
   useCustomers,
+  useSuppliers,
   useWarehouseOverview,
   type Branch,
   type CustomerDepositRecord,
@@ -116,13 +117,16 @@ export function InvoicesContainer() {
   const preSales = useAdvances('pre_sale')
   const prePurchases = useAdvances('pre_purchase')
   const parties = useCustomers({ page: 1, limit: 100, sortDirection: 'desc' })
+  const suppliers = useSuppliers()
 
   const nameById = useMemo(() => {
     const map = new Map<string, string>()
     for (const party of parties.data?.customers ?? [])
       if (party.id) map.set(party.id, party.fullName)
+    for (const supplier of suppliers.data ?? [])
+      if (supplier.id) map.set(supplier.id, supplier.name)
     return map
-  }, [parties.data])
+  }, [parties.data, suppliers.data])
 
   const advanceList = useMemo<AdvanceListRow[]>(() => {
     const wanted = (kind: AdvanceKind) => advanceKinds.length === 0 || advanceKinds.includes(kind)

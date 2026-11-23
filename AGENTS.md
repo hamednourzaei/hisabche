@@ -504,7 +504,7 @@ In Persian, in this order:
    `BLOCKED_EXTERNAL_CREDENTIAL` · `FAILED`. Never `VERIFIED_COMPLETE` (you have no live database).
 2. **Files changed** — every path, one line each on what changed and why.
 3. **Numbers you measured** — the exact commands you ran and their real totals. If you did not run
-   something, write «اجرا نشد». Never report a number you did not see.
+   something, write «not run» («اجرا نشد»). Never report a number you did not see.
 4. **What you did not do** — anything from the task left out, and why.
 5. **Assumptions** — every decision the task did not make for you.
 6. **For the owner** — migrations to run, in order, and anything that must be deployed first

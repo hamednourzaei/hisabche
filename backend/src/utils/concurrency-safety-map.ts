@@ -1195,6 +1195,23 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'order-deposit.routes.ts',
+    route: 'POST /api/advances/:id/finalize',
+    // Finalization converts the advance into an invoice once and links applied_invoice_id.
+    // Repeating the call returns the existing invoice without creating duplicates.
+    mechanisms: ['check-then-write', 'state-idempotent'],
+    evidence: [
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: 'if (advance.applied_invoice_id)',
+      },
+      {
+        file: `${SVC}/sales/order-deposit.service.ts`,
+        text: 'update({ applied_invoice_id: invoice.id })',
+      },
+    ],
+  },
+  {
+    routeFile: 'order-deposit.routes.ts',
     route: 'POST /api/orders/:id/deposits',
     // P1 (V53): the receipt is booked as a liability with a ledger entry keyed
     // by the deposit id, so a retry can never book the same money twice.

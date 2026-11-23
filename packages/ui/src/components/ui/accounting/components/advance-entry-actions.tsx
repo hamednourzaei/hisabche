@@ -15,6 +15,7 @@ import { useTranslations } from 'next-intl'
 import { useAdvances, useRefundOrderDeposit } from '@hisabche/api'
 
 import { useLocalePush } from '../../../../hooks/use-locale-push'
+import { Badge } from '../../badge'
 import { RefundDialog, refusalText } from '../../customers/customer-deposits-panel'
 
 const LINK =
@@ -59,6 +60,17 @@ export function AdvanceEntryActions({ depositId }: { depositId: string }) {
           {t('accounting.journal.refundAdvance')}
         </button>
       ) : null}
+      {/*
+        WP-05: the usage of the MONEY, said beside the document. «posted» and
+        «unused» are different facts: an advance can be booked and untouched.
+        A read that failed renders nothing here — the panel's own status badge
+        already says the receipt is unknown.
+      */}
+      {deposit.usage ? (
+        <Badge size="sm" variant={deposit.usage === 'unused' ? 'outline' : 'secondary'}>
+          {tDeposits(`usage.${deposit.usage}`)}
+        </Badge>
+      ) : null}
       {message ? (
         <span
           role={message.tone === 'error' ? 'alert' : 'status'}
@@ -82,7 +94,7 @@ export function AdvanceEntryActions({ depositId }: { depositId: string }) {
               {
                 orderId: deposit.orderId,
                 depositId: deposit.id,
-                customerId: deposit.customerId,
+                customerId: deposit.customerId ?? deposit.supplierId ?? '',
                 amountMinor,
                 reason,
                 method,

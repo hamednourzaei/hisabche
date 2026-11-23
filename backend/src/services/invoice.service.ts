@@ -206,6 +206,8 @@ function applyInvoiceListFilters<Q extends InvoiceFilterable<Q>>(
   if (filters.warehouseId) q = q.eq('warehouse_id', filters.warehouseId)
   // H1 — the rule is imported, not restated. See outstanding.domain.ts.
   if (filters.outstanding) q = q.or(OUTSTANDING_OR_FILTER)
+  if (filters.partyId)
+    q = q.or(`customer_id.eq.${filters.partyId},supplier_id.eq.${filters.partyId}`)
   if (filters.customerId) q = q.eq('customer_id', filters.customerId)
   if (filters.supplierId) q = q.eq('supplier_id', filters.supplierId)
   if (filters.currency) q = q.eq('currency', filters.currency)
@@ -417,6 +419,7 @@ export class InvoiceService {
       status,
       customerId,
       supplierId,
+      partyId,
       currency,
       dateFrom,
       dateTo,
@@ -506,6 +509,7 @@ export class InvoiceService {
         outstanding ||
         customerId ||
         supplierId ||
+        partyId ||
         currency ||
         dateFrom ||
         dateTo,
@@ -523,6 +527,7 @@ export class InvoiceService {
     if (status) countQuery = countQuery.eq('status', status)
     // Same filter on the count, or the pager offers pages the list cannot fill.
     if (outstanding) countQuery = countQuery.or(OUTSTANDING_OR_FILTER)
+    if (partyId) countQuery = countQuery.or(`customer_id.eq.${partyId},supplier_id.eq.${partyId}`)
     if (customerId) countQuery = countQuery.eq('customer_id', customerId)
     if (supplierId) countQuery = countQuery.eq('supplier_id', supplierId)
     if (currency) countQuery = countQuery.eq('currency', currency)
@@ -902,6 +907,21 @@ export class InvoiceService {
     return (customer as { full_name: string }).full_name
   }
 
+  private async verifiedSupplierName(
+    workspaceId: string,
+    supplierId: string | null,
+  ): Promise<string | null> {
+    if (!supplierId) return null
+    const { data: supplier } = await supabase
+      .from('suppliers')
+      .select('name')
+      .eq('id', supplierId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+    if (!supplier) throw new NotFoundError('Supplier')
+    return (supplier as { name: string }).name
+  }
+
   /**
    * Invoices of ONE customer are made one at a time on this instance (V53 OD-3): the credit check reads the
    * customer's receivable and the invoice then raises it, so two concurrent sales would both read the old
@@ -945,7 +965,7 @@ export class InvoiceService {
     if (clientRequestId) {
       const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
       if (existing) {
-        await this.finishReplayedInvoice(ctx, String(existing.id))
+        await this.finishReplayedInvoice(ctx, String(existing.id), data, clientRequestId)
         return { ...existing, idempotentReplay: true }
       }
     }
@@ -1014,6 +1034,14 @@ export class InvoiceService {
       currency: bookCurrency,
     })
 
+    const isPurchase = (data.type ?? 'sale') === 'purchase'
+    if (isPurchase && data.customerId && !data.supplierId) {
+      throw new ValidationError('INVOICE_PARTY_WRONG_ROLE')
+    }
+    if (!isPurchase && data.supplierId && !data.customerId) {
+      throw new ValidationError('INVOICE_PARTY_WRONG_ROLE')
+    }
+
     // ⚠️ SPEED (14 Oct): these reads do not depend on each other, and each is a
     // round trip to a database on another continent — run one after another
     // they made a single sale take ten seconds on the live site. Together they
@@ -1027,7 +1055,9 @@ export class InvoiceService {
         // not sell off another branch's shelves by naming its warehouse.
         await assertMayUseWarehouse(ctx, invoiceWarehouseId)
       })(),
-      this.verifiedCustomerName(workspaceId, data.customerId ?? null),
+      isPurchase
+        ? this.verifiedSupplierName(workspaceId, data.supplierId ?? null)
+        : this.verifiedCustomerName(workspaceId, data.customerId ?? null),
       // Only the DECISION — workflow instances start after the document exists.
       this.decideApprovalRoute(ctx, money.total, {
         type: data.type,
@@ -1123,8 +1153,14 @@ export class InvoiceService {
     // nobody can be asked for. A cash sale with no customer is still fine —
     // only the part left owing needs a name. Checked before anything is read
     // or written, and before a number is used up.
-    if (!data.customerId && this.paidAtCreation(data) < money.total - 0.000001) {
-      throw new ValidationError('INVOICE_CREDIT_NEEDS_PARTY')
+    if (isPurchase) {
+      if (!data.supplierId && this.paidAtCreation(data) < money.total - 0.000001) {
+        throw new ValidationError('INVOICE_CREDIT_NEEDS_PARTY')
+      }
+    } else {
+      if (!data.customerId && this.paidAtCreation(data) < money.total - 0.000001) {
+        throw new ValidationError('INVOICE_CREDIT_NEEDS_PARTY')
+      }
     }
 
     // ─── THE CUSTOMER'S CREDIT LIMIT (V53 OD-3 = C) ─────────────────────────
@@ -1133,20 +1169,22 @@ export class InvoiceService {
     // take the customer past the limit is refused in `block` mode unless someone holding `credit.override`
     // lets it through with a stated reason — which is then written to the invoice's history. Checked before a
     // number is used up and before anything is written.
-    const creditOverride = await this.assertWithinCreditLimit(ctx, {
-      customerId: data.customerId ?? null,
-      type: data.type ?? 'sale',
-      owing: Math.max(0, money.total - this.paidAtCreation(data)) * exchangeRate,
-      currency: bookCurrency,
-      skip: Boolean(
-        options.isImport ||
-        options.isSystemGenerated ||
-        options.clientRequestId?.startsWith('mig-inv-') ||
-        options.clientRequestId?.includes('late_fee') ||
-        options.clientRequestId?.includes('ingested_document'),
-      ),
-      overrideReason: options.creditOverrideReason ?? null,
-    })
+    const creditOverride = isPurchase
+      ? null
+      : await this.assertWithinCreditLimit(ctx, {
+          customerId: data.customerId ?? null,
+          type: data.type ?? 'sale',
+          owing: Math.max(0, money.total - this.paidAtCreation(data)) * exchangeRate,
+          currency: bookCurrency,
+          skip: Boolean(
+            options.isImport ||
+            options.isSystemGenerated ||
+            options.clientRequestId?.startsWith('mig-inv-') ||
+            options.clientRequestId?.includes('late_fee') ||
+            options.clientRequestId?.includes('ingested_document'),
+          ),
+          overrideReason: options.creditOverrideReason ?? null,
+        })
 
     // A new line names its variant when the product has them (V53 P2); a historical document is never re-checked.
     await this.assertVariantBindings(ctx.workspaceId, lines)
@@ -1200,8 +1238,8 @@ export class InvoiceService {
       type: data.type,
       date: data.date || new Date().toISOString(),
       due_date: data.dueDate || null,
-      customer_id: data.customerId || null,
-      supplier_id: data.supplierId || null,
+      customer_id: isPurchase ? null : data.customerId || null,
+      supplier_id: isPurchase ? data.supplierId || null : null,
       // ⚠️ DERIVED, NOT ACCEPTED. See `money` above.
       subtotal: money.subtotal,
       discount_total: money.discountTotal,
@@ -1529,7 +1567,7 @@ export class InvoiceService {
     }
 
     // ─── T9 — the money, recorded as money ──────────────────────────────
-    await this.recordCreationPayments(ctx, invoice.id, data)
+    await this.recordCreationPayments(ctx, invoice.id, data, clientRequestId)
 
     // Who raised it, when, for how much — the first line of its history.
     // Fire-and-forget by contract: a failed log never fails the invoice.
@@ -1849,6 +1887,8 @@ export class InvoiceService {
     ctx: TenancyContext,
     invoiceId: string,
     data: CreateInvoice,
+    /** The request's own key: one deterministic payment key per tranche. */
+    clientRequestId?: string | null,
   ): Promise<void> {
     // Each entry becomes its own payment: one row carrying a blended method
     // would make the till and the bank reconciliation both wrong.
@@ -1880,36 +1920,40 @@ export class InvoiceService {
     const partyType = isPurchase ? ('supplier' as const) : ('customer' as const)
     const partyId = (isPurchase ? data.supplierId : data.customerId) ?? null
 
-    for (const tranche of tranches) {
-      await this.payments.recordPayment(ctx, {
-        direction: isPurchase ? 'out' : 'in',
-        partyType,
-        // null for a walk-in cash sale. `openInvoicesByIds` is what makes this
-        // work — the party-based lookup filters `customer_id = null` and
-        // matches nothing, which is why there was no working path before.
-        partyId,
-        amount: tranche.amount,
-        entryDate: documentDayOf(data.date, ctx.timeZone),
-        // None named = the books currency; the payments service decides it.
-        ...(data.currency ? { currency: data.currency } : {}),
-        // The money is booked at the rate its invoice was.
-        ...(Number((data as { exchangeRate?: number }).exchangeRate) > 0
-          ? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }
-          : {}),
-        method: tranche.method,
-        // Only the cash part reaches the till; a card or a transfer paid with
-        // the same invoice is not money in a drawer.
-        ...(data.tillSessionId && tranche.method === 'cash'
-          ? { tillSessionId: data.tillSessionId }
-          : {}),
-        reference: tranche.reference,
-        // What the person typed beside the amount (transfer number, bank…).
-        notes: tranche.note,
-        // Explicit: this money settles THIS invoice. Without it the payment
-        // would auto-allocate oldest-first and could land on a different
-        // invoice entirely.
-        allocations: [{ invoiceId, amount: tranche.amount }],
-      })
+    for (const [index, tranche] of tranches.entries()) {
+      await this.payments.recordPayment(
+        ctx,
+        {
+          direction: isPurchase ? 'out' : 'in',
+          partyType,
+          // null for a walk-in cash sale. `openInvoicesByIds` is what makes this
+          // work — the party-based lookup filters `customer_id = null` and
+          // matches nothing, which is why there was no working path before.
+          partyId,
+          amount: tranche.amount,
+          entryDate: documentDayOf(data.date, ctx.timeZone),
+          // None named = the books currency; the payments service decides it.
+          ...(data.currency ? { currency: data.currency } : {}),
+          // The money is booked at the rate its invoice was.
+          ...(Number((data as { exchangeRate?: number }).exchangeRate) > 0
+            ? { exchangeRate: Number((data as { exchangeRate?: number }).exchangeRate) }
+            : {}),
+          method: tranche.method,
+          // Only the cash part reaches the till; a card or a transfer paid with
+          // the same invoice is not money in a drawer.
+          ...(data.tillSessionId && tranche.method === 'cash'
+            ? { tillSessionId: data.tillSessionId }
+            : {}),
+          reference: tranche.reference,
+          // What the person typed beside the amount (transfer number, bank…).
+          notes: tranche.note,
+          // Explicit: this money settles THIS invoice. Without it the payment
+          // would auto-allocate oldest-first and could land on a different
+          // invoice entirely.
+          allocations: [{ invoiceId, amount: tranche.amount }],
+        },
+        clientRequestId ? { clientRequestId: `${clientRequestId}:payment:${index}` } : {},
+      )
     }
   }
 
@@ -4441,23 +4485,38 @@ export class InvoiceService {
    * No capability check of its own: the caller already passed
    * `invoice.create` for this very request; this is that request, finished.
    */
-  private async finishReplayedInvoice(ctx: TenancyContext, invoiceId: string): Promise<void> {
-    const { data, error } = await supabase
+  private async finishReplayedInvoice(
+    ctx: TenancyContext,
+    invoiceId: string,
+    data: CreateInvoice,
+    clientRequestId: string | null,
+  ): Promise<void> {
+    const { data: row, error } = await supabase
       .from('invoices')
       .select('status, document_status')
       .eq('id', invoiceId)
       .eq('workspace_id', ctx.workspaceId)
       .maybeSingle()
     if (error) {
-      // Before the J3 migration there is no document_status: nothing to finish.
-      if (error.code === '42703') return
+      // Before the J3 migration there is no document_status. The ledger half
+      // may still be missing, but re-booking is idempotent per document; the
+      // money half does not depend on J3 at all.
+      if (error.code === '42703') {
+        await this.recordCreationPayments(ctx, invoiceId, data, clientRequestId)
+        return
+      }
       throw new DatabaseError('Failed to read the replayed invoice', error)
     }
-    if (!data) return
-    const status = String(data.status ?? '')
+    if (!row) return
+    const status = String(row.status ?? '')
     if (status === 'cancelled' || status === AWAITING_APPROVAL_STATUS) return
-    if (data.document_status === 'posted') return
-    await this.bookToLedger(invoiceId, ctx)
+    if (row.document_status !== 'posted') await this.bookToLedger(invoiceId, ctx)
+    // ⚠️ THE MONEY IS PART OF THE CREATION, SO A REPLAY FINISHES IT TOO.
+    // Each tranche carries a key derived from the request, so tranches already
+    // recorded replay and the ones a failed first attempt never reached are
+    // written now. Without this, a retry was told «done» while the invoice and
+    // its payments disagreed.
+    await this.recordCreationPayments(ctx, invoiceId, data, clientRequestId)
   }
 
   async postToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {

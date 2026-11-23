@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 37
+export const SCHEMA_VERSION = 39
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -1414,6 +1414,8 @@ export const WRITABLE_COLUMNS: Record<string, readonly string[]> = {
     'workspace_id',
     'order_id',
     'customer_id',
+    'supplier_id',
+    'source_type',
     'amount_minor',
     'payment_method',
     'currency',

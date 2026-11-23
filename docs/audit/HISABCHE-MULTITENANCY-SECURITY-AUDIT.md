@@ -57,3 +57,69 @@ CLAUDE.md states "`POST /api/invoices` and `POST|PATCH|DELETE /api/customers` ha
 ## 5. Not covered
 
 Live RLS state, Supabase grants, rate-limit behaviour under load, dependency CVEs (`pnpm audit` not run — network), secret scanning of git history.
+
+---
+
+## 6. WP-13 — advance, deposit and reservation functions (measured 23 Nov 2026)
+
+Method: `.pgtest/audit-rpc-security.mjs` reads the effective definition of each function across the
+applied migration chain. Grants are looked for in **every** file, not only the defining one:
+`CREATE OR REPLACE FUNCTION` never changes an ACL, so a repair migration can grant what the original
+forgot — searching one file is what hid F-13. Live behaviour was proven on PostgreSQL 18.4 with
+`.pgtest/run-advances-05-manual.mjs` (11 assertions passed) and `.pgtest/run-stock-02-manual.mjs`
+(17 assertions passed).
+
+### Callable functions
+
+| Function                    | Defined in                                             | Rights  | search_path `public, pg_temp` | anon/auth revoked in                                 | service_role granted in                              | Body names workspace_id |
+| --------------------------- | ------------------------------------------------------ | ------- | ----------------------------- | ---------------------------------------------------- | ---------------------------------------------------- | ----------------------- |
+| `order_deposit_apply`       | `order-deposit-apply-refund-01-migration.sql`          | DEFINER | yes                           | order-deposit-apply-refund-01-migration.sql          | order-deposit-apply-refund-01-migration.sql          | yes                     |
+| `order_deposit_balance`     | `order-deposit-apply-refund-01-migration.sql`          | DEFINER | yes                           | order-deposit-apply-refund-01-migration.sql          | order-deposit-apply-refund-01-migration.sql          | yes                     |
+| `order_deposit_balances`    | `order-deposit-balances-01-migration.sql`              | DEFINER | yes                           | order-deposit-balances-01-migration.sql              | order-deposit-balances-01-migration.sql              | yes                     |
+| `order_deposit_refund`      | `order-deposit-apply-refund-01-migration.sql`          | DEFINER | yes                           | order-deposit-apply-refund-01-migration.sql          | order-deposit-apply-refund-01-migration.sql          | yes                     |
+| `stock_available`           | `stock-reservations-02-grants-and-scope-migration.sql` | invoker | yes                           | stock-reservations-02-grants-and-scope-migration.sql | stock-reservations-02-grants-and-scope-migration.sql | yes                     |
+| `stock_release_reservation` | `stock-reservations-01-migration.sql`                  | invoker | yes                           | stock-reservations-02-grants-and-scope-migration.sql | stock-reservations-02-grants-and-scope-migration.sql | yes                     |
+| `stock_reserve`             | `stock-reservations-01-migration.sql`                  | invoker | yes                           | stock-reservations-02-grants-and-scope-migration.sql | stock-reservations-02-grants-and-scope-migration.sql | yes                     |
+| `stock_settle_reservation`  | `stock-reservations-01-migration.sql`                  | invoker | yes                           | stock-reservations-02-grants-and-scope-migration.sql | stock-reservations-02-grants-and-scope-migration.sql | yes                     |
+| `supplier_advance_apply`    | `advances-05-supplier-advance-party-migration.sql`     | DEFINER | yes                           | advances-05-supplier-advance-party-migration.sql     | advances-05-supplier-advance-party-migration.sql     | yes                     |
+| `supplier_advance_refund`   | `advances-05-supplier-advance-party-migration.sql`     | DEFINER | yes                           | advances-05-supplier-advance-party-migration.sql     | advances-05-supplier-advance-party-migration.sql     | yes                     |
+
+Result: **10 callable functions, 2 trigger functions, 0 failing at least one control.**
+
+### F-13 — the server could not execute the stock reservation functions (P0, FIXED)
+
+`docs/stock-reservations-01-migration.sql` revoked EXECUTE from `PUBLIC, anon, authenticated` and
+never granted it to `service_role`. PostgreSQL grants EXECUTE to PUBLIC when a function is created, so
+the REVOKE removed the only grant that existed: every backend call failed with
+`42501 permission denied for function stock_available`. `transition_sales_order` and
+`deliver_sales_order_partial` (`docs/sales-orders-02-migration.sql`) call these functions, so
+confirming a sales order was the first thing to break.
+
+Measured on PostgreSQL 18.4: `service_role` is refused with 42501 before
+`docs/stock-reservations-02-grants-and-scope-migration.sql` and answers after it; `anon` and
+`authenticated` are refused on all four functions before and after.
+
+### F-14 — available-to-promise ignored the tenant (High, FIXED)
+
+`stock_available` read `warehouse_stock` with `warehouse_id` and `product_id` only. A caller who knew
+another workspace's warehouse id read that workspace's on-hand quantity. Measured: workspace A asking
+workspace B's warehouse answered **20** before and **0** after; a stock row whose `workspace_id` is
+NULL is not counted for any workspace (it is listed by `docs/FINDING-db-integrity.sql`).
+
+Fix: `docs/stock-reservations-02-grants-and-scope-migration.sql` +
+`docs/VERIFY-stock-reservations-02-grants-and-scope.sql` +
+`backend/src/__tests__/stock-reservations-02-grants-and-scope.pg.test.ts`.
+Status: `Post-migration verification query generated — PENDING HUMAN CONFIRMATION`.
+
+### Accepted, not a defect
+
+`order_deposits_document_frozen` (`advances-03`) pins `SET search_path = public` without `pg_temp`.
+Its body reads no relation — it compares `NEW.document` with `OLD.document` and raises — so there is
+nothing for a caller to shadow. No change made.
+
+### Cross-workspace refusals proven on real PostgreSQL
+
+- `advances-05`: an unresolved party is refused on apply and on refund; another workspace's advance is
+  unreachable; the historical row whose supplier sits in `customer_id` still applies.
+- `stock-reservations-02`: another workspace's warehouse answers 0; reserving against it is refused
+  with `STOCK_RESERVATION_NO_STOCK`.

@@ -63,7 +63,7 @@ const advanceBody = z
     kind: z.enum(['pre_sale', 'pre_purchase']),
     /** The customer (pre-sale) or supplier (pre-purchase) — a row of this workspace. */
     partyId: z.string().uuid(),
-    amountMinor: z.number().int().positive(),
+    amountMinor: z.number().int().nonnegative(),
     paymentMethod: z.string().trim().min(1).max(32).optional(),
     date: z
       .string()
@@ -211,9 +211,10 @@ export async function orderDepositRoutes(fastify: FastifyInstance) {
         if (body.kind === 'pre_purchase' && !holds(request.tenancy, 'payment.record')) {
           throw new ForbiddenError('CAPABILITY_REQUIRED:payment.record')
         }
-        // The party is a real customer/supplier of THIS workspace.
+        // D-1 fix: The party is a real customer (pre_sale) or supplier (pre_purchase) of THIS workspace.
+        const partyTable = body.kind === 'pre_purchase' ? 'suppliers' : 'customers'
         const party = await supabase
-          .from('customers')
+          .from(partyTable)
           .select('id')
           .eq('workspace_id', request.tenancy.workspaceId)
           .eq('id', body.partyId)
@@ -224,7 +225,8 @@ export async function orderDepositRoutes(fastify: FastifyInstance) {
         const { deposit, posting } = await service.createOrderDeposit(request.tenancy, {
           id: body.id,
           orderId: body.id ?? '',
-          customerId: body.partyId,
+          customerId: body.kind === 'pre_sale' ? body.partyId : undefined,
+          supplierId: body.kind === 'pre_purchase' ? body.partyId : undefined,
           amountMinor: body.amountMinor,
           paymentMethod: body.paymentMethod,
           date: body.date,
@@ -235,6 +237,20 @@ export async function orderDepositRoutes(fastify: FastifyInstance) {
         return reply.status(201).send({ data: deposit, posting })
       } catch (err) {
         return sendFailure(reply, request.log, err, 'Failed to record the advance')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/advances/:id/finalize',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const result = await service.finalizeAdvance(request.tenancy, id)
+        return reply.send({ data: result })
+      } catch (err) {
+        return sendFailure(reply, request.log, err, 'Failed to finalize advance')
       }
     },
   )

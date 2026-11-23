@@ -84,6 +84,26 @@ describe('settlement is explicit', () => {
     ).toThrow('INSUFFICIENT_PACKAGE_CREDIT')
   })
 
+  it('an employee session cannot spend a customer package — complementary stays allowed', () => {
+    const employeeSession = { ...base, customerId: null, subjectType: 'employee' as const }
+
+    expect(() =>
+      planServiceDelivery({
+        session: employeeSession,
+        creditEntries: [grant(5)],
+        packageProductId: 'pkg',
+      }),
+    ).toThrow('SETTLEMENT_CUSTOMER_REQUIRED')
+
+    const free = planServiceDelivery({
+      session: employeeSession,
+      requestedSettlementMethod: 'complementary',
+      reason: 'staff training',
+    })
+    expect(free.session).toMatchObject({ status: 'delivered', settlementMethod: 'complementary' })
+    expect(free.consumptionEntry).toBeNull()
+  })
+
   it('invoice needs an invoice id, and links it', () => {
     expect(() =>
       planServiceDelivery({ session: base, requestedSettlementMethod: 'invoice' }),

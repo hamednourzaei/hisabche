@@ -266,3 +266,53 @@ No live HTTP request hit a deployed server, and no migration was run.
 4. Migrations 04 and 05 must be run and verified by a person on live Supabase; status `PENDING_HUMAN_CONFIRMATION`.
 5. Embedded Postgres cannot start on this machine, so every `*.pg.test.ts` in the touched areas is
    skipped/blocked; rerun them on a machine with working shared memory.
+
+---
+
+## 10. WP-12 — inventory, costing and document effects (measured 23 Nov 2026)
+
+| #   | Invariant                                                                               | Enforced in                                                                                              | Guard                                                                                                                  | Measured                                              |
+| --- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | Every stock movement names the document that caused it                                  | `InvoiceService.batchUpdateStock` writes `reference_type` **and** `reference_id`                         | `backend/src/__tests__/stock-movement-provenance.test.ts`                                                              | pass                                                  |
+| 2   | An approval-held invoice moves no stock until approval, then exactly once               | `InvoiceService.create` gates `planStockMovements` on `isHeld`; `postApprovedInvoice` moves it           | `backend/src/__tests__/invoice-derived-money.test.ts` (`creation does not move stock while the document is held`)      | pass                                                  |
+| 3   | An edit gives back exactly what was moved, once (48, not 2), then applies the new lines | `invoice_write_document` (RPC)                                                                           | `backend/src/__tests__/invoice-edit-rules.test.ts` (`netReversal`); `invoice-write-document.pg.test.ts` (real trigger) | pure test pass; real-PG run **BLOCKED (environment)** |
+| 4   | A purchase order receives once under concurrent requests                                | conditional status claim before inserting movements                                                      | `backend/src/__tests__/purchase-receive-once.test.ts` (#142)                                                           | pass                                                  |
+| 5   | Cancelling a purchase voids its cost layers, and refuses when a layer was drawn from    | `voidReceipt`, `assertReceiptUntouched`                                                                  | `backend/src/__tests__/purchase-cancel-voids-cost-layers.test.ts`                                                      | pass                                                  |
+| 6   | A pre-purchase advance adds no stock and no expense                                     | supplier advance functions book Dr supplier advances / Cr cash                                           | `backend/src/__tests__/advances.test.ts` (`pre-purchase: … no expense, no stock`)                                      | pass                                                  |
+| 7   | Cost of a sale comes from the costing layers, never from `products.buy_price`           | `services/inventory-costing` (`costing`); `refreshBuyPrices` touches only the display price of a product | `backend/src/__tests__/inventory-costing-rules.test.ts` (A35), `valuation-consistency.test.ts`                         | pass                                                  |
+| 8   | A cost nobody recorded is unknown, never zero                                           | `profit-report.domain.ts`, `unknown-is-not-zero` guards                                                  | `backend/src/__tests__/cost-unknown-is-not-zero.test.ts`                                                               | pass                                                  |
+
+Command and total:
+
+```
+cd backend && npx vitest run \
+  src/__tests__/purchase-receive-once.test.ts \
+  src/__tests__/purchase-cancel-voids-cost-layers.test.ts \
+  src/__tests__/purchase-return-accounting.test.ts \
+  src/__tests__/invoice-derived-money.test.ts \
+  src/__tests__/stock-movement-provenance.test.ts \
+  src/__tests__/invoice-edit-rules.test.ts \
+  src/__tests__/invoice-cost-release-not-swallowed.test.ts \
+  src/__tests__/advances.test.ts \
+  src/__tests__/inventory-costing-rules.test.ts \
+  src/__tests__/valuation-consistency.test.ts \
+  src/__tests__/profit-by-cost-object.test.ts \
+  src/__tests__/cost-unknown-is-not-zero.test.ts
+→ Test Files 12 passed (12) · Tests 124 passed (124)
+```
+
+### Gap, stated plainly
+
+Row 3's real-PostgreSQL half (`invoice-write-document.pg.test.ts` runs the real
+`stock_movements_project` trigger and asserts the exact give-back and the duplicate refusal) could not
+be executed here: embedded PostgreSQL 17.10 fails to start on this host with
+`FATAL: could not create shared memory segment: error code 1314`. The file is written and type-checks;
+its execution is **BLOCKED (environment)**, not failed. Everything in rows 1, 2, 4–8 was executed.
+
+### WP-12-O1 — inventory value in analytics (observation, owner decision)
+
+`backend/src/services/analytics.service.ts` values stock as `quantity × products.buy_price`
+(lines 218, 656, 671) for the inventory-value figure. That is presentation, not the cost of a sale and
+not a ledger input, so it does not break the costing rule; but it is not the layer value either. It is
+recorded here with status **OPEN_OWNER_DECISION** rather than changed silently: switching it to cost
+layers changes a number the owner may have been reading for months.

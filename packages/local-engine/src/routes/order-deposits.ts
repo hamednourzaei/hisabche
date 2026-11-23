@@ -31,6 +31,7 @@
 
 import { buildEnqueue } from '@hisabche/app-bridge'
 import {
+  advanceUsageOf,
   canDrawFromDeposit,
   DEFAULT_DEPOSIT_FORFEITURE_POLICY,
   decideDepositForfeiture,
@@ -55,7 +56,12 @@ interface DepositRow {
   id: string
   workspace_id: string
   order_id: string
-  customer_id: string
+  /** NULL on a pre_purchase advance: the supplier is the party, not the customer. */
+  customer_id: string | null
+  /** The supplier side of a pre_purchase advance; NULL for every customer deposit. */
+  supplier_id: string | null
+  /** `sales_order` | `service_session` | `pre_sale` | `pre_purchase`. */
+  source_type: string | null
   amount_minor: number
   payment_method: string
   currency: string | null
@@ -104,6 +110,36 @@ function requireDeposit(ctx: RouteHandlerContext, orderId: string, depositId: st
   )
   if (!row) throw new NotFoundError('Order deposit', depositId)
   return row
+}
+
+/** Which side of the books a deposit lives on. The KIND decides, never the presence of an id. */
+type DepositSide = 'customer' | 'supplier'
+
+function sideOf(deposit: DepositRow): DepositSide {
+  return deposit.source_type === 'pre_purchase' ? 'supplier' : 'customer'
+}
+
+/**
+ * The party this deposit belongs to, or a refusal.
+ *
+ * ⚠️ NEVER A GUESS. A pulled pre_purchase row whose party could not be mapped
+ * carries `supplier_id = NULL` on purpose (docs/FINDING-advances-party-identity.sql).
+ * Falling back to `customer_id` — the old column that held the supplier id
+ * before advances-04 — would move the money under whatever party happens to
+ * share that UUID. The screen gets a code it can explain instead.
+ */
+function partyOf(deposit: DepositRow): string {
+  if (sideOf(deposit) === 'supplier') {
+    if (!deposit.supplier_id) throw new ValidationError('ADVANCE_PARTY_UNKNOWN')
+    return deposit.supplier_id
+  }
+  if (!deposit.customer_id) throw new ValidationError('DEPOSIT_PARTY_UNKNOWN')
+  return deposit.customer_id
+}
+
+/** The advances account this deposit's receipt credited. */
+function advancesRoleOf(deposit: DepositRow): 'customer_advances' | 'supplier_advances' {
+  return sideOf(deposit) === 'supplier' ? 'supplier_advances' : 'customer_advances'
 }
 
 /**
@@ -186,6 +222,8 @@ function viewOf(db: LocalDb, workspaceId: string, row: DepositRow) {
     id: row.id,
     orderId: row.order_id,
     customerId: row.customer_id,
+    supplierId: row.supplier_id ?? null,
+    sourceType: row.source_type ?? 'sales_order',
     amountMinor: balance.amountMinor,
     appliedMinor: balance.appliedMinor,
     refundedMinor: balance.refundedMinor,
@@ -195,6 +233,9 @@ function viewOf(db: LocalDb, workspaceId: string, row: DepositRow) {
     postingStatus: row.posting_status,
     journalEntryId: row.journal_entry_id,
     status: statusOf(row.posting_status, balance),
+    // WP-05: the usage model beside the receipt state and the document, never
+    // instead of either. Null when a figure could not be read.
+    usage: advanceUsageOf(balance),
     pendingSync: hasPendingSync(db, workspaceId, row.id),
     createdAt: row.created_at,
   }
@@ -248,7 +289,16 @@ function queueMovement(
 }
 
 /**
- * The ledger entry for one move: Dr customer advances / Cr the other side.
+ * The ledger entry for one move: the advances line against the other side.
+ *
+ * `advancesOnDebit` says WHICH SIDE the advances account sits on. It is not a
+ * property of the kind, which is why it is a parameter and not a lookup:
+ *
+ *   receipt   (either kind) Dr advances      / Cr cash | bank   → true
+ *   sale apply              Dr customer adv. / Cr receivable    → true
+ *   purchase apply          Dr payable       / Cr supplier adv. → false
+ *   refund    (either kind) Dr advances      / Cr cash | bank   → true, except
+ *   purchase refund         Dr cash | bank   / Cr supplier adv. → false
  *
  * A chart of accounts that cannot express it refuses the whole move
  * (`DEPOSIT_ACCOUNTS_MISSING`) — the server's own code for the same condition.
@@ -256,25 +306,36 @@ function queueMovement(
 function postMovement(
   c: RouteHandlerContext,
   input: {
-    sourceType: 'payment'
+    sourceType: 'order_deposit' | 'payment'
     sourceId: string
     date: string
     description: string
     reference: string
     branches: string | null
+    advanceRole: 'customer_advances' | 'supplier_advances'
+    advancesOnDebit: boolean
     otherRole: AccountRole
     amount: number
   },
 ): string {
-  const roles: AccountRole[] = ['customer_advances', input.otherRole]
+  const roles: AccountRole[] = [input.advanceRole, input.otherRole]
   const { accounts, missing } = ensureAccountsForRoles(c.db, c.ctx.workspaceId, roles)
   // Bound to locals: an index read is `string | undefined` under
   // `noUncheckedIndexedAccess`, and the check below is what makes them real.
-  const advancesAccount = accounts.customer_advances
+  const advancesAccount = accounts[input.advanceRole]
   const otherAccount = accounts[input.otherRole]
   if (missing.length > 0 || !advancesAccount || !otherAccount) {
     throw new ConflictError('DEPOSIT_ACCOUNTS_MISSING', 'DEPOSIT_ACCOUNTS_MISSING')
   }
+  const lines = input.advancesOnDebit
+    ? [
+        { accountId: advancesAccount, debit: input.amount, credit: 0 },
+        { accountId: otherAccount, debit: 0, credit: input.amount },
+      ]
+    : [
+        { accountId: otherAccount, debit: input.amount, credit: 0 },
+        { accountId: advancesAccount, debit: 0, credit: input.amount },
+      ]
   const outcome = postDocument(c.db, c.ctx, {
     sourceType: input.sourceType,
     sourceId: input.sourceId,
@@ -282,10 +343,7 @@ function postMovement(
     description: input.description,
     reference: input.reference,
     branchId: input.branches,
-    lines: [
-      { accountId: advancesAccount, debit: input.amount, credit: 0 },
-      { accountId: otherAccount, debit: 0, credit: input.amount },
-    ],
+    lines,
   })
   // `skipped` would mean an account vanished between the lookup and the post;
   // the move did not happen, so it must not be recorded as if it had.
@@ -299,22 +357,40 @@ function postMovement(
 function requireApplicableInvoice(c: RouteHandlerContext, deposit: DepositRow, invoiceId: string) {
   const invoice = c.db.get<{
     id: string
+    type: string | null
     customer_id: string | null
+    supplier_id: string | null
     currency: string | null
     total: number
     paid_amount: number
     status: string
     branch_id: string | null
   }>(
-    `SELECT id, customer_id, currency, total, paid_amount, status, branch_id
+    `SELECT id, type, customer_id, supplier_id, currency, total, paid_amount, status, branch_id
        FROM invoice
       WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
     [invoiceId, c.ctx.workspaceId],
   )
   if (!invoice) throw new NotFoundError('Invoice', invoiceId)
-  if (invoice.customer_id !== deposit.customer_id) {
-    throw new ValidationError('DEPOSIT_CUSTOMER_MISMATCH')
+
+  // ── The side decides which invoice can take the money ─────────────────────
+  //
+  // A customer advance settles a SALE for that customer; a supplier advance
+  // settles a PURCHASE from that supplier. Comparing customer_id on both sides
+  // was the old conflation — a purchase invoice whose `customer_id` happened to
+  // be NULL matched a pre_purchase advance whose `customer_id` was also NULL
+  // (`null = null`), which is exactly how money moves to a walk-in sale.
+  if (sideOf(deposit) === 'supplier') {
+    if (invoice.type !== 'purchase') throw new ValidationError('ADVANCE_INVOICE_NOT_PURCHASE')
+    if (invoice.supplier_id !== deposit.supplier_id) {
+      throw new ValidationError('DEPOSIT_SUPPLIER_MISMATCH')
+    }
+  } else {
+    if (invoice.customer_id !== deposit.customer_id) {
+      throw new ValidationError('DEPOSIT_CUSTOMER_MISMATCH')
+    }
   }
+
   if (!invoice.currency || invoice.currency !== deposit.currency) {
     throw new ValidationError('DEPOSIT_CURRENCY_MISMATCH')
   }
@@ -385,6 +461,7 @@ export function registerOrderDepositsRoutes(router: Router) {
     const rows = db.all<DepositRow>(
       `SELECT * FROM order_deposits
         WHERE workspace_id = ? AND customer_id = ? AND deleted_at IS NULL
+          AND COALESCE(source_type, 'sales_order') <> 'pre_purchase'
         ORDER BY created_at DESC`,
       [ctx.workspaceId, params.id],
     )
@@ -398,8 +475,24 @@ export function registerOrderDepositsRoutes(router: Router) {
     const orderId = params.id ?? ''
     const raw = (body ?? {}) as Record<string, unknown>
     const customerId = typeof raw.customerId === 'string' ? raw.customerId.trim() : ''
+    const supplierId = typeof raw.supplierId === 'string' ? raw.supplierId.trim() : ''
     const amountMinor = Number(raw.amountMinor)
-    if (!customerId) throw new ValidationError('customerId is required')
+    // A receipt is for a customer (an order deposit) or for a supplier (an
+    // advance paid before the goods). The KIND names the party; neither id is
+    // ever a stand-in for the other.
+    const sourceType =
+      raw.sourceType === 'service_session' ||
+      raw.sourceType === 'pre_sale' ||
+      raw.sourceType === 'pre_purchase'
+        ? raw.sourceType
+        : 'sales_order'
+    const isSupplierAdvance = sourceType === 'pre_purchase'
+    if (isSupplierAdvance) {
+      if (!supplierId) throw new ValidationError('supplierId is required')
+      if (customerId) throw new ValidationError('ADVANCE_PARTY_CONFLICT')
+    } else if (!customerId) {
+      throw new ValidationError('customerId is required')
+    }
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
       throw new ValidationError('DEPOSIT_AMOUNT_INVALID')
     }
@@ -414,18 +507,27 @@ export function registerOrderDepositsRoutes(router: Router) {
         ? raw.date
         : nowIso().slice(0, 10)
     const id = typeof raw.id === 'string' && raw.id ? raw.id : generateUuid()
-    // V54 5.4: a booking deposit. The money is identical; the server checks the
-    // session and records the kind when the receipt arrives.
-    const sourceType = raw.sourceType === 'service_session' ? 'service_session' : null
     const now = nowIso()
 
     return db.transaction(() => {
       db.run(
         `INSERT INTO order_deposits
-           (id, workspace_id, order_id, customer_id, amount_minor, payment_method,
-            currency, posting_status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
-        [id, ctx.workspaceId, orderId, customerId, amountMinor, paymentMethod, currency, now, now],
+           (id, workspace_id, order_id, customer_id, supplier_id, source_type, amount_minor,
+            payment_method, currency, posting_status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+        [
+          id,
+          ctx.workspaceId,
+          orderId,
+          isSupplierAdvance ? null : customerId,
+          isSupplierAdvance ? supplierId : null,
+          sourceType,
+          amountMinor,
+          paymentMethod,
+          currency,
+          now,
+          now,
+        ],
       )
 
       // The receipt books Dr cash|bank / Cr customer advances, exactly as the
@@ -435,20 +537,23 @@ export function registerOrderDepositsRoutes(router: Router) {
       const digits = ledgerFractionDigitsOf(currency)
       const major = digits === null ? null : ledgerAmountOf(amountMinor, digits)
       const role: AccountRole = paymentMethod === 'bank' ? 'bank' : 'cash'
+      const advanceRole: AccountRole = isSupplierAdvance ? 'supplier_advances' : 'customer_advances'
       let journalEntryId: string | null = null
       if (major !== null) {
         const { accounts, missing } = ensureAccountsForRoles(db, ctx.workspaceId, [
           role,
-          'customer_advances',
+          advanceRole,
         ])
         const debitAccount = accounts[role]
-        const advanceAccount = accounts.customer_advances
+        const advanceAccount = accounts[advanceRole]
         if (missing.length === 0 && debitAccount && advanceAccount) {
           const outcome = postDocument(db, ctx, {
             sourceType: 'order_deposit',
             sourceId: id,
             date,
-            description: `بیعانه سفارش ${orderId}`,
+            description: isSupplierAdvance
+              ? `پیش‌پرداخت تأمین‌کننده ${supplierId}`
+              : `بیعانه سفارش ${orderId}`,
             reference: orderId,
             branchId: null,
             lines: [
@@ -478,11 +583,11 @@ export function registerOrderDepositsRoutes(router: Router) {
           movement: 'receipt',
           id,
           orderId,
-          customerId,
+          ...(isSupplierAdvance ? { supplierId } : { customerId }),
           amountMinor,
           paymentMethod,
           date,
-          ...(sourceType ? { sourceType } : {}),
+          sourceType,
         },
         id,
       )
@@ -497,6 +602,8 @@ export function registerOrderDepositsRoutes(router: Router) {
     const { db, ctx, params, body } = c
     requireCapability(ctx, 'invoice.create')
     const deposit = requireDeposit(c, params.id ?? '', params.depositId ?? '')
+    // The party must be real before a receipt is (re)booked under its name.
+    partyOf(deposit)
     const raw = (body ?? {}) as Record<string, unknown>
     const date =
       typeof raw.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.date)
@@ -509,35 +616,26 @@ export function registerOrderDepositsRoutes(router: Router) {
     const now = nowIso()
 
     return db.transaction(() => {
-      const { accounts, missing } = ensureAccountsForRoles(db, ctx.workspaceId, [
-        role,
-        'customer_advances',
-      ])
-      const debitAccount = accounts[role]
-      const advanceAccount = accounts.customer_advances
-      if (missing.length > 0 || !debitAccount || !advanceAccount) {
-        throw new ConflictError('DEPOSIT_ACCOUNTS_MISSING', 'DEPOSIT_ACCOUNTS_MISSING')
-      }
-      const outcome = postDocument(db, ctx, {
+      const journalEntryId = postMovement(c, {
         sourceType: 'order_deposit',
         sourceId: deposit.id,
         date,
-        description: `بیعانه سفارش ${deposit.order_id}`,
+        description:
+          sideOf(deposit) === 'supplier'
+            ? `پیش‌پرداخت تأمین‌کننده ${partyOf(deposit)}`
+            : `بیعانه سفارش ${deposit.order_id}`,
         reference: deposit.order_id,
-        branchId: null,
-        lines: [
-          { accountId: debitAccount, debit: major, credit: 0 },
-          { accountId: advanceAccount, debit: 0, credit: major },
-        ],
+        branches: null,
+        advanceRole: advancesRoleOf(deposit),
+        advancesOnDebit: true,
+        otherRole: role,
+        amount: major,
       })
-      if (outcome.status === 'skipped') {
-        throw new ConflictError('DEPOSIT_ACCOUNTS_MISSING', 'DEPOSIT_ACCOUNTS_MISSING')
-      }
       db.run(
         `UPDATE order_deposits
             SET posting_status = 'posted', journal_entry_id = ?, updated_at = ?
           WHERE id = ? AND workspace_id = ?`,
-        [outcome.entryId, now, deposit.id, ctx.workspaceId],
+        [journalEntryId, now, deposit.id, ctx.workspaceId],
       )
       const inserted = db.get<DepositRow>('SELECT * FROM order_deposits WHERE id = ?', [
         deposit.id,
@@ -552,6 +650,10 @@ export function registerOrderDepositsRoutes(router: Router) {
     // Settling an invoice is a sales write, as on the server.
     requireCapability(ctx, 'invoice.create')
     const deposit = requireDeposit(c, params.id ?? '', params.depositId ?? '')
+    const side = sideOf(deposit)
+    // Resolved before anything is written: an unresolved advance must not book
+    // half a settlement under a party the device had to guess.
+    const partyId = partyOf(deposit)
     const raw = (body ?? {}) as Record<string, unknown>
     const invoiceId = typeof raw.invoiceId === 'string' ? raw.invoiceId.trim() : ''
     const amountMinor = Number(raw.amountMinor)
@@ -592,13 +694,20 @@ export function registerOrderDepositsRoutes(router: Router) {
       if (deposit.posting_status === 'pending_posting') {
         throw new ConflictError('DEPOSIT_PENDING_POSTING', 'DEPOSIT_PENDING_POSTING')
       }
+      // ⚠️ A PULLED DEPOSIT WAS BOOKED ON THE SERVER, NOT HERE. The device's
+      // journal holds no entry for it, but `posting_status = 'posted'` is the
+      // server's own statement that the receipt exists in the books. Only a row
+      // that is neither booked locally nor marked posted is refused — a NULL
+      // status is a row older than the column, and its receipt is unknown.
       const receipt = db.get<{ id: string }>(
         `SELECT id FROM journal_entry
           WHERE workspace_id = ? AND source_type = 'order_deposit' AND source_id = ?
             AND status = 'posted' AND deleted_at IS NULL`,
         [ctx.workspaceId, deposit.id],
       )
-      if (!receipt) throw new ConflictError('DEPOSIT_NOT_BOOKED', 'DEPOSIT_NOT_BOOKED')
+      if (!receipt && deposit.posting_status !== 'posted') {
+        throw new ConflictError('DEPOSIT_NOT_BOOKED', 'DEPOSIT_NOT_BOOKED')
+      }
 
       const invoice = requireApplicableInvoice(c, deposit, invoiceId)
 
@@ -620,28 +729,36 @@ export function registerOrderDepositsRoutes(router: Router) {
         throw new ConflictError('DEPOSIT_INSUFFICIENT_BALANCE', 'DEPOSIT_INSUFFICIENT_BALANCE')
       }
 
-      // 1. The settlement IS a payment: direction 'in', the deposit as its method,
-      //    and one allocation — the same rows `payments_record` writes server-side.
+      // 1. The settlement IS a payment: a supplier advance settles a purchase
+      //    with money OUT, a customer deposit settles a sale with money already
+      //    IN — and one allocation, the same rows `payments_record` writes
+      //    server-side.
       const paymentId = generateUuid()
+      const direction = side === 'supplier' ? 'out' : 'in'
       const count = db.get<{ count: number }>(
-        "SELECT count(*) AS count FROM payment WHERE workspace_id = ? AND direction = 'in'",
-        [ctx.workspaceId],
+        'SELECT count(*) AS count FROM payment WHERE workspace_id = ? AND direction = ?',
+        [ctx.workspaceId, direction],
       )
-      const paymentNumber = `RCT-${String((count?.count ?? 0) + 1).padStart(5, '0')}`
+      const paymentNumber = `${side === 'supplier' ? 'VCH' : 'RCT'}-${String(
+        (count?.count ?? 0) + 1,
+      ).padStart(5, '0')}`
       db.run(
         `INSERT INTO payment (
            id, workspace_id, payment_number, direction, party_type, party_id,
            amount, currency, method, entry_date, reference, notes, status,
            created_at, updated_at, origin, sync_state
-         ) VALUES (?, ?, ?, 'in', 'customer', ?, ?, ?, 'order_deposit', ?, ?, ?, 'posted',
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted',
                    ?, ?, 'local', 'local_only')`,
         [
           paymentId,
           ctx.workspaceId,
           paymentNumber,
-          deposit.customer_id,
+          direction,
+          side === 'supplier' ? 'supplier' : 'customer',
+          partyId,
           major,
           deposit.currency,
+          side === 'supplier' ? 'supplier_advance' : 'order_deposit',
           date,
           `DEPOSIT:${deposit.id}`,
           'Application of order deposit',
@@ -668,16 +785,23 @@ export function registerOrderDepositsRoutes(router: Router) {
         ],
       )
 
-      // 2. Dr customer advances / Cr receivable — credited what the invoice is
-      //    owed, debited the liability we held.
+      // 2. Customer: Dr customer advances / Cr receivable — credited what the
+      //    invoice is owed, debited the liability we held.
+      //    Supplier: Dr payable / Cr supplier advances — the payable the
+      //    purchase created is settled by money that already left.
       const journalEntryId = postMovement(c, {
         sourceType: 'payment',
         sourceId: paymentId,
         date,
-        description: `تطبیق بیعانه سفارش با فاکتور ${invoice.id}`,
+        description:
+          side === 'supplier'
+            ? `تطبیق پیش‌پرداخت با فاکتور خرید ${invoice.id}`
+            : `تطبیق بیعانه سفارش با فاکتور ${invoice.id}`,
         reference: paymentNumber,
         branches: invoice.branch_id,
-        otherRole: 'receivable',
+        advanceRole: advancesRoleOf(deposit),
+        advancesOnDebit: side === 'customer',
+        otherRole: side === 'supplier' ? 'payable' : 'receivable',
         amount: major,
       })
       db.run('UPDATE payment SET journal_entry_id = ? WHERE id = ? AND workspace_id = ?', [
@@ -744,6 +868,8 @@ export function registerOrderDepositsRoutes(router: Router) {
     // Money going back out to a customer is a payment, not an invoice edit.
     requireCapability(ctx, 'payment.record')
     const deposit = requireDeposit(c, params.id ?? '', params.depositId ?? '')
+    const side = sideOf(deposit)
+    const partyId = partyOf(deposit)
     const raw = (body ?? {}) as Record<string, unknown>
     const amountMinor = Number(raw.amountMinor)
     const idempotencyKey = typeof raw.idempotencyKey === 'string' ? raw.idempotencyKey.trim() : ''
@@ -790,8 +916,11 @@ export function registerOrderDepositsRoutes(router: Router) {
       )
       // Nothing is refunded from money that was never booked: debiting advances
       // that were never credited would invent a balance.
-      if (!receipt)
+      // The same rule as an application: a pulled deposit says `posted` because
+      // the SERVER booked its receipt; only an unknown/pending receipt refuses.
+      if (!receipt && deposit.posting_status !== 'posted') {
         throw new ConflictError('DEPOSIT_REFUND_NOT_POSTED', 'DEPOSIT_REFUND_NOT_POSTED')
+      }
 
       const major = ledgerAmountOf(amountMinor, digits)
       if (major === null) throw new ValidationError('DEPOSIT_CURRENCY_PRECISION_UNSUPPORTED')
@@ -807,25 +936,31 @@ export function registerOrderDepositsRoutes(router: Router) {
       }
 
       // 1. Money out is a payment with no allocation: it returns the unused
-      //    advance, it does not settle anything.
+      //    advance, it does not settle anything. The supplier side is the
+      //    mirror — the supplier returns money, which comes back IN.
       const paymentId = generateUuid()
+      const direction = side === 'supplier' ? 'in' : 'out'
       const count = db.get<{ count: number }>(
-        "SELECT count(*) AS count FROM payment WHERE workspace_id = ? AND direction = 'out'",
-        [ctx.workspaceId],
+        'SELECT count(*) AS count FROM payment WHERE workspace_id = ? AND direction = ?',
+        [ctx.workspaceId, direction],
       )
-      const paymentNumber = `VCH-${String((count?.count ?? 0) + 1).padStart(5, '0')}`
+      const paymentNumber = `${side === 'supplier' ? 'RCT' : 'VCH'}-${String(
+        (count?.count ?? 0) + 1,
+      ).padStart(5, '0')}`
       db.run(
         `INSERT INTO payment (
            id, workspace_id, payment_number, direction, party_type, party_id,
            amount, currency, method, entry_date, reference, notes, status,
            created_at, updated_at, origin, sync_state
-         ) VALUES (?, ?, ?, 'out', 'customer', ?, ?, ?, ?, ?, ?, ?, 'posted',
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'posted',
                    ?, ?, 'local', 'local_only')`,
         [
           paymentId,
           ctx.workspaceId,
           paymentNumber,
-          deposit.customer_id,
+          direction,
+          side === 'supplier' ? 'supplier' : 'customer',
+          partyId,
           major,
           deposit.currency,
           method,
@@ -837,14 +972,21 @@ export function registerOrderDepositsRoutes(router: Router) {
         ],
       )
 
-      // 2. Dr customer advances / Cr cash | bank.
+      // 2. Customer: Dr customer advances / Cr cash | bank.
+      //    Supplier: Dr cash | bank / Cr supplier advances — the asset comes
+      //    back, it is not credited as a liability.
       const journalEntryId = postMovement(c, {
         sourceType: 'payment',
         sourceId: paymentId,
         date,
-        description: `بازگرداندن بیعانه سفارش ${deposit.order_id}`,
+        description:
+          side === 'supplier'
+            ? `بازگرداندن پیش‌پرداخت تأمین‌کننده ${deposit.order_id}`
+            : `بازگرداندن بیعانه سفارش ${deposit.order_id}`,
         reference: paymentNumber,
         branches: null,
+        advanceRole: advancesRoleOf(deposit),
+        advancesOnDebit: side === 'customer',
         otherRole: method === 'bank' ? 'bank' : 'cash',
         amount: major,
       })

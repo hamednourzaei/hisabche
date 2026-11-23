@@ -361,7 +361,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
           ...(foreign && exchangeRate !== null ? { exchangeRate } : {}),
           ...(tillSessionId ? { tillSessionId } : {}),
           ...(sellerUserId ? { sellerUserId } : {}),
-          ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+          ...(primaryCustomer?.id
+            ? draft.transactionType === 'purchase'
+              ? { supplierId: primaryCustomer.id }
+              : { customerId: primaryCustomer.id }
+            : {}),
           ...(creditStop && creditReason.trim()
             ? { creditOverride: { reason: creditReason.trim() } }
             : {}),
@@ -404,7 +408,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               taxTotal: summary.taxTotal,
               total: summary.total,
               currency,
-              ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+              ...(primaryCustomer?.id
+                ? draft.transactionType === 'purchase'
+                  ? { supplierId: primaryCustomer.id }
+                  : { customerId: primaryCustomer.id }
+                : {}),
               ...(invoiceNotes ? { notes: invoiceNotes } : {}),
               items,
             },
@@ -603,11 +611,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     }
     const scale = 10 ** fractionDigits(currency as KnownCurrency)
     const toMinor = (value: number) => Math.round(value * scale)
-    const amountMinor = toMinor(paidAmount)
-    if (amountMinor <= 0) {
-      setError(t('advances.receivedRequired'))
-      return
-    }
+    const amountMinor = Math.max(0, toMinor(paidAmount))
     setError(null)
     try {
       // ⚠️ The ADVANCE's id is a plain uuid. `submissionKey` is the invoice

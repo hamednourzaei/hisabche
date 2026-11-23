@@ -216,3 +216,57 @@ export function useSupplierScorecard(enabled = true) {
     staleTime: 60_000,
   })
 }
+
+// ═══ Suppliers API ═══
+export interface Supplier {
+  id: string
+  name: string
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  notes?: string | null
+  isActive?: boolean
+}
+
+export const supplierKeys = {
+  all: ['suppliers'] as const,
+  lists: () => [...supplierKeys.all, 'list'] as const,
+  list: (filters?: Record<string, unknown>) => [...supplierKeys.lists(), filters] as const,
+  detail: (id: string) => [...supplierKeys.all, 'detail', id] as const,
+}
+
+export function useSuppliers(
+  filters: { search?: string | undefined; isActive?: boolean | undefined } = {},
+) {
+  const authReady = useAuthReady()
+  useRealtime({ table: 'suppliers', queryKey: supplierKeys.all as unknown as string[] })
+
+  return useQuery({
+    queryKey: supplierKeys.list(filters),
+    queryFn: async (): Promise<Supplier[]> => {
+      const res = await apiClient.get<Supplier[]>('/api/suppliers', { params: filters })
+      return asList<Supplier>(res.data)
+    },
+    enabled: authReady,
+    staleTime: 60_000,
+  })
+}
+
+export function useCreateSupplier() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: {
+      name: string
+      phone?: string
+      email?: string
+      address?: string
+      notes?: string
+    }) => {
+      const res = await apiClient.post<Supplier>('/api/suppliers', body)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: supplierKeys.all })
+    },
+  })
+}

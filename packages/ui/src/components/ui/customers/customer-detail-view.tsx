@@ -598,14 +598,30 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
               <KpiCard
                 surface="none"
                 className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
-                label={t('totalSales')}
-                value={figure((row) => row.totalSales)}
+                label={
+                  summary.totalPurchases > 0 && summary.totalSales === 0
+                    ? t('totalPurchases')
+                    : t('totalSales')
+                }
+                value={
+                  summary.totalPurchases > 0 && summary.totalSales === 0
+                    ? figure((row) => row.totalPurchases)
+                    : figure((row) => row.totalSales)
+                }
               />
               <KpiCard
                 surface="none"
                 className="rounded-xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.45)]"
-                label={t('totalReceived')}
-                value={figure((row) => row.totalReceived)}
+                label={
+                  summary.totalPurchases > 0 && summary.totalSales === 0
+                    ? t('totalPaid')
+                    : t('totalReceived')
+                }
+                value={
+                  summary.totalPurchases > 0 && summary.totalSales === 0
+                    ? figure((row) => row.totalPaid)
+                    : figure((row) => row.totalReceived)
+                }
               />
               <KpiCard
                 surface="none"

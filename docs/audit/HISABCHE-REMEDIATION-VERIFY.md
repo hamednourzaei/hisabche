@@ -99,20 +99,25 @@ not hand-edited.
 
 ## 3. Database work
 
-| File                                                          | Purpose                                                                           | Status                         |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------ |
-| `docs/service-delivery-04-settlement-undecided-migration.sql` | session settlement defaults to `undecided`; no implicit package credit at booking | **PENDING HUMAN CONFIRMATION** |
-| `docs/VERIFY-service-delivery-04-settlement-undecided.sql`    | read-only verification of the default and existing rows                           | **PENDING HUMAN CONFIRMATION** |
+| File                                                               | Purpose                                                                                                          | Status                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `docs/service-delivery-04-settlement-undecided-migration.sql`      | session settlement defaults to `undecided`; no implicit package credit at booking                                | **PENDING HUMAN CONFIRMATION** |
+| `docs/VERIFY-service-delivery-04-settlement-undecided.sql`         | read-only verification of the default and existing rows                                                          | **PENDING HUMAN CONFIRMATION** |
+| `docs/service-delivery-06-optional-service-offering-migration.sql` | makes `service_product_id` nullable in `service_sessions` and ensures fallback `service_name`                    | **PENDING HUMAN CONFIRMATION** |
+| `docs/VERIFY-service-delivery-06-optional-service-offering.sql`    | read-only verification of `service_sessions` nullability and constraints                                         | **PENDING HUMAN CONFIRMATION** |
+| `docs/advances-04-party-identity-migration.sql`                    | adds `supplier_id` to `order_deposits`, relaxes `customer_id` NOT NULL, backfills pre_purchase, adds party check | **PENDING HUMAN CONFIRMATION** |
+| `docs/VERIFY-advances-04-party-identity.sql`                       | read-only verification of columns, constraints, foreign keys and data consistency                                | **PENDING HUMAN CONFIRMATION** |
+| `docs/FINDING-advances-party-identity.sql`                         | read-only audit finding query reporting mismatched pre_purchase rows                                             | **PENDING HUMAN CONFIRMATION** |
 
-No other migration was needed for the invoice unification, the role rules or the profile gates: those
-read and write existing columns. No DDL was executed against any database. No «PASS» is claimed for
-either file.
+All migrations are idempotent, additive, tenant-safe and include down-migration rollback blocks. No DDL was executed against the live Supabase database. All status values remain `Post-migration verification query generated — PENDING HUMAN CONFIRMATION`.
 
 Order for the owner:
 
-1. Run the migration on a staging copy, then `VERIFY-service-delivery-04-settlement-undecided.sql`.
-2. Confirm the reported row counts.
-3. Only then run it on production, after the backend that understands `undecided` is deployed.
+1. Run `FINDING-advances-party-identity.sql` to inspect existing pre_purchase records.
+2. Run `advances-04-party-identity-migration.sql` on a staging copy, followed by `VERIFY-advances-04-party-identity.sql`.
+3. Run `service-delivery-06-optional-service-offering-migration.sql` followed by `VERIFY-service-delivery-06-optional-service-offering.sql`.
+4. Run `service-delivery-04-settlement-undecided-migration.sql` followed by `VERIFY-service-delivery-04-settlement-undecided.sql`.
+5. Only then run them on production, after the updated backend code is deployed.
 
 ---
 
@@ -139,3 +144,46 @@ Order for the owner:
 3. `fa/common.json` contains duplicate `free`/`FREE` keys, so PowerShell `ConvertFrom-Json` fails.
    JSON edits were made with Node and re-parsed after writing.
 4. Git is only reachable through `C:\Program Files\Git\cmd\git.exe` in this shell.
+
+---
+
+## 6. Completion pass — 23 Nov 2026
+
+Everything below was run in this session; the totals are what the commands printed.
+
+| Command                                                                                                                                         | Result                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `backend && npx tsc --noEmit`                                                                                                                   | exit 0                                                  |
+| `packages/ui && npx tsc --noEmit`                                                                                                               | exit 0                                                  |
+| `packages/validation && npx tsc --noEmit`                                                                                                       | exit 0                                                  |
+| backend WP-12 group (12 files)                                                                                                                  | **12 files / 124 tests passed**                         |
+| backend D-item group (`invoice-seller`, `invoice-credit-limit`, `party-summary`, `concurrency-safety-map`, `reversal-ledger`, service delivery) | **6 files / 121 tests passed**                          |
+| `packages/ui` invoice + session group (4 files)                                                                                                 | **4 files / 42 tests passed**                           |
+| `packages/ui` recurring-purchase guard                                                                                                          | **1 failed** with the fix undone, **1 passed** restored |
+| `packages/validation` service-delivery domain (2 files)                                                                                         | **2 files / 37 tests passed**                           |
+| `.pgtest/run-advances-05-manual.mjs` (PostgreSQL 18.4)                                                                                          | **11 passed, 0 failed**                                 |
+| `.pgtest/run-stock-02-manual.mjs` (PostgreSQL 18.4)                                                                                             | **17 passed, 0 failed**                                 |
+| `.pgtest/audit-rpc-security.mjs`                                                                                                                | 10 callable / 2 trigger / **0 failing** a control       |
+| `node scripts/migrations/pending-ledger.mjs`                                                                                                    | 302 migrations · 183 with VERIFY · 193 with a PG test   |
+| `npx eslint` on every changed source file                                                                                                       | 0 errors                                                |
+
+Two defects found by this pass and fixed:
+
+1. **Recurring purchase template carried the supplier in `customerId`**
+   (`invoice-preview-container.tsx:411`). The invoice itself mapped a purchase to `supplierId`; the
+   template payload did not, and `z.record(z.unknown())` hid it from the compiler. Guarded by
+   `packages/ui/src/__tests__/recurring-purchase-party.test.ts`, proven red without the fix.
+2. **`stock_available` ignored the tenant and the four stock functions had no `service_role` grant**
+   (`docs/stock-reservations-01-migration.sql`). Fixed by
+   `docs/stock-reservations-02-grants-and-scope-migration.sql`; proven on PostgreSQL 18.4 that
+   `service_role` is refused with 42501 before it, and that another workspace's warehouse answers 0
+   after it.
+
+One alignment, no behaviour change: the employee-session/package refusal used
+`SETTLEMENT_PACKAGE_REQUIRES_CUSTOMER`; the owner's decision names `SETTLEMENT_CUSTOMER_REQUIRED`, so
+both the server and the device domain use the decision's token, now covered by
+`service-delivery-settlement.domain.test.ts`.
+
+Still blocked, unchanged: every `*.pg.test.ts` through `embedded-postgres` 17.10 (shared-memory error
+1314), `graphify-out` (removed interpreter), and all live-database verification. No commit, push, reset,
+stash, checkout, build or dependency change was made.

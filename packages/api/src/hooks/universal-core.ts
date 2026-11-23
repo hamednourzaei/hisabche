@@ -15,7 +15,7 @@
 // - typed payloads without `any`
 // ============================================
 
-import type { AdvanceDocument, AdvanceDocumentInput } from '@hisabche/validation'
+import type { AdvanceDocument, AdvanceDocumentInput, AdvanceUsageState } from '@hisabche/validation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { asList } from '../lib/as-list'
@@ -260,7 +260,9 @@ export interface OrderDepositRecord {
 export interface CustomerDepositRecord {
   id: string
   orderId: string
-  customerId: string
+  customerId: string | null
+  supplierId?: string | null | undefined
+  appliedInvoiceId?: string | null | undefined
   amountMinor: number
   appliedMinor: number
   refundedMinor: number
@@ -275,6 +277,11 @@ export interface CustomerDepositRecord {
   note?: string | null | undefined
   /** advances-03: the priced lines it was taken for; null/absent without them. */
   document?: AdvanceDocument | null | undefined
+  /**
+   * WP-05: how much of the money was applied or refunded. Absent from an older
+   * server; null = a figure could not be read.
+   */
+  usage?: AdvanceUsageState | null | undefined
   status: 'pending_posting' | 'posting_unknown' | 'available' | 'partially_used' | 'fully_used'
   /** True while a change to this deposit is still waiting in the device's outbox. */
   pendingSync: boolean
@@ -849,6 +856,26 @@ export function useCreateAdvance() {
       queryClient.invalidateQueries({
         queryKey: universalCoreKeys.customerDeposits(input.partyId),
       })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+export function useFinalizeAdvance() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (advanceId: string) => {
+      const { data } = await apiClient.post<{
+        data: { invoice: unknown; advance: OrderDepositRecord }
+      }>(`/advances/${advanceId}/finalize`)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...universalCoreKeys.all, 'advances'] })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['payments'] })
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
@@ -1631,7 +1658,7 @@ export interface ServiceDeliverySessionItem {
   sessionType?: string | null | undefined
   /** Everyone in the session, primary included (when the API loaded them). */
   participants?: ServiceDeliverySessionParticipantItem[] | undefined
-  serviceOfferingId: string
+  serviceOfferingId?: string | null | undefined
   practitionerId?: string | null | undefined
   branchId?: string | null | undefined
   sessionDate: string
@@ -1688,7 +1715,7 @@ export function useCreateServiceDeliverySession() {
       subjectType?: 'customer' | 'employee' | undefined
       /** Free-text kind of session, 1..120 chars after trim. */
       sessionType?: string | null | undefined
-      serviceOfferingId: string
+      serviceOfferingId?: string | null | undefined
       practitionerId?: string | null | undefined
       branchId?: string | null | undefined
       /** salon-01: the chair/room; the server refuses a double booking (SERVICE_RESOURCE_BUSY). */

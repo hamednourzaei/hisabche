@@ -22,8 +22,9 @@ import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { PaymentsService } from '../payments'
-import { round2 } from '../payments'
+import { bookCurrencyTotalOf, sumMoneyByCurrency } from '@hisabche/validation'
 import { rowText, type DbRow } from '../../utils/db-row'
+import { selectAllPages } from '../../utils/fetch-all-pages'
 
 const COLUMNS = 'id, name, phone, email, address, notes, is_active, created_at, updated_at'
 
@@ -193,7 +194,7 @@ export class SupplierService {
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
-    const [purchases, openInvoices, ledger, orders] = await Promise.all([
+    const [purchases, openInvoices, ledger, orders, allPurchases] = await Promise.all([
       supabase
         .from('invoices')
         .select('id, invoice_number, date, total, paid_amount, status, currency')
@@ -211,23 +212,72 @@ export class SupplierService {
         .eq('supplier_id', id)
         .order('order_date', { ascending: false })
         .limit(50),
+      selectAllPages<
+        { total: number; status: string; currency: string | null },
+        { message: string; code?: string }
+      >((from, to) =>
+        supabase
+          .from('invoices')
+          .select('total, status, currency')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('supplier_id', id)
+          .eq('type', 'purchase')
+          .neq('status', 'cancelled')
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
     ])
 
     if (purchases.error) throw new DatabaseError('Failed to fetch purchases', purchases.error)
     if (orders.error) throw new DatabaseError('Failed to fetch purchase orders', orders.error)
+    if (allPurchases.error) {
+      throw new DatabaseError('Failed to fetch lifetime purchases', allPurchases.error)
+    }
 
     const rows = purchases.data ?? []
+    const lifetimeRows = allPurchases.data ?? []
+
+    // ── WP-09: money is never summed ACROSS currencies ───────────────────────
+    //
+    // The previous version did `Σ total` over every purchase and `Σ
+    // outstanding` over every open invoice, whichever currency each one was
+    // in. A supplier invoiced 1,000 AFN and 100 USD was reported as "1,100"
+    // — a number that belongs to no currency and cannot be paid.
+    //
+    // `balance` / `balances` below already obey this rule; the totals did not.
+    // The scalar fields stay for compatibility but are now the BOOKS-currency
+    // figure only, and the explicit per-currency arrays carry the rest.
+    const booksCurrency = ledger.currency
+    const purchasedByCurrency = sumMoneyByCurrency(
+      lifetimeRows.map((row) => ({ currency: row.currency, amount: Number(row.total) || 0 })),
+      booksCurrency,
+    )
+    const outstandingByCurrency = sumMoneyByCurrency(
+      openInvoices.map((invoice) => ({ currency: invoice.currency, amount: invoice.outstanding })),
+      booksCurrency,
+    )
 
     const result = {
       supplier,
       purchases: rows,
       purchaseOrders: orders.data ?? [],
+      /**
+       * The list above is the newest 100. When it is full the client must say
+       * "latest 100", not present it as the whole history — the totals beside
+       * it ARE complete, so a short list next to a large total is correct.
+       */
+      purchasesTruncated: rows.length >= 100,
       totals: {
-        purchaseCount: rows.length,
-        purchasedValue: round2(rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0)),
+        purchaseCount: lifetimeRows.length,
+        /** In the BOOKS currency only — the rest is in `purchasedValueByCurrency`. */
+        purchasedValue: bookCurrencyTotalOf(purchasedByCurrency, booksCurrency),
+        /** Every currency, never one figure across them. */
+        purchasedValueByCurrency: purchasedByCurrency,
         // What is STILL owed, from the allocations — not from `paid_amount`,
-        // which any invoice PATCH can overwrite.
-        outstanding: round2(openInvoices.reduce((sum, invoice) => sum + invoice.outstanding, 0)),
+        // which any invoice PATCH can overwrite. Books currency only; the rest
+        // is in `outstandingByCurrency`.
+        outstanding: bookCurrencyTotalOf(outstandingByCurrency, booksCurrency),
+        outstandingByCurrency: outstandingByCurrency,
         openInvoiceCount: openInvoices.length,
       },
       openInvoices,

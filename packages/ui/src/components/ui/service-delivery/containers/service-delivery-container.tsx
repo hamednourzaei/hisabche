@@ -207,7 +207,12 @@ function ServiceDeliveryContent() {
               ? (practitionerById.get(session.employeeId ?? '') ??
                 t('serviceDelivery.unknown.employee', 'پرسنل'))
               : (customerById.get(session.customerId ?? '') ?? null),
-          serviceName: productById.get(session.serviceOfferingId)?.name ?? null,
+          serviceName:
+            (session.sessionType && session.sessionType.trim().length > 0
+              ? session.sessionType.trim()
+              : session.serviceOfferingId
+                ? productById.get(session.serviceOfferingId)?.name
+                : null) ?? null,
           practitionerName: session.practitionerId
             ? (practitionerById.get(session.practitionerId) ?? null)
             : null,
@@ -312,20 +317,6 @@ function ServiceDeliveryContent() {
         )
       : undefined
 
-  const serviceHint = products.isError
-    ? t('serviceDelivery.create.servicesUnread', 'فهرست کالاها و خدمات خوانده نشد')
-    : serviceOptions.length === 0 && productList.length > 0
-      ? t(
-          'serviceDelivery.create.offeringTypeOffline',
-          'نوع خدمت/کالا روی این دستگاه ذخیره نشده است؛ برای انتخاب خدمت آنلاین شوید.',
-        )
-      : serviceOptions.length === 0
-        ? t(
-            'serviceDelivery.create.howToService',
-            'هنوز خدمتی تعریف نشده است؛ از «موجودی ← کالاها» یک کالا با نوع «خدمت» بسازید.',
-          )
-        : undefined
-
   const practitionerHint = mayReadEmployees
     ? employees.isError
       ? t('serviceDelivery.create.employeesUnread', 'فهرست کارمندان خوانده نشد')
@@ -390,7 +381,6 @@ function ServiceDeliveryContent() {
           .map((r) => ({ value: r.id, label: r.name }))}
         hasBranches={hasBranches}
         customerHint={customerHint}
-        serviceHint={serviceHint}
         practitionerHint={practitionerHint}
       />
 

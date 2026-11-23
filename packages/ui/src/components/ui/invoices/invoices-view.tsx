@@ -417,15 +417,18 @@ function useInvoiceColumns(
             <span
               className={cn(
                 'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold',
-                row.advance.status === 'available'
+                row.advance.appliedInvoiceId
                   ? statusBadgeStyles.success
-                  : row.advance.status === 'pending_posting' ||
-                      row.advance.status === 'posting_unknown'
+                  : row.advance.postingStatus === 'pending_posting'
                     ? statusBadgeStyles.warning
                     : statusBadgeStyles.secondary,
               )}
             >
-              {t(`customerDeposits.status.${row.advance.status}`, row.advance.status)}
+              {row.advance.appliedInvoiceId
+                ? t('invoices.finalized', 'نهایی‌شده')
+                : row.advance.postingStatus === 'pending_posting'
+                  ? t('invoices.pending', 'تأییدنشده')
+                  : t('invoices.draft', 'پیش‌نویس')}
             </span>
           ),
       },
@@ -500,7 +503,12 @@ function useInvoiceColumns(
         // name and no customer record; rendering it as a link would send the
         // user to a page that does not exist, which is worse than plain text.
         render: (row) => {
-          const id = row.rowType === 'invoice' ? row.invoice.customerId : row.advance.customerId
+          const id =
+            row.rowType === 'invoice'
+              ? row.invoice.type === 'purchase'
+                ? row.invoice.supplierId || row.invoice.customerId
+                : row.invoice.customerId
+              : row.advance.supplierId || row.advance.customerId
           const name = row.rowType === 'invoice' ? row.invoice.customerName : row.partyName
           if (id && name) {
             return (
@@ -621,7 +629,12 @@ function useInvoiceColumns(
                 onDelete={onDeleteInvoice}
               />
             ) : (
-              <AdvanceRowActions target={row} t={t} onOpenParty={onNavigateParty} />
+              <AdvanceRowActions
+                target={row}
+                t={t}
+                onOpenParty={onNavigateParty}
+                onOpenInvoice={onNavigateInvoice}
+              />
             )}
           </div>
         ),
@@ -796,11 +809,13 @@ export const InvoicesView = memo(function InvoicesView({
         rows={rows}
         columns={columns}
         rowKey={(row) => row.id}
-        onRowClick={(row) =>
-          row.rowType === 'invoice'
-            ? onNavigateInvoice(row.invoice.id)
-            : onNavigateParty?.(row.advance.customerId)
-        }
+        onRowClick={(row) => {
+          if (row.rowType === 'invoice') {
+            onNavigateInvoice(row.invoice.id)
+          } else if (row.advance.appliedInvoiceId) {
+            onNavigateInvoice(row.advance.appliedInvoiceId)
+          }
+        }}
         searchValue={searchValue}
         onSearchChange={onSearchChange}
         // The status filter sits in the table's own toolbar, beside search, saved

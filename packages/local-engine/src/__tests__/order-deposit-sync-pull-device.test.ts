@@ -245,3 +245,210 @@ describe('device B after pulling a deposit taken on device A', () => {
     expect(backup[0]!.n).toBe(3)
   })
 })
+
+// ─── The other side of the books ───────────────────────────────────────────
+//
+// A supplier advance (pre_purchase) is PULLED to the device and MOVED on it:
+// the money left the till before the purchase existed, so settling the
+// purchase debits the payable and credits `supplier_advances` (asset 1250),
+// and a refund comes back IN. Before the kind was stored, the pulled row
+// looked like a plain sales deposit with `customer_id = NULL` and could be
+// applied to a walk-in sale (`null = null`) — the same UUID-less match that
+// this suite refuses below.
+describe('a supplier advance pulled from the server', () => {
+  const SUPPLIER = '00000000-0000-4000-8000-0000000000c9'
+  const ADVANCE = '00000000-0000-4000-8000-0000000000d9'
+  const UNRESOLVED = '00000000-0000-4000-8000-0000000000d8'
+  const PURCHASE = '00000000-0000-4000-8000-0000000000b9'
+  const PURCHASE_ENTRY = '00000000-0000-4000-8000-0000000000c9'
+  const SALE = ORDER
+  const SALE_ENTRY = '00000000-0000-4000-8000-0000000000c8'
+
+  interface MovementView {
+    movementId: string
+    invoiceId: string | null
+    amountMinor: number
+    paymentId: string
+    journalEntryId: string | null
+  }
+
+  function pullAdvance(id = ADVANCE, supplierId: string | null = SUPPLIER): void {
+    const rows = [
+      {
+        id,
+        workspace_id: TEST_WORKSPACE_ID,
+        order_id: id,
+        customer_id: null,
+        supplier_id: supplierId,
+        source_type: 'pre_purchase',
+        amount_minor: 500_000,
+        payment_method: 'cash',
+        applied_invoice_id: null,
+        currency: 'AFN',
+        posting_status: 'posted',
+        created_at: '2026-11-04T08:00:00.000Z',
+        updated_at: '2026-11-04T08:00:00.000Z',
+        origin: 'server',
+        sync_state: 'synced',
+      },
+    ]
+    for (const statement of buildUpserts('order_deposits', rows)) {
+      db.run(statement.sql, statement.params)
+    }
+  }
+
+  /** A purchase invoice the device already booked, and the sale it must not take. */
+  function seedPostedInvoices(): void {
+    db.run(
+      `INSERT INTO invoice (id, workspace_id, invoice_number, type, supplier_id, date, total,
+                            paid_amount, currency, status, updated_at)
+       VALUES (?, ?, 'PUR-1', 'purchase', ?, '2026-11-01', 400_000, 0, 'AFN', 'pending',
+               datetime('now'))`,
+      [PURCHASE, TEST_WORKSPACE_ID, SUPPLIER],
+    )
+    db.run(
+      `INSERT INTO journal_entry (id, workspace_id, entry_number, date, description, reference,
+                                  status, source_type, source_id, posted_at, created_at, updated_at)
+       VALUES (?, ?, 'J-PURCHASE', '2026-11-01', 'purchase', 'PUR-1', 'posted',
+               'invoice', ?, datetime('now'), datetime('now'), datetime('now'))`,
+      [PURCHASE_ENTRY, TEST_WORKSPACE_ID, PURCHASE],
+    )
+    db.run(
+      `INSERT INTO invoice (id, workspace_id, invoice_number, type, customer_id, date, total,
+                            paid_amount, currency, status, updated_at)
+       VALUES (?, ?, 'INV-1', 'sale', ?, '2026-11-01', 100_000, 0, 'AFN', 'pending',
+               datetime('now'))`,
+      [SALE, TEST_WORKSPACE_ID, CUSTOMER],
+    )
+    db.run(
+      `INSERT INTO journal_entry (id, workspace_id, entry_number, date, description, reference,
+                                  status, source_type, source_id, posted_at, created_at, updated_at)
+       VALUES (?, ?, 'J-SALE', '2026-11-01', 'sale', 'INV-1', 'posted',
+               'invoice', ?, datetime('now'), datetime('now'), datetime('now'))`,
+      [SALE_ENTRY, TEST_WORKSPACE_ID, SALE],
+    )
+  }
+
+  const ledgerOf = (sourceId: string) =>
+    Object.fromEntries(
+      db
+        .all<{ role: string; debit: number; credit: number }>(
+          `SELECT a.role AS role, l.debit AS debit, l.credit AS credit
+             FROM journal_line l
+             JOIN journal_entry je ON je.id = l.journal_id
+             JOIN account a ON a.id = l.account_id
+            WHERE je.workspace_id = ? AND je.source_type = 'payment' AND je.source_id = ?`,
+          [TEST_WORKSPACE_ID, sourceId],
+        )
+        .map((line) => [line.role, { debit: line.debit, credit: line.credit }]),
+    )
+
+  const apply = (depositId: string, invoiceId: string, key: string) =>
+    engine.request<MovementView & { code?: string }>({
+      method: 'POST',
+      path: `/orders/${depositId}/deposits/${depositId}/apply`,
+      body: { invoiceId, amountMinor: 100_000, idempotencyKey: key },
+    })
+
+  const refund = (depositId: string, key: string) =>
+    engine.request<MovementView & { code?: string }>({
+      method: 'POST',
+      path: `/orders/${depositId}/deposits/${depositId}/refund`,
+      body: { amountMinor: 50_000, reason: 'supplier returned the money', idempotencyKey: key },
+    })
+
+  it('keeps its kind and its supplier instead of becoming a customer deposit', async () => {
+    pullAdvance()
+
+    const stored = db.get<{
+      source_type: string
+      supplier_id: string | null
+      customer_id: string | null
+    }>('SELECT source_type, supplier_id, customer_id FROM order_deposits WHERE id = ?', [ADVANCE])
+    expect(stored).toEqual({
+      source_type: 'pre_purchase',
+      supplier_id: SUPPLIER,
+      customer_id: null,
+    })
+
+    // It has no customer, so it must not appear under any customer's advances.
+    const deposits = await viewOf()
+    expect(deposits.some((deposit) => deposit.id === ADVANCE)).toBe(false)
+  })
+
+  it('settles a purchase invoice: Dr payable / Cr supplier advances, money OUT', async () => {
+    pullAdvance()
+    seedPostedInvoices()
+
+    const res = await apply(ADVANCE, PURCHASE, 'advance-apply-0001')
+    expect(res.status).toBe(201)
+    expect(res.data.invoiceId).toBe(PURCHASE)
+    expect(ledgerOf(res.data.paymentId)).toEqual({
+      payable: { debit: 100_000, credit: 0 },
+      supplier_advances: { debit: 0, credit: 100_000 },
+    })
+
+    const payment = db.get<{
+      direction: string
+      party_type: string
+      party_id: string
+      method: string
+    }>('SELECT direction, party_type, party_id, method FROM payment WHERE id = ?', [
+      res.data.paymentId,
+    ])
+    expect(payment).toEqual({
+      direction: 'out',
+      party_type: 'supplier',
+      party_id: SUPPLIER,
+      method: 'supplier_advance',
+    })
+
+    const invoice = db.get<{ paid_amount: number }>(
+      'SELECT paid_amount FROM invoice WHERE id = ?',
+      [PURCHASE],
+    )
+    expect(invoice?.paid_amount).toBe(100_000)
+  })
+
+  it('refuses a customer invoice: a supplier advance never settles a sale', async () => {
+    pullAdvance()
+    seedPostedInvoices()
+
+    const res = await apply(ADVANCE, SALE, 'advance-apply-0002')
+    expect(res.status).toBe(400)
+    expect(res.data.code).toBe('ADVANCE_INVOICE_NOT_PURCHASE')
+
+    // Nothing was written: no payment, no application.
+    expect(db.get<{ n: number }>('SELECT count(*) AS n FROM order_deposit_applications')?.n).toBe(0)
+  })
+
+  it('refunds back IN: Dr cash / Cr supplier advances and a supplier receipt', async () => {
+    pullAdvance()
+
+    const res = await refund(ADVANCE, 'advance-refund-0001')
+    expect(res.status).toBe(201)
+    expect(ledgerOf(res.data.paymentId)).toEqual({
+      cash: { debit: 50_000, credit: 0 },
+      supplier_advances: { debit: 0, credit: 50_000 },
+    })
+
+    const payment = db.get<{ direction: string; party_type: string; party_id: string }>(
+      'SELECT direction, party_type, party_id FROM payment WHERE id = ?',
+      [res.data.paymentId],
+    )
+    expect(payment).toEqual({ direction: 'in', party_type: 'supplier', party_id: SUPPLIER })
+  })
+
+  it('refuses to move an advance whose party could not be resolved', async () => {
+    pullAdvance(UNRESOLVED, null)
+    seedPostedInvoices()
+
+    const applied = await apply(UNRESOLVED, PURCHASE, 'advance-apply-0003')
+    expect(applied.status).toBe(400)
+    expect(applied.data.code).toBe('ADVANCE_PARTY_UNKNOWN')
+
+    const refunded = await refund(UNRESOLVED, 'advance-refund-0002')
+    expect(refunded.status).toBe(400)
+    expect(refunded.data.code).toBe('ADVANCE_PARTY_UNKNOWN')
+  })
+})

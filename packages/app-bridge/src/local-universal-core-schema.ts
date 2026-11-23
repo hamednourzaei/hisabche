@@ -696,7 +696,13 @@ export const UNIVERSAL_CORE_STATEMENTS: readonly string[] = [
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
     order_id TEXT NOT NULL,
-    customer_id TEXT NOT NULL,
+    customer_id TEXT,
+    supplier_id TEXT,
+    -- The kind of deposit (v39): a customer's order deposit, a booking deposit,
+    -- or a supplier advance. Without it a pulled pre_purchase row looked like a
+    -- plain sales deposit with no customer, and the customer screen then offered
+    -- it to a walk-in invoice (null = null).
+    source_type TEXT NOT NULL DEFAULT 'sales_order',
     amount_minor INTEGER NOT NULL,
     payment_method TEXT NOT NULL DEFAULT 'cash',
     currency TEXT,
@@ -777,7 +783,13 @@ export const ORDER_DEPOSIT_ALTERS: readonly string[] = [
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL DEFAULT '',
     order_id TEXT NOT NULL,
-    customer_id TEXT NOT NULL,
+    customer_id TEXT,
+    supplier_id TEXT,
+    -- The kind of deposit (v39): a customer's order deposit, a booking deposit,
+    -- or a supplier advance. Without it a pulled pre_purchase row looked like a
+    -- plain sales deposit with no customer, and the customer screen then offered
+    -- it to a walk-in invoice (null = null).
+    source_type TEXT NOT NULL DEFAULT 'sales_order',
     amount_minor INTEGER NOT NULL,
     payment_method TEXT NOT NULL DEFAULT 'cash',
     applied_invoice_id TEXT,

@@ -52,7 +52,7 @@ export interface ServiceSessionCreateDialogProps {
   open: boolean
   onClose: () => void
   customerOptions: readonly SelectFieldOption[]
-  serviceOptions: readonly SelectFieldOption[]
+  serviceOptions?: readonly SelectFieldOption[] | undefined
   practitionerOptions: readonly SelectFieldOption[]
   employeeOptions?: readonly SelectFieldOption[] | undefined
   branchOptions: readonly SelectFieldOption[]
@@ -75,7 +75,6 @@ interface FieldErrors {
   customerId?: string | undefined
   employeeId?: string | undefined
   sessionType?: string | undefined
-  serviceOfferingId?: string | undefined
   sessionDate?: string | undefined
   startTime?: string | undefined
   durationMinutes?: string | undefined
@@ -87,9 +86,10 @@ const FIELD_BY_CODE: Record<string, keyof FieldErrors> = {
   EMPLOYEE_ID_REQUIRED: 'employeeId',
   SESSION_TYPE_REQUIRED: 'sessionType',
   SESSION_TYPE_TOO_LONG: 'sessionType',
+  SERVICE_OR_TITLE_REQUIRED: 'sessionType',
+  SERVICE_OFFERING_ID_REQUIRED: 'sessionType',
   EMPLOYEE_SESSION_HAS_CUSTOMER: 'employeeId',
   CUSTOMER_SESSION_HAS_EMPLOYEE: 'customerId',
-  SERVICE_OFFERING_ID_REQUIRED: 'serviceOfferingId',
   SESSION_DATE_REQUIRED: 'sessionDate',
   SESSION_TIMES_REQUIRED: 'startTime',
   SESSION_END_BEFORE_START: 'durationMinutes',
@@ -120,14 +120,14 @@ export function ServiceSessionCreateDialog({ open, ...props }: ServiceSessionCre
 function CreateBody({
   onClose,
   customerOptions,
-  serviceOptions,
+  serviceOptions: _serviceOptions,
   practitionerOptions,
   employeeOptions,
   branchOptions,
   resourceOptions = [],
   hasBranches,
   customerHint,
-  serviceHint,
+  serviceHint: _serviceHint,
   practitionerHint,
   presetCustomerId,
 }: Omit<ServiceSessionCreateDialogProps, 'open'>) {
@@ -152,7 +152,6 @@ function CreateBody({
   )
   const [employeeId, setEmployeeId] = useState('')
   const [sessionType, setSessionType] = useState('')
-  const [serviceOfferingId, setServiceOfferingId] = useState('')
   const [practitionerId, setPractitionerId] = useState('')
   const [branchId, setBranchId] = useState('')
   const [resourceId, setResourceId] = useState('')
@@ -193,14 +192,16 @@ function CreateBody({
         next.employeeId = tr('serviceDelivery.create.employeeRequired', 'کارمند را انتخاب کنید')
       }
     }
-    if (sessionType.trim().length > 120) {
+    if (!sessionType.trim()) {
+      next.sessionType = tr(
+        'serviceDelivery.create.sessionTypeRequired',
+        'نام خدمت یا موضوع جلسه را بنویسید',
+      )
+    } else if (sessionType.trim().length > 120) {
       next.sessionType = tr(
         'serviceDelivery.create.sessionTypeTooLong',
         'عنوان جلسه نمی‌تواند بیش از ۱۲۰ نویسه باشد',
       )
-    }
-    if (!serviceOfferingId) {
-      next.serviceOfferingId = tr('serviceDelivery.create.serviceRequired', 'خدمت را انتخاب کنید')
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(sessionDate)) {
       next.sessionDate = tr('serviceDelivery.create.dateRequired', 'تاریخ را انتخاب کنید')
@@ -227,8 +228,8 @@ function CreateBody({
           : {
               employeeId: employeeId || null,
             }),
-        sessionType: sessionType.trim() || null,
-        serviceOfferingId,
+        sessionType: sessionType.trim(),
+        serviceOfferingId: null,
         sessionDate,
         startTime,
         endTime,
@@ -335,34 +336,30 @@ function CreateBody({
 
         <fieldset className="space-y-2.5">
           <legend className="w-full border-b border-[hsl(var(--border-default))] pb-1.5 text-[11px] font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
-            {tr('serviceDelivery.create.stepCustomerService', 'خدمت و نوع جلسه')}
+            {tr('serviceDelivery.fields.serviceOrTitle', 'خدمت / عنوان جلسه')}
           </legend>
-          <SelectInput
-            label={tr('serviceDelivery.fields.service', 'خدمت')}
-            name="serviceOfferingId"
-            value={serviceOfferingId}
-            onChange={setServiceOfferingId}
-            options={serviceOptions}
-            error={invalid('serviceOfferingId')}
-            searchable
-            searchPlaceholder={tr('serviceDelivery.fields.search', 'جست‌وجو…')}
-            noResultsText={tr('serviceDelivery.fields.noResults', 'چیزی پیدا نشد')}
-            placeholder={tr('serviceDelivery.fields.pickService', 'یک خدمت انتخاب کنید')}
-            {...(serviceHint ? { hint: serviceHint } : {})}
-          />
-
           <Labeled
-            label={tr('serviceDelivery.fields.sessionType', 'عنوان / نوع جلسه')}
+            label={tr('serviceDelivery.fields.serviceOrTitle', 'خدمت / عنوان جلسه')}
+            hint={tr(
+              'serviceDelivery.fields.serviceOrTitleHint',
+              'نام خدمت یا موضوع جلسه را وارد کنید.',
+            )}
             error={invalid('sessionType')}
           >
             <input
               type="text"
+              name="sessionType"
               value={sessionType}
-              onChange={(e) => setSessionType(e.target.value)}
+              onChange={(e) => {
+                setSessionType(e.target.value)
+                if (e.target.value.trim()) {
+                  setErrors((prev) => ({ ...prev, sessionType: undefined }))
+                }
+              }}
               maxLength={120}
               placeholder={tr(
-                'serviceDelivery.fields.sessionTypePlaceholder',
-                'مثلاً: مشاوره، آموزش، کوتاهی، معاینه',
+                'serviceDelivery.fields.serviceOrTitlePlaceholder',
+                'مثلاً: مشاوره، آموزش، کوتاهی مو، تعمیر، معاینه...',
               )}
               className="h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 text-sm text-[hsl(var(--fg-primary))] outline-none focus:border-[hsl(var(--color-primary))]"
             />

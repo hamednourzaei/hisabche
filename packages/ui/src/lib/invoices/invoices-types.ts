@@ -44,6 +44,7 @@ export interface Invoice {
   customerName: string
   /** H2 — present when the invoice has a real party; drives the link in the table. */
   customerId?: string | undefined
+  supplierId?: string | undefined
   /** Business/company name for the customer — blank until customers.company exists in the schema */
   company: string
   paymentDate: string

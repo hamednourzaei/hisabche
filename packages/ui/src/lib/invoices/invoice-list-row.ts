@@ -76,12 +76,13 @@ export function advanceRows(
     // Only real advance documents belong in this table. A device row that
     // predates the column cannot say what it is, so it is not guessed.
     if (!kind) continue
+    const partyId = advance.customerId ?? advance.supplierId ?? null
     rows.push({
       rowType: 'advance',
       id: advance.id,
       kind,
       advance,
-      partyName: nameById.get(advance.customerId) ?? null,
+      partyName: partyId ? (nameById.get(partyId) ?? null) : null,
     })
   }
   return rows

@@ -627,15 +627,13 @@ export class PaymentsRepository {
    * ⚠️ Cancelled invoices are excluded: a cancelled bill is not debt.
    */
   async partyMovements(workspaceId: string, partyType: PartyType, partyId: string) {
-    const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
-
     const [invoices, payments] = await Promise.all([
       readAll<PartyInvoiceRow>('party invoices', (from, to) =>
         supabase
           .from('invoices')
           .select('id, invoice_number, type, status, total, paid_amount, date, due_date, currency')
           .eq('workspace_id', workspaceId)
-          .eq(partyColumn, partyId)
+          .or(`customer_id.eq.${partyId},supplier_id.eq.${partyId}`)
           .neq('status', 'cancelled')
           .order('date', { ascending: true })
           .order('id', { ascending: true })
