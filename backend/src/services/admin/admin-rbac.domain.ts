@@ -82,6 +82,8 @@ export const ADMIN_PERMISSIONS = [
   'operations.monitor.read',
   'operations.monitor.write',
   'operations.maintenance.write',
+  'operations.infrastructure.read',
+  'operations.infrastructure.write',
   // Content
   'content.blog.read',
   'content.blog.write',
@@ -165,6 +167,8 @@ const ROLE_PERMISSIONS_MAP: Record<AdminRole, readonly AdminPermission[]> = {
     'operations.monitor.read',
     'operations.monitor.write',
     'operations.maintenance.write',
+    'operations.infrastructure.read',
+    'operations.infrastructure.write',
     'product.ai.read',
     'product.ai.write',
     'product.ai.quota',

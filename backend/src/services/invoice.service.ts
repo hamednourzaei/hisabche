@@ -2032,7 +2032,8 @@ export class InvoiceService {
     const partyType = isPurchase ? ('supplier' as const) : ('customer' as const)
     const partyId = (isPurchase ? data.supplierId : data.customerId) ?? null
 
-    for (const [index, tranche] of tranches.entries()) {
+    let index = 0
+    for (const tranche of tranches) {
       await this.payments.recordPayment(
         ctx,
         {
@@ -2068,6 +2069,7 @@ export class InvoiceService {
           ? { clientRequestId: creationPaymentRequestKey(clientRequestId, index) }
           : {},
       )
+      index++
     }
   }
 

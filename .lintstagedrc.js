@@ -55,7 +55,7 @@ function batched(command, files) {
 
 module.exports = {
   '**/*.{ts,tsx,js,jsx,mjs,cjs}': (files) => [
-    ...batched('eslint --fix', files),
+    ...batched('eslint --fix --no-warn-ignored', files),
     ...batched('prettier --write', files),
   ],
   '**/*.{json,css,md}': (files) => batched('prettier --write', files),

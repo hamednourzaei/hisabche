@@ -87,6 +87,14 @@ const UNWIRED: Record<string, { capability?: CapabilityKey; reason: string }> = 
   useReversePackageCredit: { reason: 'package credit API only; no screen' },
   useExpirePackageCredit: { reason: 'package credit API only; no screen' },
   usePackageCreditLedger: { reason: 'package credit ledger API only; no screen' },
+  useAddServiceSessionParticipant: {
+    reason:
+      'multi-participant session management API exists; group session participant list is not yet wired to a UI screen',
+  },
+  useRemoveServiceSessionParticipant: {
+    reason:
+      'multi-participant session management API exists; group session participant list is not yet wired to a UI screen',
+  },
 }
 
 describe('every universal-core hook is either wired or honestly unwired', () => {

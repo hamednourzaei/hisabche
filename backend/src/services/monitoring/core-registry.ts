@@ -524,6 +524,7 @@ export const CORES: readonly CoreDefinition[] = [
       '/v1/entities',
       '/metrics',
       '/health',
+      '/api/health',
       '/live',
       '/ready',
       '/docs',

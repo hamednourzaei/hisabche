@@ -75,6 +75,7 @@ export * from './export'
 export * from './router'
 export * from './types'
 export * from './services/repair-transitions'
+export * from './sync'
 
 export interface LocalEngine {
   request<T = unknown>(req: LocalEngineRequest): Promise<LocalEngineResponse<T>>

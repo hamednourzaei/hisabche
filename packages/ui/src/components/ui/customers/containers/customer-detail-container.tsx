@@ -69,11 +69,9 @@ export function CustomerDetailContainer({ customerId }: { customerId: string }) 
   const [invoicePage, setInvoicePage] = useState(1)
 
   const customerQuery = useCustomer(customerId)
-  const partyRole = (customerQuery.data as { role?: string } | undefined)?.role
-  const partyType = partyRole === 'seller' ? 'supplier' : 'customer'
-  const summaryQuery = usePartySummary(partyType, customerId)
-  const ledgerQuery = usePartyLedger(partyType, customerId)
-  const openInvoicesQuery = useOpenInvoices(partyType, customerId)
+  const summaryQuery = usePartySummary('customer', customerId)
+  const ledgerQuery = usePartyLedger('customer', customerId)
+  const openInvoicesQuery = useOpenInvoices('customer', customerId)
   const invoicesQuery = useInvoices({
     page: invoicePage,
     limit: INVOICE_PAGE_SIZE,

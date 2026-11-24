@@ -1550,3 +1550,4 @@ export {
 export * from './hooks/purchasing-rfq'
 export * from './hooks/org-chart'
 export * from './hooks/erp-registers'
+export * from './hooks/admin-infrastructure'

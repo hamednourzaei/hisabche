@@ -66,6 +66,16 @@ import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 import type { DbRow } from '../utils/db-row'
 
+export {
+  explodeMultiLevelBom,
+  BomCycleDetectedError,
+  type BomComponentItem,
+  type BomDefinition,
+  type BomExplosionResult,
+  type ExplodedLeafItem,
+  type ExplodedTreeNode,
+} from './manufacturing/bom-explosion.domain'
+
 // ⚠️ NO `notes`. `boms.notes` is in the validation contract but no migration in
 // docs/ ever created the column (base schema: id, product_id, version,
 // is_active, user_id, created_at, updated_at; later: workspace_id). Selecting

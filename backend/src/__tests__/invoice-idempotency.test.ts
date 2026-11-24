@@ -25,15 +25,46 @@ vi.mock('../db', () => {
       neq: () => q,
       in: () => q,
       is: () => q,
+      like: () => q,
+      ilike: () => q,
+      gt: () => q,
+      gte: () => q,
+      lt: () => q,
+      lte: () => q,
       order: () => q,
+      range: () => q,
       limit: () => q,
       maybeSingle: async () => {
         calls.push({ table, op: 'lookup' })
         lookups++
         return lookups === 1 ? lookup : lookupAfterConflict
       },
-      single: async () => (op === 'insert' ? insert : { data: null, error: null }),
-      then: (r: (v: Result) => unknown) => r({ data: [], error: null }),
+      single: async () => {
+        if (table === 'accounts') {
+          return { data: { id: 'acc-1', code: '1000', name: 'Cash', type: 'asset' }, error: null }
+        }
+        return op === 'insert' ? insert : { data: null, error: null }
+      },
+      then: (r: (v: Result) => unknown) => {
+        if (table === 'invoice_outstanding') {
+          return r({
+            data: [
+              {
+                invoice_id: '33333333-3333-4333-8333-333333333333',
+                invoice_number: 'INV-000051',
+                total: 100,
+                allocated: 0,
+                due_date: '2026-11-24',
+                invoice_date: '2026-11-24',
+                type: 'sale',
+                currency: 'AFN',
+              },
+            ],
+            error: null,
+          })
+        }
+        return r({ data: [], error: null })
+      },
     }
     return q
   }
@@ -46,6 +77,10 @@ vi.mock('../db', () => {
       if (name === 'invoice_write_document') {
         calls.push({ table: 'invoices', op: 'insert' })
         return { data: null, error: insert.error }
+      }
+      if (name.startsWith('payments_record')) {
+        calls.push({ table: `rpc:${name}`, op: 'rpc' })
+        return { data: { payment_id: 'pmt-1', replayed: false }, error: null }
       }
       calls.push({ table: `rpc:${name}`, op: 'rpc' })
       return { data: 'INV-000001', error: null }

@@ -154,7 +154,11 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const setOperatingAnswer = useOnboardingStore((s) => s.setOperatingAnswer)
   // The ONE canonical primary-industry decision (ADR-001): registry order,
   // explicit primary wins. The page displays the SAME value (F-005).
-  const primaryTrade = primaryIndustryKeyOf(businessType, primaryTradeKey) ?? undefined
+  let primaryTrade = primaryIndustryKeyOf(businessType) ?? undefined
+  if (primaryTradeKey) {
+    primaryTrade =
+      (primaryIndustryKeyOf(businessType, primaryTradeKey) ?? undefined) || primaryTrade
+  }
   // EVERY selected activity pre-fills its own answers (V64 §5).
   const operatingAnswers = useMemo<OperatingAnswers>(
     () => ({ ...suggestedOperatingAnswersFor(selectedTrades), ...ownAnswers }),
@@ -324,7 +328,7 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     // activity contributes; the primary only decides vocabulary (V64 §5).
     const inferredDna = inferOperationalDna({
       tradeKey: primaryTrade,
-      tradeKeys: selected,
+      tradeKeys: selectedTrades,
       primaryTradeKey: primaryTrade,
       ...operatingAnswers,
     })

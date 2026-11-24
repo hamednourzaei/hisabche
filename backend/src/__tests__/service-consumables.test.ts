@@ -70,7 +70,10 @@ function fakeDb() {
   chain.select = () => chain
   chain.eq = () => chain
   chain.is = () => chain
+  chain.order = () => chain
   chain.maybeSingle = async () => ({ data: SESSION, error: null })
+  chain.then = (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
+    Promise.resolve(resolve({ data: [], error: null }))
   return {
     rpc: async () => ({ data: { package_credit_id: null }, error: null }),
     from: (table: string) => ({

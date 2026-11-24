@@ -44,3 +44,6 @@ export { base64ToBytes, bytesToBase64 } from './base64'
 // Pure pack manifest & install planner (safe for both Electron and React Native).
 export * from './packs/manifest'
 export * from './packs/plan'
+
+// Hardware POS serial weigh scales & peripherals protocol
+export * from './hardware/serial-scale-protocol'

@@ -588,6 +588,12 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     mechanisms: ['last-write-wins'],
     evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
   },
+  {
+    routeFile: 'admin-infrastructure.routes.ts',
+    route: 'PUT /api/admin/infrastructure/settings',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin/admin-infrastructure.service.ts`, text: 'updateSettings' }],
+  },
   // ─── V63 #68 — the maintenance switch (one reserved feature_flags row) ──
   {
     routeFile: 'admin-insights.routes.ts',

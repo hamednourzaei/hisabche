@@ -72,6 +72,10 @@ function makeQuery(table: string) {
       eqs.push([column, value])
       return api
     },
+    is: (column: string, value: unknown) => {
+      eqs.push([column, value])
+      return api
+    },
     in: (column: string, values: unknown[]) => {
       inFilter = { column, values }
       return api
@@ -503,7 +507,13 @@ describe('listing workspaces with their owner', () => {
     // Four table queries: the page, owner profiles, subscriptions,
     // memberships. Two workspaces must not mean 1 + 2*3 — this is the
     // assertion that stops a future refactor looping per row.
-    expect(queryLog).toEqual(['workspaces', 'profiles', 'subscriptions', 'workspace_members'])
+    expect(queryLog).toEqual([
+      'workspaces',
+      'profiles',
+      'subscriptions',
+      'subscriptions',
+      'workspace_members',
+    ])
     expect(authCalls).toBe(1)
   })
 

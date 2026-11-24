@@ -20,6 +20,7 @@ import { memoryCache } from '../utils/pagination'
 import { decideRoute, looksLikeApiKey } from '../services/developer/developer.domain'
 import { NotConfiguredError } from '../services/developer/developer.repository'
 import { developerService, type ApiKeyPrincipal } from '../services/developer/developer.service'
+import { jwtPayloadToUser, verifyJwtSignatureLocally } from './jwt-verifier'
 
 /**
  * The authenticated user IS Supabase's `User` — this middleware puts the
@@ -274,13 +275,29 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return
   }
 
-  // ✅ کوئری ۱: verify توکن
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(token)
+  // ✅ کوئری ۱: verify توکن (با پشتیبانی از اعتبارسنجی محلی آفلاین در قطعی اینترنت)
+  let user: SupabaseUser | null = null
+  try {
+    const { data, error } = await supabase.auth.getUser(token)
+    if (!error && data?.user) {
+      user = data.user
+    }
+  } catch {
+    user = null
+  }
 
-  if (error || !user) {
+  // Fallback to local cryptographic HMAC-SHA256 verification when network is down
+  if (!user) {
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET
+    if (jwtSecret) {
+      const localResult = verifyJwtSignatureLocally(token, jwtSecret)
+      if (localResult.valid && localResult.payload) {
+        user = jwtPayloadToUser(localResult.payload)
+      }
+    }
+  }
+
+  if (!user) {
     return reply.status(401).send({ error: 'Invalid or expired token' })
   }
 

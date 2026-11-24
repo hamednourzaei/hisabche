@@ -7387,6 +7387,34 @@
         "noneHint": "No API key was used in this window.",
         "notConfiguredHint": "The API request log does not exist yet."
       }
+    },
+    "infrastructure": {
+      "title": "Infrastructure & Nginx Proxy Controls",
+      "subtitle": "Real-time control of Nginx reverse proxy routing, edge rate limiting, cache bypass, and emergency maintenance mode",
+      "nginxProxy": "Nginx Reverse Proxy Routing",
+      "nginxProxyDesc": "All client incoming traffic routes through the hardened Nginx reverse proxy layer",
+      "rateLimiting": "Edge Rate Limiting",
+      "rateLimitingDesc": "Protects against DoS attacks and throttles requests at the proxy edge",
+      "rateLimitRps": "Rate Limit Requests Per Second (RPS)",
+      "rateLimitBurst": "Maximum Traffic Burst",
+      "cacheBypass": "Cache Bypass Mode",
+      "cacheBypassDesc": "Direct origin response without proxy cache for real-time debugging",
+      "maintenance": "Emergency Maintenance Mode",
+      "maintenanceDesc": "Serves 503 maintenance page to non-admin users during emergency operations",
+      "maintenanceNotice": "Maintenance Notice for Users",
+      "wsCompression": "WebSocket Realtime Compression",
+      "wsCompressionDesc": "Reduces sync bandwidth on low-speed 2G/3G connections",
+      "upstreamHealth": "Upstream Health Probing",
+      "upstreamHealthDesc": "Automatic failover and passive probing when an instance goes down",
+      "hsts": "Strict Transport Security (HSTS / TLS)",
+      "hstsDesc": "Enforces HTTPS encryption headers and strict transport security",
+      "enabled": "Active",
+      "disabled": "Disabled",
+      "saveChanges": "Save Infrastructure Settings",
+      "saved": "Infrastructure settings updated successfully",
+      "saveError": "Failed to update infrastructure settings",
+      "updatedAt": "Last updated: {date}",
+      "updatedBy": "By: {user}"
     }
   },
   "till": {

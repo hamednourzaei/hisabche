@@ -15,6 +15,10 @@ function builder(rows: Row[]) {
       filters.push((r) => r[col] === val)
       return q
     },
+    is: (col: string, val: unknown) => {
+      filters.push((r) => (val === null ? r[col] == null : r[col] === val))
+      return q
+    },
     order: () => q,
     limit: () => q,
     maybeSingle: async () => ({

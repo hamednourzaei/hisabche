@@ -206,7 +206,7 @@ describe('assertWithinCreditLimit', () => {
       data: null,
       error: { code: 'PGRST202', message: 'Could not find the function assert_customer_credit' },
     }
-    await expect(check(seller)).rejects.toThrow(/over by 100/)
+    await expect(check(seller)).rejects.toThrow(/CREDIT_MIGRATION_REQUIRED/)
   })
 
   it('a cash-only customer (limit 0) is refused any credit', async () => {

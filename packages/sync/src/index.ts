@@ -16,3 +16,4 @@
 export * from './wire'
 export * from './stream-client'
 export * from './sync-identity'
+export * from './durable-outbox-and-fallback'

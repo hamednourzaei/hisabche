@@ -49,6 +49,10 @@ function makeQuery(table: string) {
       eqs.push([column, value])
       return api
     },
+    is: (column: string, value: unknown) => {
+      eqs.push([column, value])
+      return api
+    },
     update: (values: Row) => {
       patch = values
       return api

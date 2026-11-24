@@ -29,6 +29,7 @@ import {
   registerInstanceAdminRoutes,
   registerSystemMetricsRoutes,
 } from './routes/system-metrics.routes'
+import { databaseHaRoutes } from './routes/database-ha.routes'
 import { pressureMonitor } from './runtime/pressure'
 import { assertNoTestMarkersInProduction, markTestRuntime } from './runtime/test-runtime'
 import {
@@ -174,6 +175,7 @@ import adminGatewaysRoutes from './routes/admin-gateways.routes'
 import adminMonitorRoutes from './routes/admin-monitor.routes'
 import adminAiRoutes from './routes/admin-ai.routes'
 import adminInsightsRoutes from './routes/admin-insights.routes'
+import adminInfrastructureRoutes from './routes/admin-infrastructure.routes'
 import {
   RouteMetricsCollector,
   currentInstanceSample,
@@ -620,6 +622,7 @@ server.get('/api/health', async () => ({
 
 registerSystemMetricsRoutes(server, () => inflightRequests)
 registerInstanceAdminRoutes(server)
+databaseHaRoutes(server)
 
 server.get('/live', async () => ({
   status: 'ok',
@@ -1074,6 +1077,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
   await server.register(adminMonitorRoutes)
   await server.register(adminAiRoutes)
   await server.register(adminInsightsRoutes)
+  await server.register(adminInfrastructureRoutes)
   await server.register(cloudMigrationRoutes)
 
   server.log.info('✅ All routes registered successfully')

@@ -1537,3 +1537,4 @@ export {
 } from './schemas/invoice-exchange.schema'
 
 export * from './schemas/crm-appointment.schema'
+export * from './schemas/infrastructure-settings.schema'

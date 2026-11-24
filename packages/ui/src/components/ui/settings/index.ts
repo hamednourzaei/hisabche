@@ -10,3 +10,7 @@ export { WorkplaceTimeZoneSection } from './workplace-time-zone-section'
 export { BookCurrencySection } from './book-currency-section'
 export { IndustryProfileSection } from './industry-profile-section'
 export { CreditLimitModeSection } from './credit-limit-mode-section'
+export {
+  InfrastructureTogglesPanel,
+  type InfrastructureTogglesPanelProps,
+} from './infrastructure-toggles-panel'
