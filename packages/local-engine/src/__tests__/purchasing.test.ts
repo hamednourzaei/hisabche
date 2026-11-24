@@ -58,6 +58,44 @@ describe('purchase orders on the device', () => {
     expect(none.data).toEqual([])
   })
 
+  it('creates a supplier locally, enforces validation, and replays by id', async () => {
+    const invalid = await engine.request({
+      method: 'POST',
+      path: '/suppliers',
+      body: { name: '   ' },
+    })
+    expect(invalid.status).toBe(400)
+
+    const fixedId = '66666666-6666-4666-8666-666666666666'
+    const created = await engine.request<{ id: string; name: string; isActive: boolean }>({
+      method: 'POST',
+      path: '/suppliers',
+      body: { id: fixedId, name: 'بازرگانی هرات', phone: '0799112233', address: 'هرات' },
+    })
+    expect(created.status).toBe(201)
+    expect(created.data).toMatchObject({
+      id: fixedId,
+      name: 'بازرگانی هرات',
+      phone: '0799112233',
+      address: 'هرات',
+      isActive: true,
+    })
+
+    const replayed = await engine.request<{ id: string; name: string }>({
+      method: 'POST',
+      path: '/suppliers',
+      body: { id: fixedId, name: 'نام متفاوت' },
+    })
+    expect(replayed.status).toBe(200)
+    expect(replayed.data.name).toBe('بازرگانی هرات')
+
+    const listed = await engine.request<Array<{ id: string }>>({
+      method: 'GET',
+      path: '/suppliers',
+    })
+    expect(listed.data.map((s) => s.id)).toContain(fixedId)
+  })
+
   it('creates an order, opens it with supplier and lines, and lists it', async () => {
     const made = await create()
     expect(made.status).toBe(201)

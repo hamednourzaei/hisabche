@@ -57,6 +57,9 @@ describe('InfrastructureTogglesPanel Component', () => {
     expect(screen.getByTestId('toggle-ws-compression')).toBeTruthy()
     expect(screen.getByTestId('toggle-upstream-health')).toBeTruthy()
     expect(screen.getByTestId('toggle-hsts')).toBeTruthy()
+    expect(screen.getByTestId('nginx-directives-preview').textContent).toContain(
+      'set $hisabche_proxy_mode "nginx";',
+    )
   })
 
   it('reveals rate limit RPS and burst inputs when rate limiting is enabled', () => {
@@ -140,6 +143,10 @@ describe('InfrastructureTogglesPanel Component', () => {
       'saveError',
       'updatedAt',
       'updatedBy',
+      'nginxPreview',
+      'stepUpTitle',
+      'stepUpDesc',
+      'stepUpConfirm',
     ]
 
     for (const locale of locales) {

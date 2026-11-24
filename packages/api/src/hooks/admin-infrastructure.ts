@@ -16,14 +16,16 @@ import apiClient from '../lib/client'
 
 export const INFRASTRUCTURE_SETTINGS_QUERY_KEY = ['admin', 'infrastructure', 'settings'] as const
 
+export type UpdateInfrastructureSettingsMutationInput = UpdateInfrastructureSettingsInput & {
+  stepUpTimestamp?: string | undefined
+}
+
 export function useInfrastructureSettings() {
   return useQuery<InfrastructureSettings>({
     queryKey: INFRASTRUCTURE_SETTINGS_QUERY_KEY,
     queryFn: async () => {
-      const response = await apiClient.get<InfrastructureSettings>(
-        '/api/admin/infrastructure/settings',
-      )
-      return response.data
+      const response = await apiClient.get('/admin/infrastructure/settings')
+      return response.data as InfrastructureSettings
     },
     staleTime: 30_000,
   })
@@ -32,13 +34,17 @@ export function useInfrastructureSettings() {
 export function useUpdateInfrastructureSettings() {
   const queryClient = useQueryClient()
 
-  return useMutation<InfrastructureSettings, Error, UpdateInfrastructureSettingsInput>({
-    mutationFn: async (patch: UpdateInfrastructureSettingsInput) => {
-      const response = await apiClient.put<InfrastructureSettings>(
-        '/api/admin/infrastructure/settings',
+  return useMutation<InfrastructureSettings, Error, UpdateInfrastructureSettingsMutationInput>({
+    mutationFn: async ({
+      stepUpTimestamp,
+      ...patch
+    }: UpdateInfrastructureSettingsMutationInput) => {
+      const response = await apiClient.put(
+        '/admin/infrastructure/settings',
         patch,
+        stepUpTimestamp ? { headers: { 'X-Admin-Step-Up-Timestamp': stepUpTimestamp } } : undefined,
       )
-      return response.data
+      return response.data as InfrastructureSettings
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(INFRASTRUCTURE_SETTINGS_QUERY_KEY, updated)

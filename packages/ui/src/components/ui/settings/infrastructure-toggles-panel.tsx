@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   DEFAULT_INFRASTRUCTURE_SETTINGS,
+  buildNginxConfigDirectives,
   type InfrastructureSettings,
   type UpdateInfrastructureSettingsInput,
 } from '@hisabche/validation'
@@ -14,11 +15,13 @@ import { Badge } from '../badge'
 export interface InfrastructureTogglesPanelProps {
   initialSettings?: InfrastructureSettings
   onSave?: (settings: UpdateInfrastructureSettingsInput) => Promise<void> | void
+  isSavingExternal?: boolean
 }
 
 export function InfrastructureTogglesPanel({
   initialSettings,
   onSave,
+  isSavingExternal,
 }: InfrastructureTogglesPanelProps) {
   const t = useTranslations('admin.infrastructure')
   const query = useInfrastructureSettings()
@@ -84,19 +87,21 @@ export function InfrastructureTogglesPanel({
         await mutation.mutateAsync(payload)
       }
       setSavedSuccess(true)
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'STEP_UP_CANCELLED') return
       setErrorMessage(t('saveError'))
     }
   }
 
-  const isSaving = mutation.isPending
+  const isSaving = mutation.isPending || Boolean(isSavingExternal)
+  const nginxDirectives = buildNginxConfigDirectives(form)
 
   return (
     <section
       data-testid="infrastructure-toggles-panel"
       className="space-y-6 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 text-start"
     >
-      <header className="border-b border-[hsl(var(--border-subtle))] pb-4">
+      <header className="border-b border-[hsl(var(--border-default))] pb-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">{t('title')}</h2>
@@ -110,7 +115,7 @@ export function InfrastructureTogglesPanel({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Nginx Proxy Main Toggle */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-muted))] p-4">
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-4">
           <div className="space-y-1">
             <label
               htmlFor="toggle-nginx-proxy"
@@ -129,7 +134,7 @@ export function InfrastructureTogglesPanel({
         </div>
 
         {/* Rate Limiting */}
-        <div className="space-y-3 rounded-lg border border-[hsl(var(--border-subtle))] p-4">
+        <div className="space-y-3 rounded-lg border border-[hsl(var(--border-default))] p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <label
@@ -183,7 +188,7 @@ export function InfrastructureTogglesPanel({
         </div>
 
         {/* Cache Bypass */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-subtle))] p-4">
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-default))] p-4">
           <div className="space-y-1">
             <label
               htmlFor="toggle-cache-bypass"
@@ -240,7 +245,7 @@ export function InfrastructureTogglesPanel({
         </div>
 
         {/* WebSocket Realtime Compression */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-subtle))] p-4">
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-default))] p-4">
           <div className="space-y-1">
             <label
               htmlFor="toggle-ws-compression"
@@ -259,7 +264,7 @@ export function InfrastructureTogglesPanel({
         </div>
 
         {/* Upstream Health Check */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-subtle))] p-4">
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-default))] p-4">
           <div className="space-y-1">
             <label
               htmlFor="toggle-upstream-health"
@@ -278,7 +283,7 @@ export function InfrastructureTogglesPanel({
         </div>
 
         {/* HSTS / TLS */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-subtle))] p-4">
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-[hsl(var(--border-default))] p-4">
           <div className="space-y-1">
             <label
               htmlFor="toggle-hsts"
@@ -295,6 +300,20 @@ export function InfrastructureTogglesPanel({
             onCheckedChange={handleToggle('hstsEnabled')}
           />
         </div>
+
+        {/* Live Nginx Directives Preview */}
+        <details className="rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('nginxPreview')}
+          </summary>
+          <pre
+            dir="ltr"
+            data-testid="nginx-directives-preview"
+            className="mt-3 overflow-x-auto rounded-md bg-[hsl(var(--surface-base))] p-3 text-xs text-[hsl(var(--fg-secondary))]"
+          >
+            {nginxDirectives}
+          </pre>
+        </details>
 
         {/* Status Alerts */}
         {savedSuccess && (
@@ -317,7 +336,7 @@ export function InfrastructureTogglesPanel({
 
         {/* Footer with Metadata & Submit */}
         <footer className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs text-[hsl(var(--fg-muted))]">
+          <div className="text-xs text-[hsl(var(--fg-tertiary))]">
             <span>{t('updatedAt', { date: form.updatedAt ?? '—' })}</span>
             <span className="ms-3">{t('updatedBy', { user: form.updatedBy ?? 'system' })}</span>
           </div>
@@ -326,7 +345,7 @@ export function InfrastructureTogglesPanel({
             type="submit"
             disabled={isSaving}
             data-testid="btn-save-infrastructure"
-            className="inline-flex items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--color-primary-foreground))] transition-colors hover:bg-[hsl(var(--color-primary)/0.9)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-lg bg-[hsl(var(--color-primary))] px-4 py-2 text-sm font-medium text-[hsl(var(--color-primary-fg))] transition-colors hover:bg-[hsl(var(--color-primary)/0.9)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? '...' : t('saveChanges')}
           </button>

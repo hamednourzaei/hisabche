@@ -28,6 +28,7 @@ import { supabase } from '../db'
 import { getServiceModeState, setServiceModeInput } from './service-mode'
 
 export const MAINTENANCE_FLAG_KEY = 'platform.maintenance_read_only'
+export const INFRASTRUCTURE_FLAG_KEY = 'platform.nginx_infrastructure_settings'
 
 const REFRESH_MS = 10_000
 
@@ -62,7 +63,8 @@ const EXEMPT_PATHS = new Set([
 ])
 
 export function isReservedFlagKey(key: string): boolean {
-  return key.trim().toLowerCase() === MAINTENANCE_FLAG_KEY
+  const normalized = key.trim().toLowerCase()
+  return normalized === MAINTENANCE_FLAG_KEY || normalized === INFRASTRUCTURE_FLAG_KEY
 }
 
 export function isMaintenanceExempt(path: string): boolean {

@@ -11,10 +11,7 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import {
-  type UpdateInfrastructureSettingsInput,
-  updateInfrastructureSettingsSchema,
-} from '@hisabche/validation'
+import { updateInfrastructureSettingsSchema } from '@hisabche/validation'
 
 import { adminRoute } from '../middleware/admin-rbac.middleware'
 import { adminInfrastructureService } from '../services/admin/admin-infrastructure.service'
@@ -27,7 +24,7 @@ export default async function adminInfrastructureRoutes(fastify: FastifyInstance
     '/api/admin/infrastructure/settings',
     { preHandler: read },
     async (_request: FastifyRequest, reply: FastifyReply) => {
-      const settings = adminInfrastructureService.getSettings()
+      const settings = await adminInfrastructureService.loadSettings()
       return reply.status(200).send(settings)
     },
   )
@@ -35,10 +32,7 @@ export default async function adminInfrastructureRoutes(fastify: FastifyInstance
   fastify.put(
     '/api/admin/infrastructure/settings',
     { preHandler: write },
-    async (
-      request: FastifyRequest<{ Body: UpdateInfrastructureSettingsInput }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const parseResult = updateInfrastructureSettingsSchema.safeParse(request.body)
       if (!parseResult.success) {
         return reply.status(400).send({

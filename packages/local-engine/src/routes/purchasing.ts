@@ -15,6 +15,7 @@
 // nested, as `GET /api/purchase-orders` sends them.
 // ============================================
 
+import { z } from 'zod'
 import { requireCapability } from '../auth'
 import {
   DRAFT_PURCHASE_LINE_INCOMPLETE,
@@ -136,6 +137,40 @@ function openOrder(db: LocalDb, workspaceId: string, id: string) {
   }
 }
 
+interface LocalSupplierRow {
+  id: string
+  name: string
+  phone: string
+  email: string
+  address: string | null
+  notes: string
+  is_active: number
+  created_at: string
+  updated_at: string
+}
+
+function mapLocalSupplier(row: LocalSupplierRow) {
+  return {
+    id: row.id,
+    name: row.name ?? '',
+    phone: row.phone ?? '',
+    email: row.email ?? '',
+    address: row.address ?? null,
+    notes: row.notes ?? '',
+    isActive: row.is_active !== 0,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  }
+}
+
+const createLocalSupplierSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  phone: z.string().max(40).nullish(),
+  email: z.string().max(200).nullish(),
+  address: z.string().max(500).nullish(),
+  notes: z.string().max(2000).nullish(),
+})
+
 export function registerPurchasingRoutes(router: Router): void {
   // ─── GET /suppliers ─────────────────────────────────────────
   router.get('/suppliers', (c: RouteHandlerContext) => {
@@ -152,32 +187,64 @@ export function registerPurchasingRoutes(router: Router): void {
       params.push(`%${query.search}%`, `%${query.search}%`)
     }
     return db
-      .all<{
-        id: string
-        name: string
-        phone: string
-        email: string
-        address: string | null
-        notes: string
-        is_active: number
-        created_at: string
-        updated_at: string
-      }>(
+      .all<LocalSupplierRow>(
         `SELECT id, name, phone, email, address, notes, is_active, created_at, updated_at
            FROM supplier WHERE ${clauses.join(' AND ')} ORDER BY name LIMIT 500`,
         params,
       )
-      .map((row) => ({
-        id: row.id,
-        name: row.name ?? '',
-        phone: row.phone ?? '',
-        email: row.email ?? '',
-        address: row.address ?? null,
-        notes: row.notes ?? '',
-        isActive: row.is_active !== 0,
-        createdAt: row.created_at ?? null,
-        updatedAt: row.updated_at ?? null,
-      }))
+      .map(mapLocalSupplier)
+  })
+
+  // ─── POST /suppliers ────────────────────────────────────────
+  router.post('/suppliers', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'customer.write')
+    const { db, ctx, body } = c
+    const raw = (body || {}) as Record<string, unknown>
+
+    const requestedId = typeof raw.id === 'string' && raw.id.trim() ? raw.id.trim() : null
+    if (requestedId) {
+      const existing = db.get<LocalSupplierRow>(
+        `SELECT id, name, phone, email, address, notes, is_active, created_at, updated_at
+           FROM supplier WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL`,
+        [requestedId, ctx.workspaceId],
+      )
+      if (existing) return answered(mapLocalSupplier(existing))
+    }
+
+    const parsed = createLocalSupplierSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new ValidationError(
+        parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+      )
+    }
+    const data = parsed.data
+
+    const id = requestedId ?? generateUuid()
+    const now = new Date().toISOString()
+    db.run(
+      `INSERT INTO supplier (
+        id, workspace_id, name, phone, email, address, notes, is_active,
+        created_at, updated_at, origin, sync_state
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'local', 'local_only')`,
+      [
+        id,
+        ctx.workspaceId,
+        data.name,
+        data.phone?.trim() ?? '',
+        data.email?.trim() ?? '',
+        data.address?.trim() || null,
+        data.notes?.trim() ?? '',
+        now,
+        now,
+      ],
+    )
+
+    const inserted = db.get<LocalSupplierRow>(
+      `SELECT id, name, phone, email, address, notes, is_active, created_at, updated_at
+         FROM supplier WHERE id = ? AND workspace_id = ?`,
+      [id, ctx.workspaceId],
+    )
+    return mapLocalSupplier(inserted!)
   })
 
   // ─── GET /purchase-orders ───────────────────────────────────

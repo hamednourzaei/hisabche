@@ -127,9 +127,11 @@ export {
   useLocalePush,
   useLocaleReplace,
   useRouteLang,
+  InfrastructureTogglesPanel,
 } from '@hisabche/ui'
 
 export type {
+  InfrastructureTogglesPanelProps,
   PaginationBarProps,
   ButtonVariant,
   ButtonSize,

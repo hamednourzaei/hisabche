@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-689 endpoint: 219 آفلاین در دسترس · 450 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
+695 endpoint: 222 آفلاین در دسترس · 453 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
 
 | قابلیت | در دسترس | فقط آنلاین | نیست |
 | --- | ---: | ---: | ---: |
@@ -68,7 +68,7 @@
 | `employee.upsert` | 4 | 0 | 0 |
 | `expiry.batches` | 0 | 3 | 0 |
 | `finance.currency_exchange` | 0 | 17 | 0 |
-| `governance.permission_matrix` | 0 | 16 | 0 |
+| `governance.permission_matrix` | 0 | 18 | 0 |
 | `hr.attendance` | 2 | 0 | 0 |
 | `hr.attendance_devices` | 0 | 9 | 0 |
 | `hr.attendance_links` | 0 | 6 | 0 |
@@ -122,8 +122,8 @@
 | `operations.repairs` | 0 | 10 | 0 |
 | `operations.resource_bookings` | 3 | 0 | 0 |
 | `operations.salon_setup` | 0 | 7 | 0 |
-| `operations.service_delivery` | 11 | 0 | 0 |
-| `order.advances` | 0 | 2 | 0 |
+| `operations.service_delivery` | 13 | 0 | 0 |
+| `order.advances` | 0 | 3 | 0 |
 | `order.deposits` | 6 | 0 | 0 |
 | `payment.cancel` | 1 | 0 | 0 |
 | `payment.record` | 2 | 0 | 0 |
@@ -140,7 +140,7 @@
 | `product.upsert` | 3 | 0 | 0 |
 | `product.variants` | 2 | 0 | 0 |
 | `project.manage` | 0 | 17 | 0 |
-| `purchase.orders` | 6 | 0 | 0 |
+| `purchase.orders` | 7 | 0 | 0 |
 | `purchase.rfq` | 0 | 6 | 0 |
 | `purchase.three_way_match` | 0 | 3 | 0 |
 | `referral.program` | 0 | 1 | 0 |

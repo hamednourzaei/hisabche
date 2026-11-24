@@ -244,7 +244,7 @@ export function useSuppliers(
   return useQuery({
     queryKey: supplierKeys.list(filters),
     queryFn: async (): Promise<Supplier[]> => {
-      const res = await apiClient.get<Supplier[]>('/api/suppliers', { params: filters })
+      const res = await apiClient.get('/suppliers', { params: filters })
       return asList<Supplier>(res.data)
     },
     enabled: authReady,
@@ -262,8 +262,8 @@ export function useCreateSupplier() {
       address?: string
       notes?: string
     }) => {
-      const res = await apiClient.post<Supplier>('/api/suppliers', body)
-      return res.data
+      const res = await apiClient.post('/suppliers', body)
+      return res.data as Supplier
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: supplierKeys.all })

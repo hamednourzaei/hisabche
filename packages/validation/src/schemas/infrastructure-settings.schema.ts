@@ -41,3 +41,34 @@ export const DEFAULT_INFRASTRUCTURE_SETTINGS: InfrastructureSettings = {
   updatedAt: '2026-11-24T00:00:00.000Z',
   updatedBy: 'system',
 }
+
+/**
+ * Pure generator that produces an Nginx runtime override block from the active
+ * infrastructure settings so operators and scripts share one canonical rendering.
+ */
+export function buildNginxConfigDirectives(settings: InfrastructureSettings): string {
+  const safeHeader =
+    settings.cacheBypassHeader.replace(/[^A-Za-z0-9_-]/g, '') || 'X-Hisabche-Bypass-Cache'
+  const lines: string[] = [
+    '# Hisabche Nginx Runtime Control Directives (Generated)',
+    `# Edge Proxy Mode: ${settings.nginxProxyEnabled ? 'ENABLED' : 'BYPASSED_DIRECT'}`,
+    `set $hisabche_proxy_mode "${settings.nginxProxyEnabled ? 'nginx' : 'direct'}";`,
+    settings.rateLimitingEnabled
+      ? `limit_req zone=api_limit burst=${settings.rateLimitBurst} nodelay; # Target ${settings.rateLimitRps} req/s`
+      : '# Edge rate limiting DISABLED by Admin Control Plane',
+    `set $hisabche_cache_bypass "${settings.cacheBypassEnabled ? '1' : '0'}"; # Header: ${safeHeader}`,
+    settings.wsCompressionEnabled
+      ? '# WebSocket compression enabled'
+      : '# WebSocket compression disabled (gzip off for upgrade)',
+    settings.upstreamHealthCheck
+      ? '# Upstream health probes enabled (max_fails=3 fail_timeout=10s)'
+      : '# Upstream health probes disabled',
+    settings.hstsEnabled
+      ? `add_header Strict-Transport-Security "max-age=${settings.hstsMaxAge}; includeSubDomains; preload" always;`
+      : '# HSTS header disabled',
+    settings.maintenanceMode
+      ? `set $hisabche_maintenance 1; # Notice: ${settings.maintenanceNotice || 'Scheduled maintenance'}`
+      : 'set $hisabche_maintenance 0;',
+  ]
+  return lines.join('\n')
+}

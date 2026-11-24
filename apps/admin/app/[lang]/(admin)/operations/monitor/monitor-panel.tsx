@@ -289,7 +289,7 @@ export function MonitorPanel() {
           <CoreStatusBadge status={row.status} />
           {/* Which window the verdict describes: live 5 minutes, or the
               24-hour fallback for a core with no traffic right now. */}
-          <span className="block whitespace-nowrap text-[10px] text-muted-foreground">
+          <span className="block whitespace-nowrap text-xs text-muted-foreground">
             {row.windowMinutes >= 24 * 60
               ? t('admin.operations.monitor.window24h')
               : t('admin.operations.monitor.window5m')}

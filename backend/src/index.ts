@@ -37,6 +37,11 @@ import {
   noteRequestForMaintenance,
   writeBlockReason,
 } from './runtime/maintenance-mode'
+import {
+  adminInfrastructureService,
+  enableInfrastructureRefresh,
+  noteRequestForInfrastructure,
+} from './services/admin/admin-infrastructure.service'
 import { startInstanceHeartbeat } from './services/instance-registry'
 import { MONITOR_BANNER_CSS, MONITOR_BANNER_JS } from './docs/monitor-banner'
 import compress from '@fastify/compress'
@@ -362,15 +367,17 @@ server.addHook('onRequest', async (request, reply) => {
     // (runtime/maintenance-mode.ts). Admin and sign-in routes stay writable
     // during maintenance so the switch can always be turned back off.
     noteRequestForMaintenance()
+    noteRequestForInfrastructure()
     const writeBlocked = writeBlockReason(request.method, pathOnly ?? '')
     if (writeBlocked) {
       exposeToBrowser(request, reply)
+      const notice = adminInfrastructureService.getSettings().maintenanceNotice.trim()
       return reply.status(503).send({
         error: 'SERVICE_READ_ONLY',
         reason: writeBlocked,
         message:
           writeBlocked === 'maintenance'
-            ? 'The service is in maintenance; writes are paused'
+            ? notice || 'The service is in maintenance; writes are paused'
             : 'Primary database is temporarily unavailable; writes are paused',
       })
     }
@@ -485,10 +492,32 @@ server.addHook('onResponse', async (request, reply) => {
 server.addHook('onSend', async (request, reply, payload) => {
   const duration = elapsedSince(request)
 
+  const infra = adminInfrastructureService.getSettings()
   reply.header('X-Response-Time-MS', duration.toString())
   reply.header('X-Content-Type-Options', 'nosniff')
   reply.header('X-Frame-Options', 'DENY')
   reply.header('X-XSS-Protection', '1; mode=block')
+  reply.header('X-Hisabche-Edge-Proxy', infra.nginxProxyEnabled ? 'nginx' : 'direct')
+  reply.header(
+    'X-Hisabche-Rate-Limit',
+    infra.rateLimitingEnabled
+      ? `${infra.rateLimitRps}r/s;burst=${infra.rateLimitBurst}`
+      : 'disabled',
+  )
+  if (infra.hstsEnabled) {
+    reply.header(
+      'Strict-Transport-Security',
+      `max-age=${infra.hstsMaxAge}; includeSubDomains; preload`,
+    )
+  }
+  const bypassHeaderName = infra.cacheBypassHeader.toLowerCase()
+  const headerRequestedBypass = bypassHeaderName
+    ? Boolean(request.headers[bypassHeaderName])
+    : false
+  if (infra.cacheBypassEnabled || headerRequestedBypass) {
+    reply.header('X-Hisabche-Cache-Bypass', '1')
+    reply.header('Cache-Control', 'no-store')
+  }
 
   if (duration > 500) {
     request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
@@ -778,6 +807,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
       'x-workspace-id',
       'etag',
       'X-Admin-Step-Up-Timestamp',
+      'X-Hisabche-Bypass-Cache',
       // The only credential of the TV wall (the wall page of the admin app). Missing,
       // the browser preflight refused every wall request (V63 audit, 12 Nov 2026).
       'x-wall-token',
@@ -887,7 +917,8 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
     // the app answering 429 to its own shell (`/api/auth/me`,
     // `/api/governance/my-capabilities`, notifications, currency, employees).
     // Live audit B1, 28 Oct 2026.
-    allowList: (request) => request.method === 'OPTIONS',
+    allowList: (request) =>
+      request.method === 'OPTIONS' || !adminInfrastructureService.getSettings().rateLimitingEnabled,
     keyGenerator: (request) => {
       const userId = request.userId
       return rateLimitBucket(request.headers.authorization, userId || request.ip || 'anonymous')
@@ -1099,6 +1130,7 @@ async function start() {
     // V63 #68 — only a real process mirrors the maintenance switch; a test that
     // builds a server never reads a row it did not seed.
     enableMaintenanceRefresh()
+    enableInfrastructureRefresh()
 
     // ─── 6.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })

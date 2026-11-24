@@ -70,6 +70,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'DELETE /projects/:x': ['project.manage', 'online_required'],
   'DELETE /roles/:x': ['governance.permission_matrix', 'online_required'],
   'DELETE /saved-views/:x': ['saved.views', 'online_required'],
+  'DELETE /service-delivery/sessions/:x/participants/:x': [
+    'operations.service_delivery',
+    'available',
+  ],
   'DELETE /tasks/:x': ['project.manage', 'online_required'],
   'DELETE /workspaces/:x/invites/:x': ['team.members', 'online_required'],
   'DELETE /workspaces/:x/members/:x': ['team.members', 'online_required'],
@@ -84,6 +88,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /accounting/profit-report/cost-objects': ['accounting.variant_report', 'online_required'],
   'GET /accounting/profit-report/variants': ['accounting.variant_report', 'online_required'],
   'GET /accounting/trial-balance': ['accounting.trial_balance', 'available'],
+  'GET /admin/infrastructure/settings': ['governance.permission_matrix', 'online_required'],
+  'PUT /admin/infrastructure/settings': ['governance.permission_matrix', 'online_required'],
   'GET /agriculture/crops': ['trade.agriculture', 'online_required'],
   'GET /ai-requests': ['ai.assistant', 'online_required'],
   'GET /ai/config': ['ai.assistant', 'online_required'],
@@ -618,6 +624,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   // (the supplier side's functions exist only there).
   'GET /advances': ['order.advances', 'online_required'],
   'POST /advances': ['order.advances', 'online_required'],
+  'POST /advances/:x/finalize': ['order.advances', 'online_required'],
   'POST /package-credits/consume': ['operations.service_delivery', 'available'],
   'POST /package-credits/expire': ['operations.service_delivery', 'available'],
   // Suspending ONE GRANT is a manager's decision recorded on the server (append-only SUSPEND / RESUME events).
@@ -660,7 +667,9 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /service-delivery/sessions': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/deliver': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/cancel': ['operations.service_delivery', 'available'],
+  'POST /service-delivery/sessions/:x/participants': ['operations.service_delivery', 'available'],
   'POST /service-delivery/sessions/:x/status': ['operations.service_delivery', 'available'],
+  'POST /suppliers': ['purchase.orders', 'available'],
   // The person's own guide progress; offline the device copy answers.
   'GET /me/guide-progress': ['ui.guide_progress', 'online_required'],
   // The person's added dashboard cards (user-dashboard-kpis-01); offline the

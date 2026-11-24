@@ -7181,7 +7181,9 @@
         "gateways": "Gateways",
         "gatewayAnalytics": "Analytics & events",
         "oauthApps": "Apps",
-        "apiUsage": "API usage"
+        "apiUsage": "API usage",
+        "instances": "Servers & Instances",
+        "infrastructure": "Infrastructure & Nginx"
       },
       "failedLogins": {
         "title": "Failed sign-ins",
@@ -7414,7 +7416,14 @@
       "saved": "Infrastructure settings updated successfully",
       "saveError": "Failed to update infrastructure settings",
       "updatedAt": "Last updated: {date}",
-      "updatedBy": "By: {user}"
+      "updatedBy": "By: {user}",
+      "nginxPreview": "Live Nginx Directives Preview",
+      "copyDirectives": "Copy Directives",
+      "copied": "Copied",
+      "stepUpTitle": "Confirm Infrastructure Change",
+      "stepUpDesc": "Changing Nginx proxy routing, edge rate limits, or maintenance mode affects live traffic across all instances.",
+      "stepUpConfirm": "Apply Settings",
+      "stepUpReasonLabel": "Reason for infrastructure change"
     }
   },
   "till": {

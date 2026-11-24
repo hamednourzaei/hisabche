@@ -293,7 +293,12 @@ export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
 
 // ---------- Pages — Settings & Others ----------
-export { SettingsPage, BusinessStampSection } from './components/ui/settings'
+export {
+  SettingsPage,
+  BusinessStampSection,
+  InfrastructureTogglesPanel,
+  type InfrastructureTogglesPanelProps,
+} from './components/ui/settings'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'

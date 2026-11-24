@@ -18,6 +18,7 @@ import {
   type TableColumn,
 } from '@/components/ui'
 import { ServersClient } from '../servers/servers-client'
+import { InfrastructurePanel } from './infrastructure-panel'
 import { MonitorPanel } from './monitor/monitor-panel'
 import { EmailDeliveryPanel } from './email-delivery-panel'
 import { MaintenancePanel } from './maintenance-panel'
@@ -75,7 +76,23 @@ export function OperationsClient() {
         />
       )}
       {tab === 'monitor' && <MonitorPanel />}
-      {tab === 'servers' && <ServersClient />}
+      {tab === 'servers' && (
+        <TabSections
+          label={t('admin.hubs.operations.servers')}
+          sections={[
+            {
+              id: 'instances',
+              label: t('admin.insights.sections.instances'),
+              render: () => <ServersClient />,
+            },
+            {
+              id: 'infrastructure',
+              label: t('admin.insights.sections.infrastructure'),
+              render: () => <InfrastructurePanel />,
+            },
+          ]}
+        />
+      )}
       {tab === 'jobs' && (
         <TabSections
           label={t('admin.hubs.operations.jobs')}

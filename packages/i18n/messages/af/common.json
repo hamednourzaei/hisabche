@@ -7181,7 +7181,9 @@
         "gateways": "درگاه‌ها",
         "gatewayAnalytics": "آمار و رویدادها",
         "oauthApps": "برنامه‌ها",
-        "apiUsage": "مصرف API"
+        "apiUsage": "مصرف API",
+        "instances": "سرورها و نمونه‌ها",
+        "infrastructure": "زیرساخت و پروکسی Nginx"
       },
       "failedLogins": {
         "title": "ورودهای ناموفق",
@@ -7414,7 +7416,14 @@
       "saved": "تنظیمات زیرساخت با موفقیت ثبت شد",
       "saveError": "خطا در ثبت تنظیمات زیرساخت",
       "updatedAt": "آخرین به‌روزرسانی: {date}",
-      "updatedBy": "توسط: {user}"
+      "updatedBy": "توسط: {user}",
+      "nginxPreview": "پیش‌نمایش دستورات زنده Nginx",
+      "copyDirectives": "کاپی دستورات",
+      "copied": "کاپی شد",
+      "stepUpTitle": "تایید امنیتی برای تغییر زیرساخت",
+      "stepUpDesc": "تغییر تنظیمات پروکسی معکوس Nginx، محدودسازی سرعت یا حالت نگهداری روی تمام ترافیک اثر می‌گذارد.",
+      "stepUpConfirm": "تطبیق تنظیمات",
+      "stepUpReasonLabel": "دلیل تغییر زیرساخت"
     }
   },
   "till": {
