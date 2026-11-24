@@ -277,20 +277,46 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   // ✅ کوئری ۱: verify توکن (با پشتیبانی از اعتبارسنجی محلی آفلاین در قطعی اینترنت)
   let user: SupabaseUser | null = null
+  let authServiceUnavailable = false
   try {
     const { data, error } = await supabase.auth.getUser(token)
     if (!error && data?.user) {
       user = data.user
+    } else if (error) {
+      const status = (error as { status?: number }).status
+      const msg = error.message ?? ''
+      const isNetworkOrServerFailure =
+        status === 0 ||
+        (typeof status === 'number' && status >= 500) ||
+        /fetch failed|network|timeout|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|socket/i.test(msg)
+      if (isNetworkOrServerFailure) {
+        authServiceUnavailable = true
+      }
     }
   } catch {
+    authServiceUnavailable = true
     user = null
   }
 
-  // Fallback to local cryptographic HMAC-SHA256 verification when network is down
-  if (!user) {
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET
-    if (jwtSecret) {
-      const localResult = verifyJwtSignatureLocally(token, jwtSecret)
+  // Fallback to local cryptographic verification ONLY when upstream auth service is unreachable
+  // (never override an explicit upstream 401/403 token revocation).
+  if (!user && authServiceUnavailable) {
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET || ''
+    const jwtPublicKey = process.env.SUPABASE_JWT_PUBLIC_KEY
+    const expectedIssuer =
+      process.env.JWT_EXPECTED_ISSUER ||
+      (process.env.SUPABASE_URL
+        ? `${process.env.SUPABASE_URL.replace(/\/$/, '')}/auth/v1`
+        : undefined)
+    const expectedAudience = process.env.JWT_EXPECTED_AUDIENCE || 'authenticated'
+
+    if (jwtSecret || jwtPublicKey) {
+      const localResult = verifyJwtSignatureLocally(token, jwtSecret, {
+        publicKeyPem: jwtPublicKey,
+        expectedIssuer,
+        expectedAudience,
+        clockSkewSeconds: 30,
+      })
       if (localResult.valid && localResult.payload) {
         user = jwtPayloadToUser(localResult.payload)
       }

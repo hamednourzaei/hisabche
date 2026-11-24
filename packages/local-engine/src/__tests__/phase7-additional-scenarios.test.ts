@@ -20,12 +20,14 @@ import {
 describe('V2 Phase 7.5 Mandatory Offline & Sync Scenarios', () => {
   describe('Scenario 1: Shared POS terminal logout & user isolation', () => {
     it('guarantees next user cannot access previous user local partition', () => {
+      const deviceMasterSecret = PerUserPartitionManager.generateDeviceMasterSecret()
       const config1: UserDatabaseConfig = {
         deviceId: 'pos_terminal_01',
         userId: 'user_cashier_01',
         workspaceId: 'ws_alpha',
         userRole: 'cashier',
         baseStoragePath: '/pos/data',
+        deviceMasterSecret,
       }
 
       const config2: UserDatabaseConfig = {
@@ -34,6 +36,7 @@ describe('V2 Phase 7.5 Mandatory Offline & Sync Scenarios', () => {
         workspaceId: 'ws_alpha',
         userRole: 'cashier',
         baseStoragePath: '/pos/data',
+        deviceMasterSecret,
       }
 
       const partition1 = PerUserPartitionManager.resolvePartition(config1)

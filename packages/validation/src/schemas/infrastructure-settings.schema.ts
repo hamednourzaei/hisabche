@@ -13,6 +13,7 @@ export const infrastructureSettingsSchema = z.object({
   upstreamHealthCheck: z.boolean().default(true),
   hstsEnabled: z.boolean().default(true),
   hstsMaxAge: z.number().int().min(0).max(63072000).default(31536000),
+  edgeControlMode: z.enum(['fastify_runtime_only', 'webhook_synced']).optional(),
   updatedAt: z.string().optional(),
   updatedBy: z.string().optional(),
 })
@@ -20,7 +21,7 @@ export const infrastructureSettingsSchema = z.object({
 export type InfrastructureSettings = z.infer<typeof infrastructureSettingsSchema>
 
 export const updateInfrastructureSettingsSchema = infrastructureSettingsSchema
-  .omit({ updatedAt: true, updatedBy: true })
+  .omit({ edgeControlMode: true, updatedAt: true, updatedBy: true })
   .partial()
 
 export type UpdateInfrastructureSettingsInput = z.infer<typeof updateInfrastructureSettingsSchema>
@@ -51,6 +52,7 @@ export function buildNginxConfigDirectives(settings: InfrastructureSettings): st
     settings.cacheBypassHeader.replace(/[^A-Za-z0-9_-]/g, '') || 'X-Hisabche-Bypass-Cache'
   const lines: string[] = [
     '# Hisabche Nginx Runtime Control Directives (Generated)',
+    `# Control Plane Mode: ${settings.edgeControlMode ?? 'fastify_runtime_only'}`,
     `# Edge Proxy Mode: ${settings.nginxProxyEnabled ? 'ENABLED' : 'BYPASSED_DIRECT'}`,
     `set $hisabche_proxy_mode "${settings.nginxProxyEnabled ? 'nginx' : 'direct'}";`,
     settings.rateLimitingEnabled

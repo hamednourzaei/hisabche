@@ -204,5 +204,100 @@ describe('Phase 6: Ledger, Financial Posting Integrity & Schema Parity', () => {
         /Promotion Gate BLOCKED/,
       )
     })
+
+    it('detects drift across indexes, constraints, RLS policies, grants, extensions, sequences, and migration digests', () => {
+      const fullPrimary = {
+        ...catalogPrimary,
+        indexes: [
+          {
+            name: 'invoices_ws_idx',
+            table: 'invoices',
+            unique: false,
+            definition: 'CREATE INDEX invoices_ws_idx ON public.invoices (workspace_id)',
+          },
+        ],
+        constraints: [
+          {
+            name: 'invoices_total_nonneg',
+            table: 'invoices',
+            type: 'CHECK',
+            definition: 'CHECK (total_minor >= 0)',
+            validated: true,
+          },
+        ],
+        rlsPolicies: [
+          {
+            table: 'invoices',
+            name: 'invoices_tenant_isolation',
+            command: 'ALL',
+            roles: ['authenticated'],
+            usingExpr: 'workspace_id IN (SELECT auth_workspace_ids())',
+            checkExpr: 'workspace_id IN (SELECT auth_workspace_ids())',
+          },
+        ],
+        grants: [
+          {
+            grantee: 'authenticated',
+            objectType: 'table' as const,
+            objectName: 'invoices',
+            privilege: 'SELECT',
+          },
+        ],
+        extensions: ['pgcrypto@1.3', 'uuid-ossp@1.1'],
+        sequences: ['journal_entry_seq'],
+      }
+
+      const summary = SchemaFingerprintEngine.summarizeCatalog(fullPrimary)
+      expect(summary.indexCount).toBe(1)
+      expect(summary.constraintCount).toBe(1)
+      expect(summary.policyCount).toBe(1)
+      expect(summary.grantCount).toBe(1)
+      expect(summary.extensionCount).toBe(2)
+      expect(summary.sequenceCount).toBe(1)
+
+      // Dropping an RLS policy must fail Promotion Gate and name it in diffCatalogs
+      const standbyMissingRls = { ...fullPrimary, rlsPolicies: [] }
+      const rlsDiff = SchemaFingerprintEngine.diffCatalogs(fullPrimary, standbyMissingRls)
+      expect(rlsDiff.matches).toBe(false)
+      expect(
+        rlsDiff.differences.some((d) =>
+          d.includes('missing_on_standby:pol:invoices.invoices_tenant_isolation'),
+        ),
+      ).toBe(true)
+
+      // Marking a constraint NOT VALID must produce a distinct fingerprint
+      const standbyUnvalidated = {
+        ...fullPrimary,
+        constraints: [{ ...fullPrimary.constraints[0]!, validated: false }],
+      }
+      expect(SchemaFingerprintEngine.diffCatalogs(fullPrimary, standbyUnvalidated).matches).toBe(
+        false,
+      )
+
+      // Dropping a grant or extension or index must alter the fingerprint
+      expect(
+        SchemaFingerprintEngine.diffCatalogs(fullPrimary, { ...fullPrimary, grants: [] }).matches,
+      ).toBe(false)
+      expect(
+        SchemaFingerprintEngine.diffCatalogs(fullPrimary, { ...fullPrimary, indexes: [] }).matches,
+      ).toBe(false)
+      expect(
+        SchemaFingerprintEngine.diffCatalogs(fullPrimary, { ...fullPrimary, extensions: [] })
+          .matches,
+      ).toBe(false)
+      expect(
+        SchemaFingerprintEngine.diffCatalogs(fullPrimary, { ...fullPrimary, sequences: [] })
+          .matches,
+      ).toBe(false)
+
+      // Content digest fingerprinting catches SQL file modification even with identical filenames
+      const dig1 = SchemaFingerprintEngine.computeFromMigrationDigests([
+        { filename: '001.sql', contentSha256: 'aaa' },
+      ])
+      const dig2 = SchemaFingerprintEngine.computeFromMigrationDigests([
+        { filename: '001.sql', contentSha256: 'bbb' },
+      ])
+      expect(dig1).not.toBe(dig2)
+    })
   })
 })

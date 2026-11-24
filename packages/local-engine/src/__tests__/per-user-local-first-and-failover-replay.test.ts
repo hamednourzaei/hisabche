@@ -1,8 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestDb, TEST_WORKSPACE_ID, TEST_USER_ID } from './test-db'
-import { PerUserPartitionManager } from '../sync/per-user-partition'
-import { SyncStateMachine } from '../sync/sync-state-machine'
-import { BandwidthAwareSyncDispatcher, type SyncCandidateItem } from '../sync/bandwidth-aware-sync'
+import {
+  EncryptedPartitionStore,
+  PartitionSecurityError,
+  PerUserPartitionManager,
+  type SqlCipherPragmaTarget,
+} from '../sync/per-user-partition'
+import { InvalidSyncTransitionError, SyncStateMachine } from '../sync/sync-state-machine'
+import {
+  BandwidthAwareSyncDispatcher,
+  SyncBatchExecutor,
+  type SyncCandidateItem,
+} from '../sync/bandwidth-aware-sync'
 
 describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () => {
   let db: ReturnType<typeof createTestDb>
@@ -13,32 +22,163 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
     stateMachine = new SyncStateMachine(db)
   })
 
-  describe('7.1 Per-User Local Database Isolation & Encryption', () => {
-    it('generates strictly isolated, deterministic database files for different users on the same device', () => {
+  describe('7.1 Per-User Local Database Isolation & AEAD Encryption', () => {
+    it('derives secret-bound distinct partition keys and refuses missing or predictable secrets', () => {
       const deviceId = 'pos-terminal-tehran-01'
-      const ownerConfig = {
+      const deviceMasterSecret = PerUserPartitionManager.generateDeviceMasterSecret()
+
+      const ownerPartition = PerUserPartitionManager.resolvePartition({
         deviceId,
         userId: 'owner-uuid-111',
         workspaceId: TEST_WORKSPACE_ID,
         userRole: 'owner',
         baseStoragePath: '/data/app',
-      }
-      const employeeConfig = {
+        deviceMasterSecret,
+      })
+      const employeePartition = PerUserPartitionManager.resolvePartition({
         deviceId,
         userId: 'employee-uuid-222',
         workspaceId: TEST_WORKSPACE_ID,
         userRole: 'seller',
         baseStoragePath: '/data/app',
-      }
-
-      const ownerPartition = PerUserPartitionManager.resolvePartition(ownerConfig)
-      const employeePartition = PerUserPartitionManager.resolvePartition(employeeConfig)
+        deviceMasterSecret,
+      })
 
       expect(ownerPartition.databaseFileName).not.toBe(employeePartition.databaseFileName)
       expect(ownerPartition.fullPath).not.toBe(employeePartition.fullPath)
-      expect(ownerPartition.encryptionKeyHex).toHaveLength(64) // 256-bit AES key in hex
+      expect(ownerPartition.encryptionKeyHex).toHaveLength(64)
       expect(employeePartition.encryptionKeyHex).toHaveLength(64)
       expect(ownerPartition.encryptionKeyHex).not.toBe(employeePartition.encryptionKeyHex)
+      expect(ownerPartition.partitionSaltHex).not.toBe(employeePartition.partitionSaltHex)
+
+      // Refuses predictable/short/empty deviceMasterSecret
+      expect(() =>
+        PerUserPartitionManager.resolvePartition({
+          deviceId,
+          userId: 'owner-uuid-111',
+          workspaceId: TEST_WORKSPACE_ID,
+          userRole: 'owner',
+          baseStoragePath: '/data/app',
+          deviceMasterSecret: 'short',
+        }),
+      ).toThrow(PartitionSecurityError)
+
+      expect(() =>
+        PerUserPartitionManager.resolvePartition({
+          deviceId: 'device-1234567890-abcdef',
+          userId: 'owner-uuid-111',
+          workspaceId: TEST_WORKSPACE_ID,
+          userRole: 'owner',
+          baseStoragePath: '/data/app',
+          deviceMasterSecret: 'device-1234567890-abcdef',
+        }),
+      ).toThrow(PartitionSecurityError)
+    })
+
+    it('seals records in SQLite with real AES-256-GCM ciphertext and blocks cross-user decryption', async () => {
+      const masterSecret = PerUserPartitionManager.generateDeviceMasterSecret()
+      const salt = PerUserPartitionManager.generatePartitionSaltHex()
+
+      const ownerPartition = PerUserPartitionManager.resolvePartition({
+        deviceId: 'pos-01',
+        userId: 'owner-uuid-111',
+        workspaceId: TEST_WORKSPACE_ID,
+        userRole: 'owner',
+        baseStoragePath: '/data/app',
+        deviceMasterSecret: masterSecret,
+        partitionSaltHex: salt,
+      })
+      const employeePartition = PerUserPartitionManager.resolvePartition({
+        deviceId: 'pos-01',
+        userId: 'employee-uuid-222',
+        workspaceId: TEST_WORKSPACE_ID,
+        userRole: 'seller',
+        baseStoragePath: '/data/app',
+        deviceMasterSecret: masterSecret,
+        partitionSaltHex: salt,
+      })
+
+      const store = new EncryptedPartitionStore(db, ownerPartition)
+      await store.put('owner-session-secret', {
+        refreshToken: 'secret-token-xyz',
+        balanceMinor: 950000,
+      })
+
+      // Raw row stored on SQLite disk must not leak plaintext fields
+      const rawRow = db.get<{ envelope_json: string }>(
+        `SELECT envelope_json FROM encrypted_partition_records WHERE record_key = ?`,
+        ['owner-session-secret'],
+      )
+      expect(rawRow?.envelope_json).toBeDefined()
+      expect(rawRow!.envelope_json).not.toContain('secret-token-xyz')
+      expect(rawRow!.envelope_json).not.toContain('950000')
+      expect(rawRow!.envelope_json).toContain('AES-256-GCM')
+
+      // Authorized owner partition decrypts cleanly
+      const recovered = await store.get<{ refreshToken: string; balanceMinor: number }>(
+        'owner-session-secret',
+      )
+      expect(recovered).toEqual({ refreshToken: 'secret-token-xyz', balanceMinor: 950000 })
+
+      // Cross-user cipher cannot decrypt owner's sealed envelope
+      const employeeStore = new EncryptedPartitionStore(db, employeePartition)
+      await expect(employeeStore.get('owner-session-secret')).rejects.toThrow(
+        PartitionSecurityError,
+      )
+
+      // Tampering 1 character in ciphertext fails GCM authentication tag
+      const parsedEnv = JSON.parse(rawRow!.envelope_json) as {
+        v: 1
+        alg: 'AES-256-GCM'
+        ivB64: string
+        ciphertextB64: string
+        aad: string
+      }
+      const firstChar = parsedEnv.ciphertextB64[0] === 'A' ? 'B' : 'A'
+      const flipped = firstChar + parsedEnv.ciphertextB64.slice(1)
+      await expect(
+        ownerPartition.createCipher().decrypt({ ...parsedEnv, ciphertextB64: flipped }),
+      ).rejects.toThrow(PartitionSecurityError)
+    })
+
+    it('configures SQLCipher PRAGMAs when supported and refuses plaintext SQLite when native cipher is required', () => {
+      const partition = PerUserPartitionManager.resolvePartition({
+        deviceId: 'pos-01',
+        userId: 'owner-1',
+        workspaceId: TEST_WORKSPACE_ID,
+        userRole: 'owner',
+        baseStoragePath: '/data/app',
+        deviceMasterSecret: PerUserPartitionManager.generateDeviceMasterSecret(),
+      })
+
+      const executed: string[] = []
+      const sqlCipherMock: SqlCipherPragmaTarget = {
+        pragma(stmt: string) {
+          executed.push(stmt)
+          if (stmt === 'cipher_version') return [{ cipher_version: '4.6.1 community' }]
+          return undefined
+        },
+      }
+      const res = PerUserPartitionManager.configureSqliteCipher(sqlCipherMock, partition, {
+        requireNativeSqlCipher: true,
+      })
+      expect(res.mode).toBe('sqlcipher')
+      expect(res.cipherVersion).toBe('4.6.1 community')
+      expect(res.keyApplied).toBe(true)
+      expect(executed.some((s) => s.startsWith(`key = "x'`))).toBe(true)
+
+      const plainSqliteMock: SqlCipherPragmaTarget = {
+        pragma: () => undefined,
+      }
+      const fallback = PerUserPartitionManager.configureSqliteCipher(plainSqliteMock, partition)
+      expect(fallback.mode).toBe('application_envelope_aead')
+      expect(fallback.keyApplied).toBe(false)
+
+      expect(() =>
+        PerUserPartitionManager.configureSqliteCipher(plainSqliteMock, partition, {
+          requireNativeSqlCipher: true,
+        }),
+      ).toThrow(PartitionSecurityError)
     })
 
     it('rejects cross-user partition access attempt', () => {
@@ -48,11 +188,10 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
     })
   })
 
-  describe('7.2 Explicit 6-State Mutation Lifecycle & Observability', () => {
+  describe('7.2 Explicit 6-State Mutation Lifecycle & Guarded Transitions', () => {
     it('transitions mutation through local_pending -> syncing -> server_committed with observability metrics', () => {
       const clientId = 'pay-mutation-local-001'
 
-      // 1. Local-first commit
       const record = stateMachine.recordLocalCommit({
         clientId,
         entity: 'payment',
@@ -69,17 +208,54 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
       expect(summary.localPendingCount).toBe(1)
       expect(summary.serverCommittedCount).toBe(0)
 
-      // 2. Mark syncing in-flight
       stateMachine.markSyncing(clientId)
       summary = stateMachine.getObservabilitySummary(TEST_WORKSPACE_ID, TEST_USER_ID)
       expect(summary.localPendingCount).toBe(0)
       expect(summary.syncingCount).toBe(1)
 
-      // 3. Mark server committed
       stateMachine.markServerCommitted(clientId)
       summary = stateMachine.getObservabilitySummary(TEST_WORKSPACE_ID, TEST_USER_ID)
       expect(summary.syncingCount).toBe(0)
       expect(summary.serverCommittedCount).toBe(1)
+    })
+
+    it('enforces FSM transitions strictly and prevents resetting committed mutations back to local_pending', () => {
+      const clientId = 'inv-fsm-strict-001'
+      stateMachine.recordLocalCommit({
+        clientId,
+        entity: 'invoice',
+        operation: 'create',
+        userId: TEST_USER_ID,
+        workspaceId: TEST_WORKSPACE_ID,
+        idempotencyKey: 'idemp-strict-1',
+      })
+
+      // Cannot skip `syncing` straight to `server_committed`
+      expect(() => stateMachine.markServerCommitted(clientId)).toThrow(InvalidSyncTransitionError)
+
+      stateMachine.markSyncing(clientId)
+      stateMachine.markServerCommitted(clientId)
+
+      // Replay of same local commit must remain `server_committed` without resetting attempts/state
+      const replayed = stateMachine.recordLocalCommit({
+        clientId,
+        entity: 'invoice',
+        operation: 'create',
+        userId: TEST_USER_ID,
+        workspaceId: TEST_WORKSPACE_ID,
+        idempotencyKey: 'idemp-strict-1',
+      })
+      expect(replayed.state).toBe('server_committed')
+      expect(replayed.attempts).toBe(1)
+
+      // Cannot move committed mutation back to `syncing` or `conflict`
+      expect(() => stateMachine.markSyncing(clientId)).toThrow(InvalidSyncTransitionError)
+      expect(() => stateMachine.markConflict(clientId, 'late')).toThrow(InvalidSyncTransitionError)
+
+      // Reconciled is strictly terminal
+      stateMachine.markReconciled(clientId)
+      expect(() => stateMachine.markSyncing(clientId)).toThrow(InvalidSyncTransitionError)
+      expect(() => stateMachine.markRejected(clientId, 'nope')).toThrow(InvalidSyncTransitionError)
     })
 
     it('handles conflict and explicit reconciliation transitions', () => {
@@ -103,7 +279,7 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
     })
   })
 
-  describe('7.3 Bandwidth-Aware & Load-Aware Sync Dispatching', () => {
+  describe('7.3 Bandwidth-Aware Telemetry, Adaptive Executor & Backoff Scheduling', () => {
     const candidates: SyncCandidateItem[] = [
       {
         clientId: 'm1',
@@ -156,11 +332,9 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
         attempts: 0,
       }))
 
-      // Slow 2G normal load -> max 5 items
       const batch2G = BandwidthAwareSyncDispatcher.selectBatch(manyCandidates, 'slow_2g', 0)
       expect(batch2G).toHaveLength(5)
 
-      // Slow 2G under high server load (> 0.7) -> halved to 2 items
       const batchOverloaded = BandwidthAwareSyncDispatcher.selectBatch(
         manyCandidates,
         'slow_2g',
@@ -168,21 +342,72 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
       )
       expect(batchOverloaded).toHaveLength(2)
     })
+
+    it('executes adaptive transport cycles over SyncStateMachine with retry backoff on outage', async () => {
+      for (let i = 0; i < 6; i++) {
+        stateMachine.recordLocalCommit({
+          clientId: `exec-item-${i}`,
+          entity: i === 5 ? 'customer' : 'payment',
+          operation: 'create',
+          userId: TEST_USER_ID,
+          workspaceId: TEST_WORKSPACE_ID,
+        })
+      }
+
+      let transportCalls = 0
+      const executor = new SyncBatchExecutor(stateMachine, {
+        async sendBatch(items) {
+          transportCalls++
+          if (transportCalls === 1) {
+            throw new Error('504 Gateway Timeout on 2G link')
+          }
+          return items.map((item) => ({ clientId: item.clientId, status: 'committed' as const }))
+        },
+      })
+
+      const t0 = 1_700_000_000_000
+
+      // Offline telemetry dispatches zero batches
+      const offlineReport = await executor.runCycle({
+        workspaceId: TEST_WORKSPACE_ID,
+        telemetry: { online: false },
+        nowMs: t0,
+      })
+      expect(offlineReport.profile).toBe('offline')
+      expect(offlineReport.selectedCount).toBe(0)
+
+      // High-RTT telemetry adapts profile -> `slow_2g` (max 5 items) and requeues on failure
+      const failReport = await executor.runCycle({
+        workspaceId: TEST_WORKSPACE_ID,
+        telemetry: { online: true, effectiveRttMs: 1800, downlinkMbps: 0.15 },
+        nowMs: t0,
+      })
+      expect(failReport.profile).toBe('slow_2g')
+      expect(failReport.selectedCount).toBe(5)
+      expect(failReport.requeuedCount).toBe(5)
+
+      // Immediately 1 second later, requeued 5 items are still backed off so ONLY the 6th unattempted item dispatches
+      const duringBackoff = await executor.runCycle({
+        workspaceId: TEST_WORKSPACE_ID,
+        telemetry: { online: true, effectiveRttMs: 40, downlinkMbps: 20 },
+        nowMs: t0 + 1000,
+      })
+      expect(duringBackoff.profile).toBe('4g_wifi')
+      expect(duringBackoff.selectedCount).toBe(1)
+      expect(duringBackoff.committedCount).toBe(1)
+
+      // After backoff expires (e.g. +120s), remaining 5 items flush cleanly on 4G
+      const recovery = await executor.runCycle({
+        workspaceId: TEST_WORKSPACE_ID,
+        telemetry: { online: true, effectiveRttMs: 40, downlinkMbps: 20 },
+        nowMs: t0 + 120_000,
+      })
+      expect(recovery.committedCount).toBe(5)
+      expect(stateMachine.getObservabilitySummary(TEST_WORKSPACE_ID).serverCommittedCount).toBe(6)
+    })
   })
 
   describe('7.4 Critical Scenario: Failover & Replay with Zero Duplicate Financial Effect', () => {
-    /**
-     * Simulates the exact 7-step critical disaster scenario:
-     * 1. User records a payment locally.
-     * 2. Local DB commits payment & writes local outbox.
-     * 3. Server commits payment to Primary DB.
-     * 4. API dies before responding to client (network timeout / 504).
-     * 5. Primary DB fails.
-     * 6. Standby is promoted (with human approval and new epoch).
-     * 7. Client reconnects and re-sends the same mutation with idempotency key.
-     *
-     * Expected Result: The payment was applied exactly once. Zero duplicate ledger lines.
-     */
     it('proves exactly-once payment application across primary failure and standby promotion', () => {
       const serverPaymentsTable = new Map<
         string,
@@ -195,22 +420,18 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
         credit: number
       }> = []
 
-      // Simulated server posting handler with PK idempotency
       function serverProcessPayment(mutation: {
         id: string
         amount: number
         idempotencyKey: string
       }) {
         if (serverPaymentsTable.has(mutation.id)) {
-          // Idempotent hit: already committed! Return existing record without duplicating ledger
           return { status: 'already_committed', payment: serverPaymentsTable.get(mutation.id)! }
         }
 
-        // Fresh commit
         const payment = { ...mutation, version: 1 }
         serverPaymentsTable.set(mutation.id, payment)
 
-        // Write double-entry ledger lines (e.g. Debit Cash 500, Credit Accounts Receivable 500)
         serverLedgerLines.push({
           id: `line-dr-${mutation.id}`,
           paymentId: mutation.id,
@@ -227,7 +448,6 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
         return { status: 'created', payment }
       }
 
-      // Step 1 & 2: Local payment committed
       const paymentId = 'pay-disaster-test-999'
       const idempotencyKey = 'idemp-pos-device-seq-42'
       stateMachine.recordLocalCommit({
@@ -239,7 +459,6 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
         idempotencyKey,
       })
 
-      // Step 3: Server commits to primary
       stateMachine.markSyncing(paymentId)
       const firstServerResult = serverProcessPayment({
         id: paymentId,
@@ -250,18 +469,12 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
       expect(serverPaymentsTable.size).toBe(1)
       expect(serverLedgerLines).toHaveLength(2)
 
-      // Step 4: API dies before client receives response
-      // Client still sees mutation as pending / syncing!
       const clientViewBeforeReconnect = stateMachine.getObservabilitySummary(
         TEST_WORKSPACE_ID,
         TEST_USER_ID,
       )
       expect(clientViewBeforeReconnect.serverCommittedCount).toBe(0)
 
-      // Step 5 & 6: Primary fails, Standby promoted with streaming replication
-      // Standby has the replicated payments table and ledger lines
-
-      // Step 7: Client reconnects to promoted Standby and re-sends the same mutation
       const replayServerResult = serverProcessPayment({
         id: paymentId,
         amount: 50000,
@@ -269,10 +482,8 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
       })
       expect(replayServerResult.status).toBe('already_committed')
 
-      // Client marks server committed
       stateMachine.markServerCommitted(paymentId)
 
-      // FINAL PROOF: Exactly one payment, exactly two balanced ledger lines, ZERO duplication!
       expect(serverPaymentsTable.size).toBe(1)
       expect(serverLedgerLines).toHaveLength(2)
 
@@ -280,7 +491,7 @@ describe('Phase 7: Per-User Local-First, State Machine & Failover Replay', () =>
       const totalCredits = serverLedgerLines.reduce((sum, l) => sum + l.credit, 0)
       expect(totalDebits).toBe(50000)
       expect(totalCredits).toBe(50000)
-      expect(totalDebits).toBe(totalCredits) // Perfectly balanced
+      expect(totalDebits).toBe(totalCredits)
 
       const clientViewFinal = stateMachine.getObservabilitySummary(TEST_WORKSPACE_ID, TEST_USER_ID)
       expect(clientViewFinal.serverCommittedCount).toBe(1)

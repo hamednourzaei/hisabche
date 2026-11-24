@@ -8,6 +8,7 @@
 // without extra migrations, while keeping an in-process cache for fast hooks.
 // ============================================
 
+import { createHmac } from 'node:crypto'
 import {
   DEFAULT_INFRASTRUCTURE_SETTINGS,
   buildNginxConfigDirectives,
@@ -17,21 +18,32 @@ import {
   updateInfrastructureSettingsSchema,
 } from '@hisabche/validation'
 import { supabase } from '../../db'
+import { DatabaseError } from '../../errors/database.error'
 import { INFRASTRUCTURE_FLAG_KEY } from '../../runtime/maintenance-mode'
 import { setServiceModeInput } from '../../runtime/service-mode'
 import { AdminSecurityService } from './admin-security.service'
 
 const REFRESH_MS = 10_000
 
+function currentEdgeControlMode(): 'fastify_runtime_only' | 'webhook_synced' {
+  return process.env.NGINX_RELOAD_WEBHOOK_URL ? 'webhook_synced' : 'fastify_runtime_only'
+}
+
 class AdminInfrastructureService {
   private currentSettings: InfrastructureSettings = {
     ...DEFAULT_INFRASTRUCTURE_SETTINGS,
+    edgeControlMode: currentEdgeControlMode(),
     updatedAt: new Date().toISOString(),
     updatedBy: 'system',
   }
   private lastReadMs = 0
   private inflight: Promise<InfrastructureSettings> | null = null
   private refreshEnabled = false
+  private reloadFetch: typeof fetch = globalThis.fetch
+
+  setReloadFetchForTest(fn: typeof fetch | null): void {
+    this.reloadFetch = fn ?? globalThis.fetch
+  }
 
   enableRefresh(): void {
     this.refreshEnabled = true
@@ -71,11 +83,10 @@ class AdminInfrastructureService {
                 typeof data.is_enabled === 'boolean'
                   ? data.is_enabled
                   : parsed.data.nginxProxyEnabled,
+              edgeControlMode: currentEdgeControlMode(),
               updatedAt: parsed.data.updatedAt ?? data.updated_at ?? this.currentSettings.updatedAt,
             }
-            if (this.currentSettings.maintenanceMode) {
-              setServiceModeInput({ maintenance: true })
-            }
+            setServiceModeInput({ maintenance: this.currentSettings.maintenanceMode })
           }
         }
       } catch {
@@ -106,6 +117,7 @@ class AdminInfrastructureService {
         ;(next as Record<string, unknown>)[key] = value
       }
     }
+    next.edgeControlMode = currentEdgeControlMode()
     next.updatedAt = now
     next.updatedBy = adminEmail
     this.currentSettings = next
@@ -115,23 +127,81 @@ class AdminInfrastructureService {
       setServiceModeInput({ maintenance: next.maintenanceMode })
     }
 
-    try {
-      await supabase.from('feature_flags').upsert(
-        {
-          key: INFRASTRUCTURE_FLAG_KEY,
-          name: 'Infrastructure & Nginx Control Plane',
-          description: JSON.stringify(next),
-          is_enabled: next.nginxProxyEnabled,
-          rollout_percentage: next.nginxProxyEnabled ? 100 : 0,
-          platforms: [],
-          countries: [],
-          is_beta: false,
-          updated_at: now,
-        },
-        { onConflict: 'key' },
+    const { error } = await supabase.from('feature_flags').upsert(
+      {
+        key: INFRASTRUCTURE_FLAG_KEY,
+        name: 'Infrastructure & Nginx Control Plane',
+        description: JSON.stringify(next),
+        is_enabled: next.nginxProxyEnabled,
+        rollout_percentage: next.nginxProxyEnabled ? 100 : 0,
+        platforms: [],
+        countries: [],
+        is_beta: false,
+        updated_at: now,
+      },
+      { onConflict: 'key' },
+    )
+    if (error) {
+      this.currentSettings = previous
+      setServiceModeInput({ maintenance: previous.maintenanceMode })
+      throw new DatabaseError(`Failed to persist infrastructure settings: ${error.message}`)
+    }
+
+    // If an external Nginx reload agent/webhook is configured, push directives for
+    // `nginx -t && nginx -s reload` and roll back persisted settings on failure.
+    const webhookUrl = process.env.NGINX_RELOAD_WEBHOOK_URL
+    if (webhookUrl) {
+      const directives = buildNginxConfigDirectives(next)
+      const bodyJson = JSON.stringify({
+        action: 'validate_and_reload',
+        directives,
+        settings: next,
+      })
+      const sig = createHmac(
+        'sha256',
+        process.env.NGINX_RELOAD_WEBHOOK_SECRET || process.env.JWT_SECRET || 'hisabche-infra',
       )
-    } catch {
-      // Tolerate unmigrated/mock DB in dev/unit test runs while keeping in-process state consistent
+        .update(bodyJson)
+        .digest('hex')
+
+      let reloadOk = false
+      let reloadFailureReason = 'unknown'
+      try {
+        const res = await this.reloadFetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-hisabche-infra-signature': sig,
+          },
+          body: bodyJson,
+        })
+        reloadOk = res.ok
+        if (!res.ok) reloadFailureReason = `HTTP ${res.status}`
+      } catch (err) {
+        reloadFailureReason = err instanceof Error ? err.message : 'webhook unreachable'
+      }
+
+      if (!reloadOk) {
+        this.currentSettings = previous
+        setServiceModeInput({ maintenance: previous.maintenanceMode })
+        await supabase.from('feature_flags').upsert(
+          {
+            key: INFRASTRUCTURE_FLAG_KEY,
+            name: 'Infrastructure & Nginx Control Plane',
+            description: JSON.stringify(previous),
+            is_enabled: previous.nginxProxyEnabled,
+            rollout_percentage: previous.nginxProxyEnabled ? 100 : 0,
+            platforms: [],
+            countries: [],
+            is_beta: false,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'key' },
+        )
+        throw new DatabaseError(
+          `Nginx reload webhook failed (${reloadFailureReason}); settings rolled back to previous state.`,
+        )
+      }
     }
 
     try {
@@ -153,12 +223,14 @@ class AdminInfrastructureService {
   resetToDefaults(): InfrastructureSettings {
     this.currentSettings = {
       ...DEFAULT_INFRASTRUCTURE_SETTINGS,
+      edgeControlMode: currentEdgeControlMode(),
       updatedAt: new Date().toISOString(),
       updatedBy: 'system',
     }
     this.lastReadMs = 0
     this.inflight = null
     this.refreshEnabled = false
+    this.reloadFetch = globalThis.fetch
     setServiceModeInput({ maintenance: false })
     return { ...this.currentSettings }
   }

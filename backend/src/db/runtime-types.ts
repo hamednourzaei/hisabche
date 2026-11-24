@@ -23,6 +23,7 @@ export interface FencingToken {
   readonly epoch: number
   readonly writerId: string
   readonly issuedAt: string
+  readonly signature?: string | undefined
 }
 
 export interface WriterLease {
@@ -32,6 +33,39 @@ export interface WriterLease {
   readonly expiresAt: string
   readonly active: boolean
   readonly fenceSignature?: string | undefined
+}
+
+export interface DistributedWriterLeaseRecord {
+  readonly clusterKey: string
+  readonly epoch: number
+  readonly writerId: string
+  readonly leaseExpiresAt: string
+  readonly fenceSignature?: string | undefined
+}
+
+export interface WriterLeaseStore {
+  readLease(clusterKey: string): Promise<DistributedWriterLeaseRecord | null>
+  acquireOrRenewLease(params: {
+    clusterKey: string
+    writerId: string
+    epoch: number
+    ttlMs: number
+    fenceSignature: string
+  }): Promise<DistributedWriterLeaseRecord>
+  promoteStandby(params: {
+    clusterKey: string
+    expectedEpoch: number
+    newWriterId: string
+    authorizedBy: string
+    reason: string
+    ttlMs: number
+    fenceSignature: string
+  }): Promise<DistributedWriterLeaseRecord>
+  assertWriterEpoch(params: {
+    clusterKey: string
+    writerId: string
+    epoch: number
+  }): Promise<boolean>
 }
 
 export interface DatabaseHealth {
@@ -61,4 +95,5 @@ export interface PromotionDecision {
   readonly reason: string
   readonly authorizedBy: string
   readonly timestamp: string
+  readonly clusterKey?: string | undefined
 }

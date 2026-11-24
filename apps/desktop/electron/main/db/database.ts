@@ -24,7 +24,16 @@ import {
   type LocalTable,
   type QueueEntry,
 } from '@hisabche/app-bridge'
-import type { LocalDb, RunResult } from '@hisabche/local-engine'
+import {
+  PerUserPartitionManager,
+  type LocalDb,
+  type RunResult,
+  type SqlCipherActivationResult,
+  type SqlCipherPragmaTarget,
+  type UserDatabaseConfig,
+  type UserPartitionInfo,
+} from '@hisabche/local-engine'
+import { secureGet, secureSet } from '../services/secure-store'
 
 type SqliteDatabase = {
   prepare(sql: string): {
@@ -92,6 +101,60 @@ function runMigrations(database: SqliteDatabase): void {
       }
     }
   }
+}
+
+export function getOrCreatePartitionMasterSecret(): string {
+  const EXISTING_KEY = 'hisabche.partition.master'
+  const existing = secureGet(EXISTING_KEY)
+  if (existing && existing.length >= 32) {
+    return existing
+  }
+  const generated = PerUserPartitionManager.generateDeviceMasterSecret()
+  secureSet(EXISTING_KEY, generated)
+  return generated
+}
+
+export function openUserPartitionWith(
+  Driver: new (path: string) => SqliteDatabase,
+  config: Omit<UserDatabaseConfig, 'deviceMasterSecret'> & {
+    deviceMasterSecret?: string | undefined
+    requireNativeSqlCipher?: boolean | undefined
+  },
+): {
+  opened: boolean
+  partition: UserPartitionInfo
+  encryption: SqlCipherActivationResult
+} {
+  const masterSecret = config.deviceMasterSecret ?? getOrCreatePartitionMasterSecret()
+  const partition = PerUserPartitionManager.resolvePartition({
+    ...config,
+    deviceMasterSecret: masterSecret,
+  })
+  const candidate = new Driver(partition.fullPath)
+  let encryption: SqlCipherActivationResult
+  try {
+    encryption = PerUserPartitionManager.configureSqliteCipher(
+      candidate as SqlCipherPragmaTarget,
+      partition,
+      { requireNativeSqlCipher: config.requireNativeSqlCipher },
+    )
+    candidate.pragma('journal_mode = WAL')
+    candidate.pragma('foreign_keys = ON')
+    CREATE_STATEMENTS.forEach((statement) => candidate.exec(statement))
+    runMigrations(candidate)
+    candidate
+      .prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)')
+      .run('schema_version', String(SCHEMA_VERSION))
+  } catch (error) {
+    candidate.close()
+    lastFailure = error instanceof Error ? error.message : String(error)
+    reportError(error, { scope: 'db.openPartition' })
+    throw error
+  }
+
+  db?.close()
+  db = candidate
+  return { opened: true, partition, encryption }
 }
 
 export function initDatabaseWith(
