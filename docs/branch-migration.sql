@@ -80,23 +80,58 @@ CREATE POLICY branches_workspace_members ON branches
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
+-- ⚠️ One policy per command. `rls-performance-migration.sql` used to add
+-- `member_branches_own_rows` (SELECT, user-only) on top of a FOR ALL policy —
+-- two permissive SELECT policies for the same role (multiple_permissive_policies).
+-- The split keeps the exact effective access: reads = workspace rows OR the
+-- user's own rows; writes = workspace rows only.
 DROP POLICY IF EXISTS member_branches_workspace_members ON member_branches;
-CREATE POLICY member_branches_workspace_members ON member_branches
-  FOR ALL TO authenticated
+DROP POLICY IF EXISTS member_branches_own_rows ON member_branches;
+DROP POLICY IF EXISTS member_branches_select ON member_branches;
+DROP POLICY IF EXISTS member_branches_insert ON member_branches;
+DROP POLICY IF EXISTS member_branches_update ON member_branches;
+DROP POLICY IF EXISTS member_branches_delete ON member_branches;
+
+CREATE POLICY member_branches_select ON member_branches
+  FOR SELECT TO authenticated
+  USING (
+    workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+    )
+    OR user_id = (SELECT auth.uid())
+  );
+
+CREATE POLICY member_branches_insert ON member_branches
+  FOR INSERT TO authenticated
+  WITH CHECK (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+  ));
+
+CREATE POLICY member_branches_update ON member_branches
+  FOR UPDATE TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+  ));
+
+CREATE POLICY member_branches_delete ON member_branches
+  FOR DELETE TO authenticated
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;

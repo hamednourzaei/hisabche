@@ -14,6 +14,7 @@ import {
   computeItemTotal,
   createInvoiceSchema,
   computePackageDeferrals,
+  creationPaymentTranches,
   cutLossIssue,
   invoiceLedgerLines,
   isPackageOffering,
@@ -985,12 +986,35 @@ export function registerInvoiceRoutes(router: Router): void {
         }
       }
 
-      // 8. Payment settlement if paidAmount > 0 or payments array provided
-      const paidInput = Number(raw.paidAmount ?? raw.paid_amount) || 0
-      if (paidInput > 0) {
-        const paymentAmount = Math.min(paidInput, total)
+      // 8. Payment settlement — ONE ROW PER TRANCHE.
+      //
+      // ⚠️ The screen sends the whole `payments` array (cash + bank + …). This
+      // route used to read only `paidAmount` (the sum) and stamp `paymentMethod`
+      // on the single row it wrote, so a split payment became one cash payment
+      // on the device and several rows on the server. The till, the bank
+      // reconciliation and the party statement then disagreed about money that
+      // had already been taken. `creationPaymentTranches` is the same rule the
+      // server runs: `payments[]` is authoritative, `paidAmount` is only the
+      // legacy single-tranche request, and a `credit` row is not money.
+      const tranches = creationPaymentTranches({
+        payments: data.payments,
+        paidAmount: Number(raw.paidAmount ?? raw.paid_amount ?? data.paidAmount) || 0,
+        paymentMethod: data.paymentMethod,
+        reference: data.reference,
+      })
+      const paidTotal = round2(tranches.reduce((sum, tranche) => sum + tranche.amount, 0))
+
+      // ⚠️ MORE MONEY THAN THE INVOICE IS REFUSED, exactly as the server
+      // refuses it (`PAYMENT_ALLOCATION_EXCEEDS_OUTSTANDING`). Capping the sum
+      // at the total silently dropped the rest of the cash the person took.
+      if (paidTotal > round2(total) + 0.005) {
+        throw new ValidationError('PAYMENT_ALLOCATION_EXCEEDS_OUTSTANDING')
+      }
+
+      tranches.forEach((tranche, index) => {
         const paymentId = generateUuid()
-        const paymentNumber = `PAY-${invoiceNumber}`
+        const paymentNumber =
+          tranches.length > 1 ? `PAY-${invoiceNumber}-${index + 1}` : `PAY-${invoiceNumber}`
         const partyType = type === 'purchase' ? 'supplier' : 'customer'
         const partyId = type === 'purchase' ? supplierId : customerId
         const direction = type === 'purchase' ? 'out' : 'in'
@@ -1008,9 +1032,9 @@ export function registerInvoiceRoutes(router: Router): void {
             direction,
             partyType,
             partyId,
-            paymentAmount,
+            tranche.amount,
             currency,
-            paymentMethod,
+            tranche.method,
             date,
             invoiceNumber,
             'پرداخت در زمان ثبت فاکتور',
@@ -1024,12 +1048,24 @@ export function registerInvoiceRoutes(router: Router): void {
             id, workspace_id, payment_id, invoice_id, amount,
             created_at, updated_at, origin, sync_state
           ) VALUES (?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
-          [generateUuid(), workspaceId, paymentId, invoiceId, paymentAmount, now, now],
+          [generateUuid(), workspaceId, paymentId, invoiceId, tranche.amount, now, now],
         )
+      })
 
-        const newStatus = paymentAmount >= total ? 'completed' : 'partial'
+      if (paidTotal > 0) {
+        const newStatus = paidTotal >= total ? 'completed' : 'partial'
         db.run('UPDATE invoice SET paid_amount = ?, status = ?, updated_at = ? WHERE id = ?', [
-          paymentAmount,
+          paidTotal,
+          newStatus,
+          now,
+          invoiceId,
+        ])
+      }
+
+      if (paidTotal > 0) {
+        const newStatus = paidTotal >= total ? 'completed' : 'partial'
+        db.run('UPDATE invoice SET paid_amount = ?, status = ?, updated_at = ? WHERE id = ?', [
+          paidTotal,
           newStatus,
           now,
           invoiceId,

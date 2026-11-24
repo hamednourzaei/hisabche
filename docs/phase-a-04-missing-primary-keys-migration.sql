@@ -99,7 +99,7 @@ END
 $cs$;
 
 -- Also index the tenancy boundary, which every read of this table filters on.
-CREATE INDEX IF NOT EXISTS checkout_sessions_workspace_idx
+CREATE INDEX IF NOT EXISTS checkout_sessions_workspace_id_idx
   ON checkout_sessions (workspace_id);
 
 -- ---------------------------------------------------------------------------

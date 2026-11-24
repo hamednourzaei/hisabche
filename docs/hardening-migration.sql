@@ -294,6 +294,26 @@ CREATE INDEX IF NOT EXISTS products_workspace_id_sku_idx ON products (workspace_
 CREATE INDEX IF NOT EXISTS activities_workspace_id_entity_type_entity_id_idx ON activities (workspace_id, entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS workspace_members_user_id_workspace_id_idx ON workspace_members (user_id, workspace_id);
 
+-- ─── Drop superseded duplicate indexes (duplicate_index) ────────────────────
+-- Each index below is byte-for-byte redundant with a canonical index created
+-- above (same table, same columns, same order). They survived under an older
+-- name; the canonical name is the one the code and constraints reference.
+-- Dropping them clears Supabase's duplicate_index advisories with zero change
+-- to query plans — the canonical index serves every lookup the duplicate did.
+DROP INDEX IF EXISTS checkout_sessions_workspace_idx;      -- ≡ checkout_sessions_workspace_id_idx
+DROP INDEX IF EXISTS customers_workspace_idx;              -- ≡ customers_workspace_id_idx
+DROP INDEX IF EXISTS invoice_items_invoice_idx;            -- ≡ invoice_items_invoice_id_idx
+DROP INDEX IF EXISTS invoices_workspace_idx;               -- ≡ invoices_workspace_id_idx
+DROP INDEX IF EXISTS invoices_workspace_customer_idx;      -- ≡ invoices_workspace_id_customer_id_idx
+DROP INDEX IF EXISTS journal_lines_workspace_account_idx;  -- ≡ journal_lines_workspace_id_account_id_idx
+DROP INDEX IF EXISTS products_workspace_idx;               -- ≡ products_workspace_id_idx
+DROP INDEX IF EXISTS stock_movements_workspace_idx;        -- ≡ stock_movements_workspace_product_idx
+DROP INDEX IF EXISTS subscriptions_workspace_idx;          -- ≡ subscriptions_workspace_id_idx
+DROP INDEX IF EXISTS sync_change_log_ws_version_idx;       -- ≡ sync_change_log_workspace_version_idx
+DROP INDEX IF EXISTS transactions_workspace_idx;           -- ≡ transactions_workspace_id_idx
+DROP INDEX IF EXISTS transactions_workspace_customer_idx;  -- ≡ transactions_workspace_id_customer_id_idx
+DROP INDEX IF EXISTS workspace_members_workspace_idx;      -- ≡ workspace_members_workspace_id_idx
+
 COMMIT;
 
 

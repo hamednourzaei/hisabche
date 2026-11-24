@@ -70,7 +70,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT workspace_id FROM workspace_members
-  WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL;
+  WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL;
 $$;
 
 CREATE OR REPLACE FUNCTION is_workspace_member(_workspace_id uuid, _user_id uuid)
@@ -97,7 +97,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT workspace_id FROM workspace_members
-  WHERE user_id = auth.uid()
+  WHERE user_id = (SELECT auth.uid())
     AND role = 'owner'
     AND has_access = true
     AND suspended_at IS NULL;
@@ -121,17 +121,20 @@ REVOKE EXECUTE ON FUNCTION auth_owned_workspace_ids() FROM anon;
 -- and it was broken from the first day while nobody noticed, because the
 -- backend connects with `service_role` and bypasses RLS entirely.
 
+-- ⚠️ ONE SELECT policy, not two. Two permissive SELECT policies for the same
+-- role are OR'd by Postgres — identical rows, but Supabase flags the pair as
+-- multiple_permissive_policies and the planner pays for two policy evaluations.
+-- The OR below is exactly what the two old policies (own_row + colleagues)
+-- produced together. `is_workspace_member` is SECURITY DEFINER, so reading
+-- `workspace_members` inside it does not re-enter this policy.
 DROP POLICY IF EXISTS workspace_members_own_row ON workspace_members;
+DROP POLICY IF EXISTS workspace_members_colleagues ON workspace_members;
 CREATE POLICY workspace_members_own_row ON workspace_members
   FOR SELECT TO authenticated
-  USING (user_id = (SELECT auth.uid()));
-
-DROP POLICY IF EXISTS workspace_members_colleagues ON workspace_members;
-CREATE POLICY workspace_members_colleagues ON workspace_members
-  FOR SELECT TO authenticated
-  -- SECURITY DEFINER, so reading `workspace_members` inside it does not
-  -- re-enter this policy.
-  USING (is_workspace_member(workspace_id, (SELECT auth.uid())));
+  USING (
+    user_id = (SELECT auth.uid())
+    OR is_workspace_member(workspace_id, (SELECT auth.uid()))
+  );
 
 DROP POLICY IF EXISTS workspace_members_insert ON workspace_members;
 CREATE POLICY workspace_members_insert ON workspace_members
@@ -151,23 +154,25 @@ CREATE POLICY workspace_members_delete ON workspace_members
 
 -- ─── The per-user tables ────────────────────────────────────────────────────
 --
--- These four are keyed by `user_id` rather than `workspace_id`, and that is
+-- These are keyed by `user_id` rather than `workspace_id`, and that is
 -- correct rather than an oversight:
 --
---   member_branches           which branches THIS person is pinned to
---   ui_visibility_profiles    what THIS person has hidden in their interface
 --   billing_events            what THIS person was charged
 --   notifications             what is waiting for THIS person
 --
 -- They are the documented exceptions to the workspace rule.
+--
+-- ⚠️ `member_branches` and `ui_visibility_profiles` used to be in this loop.
+-- Adding a second SELECT policy (`*_own_rows`) on top of the FOR ALL policy
+-- their own migrations already create produced multiple_permissive_policies
+-- warnings. They are now consolidated into one policy per command inside
+-- `branch-migration.sql` and `personalization-migration.sql`.
 
 DO $$
 DECLARE
   v_table TEXT;
 BEGIN
   FOREACH v_table IN ARRAY ARRAY[
-    'member_branches',
-    'ui_visibility_profiles',
     'billing_events',
     'notifications'
   ] LOOP
@@ -201,7 +206,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS workspace_members_user_idx
   ON workspace_members (user_id);
 
-CREATE INDEX IF NOT EXISTS workspace_members_workspace_idx
+CREATE INDEX IF NOT EXISTS workspace_members_workspace_id_idx
   ON workspace_members (workspace_id);
 
 DO $$

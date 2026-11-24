@@ -98,6 +98,7 @@ CREATE INDEX IF NOT EXISTS repair_ticket_events_ticket_idx
 CREATE OR REPLACE FUNCTION public.repair_ticket_events_append_only()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $fn$
 BEGIN
   IF pg_trigger_depth() > 1 THEN

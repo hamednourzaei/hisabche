@@ -76,7 +76,7 @@ CREATE POLICY api_request_logs_managers_read ON api_request_logs
   USING (EXISTS (
     SELECT 1 FROM workspace_members m
      WHERE m.workspace_id = api_request_logs.workspace_id
-       AND m.user_id = auth.uid()
+       AND m.user_id = (SELECT auth.uid())
        AND m.has_access = true
        AND m.suspended_at IS NULL
        AND m.role IN ('owner', 'admin', 'manager')

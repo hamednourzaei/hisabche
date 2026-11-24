@@ -33,7 +33,9 @@ ALTER TABLE public.offline_license_signing_keys
   ALTER COLUMN private_key_hex SET NOT NULL;
 
 CREATE OR REPLACE FUNCTION public.offline_license_signing_keys_guard()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'OFFLINE_SIGNING_KEY_PERMANENT';

@@ -123,13 +123,18 @@ REVOKE ALL ON public.devices FROM PUBLIC, anon, authenticated;
 GRANT ALL ON public.offline_licenses TO service_role;
 GRANT ALL ON public.devices TO service_role;
 
+-- Drop first so a re-run rebuilds these with (SELECT auth.uid()) rather than
+-- skipping via the IF NOT EXISTS guard (auth_rls_initplan).
+DROP POLICY IF EXISTS offline_licenses_members_read ON public.offline_licenses;
+DROP POLICY IF EXISTS devices_members_read ON public.devices;
+
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'offline_licenses' AND policyname = 'offline_licenses_members_read') THEN
     CREATE POLICY offline_licenses_members_read ON public.offline_licenses
       FOR SELECT TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;
@@ -138,7 +143,7 @@ DO $$ BEGIN
       FOR SELECT TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;

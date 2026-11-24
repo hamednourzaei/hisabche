@@ -140,7 +140,7 @@ CREATE POLICY budget_revisions_workspace_members ON public.budget_revisions
   FOR SELECT TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 -- ─── budget_performance_batch — ONE call for the whole page ─────────────────

@@ -1338,13 +1338,13 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-           WHERE user_id = auth.uid()
+           WHERE user_id = (SELECT auth.uid())
              AND has_access = true
              AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-           WHERE user_id = auth.uid()
+           WHERE user_id = (SELECT auth.uid())
              AND has_access = true
              AND suspended_at IS NULL
         ))
@@ -1542,10 +1542,10 @@ END $$;
 -- The indexes every workspace-scoped read will use. Not CONCURRENTLY here
 -- because the column is still empty and the tables are small; on a table above
 -- ~1M rows, run these separately with CONCURRENTLY and outside a transaction.
-CREATE INDEX IF NOT EXISTS invoices_workspace_idx     ON invoices     (workspace_id);
-CREATE INDEX IF NOT EXISTS customers_workspace_idx    ON customers    (workspace_id);
-CREATE INDEX IF NOT EXISTS products_workspace_idx     ON products     (workspace_id);
-CREATE INDEX IF NOT EXISTS transactions_workspace_idx ON transactions (workspace_id);
+CREATE INDEX IF NOT EXISTS invoices_workspace_id_idx     ON invoices     (workspace_id);
+CREATE INDEX IF NOT EXISTS customers_workspace_id_idx    ON customers    (workspace_id);
+CREATE INDEX IF NOT EXISTS products_workspace_id_idx     ON products     (workspace_id);
+CREATE INDEX IF NOT EXISTS transactions_workspace_id_idx ON transactions (workspace_id);
 
 -- The composite the invoice list actually sorts by.
 CREATE INDEX IF NOT EXISTS invoices_workspace_date_idx
@@ -1871,7 +1871,7 @@ SET search_path = public, pg_temp
 AS $$
   SELECT m.workspace_id
     FROM workspace_members m
-   WHERE m.user_id = auth.uid()
+   WHERE m.user_id = (SELECT auth.uid())
      AND m.has_access = true
      AND m.suspended_at IS NULL
 $$;
@@ -2184,7 +2184,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -2196,7 +2196,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );
@@ -2291,7 +2291,7 @@ CREATE POLICY invoice_items_workspace_members ON invoice_items
       WHERE i.id = invoice_items.invoice_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -2301,7 +2301,7 @@ CREATE POLICY invoice_items_workspace_members ON invoice_items
       WHERE i.id = invoice_items.invoice_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );
@@ -2321,7 +2321,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -2333,13 +2333,13 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );
 
 -- The joins above are only fast with these.
-CREATE INDEX IF NOT EXISTS invoice_items_invoice_idx
+CREATE INDEX IF NOT EXISTS invoice_items_invoice_id_idx
   ON invoice_items (invoice_id);
 CREATE INDEX IF NOT EXISTS invoice_item_details_item_idx
   ON invoice_item_details (invoice_item_id);
@@ -2427,7 +2427,7 @@ CREATE INDEX IF NOT EXISTS journal_entries_workspace_date_idx
 
 ALTER TABLE journal_lines ADD COLUMN IF NOT EXISTS workspace_id uuid;
 
-CREATE INDEX IF NOT EXISTS journal_lines_workspace_account_idx
+CREATE INDEX IF NOT EXISTS journal_lines_workspace_id_account_id_idx
   ON journal_lines (workspace_id, account_id);
 
 -- A line is one side or the other, never both and never neither.
@@ -2685,11 +2685,11 @@ CREATE POLICY accounts_workspace_members ON accounts
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS journal_entries_workspace_members ON journal_entries;
@@ -2697,11 +2697,11 @@ CREATE POLICY journal_entries_workspace_members ON journal_entries
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS journal_lines_workspace_members ON journal_lines;
@@ -2709,11 +2709,11 @@ CREATE POLICY journal_lines_workspace_members ON journal_lines
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS accounting_period_locks_workspace_members ON accounting_period_locks;
@@ -2721,11 +2721,11 @@ CREATE POLICY accounting_period_locks_workspace_members ON accounting_period_loc
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3195,11 +3195,11 @@ CREATE POLICY cost_layers_workspace_members ON cost_layers
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS cost_consumptions_workspace_members ON cost_consumptions;
@@ -3207,11 +3207,11 @@ CREATE POLICY cost_consumptions_workspace_members ON cost_consumptions
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS inventory_settings_workspace_members ON inventory_settings;
@@ -3219,11 +3219,11 @@ CREATE POLICY inventory_settings_workspace_members ON inventory_settings
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS stock_movements_workspace_members ON stock_movements;
@@ -3231,11 +3231,11 @@ CREATE POLICY stock_movements_workspace_members ON stock_movements
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3347,11 +3347,11 @@ CREATE POLICY warehouses_workspace_members ON warehouses
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS warehouse_stock_workspace_members ON warehouse_stock;
@@ -3359,11 +3359,11 @@ CREATE POLICY warehouse_stock_workspace_members ON warehouse_stock
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3634,11 +3634,11 @@ CREATE POLICY payments_workspace_members ON payments
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS payment_allocations_workspace_members ON payment_allocations;
@@ -3646,11 +3646,11 @@ CREATE POLICY payment_allocations_workspace_members ON payment_allocations
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3733,11 +3733,11 @@ CREATE POLICY sync_conflicts_workspace_members ON sync_conflicts
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3819,11 +3819,11 @@ CREATE POLICY sod_settings_workspace_members ON sod_settings
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS sod_actions_workspace_members ON sod_actions;
@@ -3831,11 +3831,11 @@ CREATE POLICY sod_actions_workspace_members ON sod_actions
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS sod_overrides_workspace_members ON sod_overrides;
@@ -3843,11 +3843,11 @@ CREATE POLICY sod_overrides_workspace_members ON sod_overrides
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -3939,11 +3939,11 @@ CREATE POLICY branches_workspace_members ON branches
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS member_branches_workspace_members ON member_branches;
@@ -3951,11 +3951,11 @@ CREATE POLICY member_branches_workspace_members ON member_branches
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -4082,17 +4082,17 @@ DROP POLICY IF EXISTS ui_visibility_profiles_own ON ui_visibility_profiles;
 CREATE POLICY ui_visibility_profiles_own ON ui_visibility_profiles
   FOR ALL TO authenticated
   USING (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   )
   WITH CHECK (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   );
 
@@ -4100,17 +4100,17 @@ DROP POLICY IF EXISTS ui_visibility_suggestions_own ON ui_visibility_suggestions
 CREATE POLICY ui_visibility_suggestions_own ON ui_visibility_suggestions
   FOR ALL TO authenticated
   USING (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   )
   WITH CHECK (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   );
 
@@ -4194,11 +4194,11 @@ CREATE POLICY business_rules_workspace_members ON business_rules
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS rule_decisions_workspace_members ON rule_decisions;
@@ -4206,11 +4206,11 @@ CREATE POLICY rule_decisions_workspace_members ON rule_decisions
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 -- ─── Workflows grow a workspace ─────────────────────────────────────────────
@@ -4281,11 +4281,11 @@ CREATE POLICY mdm_merges_workspace_members ON mdm_merges
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -4413,11 +4413,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -4609,11 +4609,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -4765,11 +4765,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -5071,11 +5071,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -5306,11 +5306,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -5343,11 +5343,11 @@ CREATE POLICY suppliers_workspace_members ON suppliers
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 -- ─── The till order, written atomically ─────────────────────────────────────
@@ -5495,11 +5495,11 @@ CREATE POLICY exchange_rates_workspace_members ON exchange_rates
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 -- ─── 2. invoice_items had no workspace of its own ───────────────────────────
@@ -6122,11 +6122,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;
@@ -6182,11 +6182,11 @@ CREATE POLICY migration_profiles_workspace_members ON migration_profiles
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -6734,7 +6734,7 @@ SET search_path = public, pg_temp
 AS $$
   SELECT m.workspace_id
     FROM workspace_members m
-   WHERE m.user_id = auth.uid()
+   WHERE m.user_id = (SELECT auth.uid())
      AND m.has_access = true
      AND m.suspended_at IS NULL
 $$;
@@ -6786,7 +6786,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-  SELECT w.id FROM workspaces w WHERE w.owner_id = auth.uid()
+  SELECT w.id FROM workspaces w WHERE w.owner_id = (SELECT auth.uid())
 $$;
 
 REVOKE ALL ON FUNCTION auth_owned_workspace_ids() FROM PUBLIC;
@@ -6807,7 +6807,7 @@ DROP POLICY IF EXISTS workspace_members_select ON workspace_members;
 DROP POLICY IF EXISTS workspace_members_own_row ON workspace_members;
 CREATE POLICY workspace_members_own_row ON workspace_members
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (SELECT auth.uid()));
 
 -- ─── 3. Route every other policy through the function ───────────────────────
 --
@@ -6967,7 +6967,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT workspace_id FROM workspace_members
-  WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL;
+  WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL;
 $$;
 
 CREATE OR REPLACE FUNCTION is_workspace_member(_workspace_id uuid, _user_id uuid)
@@ -6994,7 +6994,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT workspace_id FROM workspace_members
-  WHERE user_id = auth.uid()
+  WHERE user_id = (SELECT auth.uid())
     AND role = 'owner'
     AND has_access = true
     AND suspended_at IS NULL;
@@ -7098,7 +7098,7 @@ END $$;
 CREATE INDEX IF NOT EXISTS workspace_members_user_idx
   ON workspace_members (user_id);
 
-CREATE INDEX IF NOT EXISTS workspace_members_workspace_idx
+CREATE INDEX IF NOT EXISTS workspace_members_workspace_id_idx
   ON workspace_members (workspace_id);
 
 DO $$
@@ -8632,7 +8632,7 @@ END $$;
 -- ON DELETE RESTRICT, never CASCADE: deleting a workspace must not silently
 -- delete its billing relationship. It should fail loudly.
 
-CREATE INDEX IF NOT EXISTS subscriptions_workspace_idx ON subscriptions (workspace_id);
+CREATE INDEX IF NOT EXISTS subscriptions_workspace_id_idx ON subscriptions (workspace_id);
 
 -- At most ONE subscription per workspace — the hierarchy says
 -- "ONE Workspace Subscription". Partial, so the many pre-backfill NULLs do not
@@ -8777,7 +8777,7 @@ WHERE i.indexrelid IN (
 -- remains the record of who bought the plan.
 --
 -- DROP INDEX IF EXISTS subscriptions_one_per_workspace_idx;
--- DROP INDEX IF EXISTS subscriptions_workspace_idx;
+-- DROP INDEX IF EXISTS subscriptions_workspace_id_idx;
 -- ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_workspace_fk;
 -- ALTER TABLE subscriptions DROP COLUMN IF EXISTS workspace_id;
 
@@ -8964,7 +8964,7 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select w.id from workspaces w where w.owner_id = auth.uid()
+  select w.id from workspaces w where w.owner_id = (SELECT auth.uid())
 $$;
 
 revoke all on function auth_owned_workspace_ids() from public;
@@ -8979,7 +8979,7 @@ drop policy if exists workspace_members_select on workspace_members;
 drop policy if exists workspace_members_own_row on workspace_members;
 create policy workspace_members_own_row on workspace_members
   for select
-  using (user_id = auth.uid());
+  using (user_id = (SELECT auth.uid()));
 
 -- Read, part two: your colleagues in a workspace you belong to.
 --
@@ -8989,7 +8989,7 @@ create policy workspace_members_own_row on workspace_members
 drop policy if exists workspace_members_colleagues on workspace_members;
 create policy workspace_members_colleagues on workspace_members
   for select
-  using (is_workspace_member(workspace_id, auth.uid()));
+  using (is_workspace_member(workspace_id, (SELECT auth.uid())));
 
 -- Write: only the workspace owner adds, changes or removes colleagues.
 drop policy if exists workspace_members_insert on workspace_members;

@@ -248,6 +248,7 @@ CREATE INDEX IF NOT EXISTS remittance_events_idx ON public.remittance_events (re
 CREATE OR REPLACE FUNCTION public.remittance_events_append_only()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $fn$
 BEGIN
   IF pg_trigger_depth() > 1 THEN

@@ -126,6 +126,9 @@ CREATE TRIGGER trg_pkg_susp_immutable
   BEFORE UPDATE OR DELETE ON public.package_credit_suspensions
   FOR EACH ROW EXECUTE FUNCTION public.prevent_package_credit_side_table_mutation();
 
+-- Trigger-only guard: fires on DML, never callable via /rpc by client roles.
+REVOKE ALL ON FUNCTION public.prevent_package_credit_side_table_mutation() FROM PUBLIC, anon, authenticated, service_role;
+
 -- Privileges: a new Supabase table is born with ALL for service_role / anon / authenticated - take it away first.
 REVOKE ALL ON public.package_credit_allocations FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON public.package_credit_suspensions FROM PUBLIC, anon, authenticated, service_role;
@@ -139,12 +142,12 @@ ALTER TABLE public.package_credit_suspensions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS package_credit_allocations_member_read ON public.package_credit_allocations;
 CREATE POLICY package_credit_allocations_member_read ON public.package_credit_allocations
   FOR SELECT TO authenticated
-  USING (workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()));
+  USING (workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())));
 
 DROP POLICY IF EXISTS package_credit_suspensions_member_read ON public.package_credit_suspensions;
 CREATE POLICY package_credit_suspensions_member_read ON public.package_credit_suspensions
   FOR SELECT TO authenticated
-  USING (workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()));
+  USING (workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())));
 
 -- 4. The allocation + release trigger --------------------------------------
 CREATE OR REPLACE FUNCTION public.package_credit_allocate()

@@ -8,13 +8,16 @@ describe('accrual-schedules-01-migration.sql (PG)', () => {
 
   beforeAll(async () => {
     pg = await startPg()
-    const baseSql = readFileSync(resolve(__dirname, '../../docs/base-schema-migration.sql'), 'utf8')
+    const baseSql = readFileSync(
+      resolve(__dirname, '../../../docs/base-schema-migration.sql'),
+      'utf8',
+    )
     const coreSql = readFileSync(
-      resolve(__dirname, '../../docs/accounting-core-migration.sql'),
+      resolve(__dirname, '../../../docs/accounting-core-migration.sql'),
       'utf8',
     )
     const migSql = readFileSync(
-      resolve(__dirname, '../../docs/accrual-schedules-01-migration.sql'),
+      resolve(__dirname, '../../../docs/accrual-schedules-01-migration.sql'),
       'utf8',
     )
     await pg.sql.unsafe(baseSql)

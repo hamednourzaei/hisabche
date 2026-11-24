@@ -123,11 +123,13 @@ CREATE INDEX IF NOT EXISTS license_logs_event_idx ON public.license_logs (event)
 
 -- Append-only trigger on license_logs: refuse updates and deletes
 CREATE OR REPLACE FUNCTION public.prevent_license_logs_mutation()
-RETURNS trigger AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   RAISE EXCEPTION 'license_logs is append-only: updates and deletes are forbidden';
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DO $$
 BEGIN
@@ -167,6 +169,11 @@ REVOKE ALL ON public.license_review_queue FROM PUBLIC, anon, authenticated;
 GRANT ALL ON public.license_logs TO service_role;
 GRANT ALL ON public.license_review_queue TO service_role;
 
+-- Drop first so a re-run rebuilds these with (SELECT auth.uid()) rather than
+-- skipping via the IF NOT EXISTS guard (auth_rls_initplan).
+DROP POLICY IF EXISTS license_logs_members_read ON public.license_logs;
+DROP POLICY IF EXISTS license_review_queue_members_read ON public.license_review_queue;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -177,7 +184,7 @@ BEGIN
       FOR SELECT TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;
@@ -190,7 +197,7 @@ BEGIN
       FOR SELECT TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;

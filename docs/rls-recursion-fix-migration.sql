@@ -61,7 +61,7 @@ SET search_path = public, pg_temp
 AS $$
   SELECT m.workspace_id
     FROM workspace_members m
-   WHERE m.user_id = auth.uid()
+   WHERE m.user_id = (SELECT auth.uid())
      AND m.has_access = true
      AND m.suspended_at IS NULL
 $$;
@@ -111,30 +111,38 @@ RETURNS SETOF uuid
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public
 AS $$
-  SELECT w.id FROM workspaces w WHERE w.owner_id = auth.uid()
+  SELECT workspace_id FROM workspace_members
+  WHERE user_id = (SELECT auth.uid())
+    AND role = 'owner'
+    AND has_access = true
+    AND suspended_at IS NULL
 $$;
 
-REVOKE ALL ON FUNCTION auth_owned_workspace_ids() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION auth_owned_workspace_ids() TO authenticated;
+REVOKE ALL ON FUNCTION auth_owned_workspace_ids() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION auth_owned_workspace_ids() TO authenticated, service_role;
 
 -- ─── 2. Remove the recursive policy ─────────────────────────────────────────
 --
--- Dropped, not rewritten: a second SELECT policy on this table already exists
--- and is correct — `workspace members can view members`, which goes through
--- `is_workspace_member(...)`, a SECURITY DEFINER function. Two SELECT policies
--- are OR'd together, so removing the broken one loses no access at all.
+-- Dropped, not rewritten: the colleague-read path goes through
+-- `is_workspace_member(...)`, a SECURITY DEFINER function, so it cannot loop.
+--
+-- ⚠️ ONE SELECT policy. own_row + colleagues as two permissive SELECT policies
+-- is what Supabase flags as multiple_permissive_policies; the OR below is the
+-- exact access the pair produced. A member reads their own row (the login path
+-- needs it before it knows which workspaces exist) plus everyone they share a
+-- workspace with.
 
 DROP POLICY IF EXISTS workspace_members_select ON workspace_members;
-
--- A member may always read their OWN membership row. This is what the login
--- path needs before it knows which workspaces exist, and it cannot recurse
--- because it never leaves the row being tested.
 DROP POLICY IF EXISTS workspace_members_own_row ON workspace_members;
+DROP POLICY IF EXISTS workspace_members_colleagues ON workspace_members;
 CREATE POLICY workspace_members_own_row ON workspace_members
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  USING (
+    user_id = (SELECT auth.uid())
+    OR is_workspace_member(workspace_id, (SELECT auth.uid()))
+  );
 
 -- ─── 3. Route every other policy through the function ───────────────────────
 --
@@ -185,6 +193,12 @@ CREATE POLICY workspaces_select_policy ON workspaces
 DROP POLICY IF EXISTS workspace_members_insert ON workspace_members;
 CREATE POLICY workspace_members_insert ON workspace_members
   FOR INSERT TO authenticated
+  WITH CHECK (workspace_id IN (SELECT auth_owned_workspace_ids()));
+
+DROP POLICY IF EXISTS workspace_members_update ON workspace_members;
+CREATE POLICY workspace_members_update ON workspace_members
+  FOR UPDATE TO authenticated
+  USING (workspace_id IN (SELECT auth_owned_workspace_ids()))
   WITH CHECK (workspace_id IN (SELECT auth_owned_workspace_ids()));
 
 DROP POLICY IF EXISTS workspace_members_delete ON workspace_members;

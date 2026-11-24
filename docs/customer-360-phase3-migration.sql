@@ -92,25 +92,25 @@ DROP POLICY IF EXISTS customer_documents_ws_select ON customer_documents;
 CREATE POLICY customer_documents_ws_select ON customer_documents FOR SELECT TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS customer_documents_ws_insert ON customer_documents;
 CREATE POLICY customer_documents_ws_insert ON customer_documents FOR INSERT TO authenticated
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS customer_documents_ws_update ON customer_documents;
 CREATE POLICY customer_documents_ws_update ON customer_documents FOR UPDATE TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 -- No DELETE policy: rows are soft-deleted.
 

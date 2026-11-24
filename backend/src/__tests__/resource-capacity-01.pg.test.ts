@@ -47,6 +47,7 @@ beforeAll(async () => {
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon; END IF;
       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role; END IF;
     END $$;
+    CREATE SCHEMA IF NOT EXISTS auth;
     CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
     CREATE TABLE IF NOT EXISTS public.workspaces (id uuid PRIMARY KEY);
     CREATE TABLE IF NOT EXISTS public.branches (id uuid PRIMARY KEY);

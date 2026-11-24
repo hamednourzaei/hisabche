@@ -136,7 +136,7 @@ CREATE POLICY api_keys_managers_read ON api_keys
   USING (EXISTS (
     SELECT 1 FROM workspace_members m
      WHERE m.workspace_id = api_keys.workspace_id
-       AND m.user_id = auth.uid()
+       AND m.user_id = (SELECT auth.uid())
        AND m.has_access = true
        AND m.suspended_at IS NULL
        AND m.role IN ('owner', 'admin', 'manager')
@@ -148,7 +148,7 @@ CREATE POLICY webhook_endpoints_managers_read ON webhook_endpoints
   USING (EXISTS (
     SELECT 1 FROM workspace_members m
      WHERE m.workspace_id = webhook_endpoints.workspace_id
-       AND m.user_id = auth.uid()
+       AND m.user_id = (SELECT auth.uid())
        AND m.has_access = true
        AND m.suspended_at IS NULL
        AND m.role IN ('owner', 'admin', 'manager')
@@ -160,7 +160,7 @@ CREATE POLICY webhook_deliveries_managers_read ON webhook_deliveries
   USING (EXISTS (
     SELECT 1 FROM workspace_members m
      WHERE m.workspace_id = webhook_deliveries.workspace_id
-       AND m.user_id = auth.uid()
+       AND m.user_id = (SELECT auth.uid())
        AND m.has_access = true
        AND m.suspended_at IS NULL
        AND m.role IN ('owner', 'admin', 'manager')

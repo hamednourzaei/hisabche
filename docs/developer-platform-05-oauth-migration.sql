@@ -93,7 +93,7 @@ CREATE POLICY oauth_apps_publisher_read ON oauth_apps
   USING (EXISTS (
     SELECT 1 FROM workspace_members m
      WHERE m.workspace_id = oauth_apps.owner_workspace_id
-       AND m.user_id = auth.uid()
+       AND m.user_id = (SELECT auth.uid())
        AND m.has_access = true
        AND m.suspended_at IS NULL
        AND m.role IN ('owner', 'admin', 'manager')

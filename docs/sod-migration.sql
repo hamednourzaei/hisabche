@@ -70,11 +70,11 @@ CREATE POLICY sod_settings_workspace_members ON sod_settings
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS sod_actions_workspace_members ON sod_actions;
@@ -82,11 +82,11 @@ CREATE POLICY sod_actions_workspace_members ON sod_actions
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS sod_overrides_workspace_members ON sod_overrides;
@@ -94,11 +94,11 @@ CREATE POLICY sod_overrides_workspace_members ON sod_overrides
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;

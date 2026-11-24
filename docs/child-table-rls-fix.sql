@@ -33,7 +33,11 @@ ALTER TABLE invoice_items         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_item_details  ENABLE ROW LEVEL SECURITY;
 
 -- ─── invoice_items ──────────────────────────────────────────────────────────
+-- `invoice_items_via_parent` (remaining-policies-migration.sql) is the same
+-- rule under a second name — two permissive FOR ALL policies for one role.
+-- This is the canonical one; the duplicate goes.
 
+DROP POLICY IF EXISTS invoice_items_via_parent ON invoice_items;
 DROP POLICY IF EXISTS invoice_items_workspace_members ON invoice_items;
 CREATE POLICY invoice_items_workspace_members ON invoice_items
   FOR ALL TO authenticated
@@ -43,7 +47,7 @@ CREATE POLICY invoice_items_workspace_members ON invoice_items
       WHERE i.id = invoice_items.invoice_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -53,7 +57,7 @@ CREATE POLICY invoice_items_workspace_members ON invoice_items
       WHERE i.id = invoice_items.invoice_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );
@@ -73,7 +77,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -85,13 +89,13 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );
 
 -- The joins above are only fast with these.
-CREATE INDEX IF NOT EXISTS invoice_items_invoice_idx
+CREATE INDEX IF NOT EXISTS invoice_items_invoice_id_idx
   ON invoice_items (invoice_id);
 CREATE INDEX IF NOT EXISTS invoice_item_details_item_idx
   ON invoice_item_details (invoice_item_id);

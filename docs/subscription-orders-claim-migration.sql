@@ -221,9 +221,10 @@ BEGIN
 END;
 $$;
 
--- Grant execution to authenticated users & service role
-REVOKE EXECUTE ON FUNCTION public.canonical_provision_workspace FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.canonical_provision_workspace TO authenticated, service_role;
+-- Backend-only RPC: provisioning runs from the backend as service_role (db.ts
+-- validates the key's role claim). Signed-in clients must not call it via /rpc.
+REVOKE EXECUTE ON FUNCTION public.canonical_provision_workspace FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.canonical_provision_workspace TO service_role;
 
 -- 5. Verification Query (Run to verify installation)
 -- SELECT id, plan, status FROM public.subscription_orders LIMIT 1;

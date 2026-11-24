@@ -476,18 +476,18 @@ CREATE POLICY blog_comments_read ON blog_comments
       SELECT 1 FROM public.blog_posts p
       WHERE p.id = post_id AND public.blog_post_is_public(p.status, p.published_at)
     ))
-    OR user_id = auth.uid()
+    OR user_id = (SELECT auth.uid())
   );
 
 DROP POLICY IF EXISTS blog_reactions_own_read ON public.blog_reactions;
 CREATE POLICY blog_reactions_own_read ON blog_reactions
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS blog_ratings_own_read ON public.blog_ratings;
 CREATE POLICY blog_ratings_own_read ON blog_ratings
   FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (SELECT auth.uid()));
 
 -- blog_post_view_days: no policy at all — clients read nothing; admin
 -- statistics come from blog_post_stats() through the backend.

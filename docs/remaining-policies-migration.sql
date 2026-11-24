@@ -90,6 +90,12 @@ END $$;
 -- table the caller cannot read returns false, so the child is unreachable for
 -- exactly the same rows the parent is.
 
+-- ⚠️ `invoice_items` used to be in this list. Its `_via_parent` policy is
+-- semantically identical to `invoice_items_workspace_members` from
+-- `child-table-rls-fix.sql` (both reach the parent invoice's workspace), and
+-- two permissive FOR ALL policies for the same role is exactly what Supabase
+-- flags as multiple_permissive_policies. The canonical policy is the
+-- child-table-rls-fix one; the duplicate is dropped below.
 DO $$
 DECLARE
   v_child  TEXT;
@@ -101,8 +107,7 @@ BEGIN
       ('workflow_steps',       'workflows',           'workflow_id'),
       ('workflow_actions',     'workflow_instances',  'instance_id'),
       ('purchase_order_items', 'purchase_orders',     'purchase_order_id'),
-      ('project_members',      'projects',            'project_id'),
-      ('invoice_items',        'invoices',            'invoice_id')
+      ('project_members',      'projects',            'project_id')
     ) AS t(child, parent, fk)
   LOOP
     IF NOT EXISTS (
@@ -134,6 +139,17 @@ BEGIN
 
     RAISE NOTICE 'parent policy: % via %', v_child, v_parent;
   END LOOP;
+END $$;
+
+-- Retire the duplicate invoice_items policy left by earlier runs of this file.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'invoice_items'
+  ) THEN
+    DROP POLICY IF EXISTS invoice_items_via_parent ON invoice_items;
+  END IF;
 END $$;
 
 -- ─── 3. Global configuration — DELIBERATELY LEFT WITH NO POLICY ─────────────

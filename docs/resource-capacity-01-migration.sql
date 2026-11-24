@@ -13,6 +13,23 @@
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+-- Keep the extension out of the exposed public schema (extension_in_public).
+-- `extensions` is Supabase's standard non-API schema. The move is idempotent and
+-- preserves the OIDs that existing exclusion constraints depend on.
+CREATE SCHEMA IF NOT EXISTS extensions;
+-- resource_bookings is backend-only (locked down below), so only service_role
+-- needs the extension schema; clients never resolve gist_uuid_ops themselves.
+-- Conditional: a bare Postgres (the pg test harness) has no Supabase roles.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    GRANT USAGE ON SCHEMA extensions TO service_role;
+  END IF;
+END $$;
+ALTER EXTENSION btree_gist SET SCHEMA extensions;
+-- The exclusion constraint below uses btree_gist's gist_uuid_ops; keep the
+-- extension schema visible so the operator class resolves after the move.
+SET search_path = public, extensions;
 
 -- ─── 1. Generalize resource kinds & exclusiveness on service_resources ────────
 ALTER TABLE public.service_resources

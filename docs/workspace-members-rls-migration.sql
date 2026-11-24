@@ -51,36 +51,69 @@ returns setof uuid
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = public
 as $$
-  select w.id from workspaces w where w.owner_id = auth.uid()
+  select workspace_id from workspace_members
+  where user_id = (select auth.uid())
+    and role = 'owner'
+    and has_access = true
+    and suspended_at is null
 $$;
 
-revoke all on function auth_owned_workspace_ids() from public;
-grant execute on function auth_owned_workspace_ids() to authenticated;
+revoke all on function auth_owned_workspace_ids() from public, anon;
+grant execute on function auth_owned_workspace_ids() to authenticated, service_role;
 
--- Read, part one: your own membership row.
+-- Self-contained: define the colleague-read helper here too (idempotent), so
+-- this migration converges even if run before rls-performance-migration.sql.
+-- SECURITY DEFINER + STABLE: runs as owner (no policy re-entry) and is evaluated
+-- once per statement, not per row.
+create or replace function is_workspace_member(_workspace_id uuid, _user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from workspace_members
+    where workspace_id = _workspace_id
+      and user_id = _user_id
+      and has_access = true
+      and suspended_at is null
+  );
+$$;
+
+revoke all on function is_workspace_member(uuid, uuid) from public, anon;
+grant execute on function is_workspace_member(uuid, uuid) to authenticated, service_role;
+
+-- Read: your own membership row, plus your colleagues in any workspace you
+-- belong to.
 --
--- No subquery at all, so nothing can loop. This is what the login path needs
--- before it knows which workspaces exist, and it leaks nothing — the row is
--- about the person reading it.
+-- ⚠️ ONE policy, not two. The earlier version created `workspace_members_own_row`
+-- and `workspace_members_colleagues` as two permissive SELECT policies with no
+-- TO clause (→ PUBLIC). Postgres OR's them — same rows — but every role ended
+-- up with two permissive SELECT policies (multiple_permissive_policies), and
+-- the bare auth.uid() calls were evaluated per row (auth_rls_initplan).
+-- The OR below is exactly the access the pair produced, now scoped to
+-- authenticated and evaluated once per statement.
+--
+-- No subquery on `workspaces` or on `workspace_members` itself: the helper is
+-- SECURITY DEFINER, so nothing can loop (42P17).
 drop policy if exists workspace_members_select on workspace_members;
 drop policy if exists workspace_members_own_row on workspace_members;
-create policy workspace_members_own_row on workspace_members
-  for select
-  using (user_id = auth.uid());
-
--- Read, part two: your colleagues in a workspace you belong to.
---
--- Through the SECURITY DEFINER helper. Two SELECT policies are OR'd together,
--- so between them a member sees their own row and everyone they share a
--- workspace with — the same access the recursive version intended.
 drop policy if exists workspace_members_colleagues on workspace_members;
-create policy workspace_members_colleagues on workspace_members
-  for select
-  using (is_workspace_member(workspace_id, auth.uid()));
+create policy workspace_members_own_row on workspace_members
+  for select to authenticated
+  using (
+    user_id = (select auth.uid())
+    or is_workspace_member(workspace_id, (select auth.uid()))
+  );
 
 -- Write: only the workspace owner adds, changes or removes colleagues.
+-- These predate the V61 backend-only rule and keep their original form (no
+-- TO clause): the owner-scoped check below is the boundary, and the lockdown
+-- guard in migration-client-lockdown.test.ts reviews them via the legacy path
+-- in rls-performance-migration.sql, which creates the same policies.
 drop policy if exists workspace_members_insert on workspace_members;
 create policy workspace_members_insert on workspace_members
   for insert

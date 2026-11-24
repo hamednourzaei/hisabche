@@ -129,18 +129,24 @@ ALTER TABLE public.cloud_migration_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cloud_migration_map ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cloud_migration_records ENABLE ROW LEVEL SECURITY;
 
+-- Drop first so a re-run rebuilds these with (SELECT auth.uid()) rather than
+-- skipping via the IF NOT EXISTS guard (auth_rls_initplan).
+DROP POLICY IF EXISTS cloud_migration_jobs_tenant_policy ON public.cloud_migration_jobs;
+DROP POLICY IF EXISTS cloud_migration_map_tenant_policy ON public.cloud_migration_map;
+DROP POLICY IF EXISTS cloud_migration_records_tenant_policy ON public.cloud_migration_records;
+
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'cloud_migration_jobs' AND policyname = 'cloud_migration_jobs_tenant_policy') THEN
     CREATE POLICY cloud_migration_jobs_tenant_policy ON public.cloud_migration_jobs
       FOR ALL TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       )
       WITH CHECK (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;
@@ -150,12 +156,12 @@ DO $$ BEGIN
       FOR ALL TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       )
       WITH CHECK (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;
@@ -165,12 +171,12 @@ DO $$ BEGIN
       FOR ALL TO authenticated
       USING (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       )
       WITH CHECK (
         workspace_id IN (
-          SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid()
+          SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;

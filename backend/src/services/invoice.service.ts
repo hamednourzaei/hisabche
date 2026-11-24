@@ -15,7 +15,7 @@
 import { baseCurrencyOf } from './base-currency'
 import { documentDayOf } from '../utils/local-day'
 import { createHash, randomUUID } from 'node:crypto'
-import { PaymentsService } from './payments/payments.service'
+import { PaymentsService, type CreationPaymentWrite } from './payments/payments.service'
 import { assertMayUseWarehouse } from './inventory/warehouse-access'
 import { supabase } from '../db'
 import { rowOf, rowsOf, type DbRow } from '../utils/db-row'
@@ -41,6 +41,8 @@ import {
   applyPrice,
   computeInvoiceMoney,
   computeItemTotalRounded,
+  creationPaymentRequestKey,
+  creationPaymentTranches,
   cutLossIssue,
   movesStock,
   quoteGoldItemPrice,
@@ -469,6 +471,12 @@ export class InvoiceService {
           phone,
           email
         ),
+        supplier:suppliers!invoices_supplier_id_fkey (
+          id,
+          name,
+          phone,
+          email
+        ),
         invoice_items ( quantity )
       `,
       )
@@ -555,11 +563,11 @@ export class InvoiceService {
     const nextCursor = hasMore && last ? encodeCursor(last, sortBy) : null
 
     const invoices = rowsOf(items).map((inv) => {
-      const customer = rowOf(inv.customer)
+      const party = this.partyOf(inv)
       return {
         ...inv,
-        customerName: customer?.full_name ? String(customer.full_name) : null,
-        customer,
+        customerName: party.name,
+        customer: party.party,
         itemsSent: rowsOf(inv.invoice_items).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
       }
     })
@@ -732,8 +740,40 @@ export class InvoiceService {
           email,
           address
         ),
+        supplier:suppliers!invoices_supplier_id_fkey (
+          id,
+          name,
+          phone,
+          email,
+          address
+        ),
         invoice_items (${itemColumns})
       `
+  }
+
+  /**
+   * The party on an invoice, whichever side it belongs to.
+   *
+   * A purchase names a supplier; a sale names a customer. The read path used to
+   * resolve only `customers`, so a purchase's name, phone and print header were
+   * blank even though `supplier_id` was set. A document has exactly ONE party,
+   * so both are mapped into the existing `customer` field the screens already
+   * read — no second naming engine, and a purchase prints like any other
+   * document.
+   */
+  private partyOf(invoice: DbRow): { name: string | null; party: DbRow | null } {
+    const customer = rowOf(invoice.customer)
+    if (customer) {
+      return {
+        name: customer.full_name ? String(customer.full_name) : null,
+        party: customer,
+      }
+    }
+
+    const supplier = rowOf(invoice.supplier)
+    if (!supplier) return { name: null, party: null }
+    const name = supplier.name ? String(supplier.name) : null
+    return { name, party: name ? { ...supplier, full_name: name } : supplier }
   }
 
   // ─── Get Invoice By ID ───
@@ -764,12 +804,12 @@ export class InvoiceService {
       throw new NotFoundError('Invoice')
     }
 
-    const customer = rowOf(data.customer)
+    const party = this.partyOf(data)
     return {
       ...data,
       id: String(data.id),
-      customerName: customer?.full_name ? String(customer.full_name) : null,
-      customer,
+      customerName: party.name,
+      customer: party.party,
     }
   }
 
@@ -801,6 +841,7 @@ export class InvoiceService {
       status,
       notes,
       customer:customers!fk_invoices_customer ( full_name, phone, email, address ),
+      supplier:suppliers!invoices_supplier_id_fkey ( name, phone, email, address ),
       invoice_items (
         id, product_name, quantity, unit, unit_label, weight_grams,
         unit_price, discount, total_price,
@@ -853,7 +894,7 @@ export class InvoiceService {
       currency: data.currency,
       status: data.status,
       notes: data.notes,
-      customer: data.customer || null,
+      customer: this.partyOf(data).party,
       items: data.invoice_items || [],
     }
   }
@@ -923,11 +964,18 @@ export class InvoiceService {
   }
 
   /**
-   * Invoices of ONE customer are made one at a time on this instance (V53 OD-3): the credit check reads the
-   * customer's receivable and the invoice then raises it, so two concurrent sales would both read the old
-   * figure and both pass. ⚠️ This orders the requests of one backend instance only; across instances the
-   * guarantee needs a database lock (advisory lock in the invoice transaction) — NOT implemented, recorded in
-   * docs/implementation/V53-IMPLEMENTATION-PROGRESS.md.
+   * V53 OD-3 — the credit check and the invoice that raises the debt are
+   * ordered per customer.
+   *
+   * Across backend instances the guarantee is the database's: `assert_customer_credit`
+   * (docs/credit-concurrency-01/02/03) takes an advisory lock per customer and
+   * reads the receivable inside that lock. `serializeBy` below is only a
+   * same-instance shortcut, so one instance does not queue work the database
+   * would serialise anyway.
+   *
+   * ⚠️ When that function is missing, the fallback cannot order two instances.
+   * In `block` mode a limited sale is therefore REFUSED (fail closed) instead
+   * of being allowed on a guarantee that does not exist.
    */
   async create(
     ctx: TenancyContext,
@@ -1035,10 +1083,18 @@ export class InvoiceService {
     })
 
     const isPurchase = (data.type ?? 'sale') === 'purchase'
-    if (isPurchase && data.customerId && !data.supplierId) {
+    // ⚠️ ONE PARTY, AND IT MUST BE THE RIGHT ONE.
+    //
+    // The guard used to refuse only when the wrong id was present and the right
+    // one was missing. A purchase carrying BOTH ids passed: the header stored
+    // `customer_id` beside `supplier_id`, so a supplier document appeared on a
+    // customer's statement and could be settled by that customer's money. The
+    // party is decided by `type`; any id from the other side is a mistake the
+    // server refuses rather than a field it quietly drops.
+    if (isPurchase && data.customerId) {
       throw new ValidationError('INVOICE_PARTY_WRONG_ROLE')
     }
-    if (!isPurchase && data.supplierId && !data.customerId) {
+    if (!isPurchase && data.supplierId) {
       throw new ValidationError('INVOICE_PARTY_WRONG_ROLE')
     }
 
@@ -1223,8 +1279,11 @@ export class InvoiceService {
     // The ids are made HERE so every row of the document can be built before
     // anything is written, and written together (writeInvoiceDocument).
     const invoiceId = randomUUID()
-    const settledStatus =
-      data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending'
+    // The header's status follows the money the request actually brings, not
+    // the client's `paidAmount` — a split payment has entries and may send 0
+    // there. `payments_record` refines it to `paid`/`partial` when it runs.
+    const paidNow = this.paidAtCreation(data)
+    const settledStatus = money.total > 0 && paidNow >= money.total ? 'completed' : 'pending'
     const direction: 1 | -1 = data.type === 'purchase' ? 1 : -1
 
     // `bookCurrency` was settled above, before the money: an invoice that
@@ -1344,9 +1403,38 @@ export class InvoiceService {
           )
         : []
 
+    // ─── THE MONEY IS PART OF THE DOCUMENT'S TRANSACTION ─────────────────
+    //
+    // Prepared here, but WRITTEN by `invoice_write_document` through the
+    // payments core's own functions (`payments_record_keyed` /
+    // `payments_record_at_till`). An invoice therefore cannot commit without
+    // the payment rows and allocations that say the money was taken — the
+    // failure window that used to leave an issued invoice and moved stock with
+    // no payment behind them.
+    //
+    // A request without a key still gets one for THIS attempt, so the later
+    // `recordCreationPayments` pass can find exactly these rows and book their
+    // journal entries instead of writing a second payment.
+    const paymentWrites = await this.payments.prepareCreationPayments(
+      ctx,
+      {
+        invoiceId,
+        direction: isPurchase ? 'out' : 'in',
+        partyType: isPurchase ? 'supplier' : 'customer',
+        partyId: (isPurchase ? data.supplierId : data.customerId) ?? null,
+        entryDate: documentDayOf(data.date, ctx.timeZone),
+        ...(data.currency ? { currency: data.currency } : {}),
+        ...(exchangeRate !== 1 ? { exchangeRate } : {}),
+        ...(data.tillSessionId ? { tillSessionId: data.tillSessionId } : {}),
+        requestKey: clientRequestId ?? randomUUID(),
+      },
+      creationPaymentTranches(data),
+    )
+
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ ONE WRITE (27 Sep 2026 + M5 Slice D): header, items, their details,
-    // stock movements AND package credit grants in one transaction.
+    // stock movements, package credit grants AND the creation payments in one
+    // transaction.
     // ═══════════════════════════════════════════════════════════════════════
     const invoiceError = await this.writeInvoiceDocument(ctx, {
       invoiceId,
@@ -1355,6 +1443,7 @@ export class InvoiceService {
       detailRows: this.buildDetailRows(lines, itemRows),
       movementRows,
       grantRows,
+      paymentRows: paymentWrites.map((write) => write.sql),
     })
 
     // Checked before the idempotency branch: a missing seller column is also a
@@ -1567,7 +1656,7 @@ export class InvoiceService {
     }
 
     // ─── T9 — the money, recorded as money ──────────────────────────────
-    await this.recordCreationPayments(ctx, invoice.id, data, clientRequestId)
+    await this.recordCreationPayments(ctx, invoice.id, data, clientRequestId, paymentWrites)
 
     // Who raised it, when, for how much — the first line of its history.
     // Fire-and-forget by contract: a failed log never fails the invoice.
@@ -1722,6 +1811,10 @@ export class InvoiceService {
       creditLimitMinor: number
     } | null = null
     let useLegacyPath = true
+    // Set only when the database says the function itself is absent. Any other
+    // error already throws above; this flag decides whether the race-prone
+    // per-process path may still be used.
+    let functionMissing = false
     try {
       const { data, error } = await supabase.rpc('assert_customer_credit', {
         p_workspace_id: ctx.workspaceId,
@@ -1736,6 +1829,7 @@ export class InvoiceService {
         ) {
           throw new DatabaseError('Credit check failed', error)
         }
+        functionMissing = true
       } else {
         // supabase-js returns an ARRAY of rows for a RETURNS TABLE function. No usable row means we
         // cannot claim an answer — the legacy path below decides, never a silent pass.
@@ -1766,6 +1860,27 @@ export class InvoiceService {
       if (error instanceof DatabaseError) throw error
     }
     if (useLegacyPath) {
+      // ⚠️ A BLOCKED CREDIT SALE NEEDS THE DATABASE LOCK.
+      //
+      // The per-process path below can only order requests handled by THIS
+      // backend instance. Two instances would both read the old receivable and
+      // both pass — the customer crosses the limit, and no later check exists.
+      // `assert_customer_credit` holds an advisory lock across instances, so
+      // when it is missing and the owner asked to BLOCK, the sale is refused
+      // instead of being allowed on a guarantee that does not exist. `warn` and
+      // `off` cannot authorise anything, so they keep working pre-migration.
+      if (functionMissing) {
+        const mode = await creditLimitModeOf(ctx.workspaceId)
+        const limit = await creditLimitOf(ctx.workspaceId, input.customerId)
+        if (mode === 'block' && limit !== null) {
+          throw new DatabaseError(
+            'CREDIT_MIGRATION_REQUIRED: apply docs/credit-concurrency-01-migration.sql ' +
+              '(and -02) before a blocked credit sale. The per-process fallback cannot ' +
+              'guarantee the limit across backend instances.',
+            null,
+          )
+        }
+      }
       verdict = await this.assertWithinCreditLimitLegacy(ctx, input, amountMinor)
     }
 
@@ -1863,54 +1978,51 @@ export class InvoiceService {
     }
   }
 
-  /** What of this invoice is being paid in CASH as it is created. */
   /** What is settled at creation, in the invoice's currency; «نسیه» is not settled. */
   private paidAtCreation(data: CreateInvoice): number {
-    if (data.payments && data.payments.length > 0) {
-      return data.payments
-        .filter((payment) => payment.method !== 'credit')
-        .reduce((sum, payment) => sum + payment.amount, 0)
-    }
-    return (data.paymentMethod ?? 'cash') === 'credit' ? 0 : (data.paidAmount ?? 0)
+    return creationPaymentTranches(data).reduce((sum, payment) => sum + payment.amount, 0)
   }
 
+  /** What of this invoice is being paid in CASH as it is created. */
   private cashPaidAtCreation(data: CreateInvoice): number {
-    if (data.payments && data.payments.length > 0) {
-      return data.payments
-        .filter((payment) => payment.method === 'cash')
-        .reduce((sum, payment) => sum + payment.amount, 0)
-    }
-    return (data.paymentMethod ?? 'cash') === 'cash' ? (data.paidAmount ?? 0) : 0
+    return creationPaymentTranches(data)
+      .filter((payment) => payment.method === 'cash')
+      .reduce((sum, payment) => sum + payment.amount, 0)
   }
 
+  /**
+   * Book the journal entry of every payment the document's transaction wrote.
+   *
+   * ⚠️ `prepared` IS NOT A SECOND WRITE. `invoice_write_document` already
+   * committed these payments and their allocations with the invoice. What is
+   * missing at this point is each payment's own ledger entry, which the
+   * payment core owns. Calling `recordPayment` with the SAME idempotency key
+   * finds the payment and replays it — it cannot create a second one.
+   *
+   * The replay path (`finishReplayedInvoice`) passes no list: it rebuilds the
+   * same keys from the request key, so a first attempt that died after the
+   * document still has its journal entries booked on the retry.
+   */
   private async recordCreationPayments(
     ctx: TenancyContext,
     invoiceId: string,
     data: CreateInvoice,
     /** The request's own key: one deterministic payment key per tranche. */
     clientRequestId?: string | null,
+    prepared?: readonly CreationPaymentWrite[],
   ): Promise<void> {
+    if (prepared) {
+      for (const write of prepared) {
+        await this.payments.recordPayment(ctx, write.input, {
+          clientRequestId: write.clientRequestId,
+        })
+      }
+      return
+    }
+
     // Each entry becomes its own payment: one row carrying a blended method
     // would make the till and the bank reconciliation both wrong.
-    const tranches =
-      data.payments && data.payments.length > 0
-        ? data.payments.map((p) => ({
-            method: p.method,
-            amount: p.amount,
-            reference: p.reference ?? data.reference ?? '',
-            note: p.note ?? '',
-          }))
-        : data.paidAmount && data.paidAmount > 0
-          ? [
-              {
-                method: data.paymentMethod ?? 'cash',
-                amount: data.paidAmount,
-                reference: data.reference ?? '',
-                note: '',
-              },
-            ]
-          : []
-
+    const tranches = creationPaymentTranches(data)
     if (tranches.length === 0) return
 
     // A purchase is money going OUT to a supplier; a sale is money coming IN.
@@ -1952,7 +2064,9 @@ export class InvoiceService {
           // invoice entirely.
           allocations: [{ invoiceId, amount: tranche.amount }],
         },
-        clientRequestId ? { clientRequestId: `${clientRequestId}:payment:${index}` } : {},
+        clientRequestId
+          ? { clientRequestId: creationPaymentRequestKey(clientRequestId, index) }
+          : {},
       )
     }
   }
@@ -2894,9 +3008,11 @@ export class InvoiceService {
   }
 
   /**
-   * Write an invoice's document — header (new invoices), items, their details
-   * and the stock movements — in ONE transaction
-   * (docs/invoice-write-document-migration.sql).
+   * Write an invoice's document — header (new invoices), items, their details,
+   * the stock movements, package credit grants and the creation payments — in
+   * ONE transaction (docs/invoice-write-document-migration.sql,
+   * docs/invoice-write-grant-01-migration.sql,
+   * docs/invoice-write-payment-01-migration.sql).
    *
    * `replaceItems`: an edit. The old lines are deleted and EXACTLY the stock
    * they moved is given back, from the recorded movements, in the same
@@ -2918,6 +3034,8 @@ export class InvoiceService {
       detailRows: Array<Record<string, unknown>>
       movementRows: Array<Record<string, unknown>>
       grantRows?: Array<Record<string, unknown>> | undefined
+      /** Creation payments, written by the payments core inside this transaction. */
+      paymentRows?: ReadonlyArray<Record<string, unknown>> | undefined
       replaceItems?: boolean | undefined
       /** Edit: the header's money, derived from the new lines. */
       headerPatch?: Record<string, unknown> | undefined
@@ -2937,9 +3055,15 @@ export class InvoiceService {
         p_replace_items: doc.replaceItems === true,
         p_header_patch: doc.headerPatch ?? null,
         p_expected_version: doc.expectedVersion ?? null,
-        // Named only when there is something to grant: a sale without a package keeps working
-        // on a database that has not run invoice-write-grant-01 (the 10-argument function).
-        ...(doc.grantRows && doc.grantRows.length > 0 ? { p_grants: doc.grantRows } : {}),
+        // ⚠️ A 12-argument call must name BOTH p_grants and p_payments: the
+        // function with payments has no defaults (PostgreSQL cannot resolve a
+        // partially-named overload), and an empty grant array is the truthful
+        // answer for a non-package sale.
+        ...(doc.paymentRows && doc.paymentRows.length > 0
+          ? { p_grants: doc.grantRows ?? [], p_payments: doc.paymentRows }
+          : doc.grantRows && doc.grantRows.length > 0
+            ? { p_grants: doc.grantRows }
+            : {}),
       })
 
     let { error } = await call(doc.detailRows)
@@ -2973,6 +3097,18 @@ export class InvoiceService {
     // invoice_write_document is missing (PGRST202 or 42883), silent stepwise
     // degradation is strictly forbidden because a partial failure leaves
     // orphan headers without stock movements or ledger lines.
+    // Deployment order: a sale that takes money at creation names p_payments,
+    // which exists only after invoice-write-payment-01. Refusing is the point:
+    // the old path committed the invoice and then tried to record the money.
+    if (
+      (error.code === 'PGRST202' || error.code === '42883') &&
+      (doc.paymentRows?.length ?? 0) > 0
+    ) {
+      throw new DatabaseError(
+        'INVOICE_PAYMENT_ATOMIC_MIGRATION_REQUIRED: apply docs/invoice-write-payment-01-migration.sql (after invoice-write-document and invoice-write-grant-01) before taking money with a new invoice. Nothing was written.',
+        error,
+      )
+    }
     // M5 deployment order: a sale WITH a package line names p_grants, which exists only after invoice-write-grant-01. The
     // refusal says exactly that (and a sale without a package line never names it, so it keeps working before the migration).
     if ((error.code === 'PGRST202' || error.code === '42883') && (doc.grantRows?.length ?? 0) > 0) {
@@ -2986,6 +3122,13 @@ export class InvoiceService {
         'ATOMIC_RPC_REQUIRED: invoice_write_document RPC is missing. Apply docs/invoice-write-document-migration.sql. Stepwise un-atomic fallback is disabled to prevent orphan invoices.',
         error,
       )
+    }
+
+    // A payment rule refused the money (over-allocated, till closed, party
+    // mismatch). The RPC rolled back the invoice with it, so this is the
+    // person's input to correct, not a server failure.
+    if (error.code === 'P0001' && /^PAYMENT_/.test(error.message ?? '')) {
+      throw new ValidationError(error.message ?? 'PAYMENT_REFUSED')
     }
 
     return error

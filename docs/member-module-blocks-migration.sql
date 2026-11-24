@@ -54,7 +54,7 @@ CREATE POLICY workspace_member_module_blocks_members_read ON public.workspace_me
   FOR SELECT TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;

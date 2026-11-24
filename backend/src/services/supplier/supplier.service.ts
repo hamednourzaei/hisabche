@@ -73,20 +73,26 @@ export class SupplierService {
     ctx: TenancyContext,
     filters: { search?: string | undefined; isActive?: boolean | undefined } = {},
   ) {
-    let query = supabase
-      .from('suppliers')
-      .select(COLUMNS)
-      .eq('workspace_id', ctx.workspaceId)
-      .is('deleted_at', null)
-      .order('name')
-      .limit(500)
+    // ⚠️ THE WHOLE LIST, IN PAGES. A shop with more than 500 suppliers used to
+    // get the first alphabet page and no warning: the picker, the purchase
+    // screen and the supplier statement could not reach the rest. A hard
+    // `.limit(500)` is a capped read feeding a decision.
+    const { data, error } = await selectAllPages((from, to) => {
+      let query = supabase
+        .from('suppliers')
+        .select(COLUMNS)
+        .eq('workspace_id', ctx.workspaceId)
+        .is('deleted_at', null)
 
-    if (filters.isActive !== undefined) query = query.eq('is_active', filters.isActive)
-    if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`)
-    }
+      if (filters.isActive !== undefined) query = query.eq('is_active', filters.isActive)
+      if (filters.search) {
+        query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`)
+      }
 
-    const { data, error } = await query
+      // `name` repeats; `id` makes the page boundary deterministic.
+      return query.order('name').order('id').range(from, to)
+    })
+
     if (error) throw new DatabaseError('Failed to fetch suppliers', error)
     return (data ?? []).map(mapSupplier)
   }

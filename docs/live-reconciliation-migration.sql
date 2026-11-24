@@ -271,7 +271,10 @@ UPDATE bom_items i
 -- Without an index each of those becomes a sequential scan of the whole table.
 
 CREATE INDEX IF NOT EXISTS audit_logs_workspace_idx           ON audit_logs (workspace_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS stock_movements_workspace_idx      ON stock_movements (workspace_id, product_id);
+CREATE INDEX IF NOT EXISTS stock_movements_workspace_product_idx ON stock_movements (workspace_id, product_id);
+-- The older `stock_movements_workspace_idx` held the identical (workspace_id,
+-- product_id) definition — a duplicate_index advisory. Canonical name above wins.
+DROP INDEX IF EXISTS stock_movements_workspace_idx;
 CREATE INDEX IF NOT EXISTS suppliers_workspace_idx            ON suppliers (workspace_id);
 CREATE INDEX IF NOT EXISTS purchase_orders_workspace_idx      ON purchase_orders (workspace_id, order_date DESC);
 CREATE INDEX IF NOT EXISTS payrolls_workspace_idx             ON payrolls (workspace_id, period_start DESC);
@@ -342,13 +345,13 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-           WHERE user_id = auth.uid()
+           WHERE user_id = (SELECT auth.uid())
              AND has_access = true
              AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-           WHERE user_id = auth.uid()
+           WHERE user_id = (SELECT auth.uid())
              AND has_access = true
              AND suspended_at IS NULL
         ))

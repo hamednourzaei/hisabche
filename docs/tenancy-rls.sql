@@ -165,7 +165,7 @@ SET search_path = public, pg_temp
 AS $$
   SELECT m.workspace_id
     FROM workspace_members m
-   WHERE m.user_id = auth.uid()
+   WHERE m.user_id = (SELECT auth.uid())
      AND m.has_access = true
      AND m.suspended_at IS NULL
 $$;

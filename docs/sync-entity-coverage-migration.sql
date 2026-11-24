@@ -74,7 +74,10 @@ ALTER TABLE inventory_settings ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL 
 -- inventory_settings is keyed by workspace_id (no `id` column). The generic
 -- sync_record_change() reads NEW.id and would raise on every write, so this
 -- variant uses the workspace key as the entity identity instead.
-CREATE OR REPLACE FUNCTION sync_record_workspace_keyed_change() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION sync_record_workspace_keyed_change()
+RETURNS TRIGGER LANGUAGE plpgsql
+SET search_path = public
+AS $$
 DECLARE
   v_workspace UUID;
   v_op        TEXT;
@@ -99,7 +102,7 @@ BEGIN
           current_setting('hisabche.device_id', true));
   RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ─── Bump version on update ────────────────────────────────────────────────
 DROP TRIGGER IF EXISTS cost_layers_bump_version_trg ON cost_layers;

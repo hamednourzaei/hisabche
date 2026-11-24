@@ -70,7 +70,9 @@ GRANT SELECT, INSERT ON public.workspace_operational_dna_history TO service_role
 ALTER TABLE public.workspace_operational_dna_history ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.workspace_operational_dna_history_frozen()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   -- A workspace being deleted takes its history with it (cascade); nothing else may.
   IF TG_OP = 'DELETE' AND pg_trigger_depth() > 1 THEN

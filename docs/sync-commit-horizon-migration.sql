@@ -35,7 +35,7 @@ BEGIN
      ) THEN
     ALTER INDEX public.sync_change_log_txid_idx RENAME TO sync_change_log_ws_version_idx;
   ELSIF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'sync_change_log_ws_version_idx') THEN
-    CREATE INDEX sync_change_log_ws_version_idx ON public.sync_change_log (workspace_id, sync_version);
+    CREATE INDEX IF NOT EXISTS sync_change_log_workspace_version_idx ON public.sync_change_log (workspace_id, sync_version);
   END IF;
 END $$;
 

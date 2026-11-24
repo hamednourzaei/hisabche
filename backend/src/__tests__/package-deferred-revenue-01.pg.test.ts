@@ -45,6 +45,7 @@ const run: Run = async (text, params) => {
 describe('Postgres: package revenue is deferred and released per GRANT (package-deferred-revenue-01)', () => {
   beforeAll(async () => {
     try {
+      await pg.initialise()
       await pg.start()
     } catch {
       // Non-elevated Windows (error 1314) or a quarantined binary: the scenarios are skipped here and run in CI.
@@ -59,17 +60,27 @@ describe('Postgres: package revenue is deferred and released per GRANT (package-
   }, 120_000)
 
   afterAll(async () => {
-    if (sql) await sql.end()
+    if (sql) await sql.end({ timeout: 5 })
     try {
-      await pg.stop()
+      // Bounded: when start() failed, stop() waits on a process that never came
+      // up and would burn the whole hook timeout (see core-divergence.pg.test.ts).
+      await Promise.race([
+        pg.stop(),
+        new Promise((resolve) => setTimeout(resolve, 10_000).unref?.()),
+      ])
     } catch {
       // ignore
     }
   })
 
   for (const scenario of scenarios) {
-    it(scenario.name, async () => {
-      if (!started) return
+    it(scenario.name, async (ctx) => {
+      if (!started) {
+        ctx.skip(
+          'PostgreSQL embedded engine unavailable on this host - skipped pending live DB or Linux CI',
+        )
+        return
+      }
       await scenario.run(run)
     })
   }

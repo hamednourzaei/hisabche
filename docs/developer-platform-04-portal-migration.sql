@@ -49,7 +49,7 @@ DROP POLICY IF EXISTS customer_portal_links_members_read ON customer_portal_link
 CREATE POLICY customer_portal_links_members_read ON customer_portal_links
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = customer_portal_links.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = customer_portal_links.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 COMMIT;

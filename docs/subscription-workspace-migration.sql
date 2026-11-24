@@ -108,7 +108,7 @@ END $$;
 -- ON DELETE RESTRICT, never CASCADE: deleting a workspace must not silently
 -- delete its billing relationship. It should fail loudly.
 
-CREATE INDEX IF NOT EXISTS subscriptions_workspace_idx ON subscriptions (workspace_id);
+CREATE INDEX IF NOT EXISTS subscriptions_workspace_id_idx ON subscriptions (workspace_id);
 
 -- At most ONE subscription per workspace — the hierarchy says
 -- "ONE Workspace Subscription". Partial, so the many pre-backfill NULLs do not
@@ -253,6 +253,6 @@ WHERE i.indexrelid IN (
 -- remains the record of who bought the plan.
 --
 -- DROP INDEX IF EXISTS subscriptions_one_per_workspace_idx;
--- DROP INDEX IF EXISTS subscriptions_workspace_idx;
+-- DROP INDEX IF EXISTS subscriptions_workspace_id_idx;
 -- ALTER TABLE subscriptions DROP CONSTRAINT IF EXISTS subscriptions_workspace_fk;
 -- ALTER TABLE subscriptions DROP COLUMN IF EXISTS workspace_id;

@@ -252,22 +252,40 @@ export class PaymentsRepository {
     const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
     const invoiceType = partyType === 'customer' ? 'sale' : 'purchase'
 
-    const { data, error } = await supabase
-      .from('invoice_outstanding')
-      .select(
-        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, currency',
-      )
-      .eq('workspace_id', workspaceId)
-      .eq(partyColumn, partyId)
-      .eq('type', invoiceType)
-      .gt('outstanding', 0)
-      .order('due_date', { ascending: true })
-
-    if (error) throw new DatabaseError('Failed to fetch open invoices', error)
+    // ⚠️ EVERY open invoice, not the first PostgREST page. This read feeds the
+    // auto-allocation of a payment and the party's outstanding balance; a
+    // `.limit`-less select stops at the server's max-rows (1000) and the rest
+    // of the debt quietly disappears — a payment would be told there is
+    // nothing left to settle while the customer still owes it.
+    const rows = await readAll<{
+      invoice_id: string
+      invoice_number: string | null
+      total: number
+      allocated: number
+      due_date: string | null
+      invoice_date: string | null
+      type: string
+      currency: string | null
+    }>('open invoices', (from, to) =>
+      supabase
+        .from('invoice_outstanding')
+        .select(
+          'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, currency',
+        )
+        .eq('workspace_id', workspaceId)
+        .eq(partyColumn, partyId)
+        .eq('type', invoiceType)
+        .gt('outstanding', 0)
+        .order('due_date', { ascending: true })
+        // Deterministic pages: `due_date` repeats, and PostgreSQL may order
+        // equal dates differently between two calls otherwise.
+        .order('invoice_id', { ascending: true })
+        .range(from, to),
+    )
 
     return this.netOfReturns(
       workspaceId,
-      (data ?? []).map((row) => ({
+      rows.map((row) => ({
         invoiceId: row.invoice_id,
         invoiceNumber: row.invoice_number ?? '',
         total: Number(row.total) || 0,

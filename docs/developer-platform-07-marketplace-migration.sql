@@ -282,14 +282,14 @@ DROP POLICY IF EXISTS app_publishers_member_read ON app_publishers;
 CREATE POLICY app_publishers_member_read ON app_publishers
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = app_publishers.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = app_publishers.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 DROP POLICY IF EXISTS app_installations_member_read ON app_installations;
 CREATE POLICY app_installations_member_read ON app_installations
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = app_installations.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = app_installations.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL
                     AND m.role IN ('owner', 'admin', 'manager')));
 
@@ -297,14 +297,14 @@ DROP POLICY IF EXISTS app_reviews_member_read ON app_reviews;
 CREATE POLICY app_reviews_member_read ON app_reviews
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = app_reviews.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = app_reviews.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 DROP POLICY IF EXISTS app_reports_member_read ON app_reports;
 CREATE POLICY app_reports_member_read ON app_reports
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = app_reports.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = app_reports.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 -- ─── Versions: submit, publish, reject ──────────────────────────────────────

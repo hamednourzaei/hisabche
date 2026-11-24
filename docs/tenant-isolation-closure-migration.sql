@@ -116,11 +116,11 @@ BEGIN
         FOR ALL TO authenticated
         USING (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
         WITH CHECK (workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         ))
     $p$, v_table || '_workspace_members', v_table);
   END LOOP;

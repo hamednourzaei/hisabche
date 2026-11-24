@@ -247,6 +247,71 @@ export function paymentEntriesOf(value: InvoicePaymentValue, total: number): Pay
     .filter((entry) => entry.amount > 0)
 }
 
+/** One payment row an invoice-creation request settles. */
+export interface CreationPaymentTranche {
+  method: PaymentMethod
+  amount: number
+  reference: string
+  note: string
+}
+
+/**
+ * The payment rows an invoice-creation request asks for — ONE rule, server and
+ * device.
+ *
+ * ⚠️ WHY THIS IS SHARED. The screen sends the whole `payments` array (cash +
+ * card + transfer). The server already turned each entry into its own payment;
+ * the offline engine read only the summed `paidAmount` and stamped one method on
+ * the single row it wrote, so a split payment was reconstructed differently on
+ * the device than on the server. The till and the bank reconciliation could
+ * never agree afterwards. Both runtimes now derive the rows here.
+ *
+ * `payments` is authoritative. `paidAmount`/`paymentMethod` remain for older
+ * clients that send one method; the two are never mixed.
+ *
+ * ⚠️ A `credit` entry is NOT money. It says the rest is owed, and recording it
+ * as a payment would settle an invoice with nothing. It is filtered out.
+ */
+export function creationPaymentTranches(data: {
+  payments?:
+    | readonly {
+        method: PaymentMethod
+        amount: number
+        reference?: string | undefined
+        note?: string | undefined
+      }[]
+    | undefined
+  paidAmount?: number | undefined
+  paymentMethod?: string | undefined
+  reference?: string | undefined
+}): CreationPaymentTranche[] {
+  if (data.payments && data.payments.length > 0) {
+    return data.payments
+      .filter((payment) => payment.amount > 0 && payment.method !== 'credit')
+      .map((payment) => ({
+        method: payment.method,
+        amount: payment.amount,
+        reference: payment.reference ?? data.reference ?? '',
+        note: payment.note ?? '',
+      }))
+  }
+
+  const method = (data.paymentMethod ?? 'cash') as PaymentMethod
+  const amount = Number(data.paidAmount) || 0
+  if (amount <= 0 || method === 'credit') return []
+  return [{ method, amount, reference: data.reference ?? '', note: '' }]
+}
+
+/**
+ * The idempotency key of one creation tranche.
+ *
+ * The same request key must name the same payment on the server, on a retry,
+ * and in the device's outbox — a different key is a second payment.
+ */
+export function creationPaymentRequestKey(requestKey: string, index: number): string {
+  return `${requestKey}:payment:${index}`
+}
+
 // ============================================
 // Invoice Status — ✅ اضافه کردن "paid" و "overdue"
 // ============================================

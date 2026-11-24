@@ -152,7 +152,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   )
@@ -164,7 +164,7 @@ CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
       WHERE ii.id = invoice_item_details.invoice_item_id
         AND i.workspace_id IN (
           SELECT workspace_id FROM workspace_members
-          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+          WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
         )
     )
   );

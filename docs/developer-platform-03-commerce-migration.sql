@@ -147,21 +147,21 @@ DROP POLICY IF EXISTS storefront_settings_members_read ON storefront_settings;
 CREATE POLICY storefront_settings_members_read ON storefront_settings
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = storefront_settings.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = storefront_settings.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 DROP POLICY IF EXISTS sales_orders_members_read ON sales_orders;
 CREATE POLICY sales_orders_members_read ON sales_orders
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = sales_orders.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = sales_orders.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 DROP POLICY IF EXISTS sales_order_items_members_read ON sales_order_items;
 CREATE POLICY sales_order_items_members_read ON sales_order_items
   FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM workspace_members m
-                  WHERE m.workspace_id = sales_order_items.workspace_id AND m.user_id = auth.uid()
+                  WHERE m.workspace_id = sales_order_items.workspace_id AND m.user_id = (SELECT auth.uid())
                     AND m.has_access = true AND m.suspended_at IS NULL));
 
 -- ─── Events ──────────────────────────────────────────────────────────────────

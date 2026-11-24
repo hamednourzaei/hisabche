@@ -197,19 +197,19 @@ ALTER TABLE referral_payouts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS referral_codes_own ON referral_codes;
 CREATE POLICY referral_codes_own ON referral_codes
-  FOR SELECT USING (user_id = auth.uid());
+  FOR SELECT USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS referrals_own ON referrals;
 CREATE POLICY referrals_own ON referrals
-  FOR SELECT USING (referrer_user_id = auth.uid());
+  FOR SELECT USING (referrer_user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS referral_commissions_own ON referral_commissions;
 CREATE POLICY referral_commissions_own ON referral_commissions
-  FOR SELECT USING (referrer_user_id = auth.uid());
+  FOR SELECT USING (referrer_user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS referral_payouts_own ON referral_payouts;
 CREATE POLICY referral_payouts_own ON referral_payouts
-  FOR SELECT USING (referrer_user_id = auth.uid());
+  FOR SELECT USING (referrer_user_id = (SELECT auth.uid()));
 
 COMMIT;
 

@@ -61,21 +61,66 @@ ALTER TABLE ui_visibility_suggestions ENABLE ROW LEVEL SECURITY;
 -- A preference is the user's own. Scoped to the workspace like everything
 -- else, and then to the person within it: one member's hidden modules are not
 -- another member's business.
+--
+-- ⚠️ One policy per command, not FOR ALL plus a second SELECT policy.
+-- `rls-performance-migration.sql` used to add `ui_visibility_profiles_own_rows`
+-- (SELECT, user-only) on top of this FOR ALL policy — two permissive SELECT
+-- policies for the same role, which Supabase flags as
+-- multiple_permissive_policies. The split below keeps one policy per command.
+-- Reads are scoped to the user AND their active membership, like every other
+-- tenant table (rls-coverage.test.ts): a suspended or removed member must not
+-- keep reading workspace rows through a user-only shortcut.
 DROP POLICY IF EXISTS ui_visibility_profiles_own ON ui_visibility_profiles;
-CREATE POLICY ui_visibility_profiles_own ON ui_visibility_profiles
-  FOR ALL TO authenticated
+DROP POLICY IF EXISTS ui_visibility_profiles_own_rows ON ui_visibility_profiles;
+DROP POLICY IF EXISTS ui_visibility_profiles_select ON ui_visibility_profiles;
+DROP POLICY IF EXISTS ui_visibility_profiles_insert ON ui_visibility_profiles;
+DROP POLICY IF EXISTS ui_visibility_profiles_update ON ui_visibility_profiles;
+DROP POLICY IF EXISTS ui_visibility_profiles_delete ON ui_visibility_profiles;
+
+CREATE POLICY ui_visibility_profiles_select ON ui_visibility_profiles
+  FOR SELECT TO authenticated
   USING (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+    )
+  );
+
+CREATE POLICY ui_visibility_profiles_insert ON ui_visibility_profiles
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    user_id = (SELECT auth.uid())
+    AND workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+    )
+  );
+
+CREATE POLICY ui_visibility_profiles_update ON ui_visibility_profiles
+  FOR UPDATE TO authenticated
+  USING (
+    user_id = (SELECT auth.uid())
+    AND workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   )
   WITH CHECK (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
+    )
+  );
+
+CREATE POLICY ui_visibility_profiles_delete ON ui_visibility_profiles
+  FOR DELETE TO authenticated
+  USING (
+    user_id = (SELECT auth.uid())
+    AND workspace_id IN (
+      SELECT workspace_id FROM workspace_members
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   );
 
@@ -83,17 +128,17 @@ DROP POLICY IF EXISTS ui_visibility_suggestions_own ON ui_visibility_suggestions
 CREATE POLICY ui_visibility_suggestions_own ON ui_visibility_suggestions
   FOR ALL TO authenticated
   USING (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   )
   WITH CHECK (
-    user_id = auth.uid()
+    user_id = (SELECT auth.uid())
     AND workspace_id IN (
       SELECT workspace_id FROM workspace_members
-      WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+      WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
     )
   );
 

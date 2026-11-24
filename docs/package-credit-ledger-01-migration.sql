@@ -95,6 +95,10 @@ BEGIN
 
   ALTER TABLE public.package_credit_ledger ENABLE ROW LEVEL SECURITY;
 
+  -- Drop first so a re-run rebuilds this with (SELECT auth.uid()) rather than
+  -- skipping via the IF NOT EXISTS guard (auth_rls_initplan).
+  DROP POLICY IF EXISTS package_credit_ledger_tenant_isolation ON public.package_credit_ledger;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'public'
@@ -109,14 +113,14 @@ BEGIN
         workspace_id IN (
           SELECT workspace_id
           FROM public.workspace_members
-          WHERE user_id = auth.uid()
+          WHERE user_id = (SELECT auth.uid())
         )
       )
       WITH CHECK (
         workspace_id IN (
           SELECT workspace_id
           FROM public.workspace_members
-          WHERE user_id = auth.uid()
+          WHERE user_id = (SELECT auth.uid())
         )
       );
   END IF;
@@ -140,6 +144,10 @@ CREATE TRIGGER trg_prevent_package_credit_ledger_mutation
   BEFORE UPDATE OR DELETE ON public.package_credit_ledger
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_package_credit_ledger_mutation();
+
+-- Trigger-only guard: it fires on DML, never needs to be callable via /rpc.
+-- Strip the default Supabase EXECUTE grant from every client role.
+REVOKE ALL ON FUNCTION public.prevent_package_credit_ledger_mutation() FROM PUBLIC, anon, authenticated, service_role;
 
 -- 6. Atomic Consumption Function for PostgreSQL
 CREATE OR REPLACE FUNCTION public.package_credit_consume(
@@ -259,5 +267,7 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.package_credit_consume FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.package_credit_consume TO authenticated, service_role;
+-- Backend-only RPC: the backend connects as service_role (db.ts validates the
+-- key's role claim), so signed-in clients must not call it directly via /rpc.
+REVOKE EXECUTE ON FUNCTION public.package_credit_consume FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.package_credit_consume TO service_role;

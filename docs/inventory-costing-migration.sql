@@ -120,7 +120,12 @@ UPDATE stock_movements m SET workspace_id = p.workspace_id
 FROM products p
 WHERE m.workspace_id IS NULL AND m.product_id = p.id;
 
-CREATE INDEX IF NOT EXISTS stock_movements_workspace_idx
+-- Time-ordered workspace scan index. Named distinctly from the (workspace_id,
+-- product_id) lookup index (`stock_movements_workspace_product_idx`) so the two
+-- are never confused for duplicates; the legacy `stock_movements_workspace_idx`
+-- name is retired (it duplicated the product lookup index in the live DB).
+DROP INDEX IF EXISTS stock_movements_workspace_idx;
+CREATE INDEX IF NOT EXISTS stock_movements_workspace_created_at_idx
   ON stock_movements (workspace_id, created_at DESC);
 
 -- ─── 5. Receiving goods ─────────────────────────────────────────────────────
@@ -458,11 +463,11 @@ CREATE POLICY cost_layers_workspace_members ON cost_layers
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS cost_consumptions_workspace_members ON cost_consumptions;
@@ -470,11 +475,11 @@ CREATE POLICY cost_consumptions_workspace_members ON cost_consumptions
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS inventory_settings_workspace_members ON inventory_settings;
@@ -482,11 +487,11 @@ CREATE POLICY inventory_settings_workspace_members ON inventory_settings
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS stock_movements_workspace_members ON stock_movements;
@@ -494,11 +499,11 @@ CREATE POLICY stock_movements_workspace_members ON stock_movements
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;
@@ -610,11 +615,11 @@ CREATE POLICY warehouses_workspace_members ON warehouses
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 DROP POLICY IF EXISTS warehouse_stock_workspace_members ON warehouse_stock;
@@ -622,11 +627,11 @@ CREATE POLICY warehouse_stock_workspace_members ON warehouse_stock
   FOR ALL TO authenticated
   USING (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ))
   WITH CHECK (workspace_id IN (
     SELECT workspace_id FROM workspace_members
-    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+    WHERE user_id = (SELECT auth.uid()) AND has_access = true AND suspended_at IS NULL
   ));
 
 COMMIT;

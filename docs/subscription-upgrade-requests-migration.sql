@@ -92,18 +92,23 @@ CREATE INDEX IF NOT EXISTS subscription_events_workspace_idx
 ALTER TABLE public.subscription_upgrade_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop first so a re-run rebuilds the policies with the initplan-safe
+-- (SELECT auth.uid()) form instead of skipping them via the IF NOT EXISTS guard.
+DROP POLICY IF EXISTS subscription_upgrade_requests_members_read ON public.subscription_upgrade_requests;
+DROP POLICY IF EXISTS subscription_events_members_read ON public.subscription_events;
+
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'subscription_upgrade_requests'
                  AND policyname = 'subscription_upgrade_requests_members_read') THEN
     CREATE POLICY subscription_upgrade_requests_members_read ON public.subscription_upgrade_requests
       FOR SELECT TO authenticated
-      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()));
+      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = (SELECT auth.uid())));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'subscription_events'
                  AND policyname = 'subscription_events_members_read') THEN
     CREATE POLICY subscription_events_members_read ON public.subscription_events
       FOR SELECT TO authenticated
-      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = auth.uid()));
+      USING (workspace_id IN (SELECT wm.workspace_id FROM public.workspace_members wm WHERE wm.user_id = (SELECT auth.uid())));
   END IF;
 END $$;
 

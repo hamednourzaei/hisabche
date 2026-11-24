@@ -301,7 +301,7 @@ COMMENT ON VIEW transactions_view IS
 -- filtered by workspace and party by every caller.
 -- ---------------------------------------------------------------------------
 
-CREATE INDEX IF NOT EXISTS invoices_workspace_customer_idx
+CREATE INDEX IF NOT EXISTS invoices_workspace_id_customer_id_idx
   ON invoices (workspace_id, customer_id);
 
 CREATE INDEX IF NOT EXISTS invoices_workspace_supplier_idx
@@ -310,7 +310,7 @@ CREATE INDEX IF NOT EXISTS invoices_workspace_supplier_idx
 CREATE INDEX IF NOT EXISTS payments_workspace_status_idx
   ON payments (workspace_id, status);
 
-CREATE INDEX IF NOT EXISTS transactions_workspace_customer_idx
+CREATE INDEX IF NOT EXISTS transactions_workspace_id_customer_id_idx
   ON transactions (workspace_id, customer_id);
 
 CREATE INDEX IF NOT EXISTS transactions_workspace_supplier_idx

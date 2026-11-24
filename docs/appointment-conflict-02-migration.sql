@@ -19,6 +19,25 @@
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+-- Keep the extension out of the exposed public schema (extension_in_public).
+-- `extensions` is Supabase's standard non-API schema. The move is idempotent and
+-- preserves the OIDs that existing exclusion constraints depend on.
+CREATE SCHEMA IF NOT EXISTS extensions;
+-- Grant only to roles that exist: a bare Postgres (the pg test harness) has no
+-- Supabase roles, and GRANT to a missing role aborts the whole migration.
+DO $$
+DECLARE r text;
+BEGIN
+  FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+      EXECUTE format('GRANT USAGE ON SCHEMA extensions TO %I', r);
+    END IF;
+  END LOOP;
+END $$;
+ALTER EXTENSION btree_gist SET SCHEMA extensions;
+-- The exclusion constraint below uses btree_gist's gist_uuid_ops; keep the
+-- extension schema visible so the operator class resolves after the move.
+SET search_path = public, extensions;
 
 DO $$
 DECLARE

@@ -33,7 +33,9 @@ GRANT UPDATE (retired_at) ON public.offline_license_signing_keys TO service_role
 DROP POLICY IF EXISTS offline_license_signing_keys_backend ON public.offline_license_signing_keys;
 
 CREATE OR REPLACE FUNCTION public.offline_license_signing_keys_guard()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION 'OFFLINE_SIGNING_KEY_PERMANENT';

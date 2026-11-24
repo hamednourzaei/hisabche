@@ -71,20 +71,22 @@ CREATE POLICY service_delivery_sessions_tenant_isolation ON public.service_deliv
     FOR ALL
     TO authenticated
     USING (
-        workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
+        workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid()))
     )
     WITH CHECK (
-        workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
+        workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid()))
     );
 
 -- 6. Trigger for updated_at
 CREATE OR REPLACE FUNCTION public.trg_service_delivery_sessions_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
     NEW.updated_at = timezone('utc'::text, now());
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trg_service_delivery_sessions_timestamp ON public.service_delivery_sessions;
 CREATE TRIGGER trg_service_delivery_sessions_timestamp

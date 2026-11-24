@@ -68,10 +68,10 @@ CREATE POLICY service_delivery_sessions_tenant_isolation ON public.service_deliv
   FOR ALL
   TO authenticated
   USING (
-    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
+    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid()))
   )
   WITH CHECK (
-    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
+    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = (SELECT auth.uid()))
   );
 
 -- 4. DELIVER: session transition + settlement fact in one transaction.

@@ -53,9 +53,11 @@ import {
   buildPartyActivity,
   buildPartyLedger,
   buildPartySummary,
+  creationPaymentRequestKey,
   invoicesOfAnotherParty,
   partyActivityInvoices,
   resolveBookingRate,
+  type CreationPaymentTranche,
 } from '@hisabche/validation'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
 
@@ -91,6 +93,27 @@ export interface RecordPaymentInput {
    * `amount + feeAmount`. The party's debt is settled by `amount` either way.
    */
   feeAmount?: number | undefined
+}
+
+/**
+ * One creation payment, prepared BEFORE the invoice is written.
+ *
+ * The invoice's own transaction (`invoice_write_document`) writes `sql` through
+ * `payments_record_keyed` / `payments_record_at_till`, so an invoice cannot
+ * commit without the money it says was taken. `input` is the same payment in
+ * the payment core's language: after the document commits, `recordPayment`
+ * finds it by `clientRequestId` and (re)books its journal entry.
+ */
+export interface CreationPaymentWrite {
+  clientRequestId: string
+  input: RecordPaymentInput
+  sql: {
+    payment: Record<string, unknown>
+    allocations: Array<{ invoice_id: string; amount: number }>
+    client_request_id: string
+    till_session_id?: string
+    till_amount_minor?: number
+  }
 }
 
 const today = (timeZone?: string) => businessDayOf(new Date(), timeZone)
@@ -479,6 +502,110 @@ export class PaymentsService {
       bookCurrency,
       rate: money.rate,
     })
+  }
+
+  /**
+   * Prepare the payments an invoice creation request settles, so the invoice's
+   * OWN transaction can write them.
+   *
+   * ⚠️ WHY BEFORE THE INVOICE. This used to run after the document, the stock
+   * and the ledger had committed. A failure between them left an issued invoice
+   * with its shelves already moved and no payment row for money the person had
+   * taken — the retry that fixes it only helps if the client asks again.
+   * `invoice_write_document` now calls `payments_record_keyed` (or
+   * `_at_till`) with these rows inside its transaction, so the document and its
+   * money commit or roll back together.
+   *
+   * The rules stay here, in the payment core: the number, the currency, the
+   * till and its minor amount. The SQL function only writes what it is given.
+   *
+   * `requestKey` must be the request's idempotency key (or one generated for
+   * this attempt): the same tranche index must always produce the same key, or
+   * the replay after the document commits records the payment twice.
+   */
+  async prepareCreationPayments(
+    ctx: TenancyContext,
+    document: {
+      invoiceId: string
+      direction: PaymentDirection
+      partyType: PartyType
+      partyId: string | null
+      /** The document's business day, already at the workspace's time zone. */
+      entryDate: string
+      currency?: string | undefined
+      exchangeRate?: number | undefined
+      tillSessionId?: string | null | undefined
+      requestKey: string
+    },
+    tranches: readonly CreationPaymentTranche[],
+  ): Promise<CreationPaymentWrite[]> {
+    if (tranches.length === 0) return []
+
+    const bookCurrency = await baseCurrencyOf(ctx.workspaceId)
+    const currency = document.currency ?? bookCurrency
+    const year = Number(document.entryDate.slice(0, 4))
+    const sequence = await this.repo.lastPaymentSequence(ctx.workspaceId, year)
+    const writes: CreationPaymentWrite[] = []
+
+    for (const [index, tranche] of tranches.entries()) {
+      // A cash tranche named a till: the drawer must be open and able to count
+      // this currency BEFORE the invoice is written, not after.
+      const till =
+        document.tillSessionId && tranche.method === 'cash'
+          ? await this.tillMovement(ctx, document.tillSessionId, {
+              method: tranche.method,
+              amount: tranche.amount,
+              currency,
+              bookCurrency,
+              rate: document.exchangeRate ?? 1,
+            })
+          : null
+
+      const clientRequestId = creationPaymentRequestKey(document.requestKey, index)
+      const paymentNumber = `PMT-${year}-${String(sequence + index + 1).padStart(6, '0')}`
+
+      writes.push({
+        clientRequestId,
+        input: {
+          direction: document.direction,
+          partyType: document.partyType,
+          partyId: document.partyId,
+          amount: tranche.amount,
+          entryDate: document.entryDate,
+          currency,
+          ...(document.exchangeRate && document.exchangeRate > 0
+            ? { exchangeRate: document.exchangeRate }
+            : {}),
+          method: tranche.method,
+          reference: tranche.reference,
+          notes: tranche.note,
+          // Explicit: this money settles THIS invoice; oldest-first could land
+          // it on a different debt entirely.
+          allocations: [{ invoiceId: document.invoiceId, amount: tranche.amount }],
+          ...(till ? { tillSessionId: till.sessionId } : {}),
+        },
+        sql: {
+          payment: {
+            payment_number: paymentNumber,
+            direction: document.direction,
+            party_type: document.partyType,
+            party_id: document.partyId,
+            amount: tranche.amount,
+            currency,
+            method: tranche.method,
+            entry_date: document.entryDate,
+            reference: tranche.reference,
+            notes: tranche.note,
+            status: 'posted',
+          },
+          allocations: [{ invoice_id: document.invoiceId, amount: tranche.amount }],
+          client_request_id: clientRequestId,
+          ...(till ? { till_session_id: till.sessionId, till_amount_minor: till.amountMinor } : {}),
+        },
+      })
+    }
+
+    return writes
   }
 
   private async tillMovement(

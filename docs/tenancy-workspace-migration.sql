@@ -154,10 +154,10 @@ END $$;
 -- The indexes every workspace-scoped read will use. Not CONCURRENTLY here
 -- because the column is still empty and the tables are small; on a table above
 -- ~1M rows, run these separately with CONCURRENTLY and outside a transaction.
-CREATE INDEX IF NOT EXISTS invoices_workspace_idx     ON invoices     (workspace_id);
-CREATE INDEX IF NOT EXISTS customers_workspace_idx    ON customers    (workspace_id);
-CREATE INDEX IF NOT EXISTS products_workspace_idx     ON products     (workspace_id);
-CREATE INDEX IF NOT EXISTS transactions_workspace_idx ON transactions (workspace_id);
+CREATE INDEX IF NOT EXISTS invoices_workspace_id_idx     ON invoices     (workspace_id);
+CREATE INDEX IF NOT EXISTS customers_workspace_id_idx    ON customers    (workspace_id);
+CREATE INDEX IF NOT EXISTS products_workspace_id_idx     ON products     (workspace_id);
+CREATE INDEX IF NOT EXISTS transactions_workspace_id_idx ON transactions (workspace_id);
 
 -- The composite the invoice list actually sorts by.
 CREATE INDEX IF NOT EXISTS invoices_workspace_date_idx

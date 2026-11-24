@@ -8,21 +8,24 @@ describe('sales-orders-02-migration.sql (PG)', () => {
 
   beforeAll(async () => {
     pg = await startPg()
-    const baseSql = readFileSync(resolve(__dirname, '../../docs/base-schema-migration.sql'), 'utf8')
+    const baseSql = readFileSync(
+      resolve(__dirname, '../../../docs/base-schema-migration.sql'),
+      'utf8',
+    )
     const stockResSql = readFileSync(
-      resolve(__dirname, '../../docs/stock-reservations-01-migration.sql'),
+      resolve(__dirname, '../../../docs/stock-reservations-01-migration.sql'),
       'utf8',
     )
     const platformSql = readFileSync(
-      resolve(__dirname, '../../docs/developer-platform-migration.sql'),
+      resolve(__dirname, '../../../docs/developer-platform-migration.sql'),
       'utf8',
     )
     const commerceSql = readFileSync(
-      resolve(__dirname, '../../docs/developer-platform-03-commerce-migration.sql'),
+      resolve(__dirname, '../../../docs/developer-platform-03-commerce-migration.sql'),
       'utf8',
     )
     const migSql = readFileSync(
-      resolve(__dirname, '../../docs/sales-orders-02-migration.sql'),
+      resolve(__dirname, '../../../docs/sales-orders-02-migration.sql'),
       'utf8',
     )
     await pg.sql.unsafe(baseSql)
@@ -117,7 +120,7 @@ describe('sales-orders-02-migration.sql preflight (PG)', () => {
   beforeAll(async () => {
     pg = await startPg()
     await pg.sql.unsafe(
-      readFileSync(resolve(__dirname, '../../docs/base-schema-migration.sql'), 'utf8'),
+      readFileSync(resolve(__dirname, '../../../docs/base-schema-migration.sql'), 'utf8'),
     )
   }, 60_000)
 
@@ -127,7 +130,7 @@ describe('sales-orders-02-migration.sql preflight (PG)', () => {
 
   it('stops with a named list of prerequisites and changes nothing when sales_orders is missing', async () => {
     const migSql = readFileSync(
-      resolve(__dirname, '../../docs/sales-orders-02-migration.sql'),
+      resolve(__dirname, '../../../docs/sales-orders-02-migration.sql'),
       'utf8',
     )
     let message = ''

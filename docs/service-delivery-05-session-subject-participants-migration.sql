@@ -167,26 +167,18 @@ CREATE INDEX IF NOT EXISTS idx_sd_participant_employee
   ON public.service_delivery_session_participants (workspace_id, employee_id)
   WHERE employee_id IS NOT NULL;
 
--- ─── 4. Tenant isolation (the same membership rule as every tenant table) ──
+-- ─── 4. Backend-only table (V61 lockdown rule, salon-01 pattern) ────────────
+-- Participants are written by the session service and read through the
+-- backend's session/sync routes — no client touches this table through the
+-- Data API. RLS ON, NO policy, REVOKE from anon/authenticated, service_role
+-- only: a seller must not be able to rewrite who attended a session.
 
 ALTER TABLE public.service_delivery_session_participants ENABLE ROW LEVEL SECURITY;
 
-REVOKE ALL ON public.service_delivery_session_participants FROM PUBLIC;
-REVOKE ALL ON public.service_delivery_session_participants FROM anon;
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.service_delivery_session_participants TO authenticated;
+REVOKE ALL ON public.service_delivery_session_participants FROM PUBLIC, anon, authenticated;
 GRANT ALL ON public.service_delivery_session_participants TO service_role;
 
 DROP POLICY IF EXISTS sd_session_participants_tenant_isolation ON public.service_delivery_session_participants;
-CREATE POLICY sd_session_participants_tenant_isolation ON public.service_delivery_session_participants
-  FOR ALL
-  TO authenticated
-  USING (
-    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
-  )
-  WITH CHECK (
-    workspace_id IN (SELECT workspace_id FROM public.workspace_members WHERE user_id = auth.uid())
-  );
 
 -- ─── 5. Integrity triggers ─────────────────────────────────────────────────
 -- A participant must belong to the session's workspace, reference a person of
@@ -352,6 +344,6 @@ ON CONFLICT (session_id, customer_id) WHERE customer_id IS NOT NULL DO NOTHING;
 --    ALTER TABLE public.service_delivery_sessions DROP COLUMN IF EXISTS session_type;
 --    ALTER TABLE public.service_delivery_sessions DROP COLUMN IF EXISTS employee_id;
 --    ALTER TABLE public.service_delivery_sessions DROP COLUMN IF EXISTS subject_type;
---    (drop the four chk_service_delivery_subject*/session_type/employee_settlement
+--    (drop the four chk_service_delivery_subject* / session_type / employee_settlement
 --     constraints first; keep chk_service_delivery_settlement from -04)
 */
