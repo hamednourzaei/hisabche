@@ -30,14 +30,18 @@ The Code Intelligence System provides two identical, AST-backed interfaces shari
 ### 2.1 Local MCP Server (`stdio` JSON-RPC 2.0)
 
 - **Script:** `node scripts/code-intel-mcp.mjs` (or `pnpm code-intel:mcp`)
-- **Transport:** Standard input / standard output line-delimited JSON-RPC 2.0.
-- **Exposed Tools:**
-  1. `code_intel_status`: Returns index health, schema version, git commit match, and entity counts.
-  2. `code_intel_find_symbols`: Finds symbols by exact/fuzzy name with domain, package, kind, and export filters.
-  3. `code_intel_get_symbol`: Retrieves exact symbol card with signature, file, line numbers, docstring, and hashes. Detects same-name declarations and returns `ambiguous: true` with candidate IDs.
+- **Auto-Configure Harnesses:** `node scripts/setup-mcp.mjs` (workspace `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`; pass `--global` for user-level Claude Code / Cursor / OpenCode / Antigravity configs).
+- **Transport:** Standard input / standard output line-delimited JSON-RPC 2.0 (supports batch arrays, 5000ms timeout guard, 180/min rate limit, read-only annotations).
+- **Exposed Tools (Single Engine `CodeIntelQueryEngine`):**
+  1. `code_intel_status`: Returns index health, full-manifest fingerprint freshness, dirty-tree status, schema version, and entity counts.
+  2. `code_intel_find_symbols`: Finds symbols by exact/fuzzy name with `domain`, `package`, `kind`, `returns`, and export filters.
+  3. `code_intel_get_symbol`: Retrieves exact symbol card with signature, file, line numbers, docstring, and hashes.
   4. `code_intel_get_relationships`: Retrieves callers, callees, imports, and related tests using verified AST edges.
-  5. `code_intel_impact`: Performs bounded blast-radius analysis (depth 1–3) and detects circular dependency cycles.
-  6. `code_intel_get_source`: Retrieves line-numbered source excerpts with file-level SHA-256 freshness verification. Rejects path traversal and `.env*` accesses.
+  5. `code_intel_impact` / `code_intel_impact_analysis`: Performs bounded blast-radius analysis (depth 1–3) and detects circular dependency cycles.
+  6. `code_intel_get_source`: Retrieves line-numbered source excerpts with SHA-256 freshness verification and blocks `.env*` / `.pem` / `.key` reads.
+  7. `code_intel_search_code`: BM25 keyword + error-string + Persian/English synonym search over `lexical.json`.
+  8. `code_intel_feature`: Maps a feature end-to-end across layers (`database`, `backend`, `api`, `validation`, `ui`, `app-shell`, `mobile`, `desktop`, `tests`).
+  9. `code_intel_get_context_pack`: Builds a bounded `<= 4000` token prompt-ready context pack with primary files, <= 15-line snippets, secondary signatures, offline/sync & auth warnings, and tests (`INSUFFICIENT_EVIDENCE` on miss).
 
 ### 2.2 CLI Interface (Terminal & Subprocess)
 
@@ -45,11 +49,19 @@ The Code Intelligence System provides two identical, AST-backed interfaces shari
 - **Flags:** `--json` for structured output, `--exact` for exact name matches.
 - **Commands:**
   ```bash
-  # Check index health & freshness
+  # Preflight & incremental sync across all harnesses
+  pnpm code-intel prepare [--json]
   pnpm code-intel status [--json]
+  pnpm code-intel update [--full] [--dry-run] [--json]
+  pnpm code-intel doctor [--json]
+
+  # One-call discovery & BM25 search (V3.0)
+  pnpm code-intel context-pack "<task>" [--domain <d>] [--pkg <p>] [--max-tokens <n>] [--json]
+  pnpm code-intel feature "<name>" [--limit <n>] [--json]
+  pnpm code-intel search "<query>" [--domain <d>] [--pkg <p>] [--layer <l>] [--limit <n>] [--json]
 
   # Search symbols
-  pnpm code-intel symbol find <name> [--exact] [--kind <k>] [--pkg <p>] [--domain <d>] [--limit <n>] [--json]
+  pnpm code-intel symbol find <name> [--exact] [--kind <k>] [--pkg <p>] [--domain <d>] [--returns <type>] [--limit <n>] [--json]
   pnpm code-intel symbol show <symbolId|name> [--json]
 
   # Call graph & relationships

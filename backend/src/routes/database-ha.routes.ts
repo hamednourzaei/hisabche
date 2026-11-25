@@ -11,6 +11,7 @@ import {
   checkReplicaHealth,
   checkPrimaryPing,
   getDatabaseRoutingOverview,
+  getReplicaObservabilityMetrics,
   globalFencingEngine,
   replicaCircuitBreaker,
 } from '../db/index'
@@ -29,11 +30,12 @@ export async function databaseHaRoutes(server: FastifyInstance): Promise<void> {
     const { healthy: primaryHealthy, latencyMs: primaryLatencyMs } = await primaryHealthProbe()
 
     const replicaHealth = await checkReplicaHealth()
+    const replicaMetrics = getReplicaObservabilityMetrics()
     const routingOverview = getDatabaseRoutingOverview()
     const breakerState = replicaCircuitBreaker.getState()
-    const currentEpoch = globalFencingEngine.getCurrentEpoch()
+    const fencingMetrics = globalFencingEngine.getObservabilityMetrics()
 
-    const isSystemHealthy = primaryHealthy
+    const isSystemHealthy = primaryHealthy && !fencingMetrics.degraded
 
     return reply.status(isSystemHealthy ? 200 : 503).send({
       status: isSystemHealthy ? 'healthy' : 'degraded',
@@ -44,23 +46,39 @@ export async function databaseHaRoutes(server: FastifyInstance): Promise<void> {
         provider: 'supabase',
         role: 'primary',
       },
-      replica: replicaHealth,
+      replica: {
+        ...replicaHealth,
+        measurementAgeMs: replicaMetrics.measurementAgeMs,
+        lagSource: replicaMetrics.source,
+        lastRttMs: replicaMetrics.lastRttMs,
+        fallbackCount: replicaMetrics.fallbackCount,
+      },
       circuitBreaker: {
         state: breakerState,
         consecutiveFailures: replicaCircuitBreaker.getFailureCount(),
       },
       routing: routingOverview,
       fencing: {
-        activeWriterEpoch: currentEpoch,
+        activeWriterEpoch: fencingMetrics.epoch,
+        activeWriterId: fencingMetrics.writerId,
+        degraded: fencingMetrics.degraded,
+        distributedStoreBound: fencingMetrics.distributedStoreBound,
+        leaseActive: fencingMetrics.leaseActive,
+        leaseRenewalFailures: fencingMetrics.leaseRenewalFailures,
       },
     })
   })
 
-  // GET /api/health/fencing — Writer fencing token validation
+  // GET /api/health/fencing — Writer fencing token validation & observability
   server.get('/api/health/fencing', async (_request: FastifyRequest, reply: FastifyReply) => {
-    const epoch = globalFencingEngine.getCurrentEpoch()
+    const metrics = globalFencingEngine.getObservabilityMetrics()
     return reply.send({
-      activeWriterEpoch: epoch,
+      activeWriterEpoch: metrics.epoch,
+      activeWriterId: metrics.writerId,
+      leaseActive: metrics.leaseActive,
+      degraded: metrics.degraded,
+      distributedStoreBound: metrics.distributedStoreBound,
+      leaseRenewalFailures: metrics.leaseRenewalFailures,
       timestamp: new Date().toISOString(),
     })
   })

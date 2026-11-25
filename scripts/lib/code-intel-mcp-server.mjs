@@ -9,10 +9,13 @@ import { CodeIntelQueryEngine } from './code-intel-query.mjs'
 
 export const MCP_SERVER_INFO = {
   name: 'hisabche-code-intelligence',
-  version: '1.0.0',
+  version: '3.0.0',
+  readOnly: true,
 }
 
 export const MCP_PROTOCOL_VERSION = '2024-11-05'
+const DEFAULT_TOOL_TIMEOUT_MS = 5000
+const DEFAULT_RATE_LIMIT_PER_MIN = 180
 
 export const MCP_TOOLS = [
   {
@@ -53,6 +56,7 @@ export const MCP_TOOLS = [
             'Filter by business domain (Invoices, Payments, Inventory, Accounting, Sync, etc.)',
         },
         exported: { type: 'boolean', description: 'Filter by exported status' },
+        returns: { type: 'string', description: 'Filter by return type substring' },
         limit: {
           type: 'number',
           description: 'Maximum number of results to return (default: 50, max: 100)',
@@ -136,6 +140,72 @@ export const MCP_TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'code_intel_search_code',
+    description:
+      'Hybrid AST + BM25 lexical search across symbols, comments, error messages, and file paths with token budgeting.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Natural language or identifier search query' },
+        package: { type: 'string', description: 'Optional package filter' },
+        domain: { type: 'string', description: 'Optional domain filter' },
+        layer: {
+          type: 'string',
+          enum: ['ui', 'hook', 'validation', 'route', 'service', 'db', 'sync', 'test', 'other'],
+          description: 'Optional architectural layer filter',
+        },
+        limit: { type: 'number', description: 'Max results (default 10, max 25)' },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'code_intel_feature',
+    description:
+      'Discovers the end-to-end Feature Graph (UI -> Hook -> Validation -> Route -> Service -> DB -> Sync -> Tests) for a capability.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        feature: { type: 'string', description: 'Feature name or query (e.g. invoice, payment)' },
+        limit: { type: 'number', description: 'Max seed nodes (default 20)' },
+      },
+      required: ['feature'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'code_intel_get_context_pack',
+    description:
+      'Assembles a strictly token-bounded (<= 4000 tokens) Context Pack with ranked files, bounded snippets, secondary signatures, related tests, and offline/security warnings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        task: { type: 'string', description: 'Task or bug description' },
+        package: { type: 'string', description: 'Optional package filter' },
+        domain: { type: 'string', description: 'Optional domain filter' },
+        max_tokens: { type: 'number', description: 'Token budget (default 3500, max 4000)' },
+      },
+      required: ['task'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'code_intel_impact_analysis',
+    description:
+      'Performs bounded static blast radius and dependency impact analysis for a shared symbol or file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: { type: 'string', description: 'Target symbol ID or file path' },
+        depth: { type: 'number', description: 'Maximum traversal depth (default 2, max 3)' },
+        limit: { type: 'number', description: 'Maximum impact nodes (default 25, max 50)' },
+      },
+      required: ['target'],
+      additionalProperties: false,
+    },
+  },
 ]
 
 export class CodeIntelMcpServer {
@@ -144,6 +214,9 @@ export class CodeIntelMcpServer {
     this.inputStream = options.input || process.stdin
     this.outputStream = options.output || process.stdout
     this.errorStream = options.error || process.stderr
+    this.toolTimeoutMs = options.toolTimeoutMs || DEFAULT_TOOL_TIMEOUT_MS
+    this.rateLimitPerMin = options.rateLimitPerMin || DEFAULT_RATE_LIMIT_PER_MIN
+    this.callTimestamps = []
     this.rl = null
     this.isInitialized = false
   }
@@ -193,7 +266,21 @@ export class CodeIntelMcpServer {
       return
     }
 
+    if (Array.isArray(request)) {
+      await Promise.all(request.map((item) => this.handleMessage(item)))
+      return
+    }
     await this.handleMessage(request)
+  }
+
+  _checkRateLimit() {
+    const now = Date.now()
+    this.callTimestamps = this.callTimestamps.filter((ts) => now - ts < 60_000)
+    if (this.callTimestamps.length >= this.rateLimitPerMin) {
+      return false
+    }
+    this.callTimestamps.push(now)
+    return true
   }
 
   /**
@@ -333,12 +420,33 @@ export class CodeIntelMcpServer {
       return
     }
 
+    if (!this._checkRateLimit()) {
+      this.sendError(id, -32029, 'Rate limit exceeded for Code Intelligence MCP server')
+      return
+    }
+
     const { name, arguments: args = {} } = params
     const toolDef = MCP_TOOLS.find((t) => t.name === name)
 
     if (!toolDef) {
       this.sendError(id, -32601, `Unknown tool: '${name}'`)
       return
+    }
+
+    if (!this.engine.loaded) {
+      try {
+        this.engine.load()
+      } catch (loadErr) {
+        this.sendToolResult(id, {
+          operation: name,
+          indexStatus: 'MISSING',
+          resultCount: 0,
+          results: [],
+          errors: [`Code Intelligence index unavailable: ${loadErr.message}`],
+          isError: true,
+        })
+        return
+      }
     }
 
     // Validate inputs against tool schema
@@ -354,226 +462,351 @@ export class CodeIntelMcpServer {
 
     let status = this.engine.loaded ? 'FRESH' : 'UNKNOWN'
 
-    switch (name) {
-      case 'code_intel_status': {
-        const indexStatus = this.engine.getIndexStatus()
-        status = indexStatus.status
-        this.sendToolResult(id, {
-          operation: 'code_intel_status',
-          indexStatus: indexStatus.status,
-          resultCount: 1,
-          results: [indexStatus],
-          warnings:
-            indexStatus.status === 'STALE'
-              ? [
-                  'Index is stale relative to git HEAD or disk files. Rebuild with: node scripts/build-ai-index.mjs',
+    const startedAt = Date.now()
+    let timeoutHandle = null
+    const timeoutGuard = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(
+        () => reject(new Error(`Tool '${name}' exceeded timeout (${this.toolTimeoutMs}ms)`)),
+        this.toolTimeoutMs,
+      )
+    })
+
+    try {
+      await Promise.race([
+        (async () => {
+          switch (name) {
+            case 'code_intel_status': {
+              const indexStatus = this.engine.getIndexStatus()
+              status = indexStatus.status
+              this.sendToolResult(id, {
+                operation: 'code_intel_status',
+                indexStatus: indexStatus.status,
+                resultCount: 1,
+                results: [indexStatus],
+                warnings:
+                  indexStatus.status === 'STALE'
+                    ? [
+                        'Index is stale relative to git HEAD or disk files. Rebuild with: node scripts/build-ai-index.mjs',
+                      ]
+                    : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
+
+            case 'code_intel_find_symbols': {
+              const query = args.query
+              const searchFilters = {
+                exact: args.exact === true,
+                package: args.package,
+                file: args.file,
+                kind: args.kind,
+                domain: args.domain,
+                exported: args.exported,
+                returns: args.returns,
+                limit: Math.min(args.limit || 50, 100),
+              }
+
+              const res = this.engine.findSymbols(query, searchFilters)
+              this.sendToolResult(id, {
+                operation: 'code_intel_find_symbols',
+                indexStatus: status,
+                target: query,
+                resultCount: res.totalFound,
+                truncated: res.totalFound >= (searchFilters.limit || 50),
+                results: res.results,
+                warnings:
+                  res.totalFound === 0 ? [`No symbols matching '${query}' found in index.`] : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
+
+            case 'code_intel_get_symbol': {
+              const symbolId = args.symbol_id
+              const res = this.engine.getSymbol(symbolId)
+
+              if (!res.found) {
+                this.sendToolResult(id, {
+                  operation: 'code_intel_get_symbol',
+                  indexStatus: status,
+                  target: symbolId,
+                  resultCount: 0,
+                  results: [],
+                  warnings:
+                    res.candidates?.length > 0
+                      ? [
+                          `Symbol '${symbolId}' not found. Did you mean one of: ${res.candidates.map((c) => c.name).join(', ')}?`,
+                        ]
+                      : [`Symbol '${symbolId}' not found in index.`],
+                  errors: [res.error || `Symbol '${symbolId}' not found`],
+                  isError: true,
+                })
+                return
+              }
+
+              const warnings = []
+              if (res.ambiguous) {
+                warnings.push(
+                  res.warning ||
+                    `Multiple declarations share the name '${symbolId}'. Showing first candidate. Specify full symbol ID for exact target.`,
+                )
+              }
+
+              this.sendToolResult(id, {
+                operation: 'code_intel_get_symbol',
+                indexStatus: status,
+                target: symbolId,
+                ambiguous: res.ambiguous,
+                resultCount: res.ambiguous ? res.allMatches.length : 1,
+                results: res.ambiguous ? res.allMatches : [res.symbol],
+                warnings,
+                errors: [],
+                isError: false,
+              })
+              break
+            }
+
+            case 'code_intel_get_relationships': {
+              const target = args.target
+              const direction = args.direction || 'callers'
+              const verifiedOnly = args.verified_only === true
+              const limit = Math.min(args.limit || 50, 100)
+
+              let results = []
+              let warnings = []
+              let errors = []
+
+              if (direction === 'callers') {
+                const callersRes = this.engine.getCallers(target, { verifiedOnly, limit })
+                results = callersRes.callers || []
+                if (callersRes.error) errors.push(callersRes.error)
+              } else if (direction === 'callees') {
+                const calleesRes = this.engine.getCallees(target, { verifiedOnly, limit })
+                results = calleesRes.callees || []
+                if (calleesRes.error) errors.push(calleesRes.error)
+              } else if (direction === 'imports') {
+                const importsRes = this.engine.getImports(target)
+                results = [...(importsRes.imports || []), ...(importsRes.reExports || [])]
+              } else if (direction === 'tests') {
+                const testsRes = this.engine.getRelatedTests(target)
+                results = testsRes.tests || []
+                if (testsRes.error) errors.push(testsRes.error)
+              } else if (direction === 'all') {
+                const callers =
+                  this.engine.getCallers(target, { verifiedOnly, limit }).callers || []
+                const callees =
+                  this.engine.getCallees(target, { verifiedOnly, limit }).callees || []
+                const tests = this.engine.getRelatedTests(target).tests || []
+                results = [
+                  {
+                    target,
+                    callers,
+                    callees,
+                    tests,
+                    totalRelationships: callers.length + callees.length + tests.length,
+                  },
                 ]
-              : [],
-          errors: [],
-          isError: false,
-        })
-        break
-      }
+              }
 
-      case 'code_intel_find_symbols': {
-        const query = args.query
-        const searchFilters = {
-          exact: args.exact === true,
-          package: args.package,
-          file: args.file,
-          kind: args.kind,
-          domain: args.domain,
-          exported: args.exported,
-          limit: Math.min(args.limit || 50, 100),
-        }
+              const isError = errors.length > 0 && results.length === 0
+              this.sendToolResult(id, {
+                operation: `code_intel_get_relationships:${direction}`,
+                indexStatus: status,
+                target,
+                direction,
+                verifiedOnly,
+                resultCount: results.length,
+                truncated: results.length >= limit,
+                results,
+                warnings,
+                errors,
+                isError,
+              })
+              break
+            }
 
-        const res = this.engine.findSymbols(query, searchFilters)
-        this.sendToolResult(id, {
-          operation: 'code_intel_find_symbols',
-          indexStatus: status,
-          target: query,
-          resultCount: res.totalFound,
-          truncated: res.totalFound >= (searchFilters.limit || 50),
-          results: res.results,
-          warnings: res.totalFound === 0 ? [`No symbols matching '${query}' found in index.`] : [],
-          errors: [],
-          isError: false,
-        })
-        break
-      }
+            case 'code_intel_impact': {
+              const target = args.target
+              const depth = args.depth || 1
+              const limit = args.limit || 20
 
-      case 'code_intel_get_symbol': {
-        const symbolId = args.symbol_id
-        const res = this.engine.getSymbol(symbolId)
+              const impact = this.engine.getImpactSummary(target, { depth, limit })
+              this.sendToolResult(id, {
+                operation: 'code_intel_impact',
+                indexStatus: status,
+                target,
+                depth,
+                resultCount: 1,
+                truncated: impact.truncated,
+                results: [impact],
+                warnings:
+                  impact.relevantCycles?.length > 0
+                    ? [
+                        `Target participates in ${impact.relevantCycles.length} circular dependency cycle(s).`,
+                      ]
+                    : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-        if (!res.found) {
-          this.sendToolResult(id, {
-            operation: 'code_intel_get_symbol',
-            indexStatus: status,
-            target: symbolId,
-            resultCount: 0,
-            results: [],
-            warnings:
-              res.candidates?.length > 0
-                ? [
-                    `Symbol '${symbolId}' not found. Did you mean one of: ${res.candidates.map((c) => c.name).join(', ')}?`,
-                  ]
-                : [`Symbol '${symbolId}' not found in index.`],
-            errors: [res.error || `Symbol '${symbolId}' not found`],
-            isError: true,
-          })
-          return
-        }
+            case 'code_intel_get_source': {
+              const target = args.target
+              const contextLines = args.context_lines !== undefined ? args.context_lines : 3
+              const excerptRes = this.engine.getSourceExcerpt(target, {
+                contextLines,
+                startLine: args.start_line,
+                endLine: args.end_line,
+              })
 
-        const warnings = []
-        if (res.ambiguous) {
-          warnings.push(
-            res.warning ||
-              `Multiple declarations share the name '${symbolId}'. Showing first candidate. Specify full symbol ID for exact target.`,
-          )
-        }
+              if (!excerptRes.success) {
+                this.sendToolResult(id, {
+                  operation: 'code_intel_get_source',
+                  indexStatus: status,
+                  target,
+                  resultCount: 0,
+                  results: [],
+                  warnings: [],
+                  errors: [excerptRes.error],
+                  isError: true,
+                })
+                return
+              }
 
-        this.sendToolResult(id, {
-          operation: 'code_intel_get_symbol',
-          indexStatus: status,
-          target: symbolId,
-          ambiguous: res.ambiguous,
-          resultCount: res.ambiguous ? res.allMatches.length : 1,
-          results: res.ambiguous ? res.allMatches : [res.symbol],
-          warnings,
-          errors: [],
-          isError: false,
-        })
-        break
-      }
+              const warnings = []
+              if (excerptRes.isStale && excerptRes.staleWarning) {
+                warnings.push(excerptRes.staleWarning)
+              }
 
-      case 'code_intel_get_relationships': {
-        const target = args.target
-        const direction = args.direction || 'callers'
-        const verifiedOnly = args.verified_only === true
-        const limit = Math.min(args.limit || 50, 100)
+              this.sendToolResult(id, {
+                operation: 'code_intel_get_source',
+                indexStatus: status,
+                target,
+                resultCount: 1,
+                results: [excerptRes],
+                warnings,
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-        let results = []
-        let warnings = []
-        let errors = []
+            case 'code_intel_search_code': {
+              const res = this.engine.searchCode(args.query, {
+                package: args.package,
+                domain: args.domain,
+                layer: args.layer,
+                limit: Math.min(args.limit || 10, 25),
+              })
+              this.sendToolResult(id, {
+                operation: 'code_intel_search_code',
+                indexStatus: status,
+                target: args.query,
+                resultCount: res.totalMatches,
+                results: res.results,
+                warnings:
+                  res.status === 'INSUFFICIENT_EVIDENCE'
+                    ? ['INSUFFICIENT_EVIDENCE: No hybrid AST/BM25 matches found.']
+                    : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-        if (direction === 'callers') {
-          const callersRes = this.engine.getCallers(target, { verifiedOnly, limit })
-          results = callersRes.callers || []
-          if (callersRes.error) errors.push(callersRes.error)
-        } else if (direction === 'callees') {
-          const calleesRes = this.engine.getCallees(target, { verifiedOnly, limit })
-          results = calleesRes.callees || []
-          if (calleesRes.error) errors.push(calleesRes.error)
-        } else if (direction === 'imports') {
-          const importsRes = this.engine.getImports(target)
-          results = [...(importsRes.imports || []), ...(importsRes.reExports || [])]
-        } else if (direction === 'tests') {
-          const testsRes = this.engine.getRelatedTests(target)
-          results = testsRes.tests || []
-          if (testsRes.error) errors.push(testsRes.error)
-        } else if (direction === 'all') {
-          const callers = this.engine.getCallers(target, { verifiedOnly, limit }).callers || []
-          const callees = this.engine.getCallees(target, { verifiedOnly, limit }).callees || []
-          const tests = this.engine.getRelatedTests(target).tests || []
-          results = [
-            {
-              target,
-              callers,
-              callees,
-              tests,
-              totalRelationships: callers.length + callees.length + tests.length,
-            },
-          ]
-        }
+            case 'code_intel_feature': {
+              const res = this.engine.discoverFeature(args.feature, {
+                limit: args.limit || 20,
+              })
+              this.sendToolResult(id, {
+                operation: 'code_intel_feature',
+                indexStatus: status,
+                target: args.feature,
+                resultCount: res.totalNodes || 0,
+                results: [res],
+                warnings:
+                  res.status === 'INSUFFICIENT_EVIDENCE'
+                    ? [
+                        `INSUFFICIENT_EVIDENCE: Feature '${args.feature}' did not match indexed symbols.`,
+                      ]
+                    : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-        const isError = errors.length > 0 && results.length === 0
-        this.sendToolResult(id, {
-          operation: `code_intel_get_relationships:${direction}`,
-          indexStatus: status,
-          target,
-          direction,
-          verifiedOnly,
-          resultCount: results.length,
-          truncated: results.length >= limit,
-          results,
-          warnings,
-          errors,
-          isError,
-        })
-        break
-      }
+            case 'code_intel_get_context_pack': {
+              const res = this.engine.getContextPack(args.task, {
+                package: args.package,
+                domain: args.domain,
+                maxTokens: Math.min(args.max_tokens || 3500, 4000),
+              })
+              this.sendToolResult(id, {
+                operation: 'code_intel_get_context_pack',
+                indexStatus: status,
+                target: args.task,
+                resultCount: res.relevantFiles?.length || 0,
+                truncated: res.truncated,
+                results: [res],
+                warnings:
+                  res.status === 'INSUFFICIENT_EVIDENCE'
+                    ? ['INSUFFICIENT_EVIDENCE: Context Pack returned no matching symbols.']
+                    : res.securityAndSyncWarnings || [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-      case 'code_intel_impact': {
-        const target = args.target
-        const depth = args.depth || 1
-        const limit = args.limit || 20
+            case 'code_intel_impact_analysis': {
+              const target = args.target
+              const depth = Math.min(args.depth || 2, 3)
+              const limit = Math.min(args.limit || 25, 50)
+              const impact = this.engine.getImpactSummary(target, { depth, limit })
+              this.sendToolResult(id, {
+                operation: 'code_intel_impact_analysis',
+                indexStatus: status,
+                target,
+                depth,
+                resultCount: 1,
+                truncated: impact.truncated,
+                results: [impact],
+                warnings:
+                  impact.relevantCycles?.length > 0
+                    ? [
+                        `Target participates in ${impact.relevantCycles.length} circular dependency cycle(s).`,
+                      ]
+                    : [],
+                errors: [],
+                isError: false,
+              })
+              break
+            }
 
-        const impact = this.engine.getImpactSummary(target, { depth, limit })
-        this.sendToolResult(id, {
-          operation: 'code_intel_impact',
-          indexStatus: status,
-          target,
-          depth,
-          resultCount: 1,
-          truncated: impact.truncated,
-          results: [impact],
-          warnings:
-            impact.relevantCycles?.length > 0
-              ? [
-                  `Target participates in ${impact.relevantCycles.length} circular dependency cycle(s).`,
-                ]
-              : [],
-          errors: [],
-          isError: false,
-        })
-        break
-      }
-
-      case 'code_intel_get_source': {
-        const target = args.target
-        const contextLines = args.context_lines !== undefined ? args.context_lines : 3
-        const excerptRes = this.engine.getSourceExcerpt(target, {
-          contextLines,
-          startLine: args.start_line,
-          endLine: args.end_line,
-        })
-
-        if (!excerptRes.success) {
-          this.sendToolResult(id, {
-            operation: 'code_intel_get_source',
-            indexStatus: status,
-            target,
-            resultCount: 0,
-            results: [],
-            warnings: [],
-            errors: [excerptRes.error],
-            isError: true,
-          })
-          return
-        }
-
-        const warnings = []
-        if (excerptRes.isStale && excerptRes.staleWarning) {
-          warnings.push(excerptRes.staleWarning)
-        }
-
-        this.sendToolResult(id, {
-          operation: 'code_intel_get_source',
-          indexStatus: status,
-          target,
-          resultCount: 1,
-          results: [excerptRes],
-          warnings,
-          errors: [],
-          isError: false,
-        })
-        break
-      }
-
-      default:
-        this.sendError(id, -32601, `Unhandled tool: '${name}'`)
-        break
+            default:
+              this.sendError(id, -32601, `Unhandled tool: '${name}'`)
+              break
+          }
+        })(),
+        timeoutGuard,
+      ])
+    } catch (err) {
+      this.logError(`Tool error (${name}, ${Date.now() - startedAt}ms): ${err.message}`)
+      this.sendToolResult(id, {
+        operation: name,
+        indexStatus: status,
+        resultCount: 0,
+        results: [],
+        errors: [err.message],
+        isError: true,
+      })
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
     }
   }
 

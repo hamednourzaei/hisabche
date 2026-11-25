@@ -109,7 +109,7 @@ describe('Code Intelligence MCP Server Adapter — Protocol Test Suite', () => {
   })
 
   // 2. Tool Listing
-  it('Tool Discovery: tools/list lists all 6 code intelligence tools with strict schemas', async () => {
+  it('Tool Discovery: tools/list lists all 10 code intelligence V3.0 tools with strict schemas', async () => {
     const res = await client.send({
       jsonrpc: '2.0',
       id: 3,
@@ -118,15 +118,19 @@ describe('Code Intelligence MCP Server Adapter — Protocol Test Suite', () => {
 
     assert.strictEqual(res.id, 3)
     const { tools } = res.result
-    assert.strictEqual(tools.length, 6)
+    assert.strictEqual(tools.length, 10)
 
     const toolNames = tools.map((t) => t.name).sort()
     assert.deepStrictEqual(toolNames, [
+      'code_intel_feature',
       'code_intel_find_symbols',
+      'code_intel_get_context_pack',
       'code_intel_get_relationships',
       'code_intel_get_source',
       'code_intel_get_symbol',
       'code_intel_impact',
+      'code_intel_impact_analysis',
+      'code_intel_search_code',
       'code_intel_status',
     ])
 
@@ -492,8 +496,8 @@ describe('Code Intelligence MCP Server Adapter — Protocol Test Suite', () => {
 
     child.stdin.write(statusReq)
 
-    // Wait for response with polling loop
-    for (let i = 0; i < 30; i++) {
+    // Wait for response with polling loop (up to 12s under parallel CPU load)
+    for (let i = 0; i < 120; i++) {
       if (stdoutData.trim().split('\n').filter(Boolean).length >= 2) break
       await new Promise((r) => setTimeout(r, 100))
     }

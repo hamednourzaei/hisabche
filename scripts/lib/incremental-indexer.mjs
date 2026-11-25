@@ -13,8 +13,9 @@ import {
   copyFileSync,
   renameSync,
   statSync,
+  mkdirSync,
 } from 'node:fs'
-import { join, extname, basename, resolve } from 'node:path'
+import { join, extname, basename, resolve, dirname } from 'node:path'
 import { execSync } from 'node:child_process'
 import crypto from 'node:crypto'
 
@@ -22,12 +23,15 @@ import { extractSymbolsFromSource, inferPackageName } from './ast-symbol-extract
 import { loadPathAliases, loadWorkspacePackageMap } from './module-resolver.mjs'
 import { extractFileRelationships } from './ast-relationship-extractor.mjs'
 import { buildDependencyGraph } from './dependency-graph.mjs'
+import { classifyFileDomainAndPlatform } from './domain-classifier.mjs'
+import { buildLexicalIndex } from './lexical-index.mjs'
 
 const ROOT = process.cwd()
 const AI_DIR = join(ROOT, '.ai', 'codebase')
 const GRAPH_JSON = join(AI_DIR, 'graph.json')
 const MAP_MD = join(AI_DIR, 'CODEBASE_MAP.md')
 const CACHE_JSON = join(AI_DIR, 'cache.json')
+const LEXICAL_JSON = join(AI_DIR, 'lexical.json')
 const BACKUP_JSON = join(AI_DIR, 'graph.json.bak')
 
 const INDEXER_VERSION = '2.0.0'
@@ -96,7 +100,18 @@ const IGNORE_FILES = new Set([
 
 const SOURCE_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.mts', '.json'])
 
-const CONFIG_FILES = ['package.json', 'tsconfig.json', 'tsconfig.base.json', 'turbo.json']
+const CONFIG_FILES = [
+  'package.json',
+  'tsconfig.json',
+  'tsconfig.base.json',
+  'turbo.json',
+  'apps/web/tsconfig.json',
+  'apps/desktop/tsconfig.json',
+  'apps/desktop/tsconfig.node.json',
+  'packages/ui/tsconfig.json',
+  'backend/tsconfig.json',
+  'packages/app-bridge/src/node-sqlite.d.ts',
+]
 
 export function normalizePath(p) {
   return p.replace(/\\/g, '/')
@@ -268,6 +283,7 @@ export class IncrementalIndexer {
     this.aiDir = options.aiDir || AI_DIR
     this.graphPath = options.graphPath || GRAPH_JSON
     this.cachePath = options.cachePath || CACHE_JSON
+    this.lexicalPath = options.lexicalPath || join(this.aiDir, 'lexical.json')
     this.backupPath = options.backupPath || BACKUP_JSON
   }
 
@@ -328,13 +344,21 @@ export class IncrementalIndexer {
    * Scans workspace and detects changes between disk files and cached fingerprints
    */
   detectChanges(cachedFingerprints = {}, currentPackages = []) {
-    const allDiskFiles = []
+    const allDiskFilesSet = new Set()
+    const testFilesSet = new Set()
     for (const pkg of currentPackages) {
       const pkgDir = join(this.rootDir, pkg.path)
       if (existsSync(pkgDir)) {
-        allDiskFiles.push(...getAllSourceFiles(pkgDir, pkg.path))
+        for (const sf of getAllSourceFiles(pkgDir, pkg.path)) {
+          allDiskFilesSet.add(sf)
+        }
+        for (const tf of getAllTestFiles(pkgDir, pkg.path)) {
+          allDiskFilesSet.add(tf)
+          testFilesSet.add(tf)
+        }
       }
     }
+    const allDiskFiles = Array.from(allDiskFilesSet).sort()
 
     const normalizedCached = {}
     for (const [k, v] of Object.entries(cachedFingerprints)) {
@@ -367,6 +391,7 @@ export class IncrementalIndexer {
         hash,
         size: content.length,
         lines: content.split('\n').length,
+        isTest: testFilesSet.has(file),
       }
 
       if (!cached) {
@@ -414,11 +439,11 @@ export class IncrementalIndexer {
    */
   computeInvalidationSet(changes, existingGraph) {
     const directlyChanged = new Set([
-      ...changes.added,
-      ...changes.modified,
-      ...changes.deleted,
-      ...changes.renames.map((r) => r.from),
-      ...changes.renames.map((r) => r.to),
+      ...(changes.added || []),
+      ...(changes.modified || []),
+      ...(changes.deleted || []),
+      ...(changes.renames || []).map((r) => r.from),
+      ...(changes.renames || []).map((r) => r.to),
     ])
 
     const dependentInvalidated = new Set()
@@ -434,30 +459,55 @@ export class IncrementalIndexer {
       }
     }
 
-    // 1. Files importing directly changed files
-    for (const changedFile of directlyChanged) {
-      const fileData = existingGraph.files[changedFile]
+    // 1. Transitive dependent traversal (BFS across imports & calls, cycle-safe)
+    const visited = new Set(directlyChanged)
+    const queue = Array.from(directlyChanged)
+
+    // Pre-index incoming relationships by target file for O(1) BFS lookup
+    const incomingByTargetFile = new Map()
+    for (const rel of existingGraph.relationships) {
+      let targetFile = rel.targetId || ''
+      if (targetFile.includes('#')) {
+        // Format: @hisabche/pkg/path/to/file.ts#Symbol -> extract file path if present
+        const slashIdx = targetFile.indexOf('/')
+        const afterPkg =
+          targetFile.startsWith('@') && slashIdx !== -1
+            ? targetFile.slice(targetFile.indexOf('/', slashIdx + 1) + 1)
+            : targetFile
+        targetFile = afterPkg.split('#')[0]
+      } else if (targetFile.includes('::')) {
+        targetFile = targetFile.split('::')[0]
+      }
+      if (!targetFile) continue
+      if (!incomingByTargetFile.has(targetFile)) {
+        incomingByTargetFile.set(targetFile, [])
+      }
+      incomingByTargetFile.get(targetFile).push(rel)
+    }
+
+    while (queue.length > 0) {
+      const currentFile = queue.shift()
+
+      const fileData = existingGraph.files[currentFile]
       if (fileData?.importedBy) {
         for (const dep of fileData.importedBy) {
-          if (!directlyChanged.has(dep)) {
+          if (!visited.has(dep)) {
+            visited.add(dep)
             dependentInvalidated.add(dep)
+            queue.push(dep)
           }
         }
       }
 
-      // Also check incoming IMPORTS / CALLS relationships targeting this file
-      for (const rel of existingGraph.relationships) {
-        if (
-          rel.targetId === changedFile ||
-          rel.targetId.startsWith(`${changedFile}::`) ||
-          rel.targetId.includes(changedFile)
-        ) {
-          if (rel.file && !directlyChanged.has(rel.file)) {
-            if (rel.type === 'TESTS') {
-              affectedTestFiles.add(rel.file)
-            } else {
-              dependentInvalidated.add(rel.file)
-            }
+      const incoming = incomingByTargetFile.get(currentFile) || []
+      for (const rel of incoming) {
+        if (rel.file && !visited.has(rel.file)) {
+          visited.add(rel.file)
+          if (rel.type === 'TESTS') {
+            affectedTestFiles.add(rel.file)
+          } else {
+            dependentInvalidated.add(rel.file)
+            queue.push(rel.file)
           }
         }
       }
@@ -474,18 +524,26 @@ export class IncrementalIndexer {
   /**
    * Atomically writes index and cache with backup protection
    */
-  atomicPublish(candidateGraph, candidateCache) {
+  atomicPublish(candidateGraph, candidateCache, candidateLexical = null) {
+    mkdirSync(dirname(this.graphPath), { recursive: true })
     const tmpGraph = `${this.graphPath}.tmp.${process.pid}`
     const tmpCache = `${this.cachePath}.tmp.${process.pid}`
+    const tmpLexical = `${this.lexicalPath}.tmp.${process.pid}`
 
     try {
       // 1. Write candidates to temporary files
       writeFileSync(tmpGraph, JSON.stringify(candidateGraph, null, 2), 'utf8')
       writeFileSync(tmpCache, JSON.stringify(candidateCache, null, 2), 'utf8')
+      if (candidateLexical) {
+        writeFileSync(tmpLexical, JSON.stringify(candidateLexical), 'utf8')
+      }
 
       // 2. Validate written temporary files can be parsed cleanly
       JSON.parse(readFileSync(tmpGraph, 'utf8'))
       JSON.parse(readFileSync(tmpCache, 'utf8'))
+      if (candidateLexical) {
+        JSON.parse(readFileSync(tmpLexical, 'utf8'))
+      }
 
       // 3. Backup existing graph if it exists
       if (existsSync(this.graphPath)) {
@@ -500,6 +558,9 @@ export class IncrementalIndexer {
         this._safeReplace(tmpGraph, this.graphPath)
         graphReplaced = true
         this._safeReplace(tmpCache, this.cachePath)
+        if (candidateLexical && existsSync(tmpLexical)) {
+          this._safeReplace(tmpLexical, this.lexicalPath)
+        }
       } catch (swapErr) {
         // Rollback graph from backup if graph was replaced but cache failed
         if (graphReplaced && existsSync(this.backupPath)) {
@@ -520,6 +581,10 @@ export class IncrementalIndexer {
       if (existsSync(tmpCache))
         try {
           unlinkSync(tmpCache)
+        } catch {}
+      if (existsSync(tmpLexical))
+        try {
+          unlinkSync(tmpLexical)
         } catch {}
       throw new Error(`Atomic publication failed: ${err.message}`)
     }
@@ -674,13 +739,17 @@ export class IncrementalIndexer {
 
       const pkgInfo = currentPackages.find((p) => file.startsWith(p.path))
       const pkgName = pkgInfo ? pkgInfo.name : inferPackageName(file)
+      const classified = classifyFileDomainAndPlatform(file, content)
 
-      // 1. Extract AST symbols
-      const astSymbols = extractSymbolsFromSource(file, content, {
-        packageName: pkgName,
-        domain: 'SHARED',
-        platform: 'SHARED',
-      })
+      // 1. Extract AST symbols (skip non-test extraction for pure test files, keep TESTS links)
+      const isTestFile = /\.(test|spec)\.(ts|tsx|js|jsx|mjs)$/.test(file)
+      const astSymbols = isTestFile
+        ? []
+        : extractSymbolsFromSource(file, content, {
+            packageName: pkgName,
+            domain: classified.domain,
+            platform: classified.platform,
+          })
 
       for (const sym of astSymbols) {
         const primaryKey = `${file}::${sym.name}`
@@ -698,13 +767,18 @@ export class IncrementalIndexer {
           : astSymbols.map((s) => s.name)
 
       updatedFiles[file] = {
+        file,
+        pkg: pkgName,
+        fileHash: computeSha256(content),
         imports: [],
         importedBy: updatedFiles[file]?.importedBy || [],
-        platform: updatedFiles[file]?.platform || ['SHARED'],
-        domain: updatedFiles[file]?.domain || ['SHARED'],
+        platform: [classified.platform],
+        domain: [classified.domain],
+        layer: classified.layer,
         exports: exportNames,
         size: content.length,
         lines: content.split('\n').length,
+        isTest: isTestFile,
       }
 
       // 2. Extract relationships
@@ -716,7 +790,9 @@ export class IncrementalIndexer {
         fileSymbols: astSymbols,
       })
 
-      updatedRelationships.push(...fileRels)
+      updatedRelationships.push(
+        ...(isTestFile ? fileRels.filter((r) => r.type === 'TESTS') : fileRels),
+      )
     }
 
     // Sort relationships deterministically by ID
@@ -809,8 +885,17 @@ export class IncrementalIndexer {
       fileFingerprints: updatedFingerprints,
     }
 
+    // Build and atomically publish lexical index alongside graph + cache
+    const symbolsByFileMap = new Map()
+    for (const sym of Object.values(updatedSymbols)) {
+      if (!sym?.file) continue
+      if (!symbolsByFileMap.has(sym.file)) symbolsByFileMap.set(sym.file, [])
+      symbolsByFileMap.get(sym.file).push(sym)
+    }
+    const candidateLexical = buildLexicalIndex(this.rootDir, updatedFiles, symbolsByFileMap)
+
     // Atomically publish
-    this.atomicPublish(candidateGraph, candidateCache)
+    this.atomicPublish(candidateGraph, candidateCache, candidateLexical)
 
     return {
       mode: 'INCREMENTAL_UPDATE',
@@ -871,11 +956,12 @@ export class IncrementalIndexer {
 
       const pkgInfo = currentPackages.find((p) => file.startsWith(p.path))
       const pkgName = pkgInfo ? pkgInfo.name : inferPackageName(file)
+      const classified = classifyFileDomainAndPlatform(file, content)
 
       const astSymbols = extractSymbolsFromSource(file, content, {
         packageName: pkgName,
-        domain: 'SHARED',
-        platform: 'SHARED',
+        domain: classified.domain,
+        platform: classified.platform,
       })
 
       const exportedSymbols = astSymbols.filter((s) => s.exported)
@@ -885,10 +971,14 @@ export class IncrementalIndexer {
           : astSymbols.map((s) => s.name)
 
       fileData[file] = {
+        file,
+        pkg: pkgName,
+        fileHash: computeSha256(content),
         imports: [],
         importedBy: [],
-        platform: ['SHARED'],
-        domain: ['SHARED'],
+        platform: [classified.platform],
+        domain: [classified.domain],
+        layer: classified.layer,
         exports: exportNames,
         size: content.length,
         lines: content.split('\n').length,
@@ -914,25 +1004,50 @@ export class IncrementalIndexer {
       allRelationships.push(...fileRels)
     }
 
-    // Test relationships
-    const testFiles = getAllTestFiles(this.rootDir)
-    for (const tFile of testFiles) {
-      const fullPath = join(this.rootDir, tFile)
-      let tContent = ''
-      try {
-        tContent = readFileSync(fullPath, 'utf8')
-      } catch {
-        continue
-      }
+    // Test relationships & test file fingerprints (Phase 0 / Gap 24)
+    for (const pkg of currentPackages) {
+      const pkgDir = join(this.rootDir, pkg.path)
+      if (!existsSync(pkgDir)) continue
+      for (const tFile of getAllTestFiles(pkgDir, pkg.path)) {
+        const fullPath = join(this.rootDir, tFile)
+        let tContent = ''
+        try {
+          tContent = readFileSync(fullPath, 'utf8')
+        } catch {
+          continue
+        }
 
-      const tRels = extractFileRelationships(tFile, tContent, {
-        aliases,
-        workspacePackages,
-        symbolIndex,
-      })
-      for (const r of tRels) {
-        if (r.type === 'TESTS') {
-          allRelationships.push(r)
+        const tClassified = classifyFileDomainAndPlatform(tFile, tContent)
+        fileFingerprints[tFile] = {
+          hash: computeSha256(tContent),
+          size: tContent.length,
+          lines: tContent.split('\n').length,
+          isTest: true,
+        }
+        fileData[tFile] = {
+          file: tFile,
+          pkg: pkg.name,
+          fileHash: fileFingerprints[tFile].hash,
+          imports: [],
+          importedBy: [],
+          platform: [tClassified.platform],
+          domain: [tClassified.domain],
+          layer: 'test',
+          exports: [],
+          size: tContent.length,
+          lines: fileFingerprints[tFile].lines,
+          isTest: true,
+        }
+
+        const tRels = extractFileRelationships(tFile, tContent, {
+          aliases,
+          workspacePackages,
+          symbolIndex,
+        })
+        for (const r of tRels) {
+          if (r.type === 'TESTS') {
+            allRelationships.push(r)
+          }
         }
       }
     }
@@ -1010,7 +1125,15 @@ export class IncrementalIndexer {
       fileFingerprints,
     }
 
-    this.atomicPublish(graph, cache)
+    const symbolsByFileMap = new Map()
+    for (const sym of Object.values(symbolIndex)) {
+      if (!sym?.file) continue
+      if (!symbolsByFileMap.has(sym.file)) symbolsByFileMap.set(sym.file, [])
+      symbolsByFileMap.get(sym.file).push(sym)
+    }
+    const lexical = buildLexicalIndex(this.rootDir, fileData, symbolsByFileMap)
+
+    this.atomicPublish(graph, cache, lexical)
 
     return {
       mode: 'FULL_REBUILD',
@@ -1020,6 +1143,105 @@ export class IncrementalIndexer {
         totalFiles: allFiles.length,
         totalSymbols: Object.keys(symbolIndex).length,
         totalRelationships: allRelationships.length,
+      },
+    }
+  }
+
+  /**
+   * Runs health & integrity diagnostics over graph.json, cache.json, lexical.json, and disk hashes.
+   */
+  doctor() {
+    const graph = this.loadGraph()
+    const cache = this.loadCache()
+    const issues = []
+    const orphanSymbols = []
+    const orphanRelationships = []
+    const brokenEdges = []
+    const staleFiles = []
+
+    if (!graph) issues.push('graph.json missing or corrupt')
+    if (!cache) issues.push('cache.json missing or corrupt')
+    if (!existsSync(this.lexicalPath)) issues.push('lexical.json missing (hybrid search degraded)')
+
+    const configMatch = cache?.configHash === computeConfigFingerprint(this.rootDir)
+    if (cache && !configMatch) {
+      issues.push('Configuration fingerprint drifted (tsconfig/package.json changed)')
+    }
+
+    if (graph && graph.files) {
+      const fileSet = new Set(Object.keys(graph.files))
+      const testFileSet = new Set()
+      if (cache?.fileFingerprints) {
+        for (const [f, fp] of Object.entries(cache.fileFingerprints)) {
+          if (fp?.isTest || /\.(test|spec)\.(ts|tsx|js|jsx|mjs|mts)$/.test(f)) {
+            testFileSet.add(f)
+          }
+        }
+      }
+      for (const [symId, sym] of Object.entries(graph.symbols || {})) {
+        if (sym?.file && !fileSet.has(sym.file)) {
+          orphanSymbols.push(symId)
+        }
+      }
+      for (const rel of graph.relationships || []) {
+        const isKnownFile =
+          fileSet.has(rel.file) ||
+          (rel.type === 'TESTS' &&
+            (testFileSet.has(rel.file) || existsSync(join(this.rootDir, rel.file))))
+        if (rel.file && !isKnownFile) {
+          orphanRelationships.push(rel.id)
+        }
+        if (
+          rel.type === 'IMPORTS' &&
+          rel.status === 'RESOLVED' &&
+          rel.targetId &&
+          !fileSet.has(rel.targetId) &&
+          !existsSync(join(this.rootDir, rel.targetId))
+        ) {
+          brokenEdges.push(`${rel.file} -> ${rel.targetId}`)
+        }
+      }
+    }
+
+    if (cache?.fileFingerprints) {
+      for (const [file, fp] of Object.entries(cache.fileFingerprints)) {
+        const full = join(this.rootDir, file)
+        if (!existsSync(full)) {
+          staleFiles.push({ file, reason: 'deleted' })
+          continue
+        }
+        try {
+          const hash = computeSha256(readFileSync(full, 'utf8'))
+          if (hash !== fp.hash) {
+            staleFiles.push({ file, reason: 'modified' })
+          }
+        } catch {
+          staleFiles.push({ file, reason: 'unreadable' })
+        }
+      }
+    }
+
+    const healthy =
+      issues.length === 0 &&
+      orphanSymbols.length === 0 &&
+      orphanRelationships.length === 0 &&
+      brokenEdges.length === 0 &&
+      staleFiles.length === 0
+
+    return {
+      healthy,
+      configMatch,
+      issues,
+      orphanSymbols: orphanSymbols.slice(0, 50),
+      orphanRelationships: orphanRelationships.slice(0, 50),
+      brokenEdges: brokenEdges.slice(0, 50),
+      staleFiles: staleFiles.slice(0, 100),
+      counts: {
+        issues: issues.length,
+        orphanSymbols: orphanSymbols.length,
+        orphanRelationships: orphanRelationships.length,
+        brokenEdges: brokenEdges.length,
+        staleFiles: staleFiles.length,
       },
     }
   }

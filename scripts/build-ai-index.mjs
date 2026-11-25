@@ -17,6 +17,8 @@ import {
   computeConfigFingerprint,
   computeSha256,
 } from './lib/incremental-indexer.mjs'
+import { classifyFileDomainAndPlatform } from './lib/domain-classifier.mjs'
+import { buildLexicalIndex } from './lib/lexical-index.mjs'
 
 const ROOT = process.cwd()
 const AI_DIR = join(ROOT, '.ai', 'codebase')
@@ -711,7 +713,7 @@ function buildIndex() {
   writeFileSync(GRAPH_JSON, JSON.stringify(graph, null, 2))
   console.log(`Graph written to ${GRAPH_JSON}`)
 
-  // Write fingerprint cache for incremental updates
+  // Write fingerprint cache for incremental updates (source + test files)
   const fileFingerprints = {}
   for (const file of allFiles) {
     const content = readFileContent(file)
@@ -719,8 +721,57 @@ function buildIndex() {
       hash: computeSha256(content),
       size: content.length,
       lines: content.split('\n').length,
+      isTest: false,
+    }
+    const classified = classifyFileDomainAndPlatform(file, content)
+    if (fileData[file]) {
+      fileData[file].layer = classified.layer
+      fileData[file].fileHash = fileFingerprints[file].hash
+      fileData[file].pkg = fileData[file].pkg || inferPackageName(file)
     }
   }
+
+  for (const pkg of packages) {
+    const pkgDir = join(ROOT, pkg.path)
+    if (!existsSync(pkgDir)) continue
+    for (const tFile of getAllTestFiles(pkgDir, pkg.path)) {
+      const content = readFileContent(tFile)
+      if (!content) continue
+      const h = computeSha256(content)
+      fileFingerprints[tFile] = {
+        hash: h,
+        size: content.length,
+        lines: content.split('\n').length,
+        isTest: true,
+      }
+      if (!fileData[tFile]) {
+        const tClassified = classifyFileDomainAndPlatform(tFile, content)
+        fileData[tFile] = {
+          file: tFile,
+          pkg: pkg.name,
+          fileHash: h,
+          imports: [],
+          importedBy: [],
+          platform: [tClassified.platform],
+          domain: [tClassified.domain],
+          layer: 'test',
+          exports: [],
+          size: content.length,
+          lines: fileFingerprints[tFile].lines,
+          isTest: true,
+        }
+      }
+    }
+  }
+
+  const symbolsByFileMap = new Map()
+  for (const sym of Object.values(symbolIndex)) {
+    if (!sym?.file) continue
+    if (!symbolsByFileMap.has(sym.file)) symbolsByFileMap.set(sym.file, [])
+    symbolsByFileMap.get(sym.file).push(sym)
+  }
+  const lexical = buildLexicalIndex(ROOT, fileData, symbolsByFileMap)
+  writeFileSync(join(AI_DIR, 'lexical.json'), JSON.stringify(lexical))
 
   const cache = {
     schemaVersion: 1,
@@ -731,7 +782,7 @@ function buildIndex() {
     fileFingerprints,
   }
   writeFileSync(CACHE_JSON, JSON.stringify(cache, null, 2))
-  console.log(`Cache written to ${CACHE_JSON}`)
+  console.log(`Cache + lexical index written to ${AI_DIR}`)
 
   generateMarkdownMap(graph)
   console.log(`Map written to ${MAP_MD}`)

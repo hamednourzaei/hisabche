@@ -9,7 +9,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { registerWriterClient } from './primary'
+import { primaryDb, registerWriterClient } from './primary'
 import type {
   DistributedWriterLeaseRecord,
   FencingToken,
@@ -30,17 +30,25 @@ export class FencingTokenRejectedError extends Error {
   }
 }
 
+const DEV_FENCING_SECRET = 'hisabche-dev-fencing-secret-local-only'
+
 function resolveFencingSecret(explicit?: string): string {
-  const candidate = explicit ?? process.env.WRITER_FENCING_SECRET ?? process.env.JWT_SECRET
-  if (candidate && candidate.trim().length >= 16) {
-    return candidate
+  const rawCandidate = explicit ?? process.env.WRITER_FENCING_SECRET
+  const trimmed = rawCandidate?.trim()
+  if (trimmed && trimmed.length >= 16) {
+    if (process.env.NODE_ENV === 'production' && trimmed === DEV_FENCING_SECRET) {
+      throw new Error(
+        'WRITER_FENCING_SECRET must not use the local development secret in production.',
+      )
+    }
+    return trimmed
   }
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
       'WRITER_FENCING_SECRET (>= 16 chars) is required in production to sign writer fencing tokens.',
     )
   }
-  return 'hisabche-dev-fencing-secret-local-only'
+  return DEV_FENCING_SECRET
 }
 
 /**
@@ -197,6 +205,11 @@ export class WriterFencingEngine {
   private readonly fencingSecret: string
   private readonly clusterKey: string
   private leaseStore: WriterLeaseStore | null
+  private requireDistributedLeaseStore: boolean
+  private degraded = false
+  private leaseRenewalFailures = 0
+  private lastLeaseFailure: string | null = null
+  private quarantinedWriters = new Set<string>()
 
   constructor(options?: {
     initialEpoch?: number
@@ -205,6 +218,7 @@ export class WriterFencingEngine {
     fencingSecret?: string
     clusterKey?: string
     leaseStore?: WriterLeaseStore | null
+    requireDistributedLeaseStore?: boolean | undefined
   }) {
     this.currentEpoch = options?.initialEpoch ?? Number(process.env.INITIAL_WRITER_EPOCH ?? 1)
     this.currentWriterId =
@@ -213,11 +227,73 @@ export class WriterFencingEngine {
     this.fencingSecret = resolveFencingSecret(options?.fencingSecret)
     this.clusterKey = options?.clusterKey ?? process.env.WRITER_CLUSTER_KEY ?? 'primary-cluster'
     this.leaseStore = options?.leaseStore ?? null
+    this.requireDistributedLeaseStore =
+      options?.requireDistributedLeaseStore ??
+      ((process.env.NODE_ENV === 'production' && process.env.FENCING_ALLOW_LOCAL_ONLY !== '1') ||
+        process.env.FENCING_REQUIRE_DISTRIBUTED === '1')
     this.grantFreshLease()
   }
 
   public setLeaseStore(store: WriterLeaseStore | null): void {
     this.leaseStore = store
+    if (store) {
+      this.degraded = false
+    }
+  }
+
+  public setRequireDistributedLeaseStore(required: boolean): void {
+    this.requireDistributedLeaseStore = required
+  }
+
+  public isDistributedLeaseRequired(): boolean {
+    return this.requireDistributedLeaseStore
+  }
+
+  public isDegraded(): boolean {
+    return this.degraded
+  }
+
+  public quarantineWriter(writerId: string): void {
+    if (writerId && writerId.trim().length > 0) {
+      this.quarantinedWriters.add(writerId)
+    }
+  }
+
+  public isWriterQuarantined(writerId: string): boolean {
+    return this.quarantinedWriters.has(writerId)
+  }
+
+  public releaseQuarantineOnRecovery(writerId: string): void {
+    this.quarantinedWriters.delete(writerId)
+  }
+
+  public getObservabilityMetrics(): {
+    clusterKey: string
+    epoch: number
+    writerId: string
+    leaseActive: boolean
+    leaseExpiresAt: string | null
+    degraded: boolean
+    distributedStoreBound: boolean
+    requireDistributedLeaseStore: boolean
+    leaseRenewalFailures: number
+    quarantinedWriters: readonly string[]
+    lastLeaseFailure: string | null
+  } {
+    const lease = this.getActiveLease()
+    return {
+      clusterKey: this.clusterKey,
+      epoch: this.currentEpoch,
+      writerId: this.currentWriterId,
+      leaseActive: lease.active,
+      leaseExpiresAt: this.activeLease?.expiresAt ?? null,
+      degraded: this.degraded,
+      distributedStoreBound: this.leaseStore !== null,
+      requireDistributedLeaseStore: this.requireDistributedLeaseStore,
+      leaseRenewalFailures: this.leaseRenewalFailures,
+      quarantinedWriters: [...this.quarantinedWriters].sort(),
+      lastLeaseFailure: this.lastLeaseFailure,
+    }
   }
 
   public getClusterKey(): string {
@@ -290,30 +366,64 @@ export class WriterFencingEngine {
   ): Promise<WriterLease> {
     const store = storeOverride ?? this.leaseStore
     if (!store) {
+      this.degraded = true
+      this.leaseRenewalFailures += 1
+      this.lastLeaseFailure = 'No distributed WriterLeaseStore configured'
       throw new Error('No distributed WriterLeaseStore configured')
     }
     const token = this.generateFencingToken()
-    const record = await store.acquireOrRenewLease({
-      clusterKey: this.clusterKey,
-      writerId: this.currentWriterId,
-      epoch: this.currentEpoch,
-      ttlMs: this.defaultLeaseDurationMs,
-      fenceSignature: token.signature!,
-    })
-    this.applyDistributedRecord(record)
-    return this.getActiveLease()
+    try {
+      const record = await store.acquireOrRenewLease({
+        clusterKey: this.clusterKey,
+        writerId: this.currentWriterId,
+        epoch: this.currentEpoch,
+        ttlMs: this.defaultLeaseDurationMs,
+        fenceSignature: token.signature!,
+      })
+      this.applyDistributedRecord(record)
+      this.degraded = false
+      this.lastLeaseFailure = null
+      return this.getActiveLease()
+    } catch (err) {
+      this.degraded = true
+      this.leaseRenewalFailures += 1
+      this.lastLeaseFailure = err instanceof Error ? err.message : String(err)
+      throw err
+    }
   }
 
   /**
    * Asserts that a write request carries a valid, cryptographically signed fencing
    * token matching the exact active epoch and writer, under an unexpired lease.
    */
-  public assertValidWriter(token?: FencingToken | null, nowMs: number = Date.now()): void {
+  public assertValidWriter(
+    token?: FencingToken | null,
+    nowMs: number = Date.now(),
+    options?: { maxTokenAgeMs?: number; maxClockSkewMs?: number },
+  ): void {
+    if (this.requireDistributedLeaseStore && !this.leaseStore) {
+      this.degraded = true
+      this.lastLeaseFailure = 'Distributed lease store unavailable; write rejected fail-closed.'
+      throw new FencingTokenRejectedError(
+        'Split-Brain Defense: Distributed WriterLeaseStore is required and unavailable; writes refused in degraded state.',
+        this.currentEpoch,
+        token?.epoch ?? -1,
+      )
+    }
+
     if (!token) {
       throw new FencingTokenRejectedError(
         'Split-Brain Defense: Explicit signed fencing token is required for write operations.',
         this.currentEpoch,
         -1,
+      )
+    }
+
+    if (this.quarantinedWriters.has(token.writerId)) {
+      throw new FencingTokenRejectedError(
+        `Split-Brain Defense: Writer '${token.writerId}' is quarantined after failover recovery; write refused.`,
+        this.currentEpoch,
+        token.epoch,
       )
     }
 
@@ -352,6 +462,32 @@ export class WriterFencingEngine {
     if (!this.verifyTokenSignature(token)) {
       throw new FencingTokenRejectedError(
         'Split-Brain Defense: Invalid or missing cryptographic fencing token signature.',
+        this.currentEpoch,
+        token.epoch,
+      )
+    }
+
+    const issuedAtMs = Date.parse(token.issuedAt)
+    if (!Number.isFinite(issuedAtMs)) {
+      throw new FencingTokenRejectedError(
+        'Split-Brain Defense: Fencing token has an invalid issuedAt timestamp.',
+        this.currentEpoch,
+        token.epoch,
+      )
+    }
+
+    const maxTokenAgeMs = options?.maxTokenAgeMs ?? this.defaultLeaseDurationMs
+    const maxClockSkewMs = options?.maxClockSkewMs ?? 5_000
+    if (nowMs - issuedAtMs > maxTokenAgeMs) {
+      throw new FencingTokenRejectedError(
+        'Split-Brain Defense: Fencing token has exceeded maximum allowed age.',
+        this.currentEpoch,
+        token.epoch,
+      )
+    }
+    if (issuedAtMs - nowMs > maxClockSkewMs) {
+      throw new FencingTokenRejectedError(
+        'Split-Brain Defense: Fencing token issuedAt timestamp exceeds allowed clock skew.',
         this.currentEpoch,
         token.epoch,
       )
@@ -395,6 +531,11 @@ export class WriterFencingEngine {
       newWriterClient?: SupabaseClient | undefined
     },
   ): PromotionDecision {
+    if (this.requireDistributedLeaseStore) {
+      throw new Error(
+        'Local-only promoteStandby() is forbidden when distributed lease store is required; use promoteStandbyDistributed().',
+      )
+    }
     if (!decision.approved) {
       throw new Error(
         `Promotion rejected: Explicit human or controller approval required. Reason: ${decision.reason}`,
@@ -402,6 +543,8 @@ export class WriterFencingEngine {
     }
 
     const previousWriter = this.currentWriterId
+    this.quarantinedWriters.add(previousWriter)
+    this.quarantinedWriters.delete(decision.newWriterId)
     this.currentEpoch += 1
     this.currentWriterId = decision.newWriterId
     if (decision.newWriterClient) {
@@ -439,6 +582,7 @@ export class WriterFencingEngine {
     }
     const store = decision.store ?? this.leaseStore
     if (!store) {
+      this.degraded = true
       throw new Error('No distributed WriterLeaseStore configured')
     }
 
@@ -460,10 +604,13 @@ export class WriterFencingEngine {
       fenceSignature: nextSig,
     })
 
+    this.quarantinedWriters.add(previousWriter)
+    this.quarantinedWriters.delete(record.writerId)
     if (decision.newWriterClient) {
       registerWriterClient(record.writerId, decision.newWriterClient)
     }
     this.applyDistributedRecord(record)
+    this.degraded = false
 
     return {
       approved: true,
@@ -478,10 +625,19 @@ export class WriterFencingEngine {
   }
 
   /** Resets in-memory state (test-only helper to avoid cross-suite contamination). */
-  public resetForTest(options?: { epoch?: number; writerId?: string }): void {
+  public resetForTest(options?: {
+    epoch?: number
+    writerId?: string
+    requireDistributedLeaseStore?: boolean
+  }): void {
     this.currentEpoch = options?.epoch ?? Number(process.env.INITIAL_WRITER_EPOCH ?? 1)
     this.currentWriterId = options?.writerId ?? process.env.PRIMARY_WRITER_ID ?? 'primary-master-01'
     this.leaseStore = null
+    this.requireDistributedLeaseStore = options?.requireDistributedLeaseStore ?? false
+    this.degraded = false
+    this.leaseRenewalFailures = 0
+    this.lastLeaseFailure = null
+    this.quarantinedWriters.clear()
     this.grantFreshLease()
   }
 
@@ -546,3 +702,9 @@ export class WriterFencingEngine {
 }
 
 export const globalFencingEngine = new WriterFencingEngine()
+
+export function bindDefaultDistributedLeaseStore(): SupabaseWriterLeaseStore {
+  const store = new SupabaseWriterLeaseStore(primaryDb)
+  globalFencingEngine.setLeaseStore(store)
+  return store
+}

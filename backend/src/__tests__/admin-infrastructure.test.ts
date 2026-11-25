@@ -125,6 +125,7 @@ describe('AdminInfrastructureService & Runtime Enforcement', () => {
     )
 
     process.env.NGINX_RELOAD_WEBHOOK_URL = 'https://nginx-reloader.internal/reload'
+    process.env.NGINX_RELOAD_WEBHOOK_SECRET = 'test-infra-webhook-secret-32chars'
     adminInfrastructureService.setReloadFetchForTest(async () => {
       return new Response('nginx -t syntax error', { status: 500 })
     })
@@ -143,8 +144,15 @@ describe('AdminInfrastructureService & Runtime Enforcement', () => {
         (r) => r.key === INFRASTRUCTURE_FLAG_KEY,
       )
       expect(JSON.parse(String(rows[0]?.description)).maintenanceMode).toBe(false)
+
+      // Missing webhook secret fails closed without updating settings
+      delete process.env.NGINX_RELOAD_WEBHOOK_SECRET
+      await expect(
+        adminInfrastructureService.updateSettings({ maintenanceMode: true }, 'ops@hisabche.test'),
+      ).rejects.toThrow(/NGINX_RELOAD_WEBHOOK_SECRET/)
     } finally {
       delete process.env.NGINX_RELOAD_WEBHOOK_URL
+      delete process.env.NGINX_RELOAD_WEBHOOK_SECRET
       adminInfrastructureService.setReloadFetchForTest(null)
     }
   })

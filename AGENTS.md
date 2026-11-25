@@ -224,48 +224,56 @@ When an exact source location is available:
 
 ---
 
-## 0.6. CODEBASE INTELLIGENCE: MANDATORY PREFLIGHT & POSTFLIGHT PROTOCOL
+## 0.6. CODEBASE INTELLIGENCE V3.0: MANDATORY CROSS-HARNESS PREFLIGHT & POSTFLIGHT PROTOCOL
 
-> **CANONICAL STATUS:** This file (`AGENTS.md`) is the canonical instruction file for all coding agents (Claude Code, Cursor, Codex, OpenCode, Antigravity). All other instruction files (`CLAUDE.md`, etc.) inherit directly from this protocol. For full operational details and examples, see `docs/ai/CODE-INTELLIGENCE-WORKFLOW-GUIDE.md`.
+> **CANONICAL STATUS:** This file (`AGENTS.md`) is the canonical instruction file for **every coding agent and AI harness** working in this repository (Antigravity, Claude Code, Cursor, OpenCode, Codex, etc.). All other instruction files (`CLAUDE.md`, harness rules, skills) inherit directly from this protocol. For full operational details, see `docs/ai/CODE-INTELLIGENCE-WORKFLOW-GUIDE.md`.
 
-### The Canonical Index & Interfaces
+### The Canonical Index & Access Interfaces
 
-Two canonical artifacts live in `.ai/codebase/`:
+Four canonical artifacts live in `.ai/codebase/`:
 
 - `CODEBASE_MAP.md` — human-readable architectural map (<300 lines)
-- `graph.json` — compiler-backed AST symbol and relationship graph (17,875 symbols, 63,830 relationships)
+- `graph.json` — compiler-backed AST symbol and relationship graph (with `domain`, `platform`, `layer`, `fileHash`, `isTest`)
+- `cache.json` — per-file SHA-256 fingerprint manifest & config hashes for incremental staleness/update tracking
+- `lexical.json` — BM25 full-text & Persian/English synonym inverted index (`search`, error strings, routes)
 
-Access interfaces:
+**Auto-Setup for Any Harness:** Run `node scripts/setup-mcp.mjs` (workspace `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`; pass `--global` to also register user-level Claude Code / Cursor / OpenCode / Antigravity configs, or `--dry-run` to preview).
 
-- **CLI:** `pnpm code-intel <status|symbol|callers|callees|imports|tests|impact|source>`
-- **MCP Server (stdio):** `node scripts/code-intel-mcp.mjs` (or `pnpm code-intel:mcp`) exposing `code_intel_status`, `code_intel_find_symbols`, `code_intel_get_symbol`, `code_intel_get_relationships`, `code_intel_impact`, `code_intel_get_source`.
+Access interfaces (**Single Query Engine** `CodeIntelQueryEngine` in `scripts/lib/code-intel-query.mjs`):
+
+- **CLI Cheat Sheet:**
+  - `pnpm code-intel prepare` — check status and incrementally refresh index if stale/dirty (run at start)
+  - `pnpm code-intel context-pack "<task>"` — bounded `<= 4000` token context pack (files, symbols, callers, guards, tests)
+  - `pnpm code-intel feature "<name>"` — end-to-end vertical map (schema -> backend -> api -> ui -> mobile -> tests)
+  - `pnpm code-intel search "<query>"` — BM25 keyword / error-string / Persian-English concept search
+  - `pnpm code-intel symbol find <name> [--returns <type>]` — exact AST symbol lookup
+  - `pnpm code-intel symbol show <id>` / `callers <id>` / `callees <id>` / `impact <target> --depth 2` / `source <id>`
+  - `pnpm code-intel update` — **incremental post-edit rebuild** (also `pnpm code-intel doctor` for health checks)
+- **MCP Server (stdio):** `node scripts/code-intel-mcp.mjs` (or `pnpm code-intel:mcp`) exposing read-only tools `code_intel_status`, `code_intel_find_symbols`, `code_intel_get_symbol`, `code_intel_get_relationships`, `code_intel_impact`, `code_intel_impact_analysis`, `code_intel_get_source`, `code_intel_search_code`, `code_intel_feature`, `code_intel_get_context_pack`.
 
 ---
 
-### MANDATORY PREFLIGHT (Execute Before Planning or Editing Code)
+### MANDATORY PREFLIGHT (Execute Before Planning, Exploring, or Editing Code — ALL Harnesses)
 
 1. **Preserve User Work & Working Tree Check:**
    - Inspect `git status --short`, current branch, and HEAD.
    - Never reset, checkout `--`, stash, or overwrite existing user modifications.
    - **Rule 0:** Never `git commit`, `git push`, `git reset`, or rebase. Leave work in the working tree.
-2. **Verify Code Intelligence Availability & Freshness:**
-   - Run `pnpm code-intel status` (or MCP `code_intel_status`).
-   - Check whether `index.status === 'FRESH'`. If `STALE`, note the warning.
-   - If MCP is configured in your harness, verify the live connection with a status call. Do not assume MCP is connected solely because a config snippet exists.
-3. **Grounded Symbol & Impact Discovery:**
-   - **Find existing code before building:** `pnpm code-intel symbol find <name>` (or `code_intel_find_symbols`). Never invent a function or duplicate an existing service (Rule 2).
-   - **Inspect signatures:** `pnpm code-intel symbol show <id>` (or `code_intel_get_symbol`). Read real types and docstrings.
-   - **Inspect callers/callees:** `pnpm code-intel callers <id>` (or `code_intel_get_relationships`). Know who calls this symbol across Web, Desktop, Mobile, and Backend before modifying it.
-   - **Inspect blast radius:** `pnpm code-intel impact <target> --depth 2` (or `code_intel_impact`). Identify affected packages and dependency cycles.
-   - **Retrieve exact source:** `pnpm code-intel source <id> --context 3` (or `code_intel_get_source`). Read line-numbered excerpts without blowing context on 1,000-line files.
-4. **Fallback Protocol:**
-   - If MCP/CLI is unavailable, record the limitation.
-   - Fall back to scoped repository search (`rg -n "exact_symbol" packages/<domain>`).
-   - Never interpret an empty index query as proof that code does not exist. Verify against disk files before concluding.
+2. **Ensure Fresh Index (`prepare` first):**
+   - Run `pnpm code-intel prepare` (or MCP `code_intel_status`; if `STALE` or `MISSING`, refresh via `pnpm code-intel update` before querying).
+   - Never burn context grepping thousands of files when the index is available.
+3. **One-Call Bounded Discovery (Zero Hallucination, Token-Efficient):**
+   - **Task orientation:** Start with `pnpm code-intel context-pack "<task>"` (or MCP `code_intel_get_context_pack`) or `pnpm code-intel feature "<name>"` (`code_intel_feature`) or `pnpm code-intel search "<error-or-concept>"` (`code_intel_search_code`).
+   - **Find existing code before building:** `pnpm code-intel symbol find <name> [--returns <type>]` (`code_intel_find_symbols`). Never invent a function or duplicate an existing service (Rule 2).
+   - **Inspect signatures & blast radius:** `symbol show <id>`, `callers <id>`, `impact <target> --depth 2` (`code_intel_impact_analysis`).
+   - **Retrieve exact source:** `pnpm code-intel source <id> --context 3` (`code_intel_get_source`).
+4. **Honest Fallback Protocol (Explicit `INSUFFICIENT_EVIDENCE` Rule):**
+   - If `get_context_pack` / `search` returns `INSUFFICIENT_EVIDENCE`, or MCP/CLI is unavailable/stale, record the limitation honestly and fall back to **scoped** `rg -n "exact_symbol" <target-package>`.
+   - Never inspect `.env*`, `.pem`, `.key`, or secret files, and never interpret an empty index query as proof code does not exist.
 
 ---
 
-### MANDATORY POSTFLIGHT (Execute After Every Code Change)
+### MANDATORY POSTFLIGHT (Execute After Every Prompt / Task Edit — ALL Harnesses)
 
 1. **Verify Actual Changes:**
    - Run `git diff --check` to catch whitespace or formatting errors.
@@ -275,10 +283,10 @@ Access interfaces:
    - From each modified package: `npx tsc --noEmit` and `npx vitest run <relevant-tests>`.
    - Run `npx eslint <modified-file>`: **0 errors**.
    - Do not claim tests passed unless the exit code was 0.
-3. **Check Code Intelligence Freshness:**
-   - Check if modified files altered index freshness state.
-   - If the index is stale, explicitly mark it as `STALE (requires rebuild upon completion)`.
-   - Never manually edit `graph.json`. Do not run automatic index rebuilds or claim incremental indexing exists unless explicitly approved for the task.
+3. **MANDATORY Index Sync After Every Edit (`update` always):**
+   - **Every agent and every harness (Antigravity, Claude Code, Cursor, OpenCode, Codex) MUST run `pnpm code-intel update` after finishing edits in ANY prompt or task** (and then verify `pnpm code-intel status` reports `FRESH`).
+   - This keeps `.ai/codebase/{graph.json,cache.json,lexical.json,CODEBASE_MAP.md}` permanently fresh across switches between harnesses.
+   - Never manually hand-edit `.ai/codebase/graph.json`, `cache.json`, or `lexical.json` — always use `pnpm code-intel update` (or `node scripts/build-ai-index.mjs --full` if `doctor` requests a full rebuild).
 4. **Standardized Status Reporting (Rule 9 Parity):**
    - Report exactly one of: `VERIFIED_COMPLETE` (only with live HTTP/DB verification) · `IMPLEMENTED_NOT_LIVE_VERIFIED` · `VERIFIED_WITH_LIMITATIONS` · `BLOCKED` · `NOT_IMPLEMENTED`.
    - Report separate statuses for: (1) Implementation, (2) Automated tests, (3) Runtime/device verification, (4) Production verification, (5) Harness/MCP integration, (6) Index freshness.
@@ -527,3 +535,14 @@ Editing discipline applies to every task: read each file once, one edit per file
 5. **Batch the work:** finish ALL edits of the step, THEN run tsc, THEN tests — not tsc after every file.
 6. **Formatter note:** a formatter may rewrite the file after save. If an exact-match edit then fails, re-read ONLY the region you need, never the whole file again.
 7. **In each report, add one line:** «files edited: N, total edit operations: M». M should be close to N. If M is much larger than N, explain why.
+
+---
+
+## 11. Hisabche Engineering Agency (Teams A–E & Harness Integration)
+
+Structured AI engineering, security, verification, and release-governance system adapted cleanly from `msitarzewski/agency-agents` (MIT) and strictly subordinate to all rules in this file (`§0–§10`):
+
+- **Governance, Roster & Workflows:** [hisabche-agency/README.md](./hisabche-agency/README.md) · [ORGANIZATION.md](./hisabche-agency/ORGANIZATION.md) · [GOVERNANCE.md](./hisabche-agency/GOVERNANCE.md) · [AGENT-SELECTION.md](./hisabche-agency/AGENT-SELECTION.md) · [EVIDENCE-STANDARD.md](./hisabche-agency/EVIDENCE-STANDARD.md) · `hisabche-agency/workflows/`
+- **Teams:** Architecture (`Team A`) · Security & Financial Integrity (`Team B`) · Platform, Offline & Mobile (`Team C`) · Product, Experience & i18n (`Team D`) · Quality & Release (`Team E`) + `Agents Orchestrator`
+- **Task Profiles:** Select `LIGHTWEIGHT`, `STANDARD`, or `CRITICAL` per [ORCHESTRATION.md](./hisabche-agency/ORCHESTRATION.md); assign exactly one write owner per overlapping file and invoke `Reality Checker` for independent release gates.
+- **Installed Harnesses:** Antigravity user plugin `~/.gemini/config/plugins/hisabche-agency/` (`27` skills + `rules/AGENTS.md`), Claude Code user agents `~/.claude/agents/hisabche-*.md` (preserving existing `seo-*.md` and workspace `.claude/agents/*.md`), and pre-converted Codex TOMLs in `hisabche-agency/integrations/codex/agents/`.

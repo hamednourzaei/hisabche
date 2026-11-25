@@ -36,6 +36,26 @@ import {
 
 let database: SQLite.SQLiteDatabase | null = null
 
+export interface MobileLocalDbSecurityStatus {
+  readonly initialized: boolean
+  readonly nativeSqlCipherSupported: false
+  readonly mode: 'unencrypted_expo_sqlite' | 'uninitialized'
+  readonly classification: 'PLATFORM_SQLCIPHER_NOT_CONFIGURED'
+  readonly lastFailure: string | null
+}
+
+let lastFailure: string | null = null
+
+export function getMobileLocalDbSecurityStatus(): MobileLocalDbSecurityStatus {
+  return {
+    initialized: database !== null,
+    nativeSqlCipherSupported: false,
+    mode: database !== null ? 'unencrypted_expo_sqlite' : 'uninitialized',
+    classification: 'PLATFORM_SQLCIPHER_NOT_CONFIGURED',
+    lastFailure,
+  }
+}
+
 async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ value?: string }>(
     "SELECT value FROM meta WHERE key = 'schema_version'",
@@ -62,8 +82,17 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
  * `isReady()` is how callers tell the two apart, so that «no cache» can be
  * reported as itself instead of as «no data» (راهنمای سشن §۷٫۳).
  */
-export async function initLocalDb(): Promise<boolean> {
+export async function initLocalDb(options?: {
+  readonly requireEncryptedStorage?: boolean | undefined
+}): Promise<boolean> {
   if (database) return true
+
+  if (options?.requireEncryptedStorage) {
+    lastFailure =
+      'PLATFORM_SQLCIPHER_NOT_CONFIGURED: expo-sqlite SQLCipher plugin is not compiled in.'
+    database = null
+    return false
+  }
 
   try {
     const db = await SQLite.openDatabaseAsync('hisabche.db')
@@ -79,9 +108,11 @@ export async function initLocalDb(): Promise<boolean> {
       String(SCHEMA_VERSION),
     ])
 
+    lastFailure = null
     database = db
     return true
   } catch (error) {
+    lastFailure = error instanceof Error ? error.message : String(error)
     console.error('[local-db] SQLite unavailable, running online-only:', error)
     database = null
     return false

@@ -82,9 +82,15 @@ Commands:
     --kind <kind>        Filter by kind (function, class, interface, etc.)
     --domain <domain>    Filter by business domain
     --pkg <package>      Filter by package name
+    --returns <type>     Filter by return type / signature substring
     --limit <n>          Limit number of results (default 50)
   
   symbol show <id>       Show full symbol card by ID or name
+  search <query>         Hybrid AST + BM25 lexical search (comments, errors, paths)
+    --layer <layer>      Filter by layer (ui, hook, validation, route, service, db, sync, test)
+  feature <name>         Discover full Feature Graph (UI -> Hook -> Route -> Service -> DB -> Sync)
+  context-pack <task>    Build bounded (<= 4000 tokens) Context Pack for an agent task
+    --max-tokens <n>     Token budget (default 3500, max 4000)
   callers <id>           Show verified callers of a symbol
     --verified-only      Show only AST_VERIFIED callers
   callees <id>           Show functions/methods called by a symbol
@@ -96,9 +102,11 @@ Commands:
   source <id|path>       Retrieve exact source code excerpt
     --context <n>        Number of context lines (default 3)
   status                 Show index health, freshness, and statistics
+  prepare                Verify freshness and run incremental update automatically if needed
   update                 Run incremental index update or rebuild
     --full               Force clean full rebuild
     --dry-run            Analyze changes without writing index
+  doctor                 Audit orphans, broken edges, stale disk hashes, and config drift
 
 Options:
   --json                 Output clean machine-readable JSON contract
@@ -113,6 +121,52 @@ async function run() {
 
   const engine = new CodeIntelQueryEngine()
 
+  const command = positional[0]
+
+  // Commands that manage/repair index state before query loading
+  if (command === 'prepare') {
+    const indexer = new IncrementalIndexer()
+    let currentStatus = null
+    try {
+      engine.load()
+      currentStatus = engine.getIndexStatus()
+    } catch {
+      currentStatus = { status: 'MISSING' }
+    }
+
+    if (currentStatus.status === 'FRESH') {
+      if (isJson) printJsonContract('prepare', 'repository', [{ action: 'NO_OP', status: 'FRESH' }])
+      else console.log('Index is already FRESH.')
+      process.exit(0)
+    }
+
+    const updateRes = indexer.update({
+      forceFull: currentStatus.status === 'MISSING' || currentStatus.status === 'CORRUPT',
+    })
+    if (isJson) printJsonContract('prepare', 'repository', [{ action: 'UPDATED', ...updateRes }])
+    else console.log(`Prepared index via ${updateRes.mode} (${updateRes.status || 'FRESH'}).`)
+    process.exit(0)
+  }
+
+  if (command === 'doctor') {
+    const indexer = new IncrementalIndexer()
+    const report = indexer.doctor()
+    if (isJson) {
+      printJsonContract('doctor', 'repository', [report])
+    } else {
+      console.log(`\nCode Intelligence Doctor: ${report.healthy ? 'HEALTHY' : 'ISSUES_FOUND'}`)
+      console.log(`- Config Match: ${report.configMatch}`)
+      console.log(`- Orphan Symbols: ${report.counts.orphanSymbols}`)
+      console.log(`- Orphan Relationships: ${report.counts.orphanRelationships}`)
+      console.log(`- Broken Edges: ${report.counts.brokenEdges}`)
+      console.log(`- Stale Files: ${report.counts.staleFiles}`)
+      if (report.issues.length > 0) {
+        for (const iss of report.issues) console.log(`  ! ${iss}`)
+      }
+    }
+    process.exit(report.healthy ? 0 : 1)
+  }
+
   try {
     engine.load()
   } catch (err) {
@@ -123,8 +177,6 @@ async function run() {
     }
     process.exit(2)
   }
-
-  const command = positional[0]
 
   // 1. symbol find / symbol show
   if (command === 'symbol') {
@@ -143,6 +195,7 @@ async function run() {
         kind: flags.kind,
         domain: flags.domain,
         package: flags.pkg,
+        returns: flags.returns,
         limit: flags.limit ? parseInt(flags.limit, 10) : 50,
       })
 
@@ -461,6 +514,87 @@ async function run() {
       }
       process.exit(1)
     }
+  }
+
+  // 11. search / feature / context-pack (V3.0)
+  if (command === 'search') {
+    const query = positional.slice(1).join(' ')
+    if (!query) {
+      if (isJson) printJsonContract('search', '', [], { errors: ['Missing search query'] })
+      else console.error('Error: Please provide a search query.')
+      process.exit(1)
+    }
+    const res = engine.searchCode(query, {
+      package: flags.pkg,
+      domain: flags.domain,
+      layer: flags.layer,
+      limit: flags.limit ? parseInt(flags.limit, 10) : 10,
+    })
+    if (isJson) {
+      printJsonContract('search', query, res.results, {
+        warnings: res.status === 'INSUFFICIENT_EVIDENCE' ? ['INSUFFICIENT_EVIDENCE'] : [],
+      })
+    } else {
+      console.log(`\nHybrid Search [${res.status}] for '${query}' (${res.totalMatches} matches):`)
+      for (const hit of res.results) {
+        console.log(`- ${hit.file} (score=${hit.score}, layer=${hit.layer}, domain=${hit.domain})`)
+        if (hit.symbols?.[0]) {
+          console.log(`    Top Symbol: ${hit.symbols[0].name} (L${hit.symbols[0].startLine})`)
+        }
+      }
+    }
+    process.exit(0)
+  }
+
+  if (command === 'feature') {
+    const feature = positional.slice(1).join(' ')
+    if (!feature) {
+      if (isJson) printJsonContract('feature', '', [], { errors: ['Missing feature name'] })
+      else console.error('Error: Please provide a feature name.')
+      process.exit(1)
+    }
+    const res = engine.discoverFeature(feature, {
+      limit: flags.limit ? parseInt(flags.limit, 10) : 20,
+    })
+    if (isJson) {
+      printJsonContract('feature', feature, [res])
+    } else {
+      console.log(`\nFeature Graph [${res.status}] for '${feature}' (${res.totalNodes} nodes):`)
+      for (const [layer, nodes] of Object.entries(res.layers || {})) {
+        if (nodes.length > 0) {
+          console.log(`  [${layer}]: ${nodes.map((n) => n.file).join(', ')}`)
+        }
+      }
+    }
+    process.exit(0)
+  }
+
+  if (command === 'context-pack') {
+    const task = positional.slice(1).join(' ')
+    if (!task) {
+      if (isJson)
+        printJsonContract('context-pack', '', [], { errors: ['Missing task description'] })
+      else console.error('Error: Please provide a task description.')
+      process.exit(1)
+    }
+    const res = engine.getContextPack(task, {
+      package: flags.pkg,
+      domain: flags.domain,
+      maxTokens: flags['max-tokens'] ? parseInt(flags['max-tokens'], 10) : 3500,
+    })
+    if (isJson) {
+      printJsonContract('context-pack', task, [res], { truncated: res.truncated })
+    } else {
+      console.log(
+        `\nContext Pack [${res.status}] (~${res.tokenEstimate}/${res.maxTokens} tokens, truncated=${res.truncated}):`,
+      )
+      console.log(`- Files: ${res.relevantFiles.map((f) => f.file).join(', ')}`)
+      console.log(`- Snippets: ${res.snippets.length}, Tests: ${res.relatedTests.length}`)
+      if (res.securityAndSyncWarnings.length > 0) {
+        for (const w of res.securityAndSyncWarnings) console.log(`  ! ${w}`)
+      }
+    }
+    process.exit(0)
   }
 
   console.error(`Unknown command: ${command}. Run 'node scripts/code-intel.mjs help' for usage.`)

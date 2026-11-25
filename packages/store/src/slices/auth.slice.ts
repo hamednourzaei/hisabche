@@ -13,9 +13,20 @@ import { useWorkspaceStore } from './workspace.slice'
 // threw at module scope — which took the whole app down before it rendered.
 // The literal `process.env.NEXT_PUBLIC_…` text must stay intact so Next can
 // still substitute it at build time.
-const ENCRYPTION_KEY =
-  (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ENCRYPTION_KEY : undefined) ||
-  'hisabche-dev-key-32-chars!!'
+const ENV_AUTH_ENCRYPTION_KEY =
+  typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ENCRYPTION_KEY : undefined
+
+function resolveAuthEncryptionKey(): string {
+  if (ENV_AUTH_ENCRYPTION_KEY && ENV_AUTH_ENCRYPTION_KEY.trim().length >= 16) {
+    return ENV_AUTH_ENCRYPTION_KEY
+  }
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'NEXT_PUBLIC_ENCRYPTION_KEY (>= 16 chars) is required in production for auth storage encryption.',
+    )
+  }
+  return 'hisabche-dev-key-32-chars!!'
+}
 
 const encryptedStorage = {
   getItem: (key: string): string | null => {
@@ -23,7 +34,7 @@ const encryptedStorage = {
     try {
       const encrypted = localStorage.getItem(key)
       if (!encrypted) return null
-      const bytes = CryptoJS.AES.decrypt(encrypted, ENCRYPTION_KEY)
+      const bytes = CryptoJS.AES.decrypt(encrypted, resolveAuthEncryptionKey())
       return bytes.toString(CryptoJS.enc.Utf8)
     } catch {
       localStorage.removeItem(key)
@@ -32,7 +43,7 @@ const encryptedStorage = {
   },
   setItem: (key: string, value: string): void => {
     if (typeof window === 'undefined') return
-    const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString()
+    const encrypted = CryptoJS.AES.encrypt(value, resolveAuthEncryptionKey()).toString()
     localStorage.setItem(key, encrypted)
   },
   removeItem: (key: string): void => {

@@ -1,6 +1,6 @@
 # Hisabche Engineering Organization
 
-The Hisabche Engineering Agency organizes **26 specialized agents** (filtered from 268 upstream templates) into **5 functional teams** plus **1 cross-cutting Orchestrator**.
+The Hisabche Engineering Agency organizes **27 specialized agents** (filtered from 268 upstream templates: **26 domain specialists across 5 functional teams** plus **1 cross-cutting Orchestrator**).
 
 ```text
                        ┌────────────────────────────┐

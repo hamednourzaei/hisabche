@@ -53,6 +53,12 @@ export interface CatalogGrantSpec {
   readonly privilege: string
 }
 
+export interface CatalogViewSpec {
+  readonly name: string
+  readonly materialized: boolean
+  readonly definition: string
+}
+
 export interface CatalogSchemaSnapshot {
   readonly tables: readonly CatalogTableSpec[]
   readonly functions: readonly string[]
@@ -63,6 +69,7 @@ export interface CatalogSchemaSnapshot {
   readonly grants?: readonly CatalogGrantSpec[] | undefined
   readonly extensions?: readonly string[] | undefined
   readonly sequences?: readonly string[] | undefined
+  readonly views?: readonly CatalogViewSpec[] | undefined
 }
 
 export interface SchemaMetadataSummary {
@@ -73,9 +80,22 @@ export interface SchemaMetadataSummary {
   readonly grantCount: number
   readonly extensionCount: number
   readonly sequenceCount: number
+  readonly viewCount: number
   readonly functionCount: number
   readonly triggerCount: number
   readonly fingerprint: string
+}
+
+export interface SchemaParityReport {
+  readonly schemaParity: boolean
+  readonly migrationParity: boolean | null
+  readonly dataParityVerified: false
+  readonly runtimeReadiness: boolean
+  readonly primaryFingerprint: string
+  readonly standbyFingerprint: string
+  readonly blockingDifferences: readonly string[]
+  readonly nonBlockingDifferences: readonly string[]
+  readonly humanSummary: string
 }
 
 export interface SchemaComparisonResult {
@@ -128,7 +148,17 @@ SELECT
        WHERE table_schema = 'public'
      ) g) AS grants,
   (SELECT array_agg(extname || '@' || extversion ORDER BY extname) FROM pg_extension) AS extensions,
-  (SELECT array_agg(sequence_name ORDER BY sequence_name) FROM information_schema.sequences WHERE sequence_schema = 'public') AS sequences;
+  (SELECT array_agg(sequence_name ORDER BY sequence_name) FROM information_schema.sequences WHERE sequence_schema = 'public') AS sequences,
+  (SELECT json_agg(row_to_json(v) ORDER BY v.name)
+     FROM (
+       SELECT viewname AS name, false AS materialized, definition
+       FROM pg_views
+       WHERE schemaname = 'public'
+       UNION ALL
+       SELECT matviewname AS name, true AS materialized, definition
+       FROM pg_matviews
+       WHERE schemaname = 'public'
+     ) v) AS views;
 `.trim()
 
 function canonicalTokens(catalog: CatalogSchemaSnapshot): string[] {
@@ -184,6 +214,11 @@ function canonicalTokens(catalog: CatalogSchemaSnapshot): string[] {
 
   for (const seq of [...(catalog.sequences ?? [])].sort()) {
     tokens.push(`seq:${seq}`)
+  }
+
+  const sortedViews = [...(catalog.views ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+  for (const v of sortedViews) {
+    tokens.push(`view:${v.name}:mat=${v.materialized}:${v.definition.trim()}`)
   }
 
   for (const fn of [...catalog.functions].sort()) {
@@ -248,9 +283,64 @@ export class SchemaFingerprintEngine {
       grantCount: catalog.grants?.length ?? 0,
       extensionCount: catalog.extensions?.length ?? 0,
       sequenceCount: catalog.sequences?.length ?? 0,
+      viewCount: catalog.views?.length ?? 0,
       functionCount: catalog.functions.length,
       triggerCount: catalog.triggers.length,
       fingerprint: this.computeFromCatalog(catalog),
+    }
+  }
+
+  /**
+   * Produces a structured schema parity report distinguishing schema parity,
+   * migration digest parity, data parity (never inferred from schema), and
+   * blocking vs non-blocking differences.
+   */
+  public static compareCatalogsWithReport(params: {
+    primary: CatalogSchemaSnapshot
+    standby: CatalogSchemaSnapshot
+    primaryMigrationDigest?: string | undefined
+    standbyMigrationDigest?: string | undefined
+  }): SchemaParityReport {
+    const diff = this.diffCatalogs(params.primary, params.standby)
+    const blockingDifferences: string[] = []
+    const nonBlockingDifferences: string[] = []
+
+    for (const d of diff.differences) {
+      if (d.includes(':idx:')) {
+        nonBlockingDifferences.push(d)
+      } else {
+        blockingDifferences.push(d)
+      }
+    }
+
+    const migrationParity =
+      params.primaryMigrationDigest !== undefined && params.standbyMigrationDigest !== undefined
+        ? params.primaryMigrationDigest === params.standbyMigrationDigest
+        : null
+
+    if (migrationParity === false) {
+      blockingDifferences.push(
+        `migration_digest_mismatch:primary=${params.primaryMigrationDigest}:standby=${params.standbyMigrationDigest}`,
+      )
+    }
+
+    const schemaParity = diff.matches && blockingDifferences.length === 0
+    const runtimeReadiness = schemaParity && migrationParity !== false
+
+    const humanSummary = runtimeReadiness
+      ? `Schema parity verified (${diff.primaryFingerprint.slice(0, 12)}). Note: schema parity does NOT prove data replication parity.`
+      : `Schema parity FAILED (${blockingDifferences.length} blocking, ${nonBlockingDifferences.length} non-blocking differences).`
+
+    return {
+      schemaParity,
+      migrationParity,
+      dataParityVerified: false,
+      runtimeReadiness,
+      primaryFingerprint: diff.primaryFingerprint,
+      standbyFingerprint: diff.standbyFingerprint,
+      blockingDifferences,
+      nonBlockingDifferences,
+      humanSummary,
     }
   }
 

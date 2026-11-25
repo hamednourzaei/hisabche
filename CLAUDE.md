@@ -8,17 +8,18 @@ Persian/Dari accounting and ERP software. Monorepo with pnpm + Turbo.
 
 ---
 
-## 0. Mandatory Preflight & Code Intelligence
+## 0. Mandatory Preflight & Code Intelligence V3.0
 
-Before inspecting code, planning, or making any edit:
+Before inspecting code, planning, or making any edit (applies to Claude Code, Cursor, OpenCode, Codex, Antigravity):
 1. **Git Check & Preserve User Work:** Run `git status --short`. Never run `commit`, `push`, `reset`, or `stash`. User work in progress in the working tree must remain untouched.
-2. **Code Intelligence Status:** Run `pnpm code-intel status` or the local MCP tool `code_intel_status`.
-3. **Discover Before Building (Zero Hallucination):**
-   - Find existing symbols using `pnpm code-intel symbol find <name>` or MCP `code_intel_find_symbols`.
-   - Read the real signature using `pnpm code-intel symbol show <id>`.
-   - Inspect callers via `pnpm code-intel callers <id>` and evaluate blast radius via `pnpm code-intel impact <target>`.
-   - Read exact code excerpts using `pnpm code-intel source <id>` (avoid reading 1,000-line files that burn context).
+2. **Ensure Fresh Index (`prepare`):** Run `pnpm code-intel prepare` (or MCP `code_intel_status`). If `STALE` or `MISSING`, refresh with `pnpm code-intel update` first so every harness shares a current index.
+3. **One-Call Bounded Discovery (Zero Hallucination):**
+   - Get a task context pack (`<= 4000` tokens): `pnpm code-intel context-pack "<task>"` or MCP `code_intel_get_context_pack`.
+   - Map a vertical slice: `pnpm code-intel feature "<name>"` or MCP `code_intel_feature`.
+   - Search concepts/errors (FA/EN + BM25): `pnpm code-intel search "<query>"` or MCP `code_intel_search_code`.
+   - Find symbols / callers / impact: `symbol find <name> [--returns <type>]`, `symbol show <id>`, `callers <id>`, `impact <target>`, `source <id>`.
 4. **Extend Rather Than Duplicate (Rule 2):** If a service, schema, hook, or component exists, extend it. Never create a duplicate module.
+5. **Mandatory Post-Edit Index Update:** After finishing edits in **any** prompt/task, run `pnpm code-intel update` so the next agent or harness immediately sees fresh state.
 
 ---
 
@@ -114,40 +115,39 @@ docs/             SQL files + reports. Migrations are created here.
 
 ---
 
-## 0.6. Codebase Navigation Intelligence — Permanent Rules
+## 0.6. Codebase Navigation Intelligence V3.0 — Permanent Cross-Harness Rules
 
-### Two-Part Index
-Two canonical artifacts in `.ai/codebase/` serve as the **single source of truth** for navigation:
-- `CODEBASE_MAP.md` — Human-readable, <300 lines, **the first file to read in any session**.
-- `graph.json` — Machine AST symbol and dependency graph (with git hash + timestamp to detect staleness).
+### Canonical Index Artifacts (`.ai/codebase/`)
+Four artifacts in `.ai/codebase/` form the **single source of truth** across **every coding agent and AI harness** (Antigravity, Claude Code, Cursor, OpenCode, Codex):
+- `CODEBASE_MAP.md` — Human-readable architecture map (<300 lines)
+- `graph.json` — Compiler-backed AST symbol and relationship graph (`domain`, `platform`, `layer`, `fileHash`, `isTest`)
+- `cache.json` — Full-manifest SHA-256 fingerprints & config hashes (`tsconfig*`) for exact staleness detection & incremental updates
+- `lexical.json` — BM25 full-text & Persian/English concept synonym inverted index
 
-Generate/rebuild: `node scripts/build-ai-index.mjs` (<2 seconds).
+Full build: `node scripts/build-ai-index.mjs --full` · Incremental update: `pnpm code-intel update` · Diagnostics: `pnpm code-intel doctor` · Auto-wire MCP: `node scripts/setup-mcp.mjs` (`--global` for user configs).
 
-### Rule 1: Cache-First and Staleness Check
-1. At the beginning of **every** task, read `.ai/codebase/CODEBASE_MAP.md` first.
-2. If files have changed significantly from the recorded commit in `graph.json`, run `node scripts/build-ai-index.mjs` instead of manual repo scanning.
+### Rule 1: Prepare & Cache-First (`prepare` at start)
+1. At the start of **every** task in any harness, run `pnpm code-intel prepare` (or MCP `code_intel_status`). If `STALE` or `MISSING`, refresh via `pnpm code-intel update` before querying.
+2. Start discovery with `pnpm code-intel context-pack "<task>"` (<= 4000 tokens), `pnpm code-intel feature "<name>"`, or `pnpm code-intel search "<query>"` instead of wide `grep` or reading whole files.
+3. Never read `.env*`, `.pem`, `.key`, or secret files; if retrieval returns `INSUFFICIENT_EVIDENCE`, fall back strictly to scoped `rg -n "exact_symbol" <target-package>`.
 
 ### Rule 2: Bug Resolution Protocol (Stack-Trace & Symbol Jump)
 When a bug, error message, TypeScript diagnostic, or crash is reported:
-1. **If file:line is in stack trace:** Open that exact file and line **first**. Zero exploration.
-2. **If error string or symbol is provided:** Search only in the relevant domain/platform from `CODEBASE_MAP.md` — `rg -n "exact_symbol"` or query `.ai/codebase/graph.json`.
-3. Trace only the minimal subgraph: `Failing File → Direct Caller → Direct Callee → Schema/Type → Platform Adapter`.
-4. **Hard Read Limit:** Open **at most 5 source files** before identifying the root cause.
+1. **If `file:line` is in stack trace:** Open that exact file and line **first**. Zero exploration.
+2. **If error string or symbol is provided:** Run `pnpm code-intel search "<error>"` or `symbol find <name> [--returns <type>]` via the single query core instead of scanning unrelated domains.
+3. Trace only the minimal subgraph (`callers` / `callees` / `impact --depth 2`): `Failing File -> Direct Caller -> Direct Callee -> Schema/Type -> Platform Adapter`.
+4. **Hard Read Limit:** Open **at most 5 source files** (use `source <id>`) before identifying the root cause.
 
 ### Rule 3: Feature Resolution Protocol
 When adding or modifying a capability:
-1. Classify domain and platform using `CODEBASE_MAP.md` (`SHARED` vs `WEB_ONLY` vs `MOBILE_ONLY` vs `WINDOWS_ONLY` vs `SERVER_ONLY` vs `PLATFORM_ADAPTER` vs `OFFLINE_ENGINE`).
-2. Search `graph.json` for existing hooks/services/Zod schemas/components (**Reuse > Extend > Duplicate**).
+1. Run `pnpm code-intel feature "<name>"` or `context-pack "<task>"` to inspect schema -> backend -> api -> ui -> mobile -> tests and verify `domain`/`platform`/`layer` (`SHARED` vs `WEB_ONLY` vs `MOBILE_ONLY` vs `WINDOWS_ONLY` vs `SERVER_ONLY` vs `PLATFORM_ADAPTER` vs `OFFLINE_ENGINE`).
+2. Check existing hooks/services/Zod schemas/components (**Reuse > Extend > Duplicate**, Rule 2).
 3. Business rules must reside in shared/domain packages; platform-specific code must remain a thin adapter.
-4. Before reading/editing code, construct an internal shortlist:
-   - `PRIMARY FILES` (max 2-3 prioritized files)
-   - `SECONDARY FILES` (only if data contract changes)
-5. **Hard Edit Limit:** Target **at most 2-3 files** for ordinary tasks. If more are needed, justify explicitly.
+4. Keep edits minimal and bounded (`PRIMARY FILES` first; `SECONDARY FILES` only if data contract changes).
 
-### Rule 4: Progressive Update and Honest Verification
-1. After editing code, run `node scripts/build-ai-index.mjs` to keep the index fresh.
-2. Never claim `fixed`, `verified`, or `production-ready` without executing a real check. Label statuses honestly:
-   `IMPLEMENTED` | `TYPECHECKED` | `UNIT TESTED` | `EMULATOR/LIVE VERIFIED`.
+### Rule 4: Mandatory Cross-Harness Update After Every Prompt / Task
+1. **After finishing edits in ANY prompt or task, EVERY harness (Antigravity, Claude Code, Cursor, OpenCode, Codex) MUST run `pnpm code-intel update`** and confirm `pnpm code-intel status` reports `FRESH`.
+2. Never manually edit `graph.json`, `cache.json`, or `lexical.json`. Never claim `fixed`, `verified`, or `production-ready` without executing real checks. Label statuses honestly (`VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_LIVE_VERIFIED`, `VERIFIED_WITH_LIMITATIONS`, `BLOCKED`).
 
 ---
 
@@ -353,3 +353,14 @@ Respond to the project owner in **Persian**, structured with:
 3. **Measured Numbers**: Real test command outputs, exit codes, and counts.
 4. **Scope Boundaries**: What was done and what was excluded.
 5. **Assumptions & Human Action Items**: Required migrations and human steps.
+
+---
+
+## 12. Hisabche Engineering Agency
+
+Specialized multi-team AI engineering agency (`hisabche-agency/`) built from `msitarzewski/agency-agents` (MIT), strictly subordinate to `AGENTS.md` and this file:
+
+- **Maps & Governance:** `hisabche-agency/README.md`, `hisabche-agency/ORGANIZATION.md`, `hisabche-agency/GOVERNANCE.md`, `hisabche-agency/AGENT-REGISTRY.md`, `hisabche-agency/ORCHESTRATION.md`, `hisabche-agency/EVIDENCE-STANDARD.md`, `hisabche-agency/RELEASE-POLICY.md`.
+- **Workflows (`hisabche-agency/workflows/`):** `architecture-audit`, `security-audit`, `database-audit`, `offline-sync-audit`, `mobile-audit`, `ux-audit`, `production-readiness`, `regression-testing`, `release-validation`.
+- **Execution Discipline:** Always choose `LIGHTWEIGHT` | `STANDARD` | `CRITICAL` sizing (`ORCHESTRATION.md`), keep reviewers strictly read-only alongside existing `.claude/agents/{domain,parity,security}-reviewer.md`, never bypass `AGENTS.md §0` (no git ops, no live DDL, no `.env*`, no RN/Expo upgrades, no Redis/LWW on financial sync), and verify every installation update with `node hisabche-agency/scripts/verify-agency.mjs`.
+- **Harness Locations:** User Antigravity plugin (`~/.gemini/config/plugins/hisabche-agency/`), user Claude Code agents (`~/.claude/agents/hisabche-*.md`), and pre-converted Codex TOMLs (`hisabche-agency/integrations/codex/agents/`).

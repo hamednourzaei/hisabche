@@ -8,7 +8,7 @@
 // without extra migrations, while keeping an in-process cache for fast hooks.
 // ============================================
 
-import { createHmac } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import {
   DEFAULT_INFRASTRUCTURE_SETTINGS,
   buildNginxConfigDirectives,
@@ -24,6 +24,69 @@ import { setServiceModeInput } from '../../runtime/service-mode'
 import { AdminSecurityService } from './admin-security.service'
 
 const REFRESH_MS = 10_000
+const WEBHOOK_TIMEOUT_MS = 5_000
+const MAX_REPLAY_WINDOW_SEC = 300
+const seenNonces = new Map<string, number>()
+
+export function resolveNginxWebhookSecret(): string {
+  const secret = process.env.NGINX_RELOAD_WEBHOOK_SECRET
+  if (!secret || secret.trim().length < 16) {
+    throw new Error(
+      'NGINX_RELOAD_WEBHOOK_SECRET (>= 16 chars) is required when NGINX_RELOAD_WEBHOOK_URL is configured; refusing fallback secret.',
+    )
+  }
+  return secret
+}
+
+export function validateNginxDirectivesSafe(directives: string): void {
+  if (
+    directives.includes('\0') ||
+    /[`\r]|\$\(|\b(?:lua_|exec\s*\(|system\s*\()/i.test(directives)
+  ) {
+    throw new Error('Unsafe Nginx directive token detected; configuration rejected.')
+  }
+}
+
+export function verifyInfrastructureWebhookRequest(params: {
+  bodyJson: string
+  signatureHeader: string | undefined
+  timestampHeader: string | undefined
+  nonceHeader: string | undefined
+  secret?: string | undefined
+  nowSeconds?: number | undefined
+}): { valid: boolean; reason?: string } {
+  const secret = params.secret ?? resolveNginxWebhookSecret()
+  if (!params.signatureHeader || !params.timestampHeader || !params.nonceHeader) {
+    return { valid: false, reason: 'missing_auth_headers' }
+  }
+  const ts = Number(params.timestampHeader)
+  const now = params.nowSeconds ?? Math.floor(Date.now() / 1000)
+  if (!Number.isFinite(ts) || Math.abs(now - ts) > MAX_REPLAY_WINDOW_SEC) {
+    return { valid: false, reason: 'timestamp_out_of_window' }
+  }
+  if (seenNonces.has(params.nonceHeader)) {
+    return { valid: false, reason: 'replay_nonce_detected' }
+  }
+  const expected = createHmac('sha256', secret)
+    .update(`t=${ts}.${params.nonceHeader}.${params.bodyJson}`)
+    .digest('hex')
+  const a = Buffer.from(params.signatureHeader)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { valid: false, reason: 'invalid_hmac_signature' }
+  }
+  seenNonces.set(params.nonceHeader, now)
+  if (seenNonces.size > 1000) {
+    for (const [k, recordedAt] of seenNonces) {
+      if (now - recordedAt > MAX_REPLAY_WINDOW_SEC) seenNonces.delete(k)
+    }
+  }
+  return { valid: true }
+}
+
+export function resetInfraWebhookNoncesForTest(): void {
+  seenNonces.clear()
+}
 
 function currentEdgeControlMode(): 'fastify_runtime_only' | 'webhook_synced' {
   return process.env.NGINX_RELOAD_WEBHOOK_URL ? 'webhook_synced' : 'fastify_runtime_only'
@@ -127,6 +190,9 @@ class AdminInfrastructureService {
       setServiceModeInput({ maintenance: next.maintenanceMode })
     }
 
+    const webhookUrl = process.env.NGINX_RELOAD_WEBHOOK_URL
+    const webhookSecret = webhookUrl ? resolveNginxWebhookSecret() : null
+
     const { error } = await supabase.from('feature_flags').upsert(
       {
         key: INFRASTRUCTURE_FLAG_KEY,
@@ -149,19 +215,19 @@ class AdminInfrastructureService {
 
     // If an external Nginx reload agent/webhook is configured, push directives for
     // `nginx -t && nginx -s reload` and roll back persisted settings on failure.
-    const webhookUrl = process.env.NGINX_RELOAD_WEBHOOK_URL
-    if (webhookUrl) {
+    if (webhookUrl && webhookSecret) {
       const directives = buildNginxConfigDirectives(next)
+      validateNginxDirectivesSafe(directives)
+      const timestamp = Math.floor(Date.now() / 1000)
+      const nonce = randomUUID()
+      const requestId = randomUUID()
       const bodyJson = JSON.stringify({
         action: 'validate_and_reload',
         directives,
         settings: next,
       })
-      const sig = createHmac(
-        'sha256',
-        process.env.NGINX_RELOAD_WEBHOOK_SECRET || process.env.JWT_SECRET || 'hisabche-infra',
-      )
-        .update(bodyJson)
+      const sig = createHmac('sha256', webhookSecret)
+        .update(`t=${timestamp}.${nonce}.${bodyJson}`)
         .digest('hex')
 
       let reloadOk = false
@@ -172,8 +238,12 @@ class AdminInfrastructureService {
           headers: {
             'content-type': 'application/json',
             'x-hisabche-infra-signature': sig,
+            'x-hisabche-infra-timestamp': String(timestamp),
+            'x-hisabche-infra-nonce': nonce,
+            'x-hisabche-request-id': requestId,
           },
           body: bodyJson,
+          signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
         })
         reloadOk = res.ok
         if (!res.ok) reloadFailureReason = `HTTP ${res.status}`

@@ -30,6 +30,7 @@ import {
   registerSystemMetricsRoutes,
 } from './routes/system-metrics.routes'
 import { databaseHaRoutes } from './routes/database-ha.routes'
+import { bindDefaultDistributedLeaseStore } from './db/fencing'
 import { pressureMonitor } from './runtime/pressure'
 import { assertNoTestMarkersInProduction, markTestRuntime } from './runtime/test-runtime'
 import {
@@ -769,6 +770,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
   // V63 · S-2 — an explicit, irreversible marker. Nothing else can turn the
   // MFA bypass on; a plain VITEST in a production process refuses at start().
   if (options.testRuntime) markTestRuntime()
+  else bindDefaultDistributedLeaseStore()
 
   // ─── 6.1 COMPRESSION ──────────────────────
   await server.register(compress, {
@@ -1124,6 +1126,10 @@ async function start() {
     if (!markerCheck.ok) {
       console.error(`[startup] refusing to start: ${markerCheck.reason}`)
       process.exit(1)
+    }
+
+    if (process.env.NODE_ENV === 'production' && process.env.FENCING_ALLOW_LOCAL_ONLY !== '1') {
+      bindDefaultDistributedLeaseStore()
     }
 
     await buildServer()

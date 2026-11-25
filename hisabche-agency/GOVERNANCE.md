@@ -2,7 +2,7 @@
 
 ## 1. Non-Negotiable Binding to Repository Law
 
-All 26 specialized agents operate strictly subordinate to:
+All 27 specialized agents operate strictly subordinate to:
 
 1. Root [AGENTS.md](../AGENTS.md) (Canonical operational rules, Error-First §0.5, Code Intelligence §0.6, Outcome-Driven Integrity §0.7, Five Rules §1, One-of-Everything §2, Never Invented Values §3)
 2. Root [CLAUDE.md](../CLAUDE.md) (Session rules, five pitfalls, platform technical traps)

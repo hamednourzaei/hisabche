@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "hisabche-intel": {
+      "command": "node",
+      "args": ["C:/Users/hamed/Desktop/hisabche/scripts/code-intel-mcp.mjs"],
+      "env": {
+        "HISABCHE_CODE_INTEL_READONLY": "1"
+      }
+    }
+  }
+}

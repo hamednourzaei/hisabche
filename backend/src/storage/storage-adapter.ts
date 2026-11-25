@@ -16,10 +16,80 @@ import { dirname, join, relative, resolve, sep } from 'node:path'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { supabase } from '../db'
 
+export const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MiB
+export const DEFAULT_ALLOWED_CONTENT_TYPES = new Set([
+  'application/pdf',
+  'application/octet-stream',
+  'application/json',
+  'text/csv',
+  'text/plain',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+])
+
 export interface StorageUploadOptions {
   contentType?: string | undefined
   upsert?: boolean | undefined
   isPublic?: boolean | undefined
+  maxBytes?: number | undefined
+  expectedTenantPrefix?: string | undefined
+  expectedSha256?: string | undefined
+}
+
+export function validateStorageObjectPath(
+  bucket: string,
+  objectPath: string,
+  expectedTenantPrefix?: string,
+): { cleanBucket: string; cleanPath: string } {
+  if (!bucket || /[^a-zA-Z0-9._-]/.test(bucket) || bucket.includes('..')) {
+    throw new Error(`[StorageSecurity] Unsafe bucket name: ${bucket}`)
+  }
+  if (!objectPath || objectPath.includes('\0') || objectPath.includes('\\')) {
+    throw new Error(`[StorageSecurity] Unsafe object path: ${objectPath}`)
+  }
+  const segments = objectPath.split('/').filter((s) => s.length > 0)
+  if (segments.length === 0 || segments.some((s) => s === '.' || s === '..')) {
+    throw new Error(`[StorageSecurity] Path traversal blocked: ${objectPath}`)
+  }
+  const cleanPath = segments.join('/')
+  if (expectedTenantPrefix) {
+    const cleanPrefix = expectedTenantPrefix.replace(/^\/+|\/+$/g, '')
+    if (cleanPath !== cleanPrefix && !cleanPath.startsWith(`${cleanPrefix}/`)) {
+      throw new Error(
+        `[StorageSecurity] Tenant isolation violation: path '${cleanPath}' escapes tenant '${cleanPrefix}'.`,
+      )
+    }
+  }
+  return { cleanBucket: bucket, cleanPath }
+}
+
+export function validateUploadPayload(fileData: Buffer, options?: StorageUploadOptions): string {
+  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_UPLOAD_BYTES
+  if (fileData.byteLength > maxBytes) {
+    throw new Error(
+      `[StorageSecurity] Upload exceeds max allowed size (${fileData.byteLength} > ${maxBytes} bytes).`,
+    )
+  }
+  const contentType = (options?.contentType ?? 'application/octet-stream')
+    .split(';')[0]!
+    .trim()
+    .toLowerCase()
+  if (!DEFAULT_ALLOWED_CONTENT_TYPES.has(contentType)) {
+    throw new Error(`[StorageSecurity] Disallowed content-type: ${contentType}`)
+  }
+  const digest = sha256Hex(fileData)
+  if (options?.expectedSha256 && options.expectedSha256.toLowerCase() !== digest) {
+    throw new Error('[StorageSecurity] Upload payload SHA-256 integrity mismatch.')
+  }
+  return digest
+}
+
+export function validateSignedUrlTtl(expiresInSeconds: number): number {
+  if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
+    throw new Error(`[StorageSecurity] Signed URL TTL must be a positive finite number.`)
+  }
+  return Math.max(1, Math.min(604800, Math.floor(expiresInSeconds)))
 }
 
 export interface StorageProvider {
@@ -73,10 +143,18 @@ export class SupabaseStorageProvider implements StorageProvider {
     fileData: Buffer,
     options?: StorageUploadOptions,
   ): Promise<{ path: string; publicUrl?: string | undefined }> {
-    const { data, error } = await this.client.storage.from(bucket).upload(path, fileData, {
-      contentType: options?.contentType ?? 'application/octet-stream',
-      upsert: options?.upsert ?? true,
-    })
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(
+      bucket,
+      path,
+      options?.expectedTenantPrefix,
+    )
+    validateUploadPayload(fileData, options)
+    const { data, error } = await this.client.storage
+      .from(cleanBucket)
+      .upload(cleanPath, fileData, {
+        contentType: options?.contentType ?? 'application/octet-stream',
+        upsert: options?.upsert ?? true,
+      })
 
     if (error) {
       throw new Error(
@@ -256,7 +334,13 @@ export class S3CompatibleStorageProvider implements StorageProvider {
     fileData: Buffer,
     options?: StorageUploadOptions,
   ): Promise<{ path: string; publicUrl?: string | undefined }> {
-    const url = this.buildObjectUrl(bucket, path)
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(
+      bucket,
+      path,
+      options?.expectedTenantPrefix,
+    )
+    validateUploadPayload(fileData, options)
+    const url = this.buildObjectUrl(cleanBucket, cleanPath)
     const payloadHash = sha256Hex(fileData)
     const headers = this.signHeaders('PUT', url, payloadHash, {
       'content-type': options?.contentType ?? 'application/octet-stream',
@@ -269,15 +353,15 @@ export class S3CompatibleStorageProvider implements StorageProvider {
     })
     if (!res.ok) {
       throw new Error(
-        `[S3CompatibleStorageProvider] Upload failed (${res.status}) for ${bucket}/${path}`,
+        `[S3CompatibleStorageProvider] Upload failed (${res.status}) for ${cleanBucket}/${cleanPath}`,
       )
     }
 
     const publicUrl =
       options?.isPublic && this.config.publicBaseUrl
-        ? `${this.config.publicBaseUrl.replace(/\/$/, '')}/${bucket}/${path.replace(/^\/+/, '')}`
+        ? `${this.config.publicBaseUrl.replace(/\/$/, '')}/${cleanBucket}/${cleanPath}`
         : undefined
-    return { path, publicUrl }
+    return { path: cleanPath, publicUrl }
   }
 
   async download(bucket: string, path: string): Promise<Buffer> {
@@ -363,6 +447,19 @@ export class S3CompatibleStorageProvider implements StorageProvider {
   }
 }
 
+function resolveLocalSigningSecret(explicit?: string): string {
+  const candidate = explicit ?? process.env.STORAGE_SIGNING_SECRET ?? process.env.JWT_SECRET
+  if (candidate && candidate.trim().length >= 16) {
+    return candidate
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[LocalFilesystemStorageProvider] STORAGE_SIGNING_SECRET (>= 16 chars) is required in production; refusing default key.',
+    )
+  }
+  return 'hisabche-local-storage-signing-key'
+}
+
 /**
  * Atomic local-disk storage provider with strict path-traversal prevention and
  * HMAC-SHA256 signed download URLs for single-node/edge deployments.
@@ -370,30 +467,37 @@ export class S3CompatibleStorageProvider implements StorageProvider {
 export class LocalFilesystemStorageProvider implements StorageProvider {
   public readonly name = 'local-filesystem'
   private readonly resolvedRoot: string
+  private readonly signingSecret: string
 
   constructor(
     rootDir: string,
-    private readonly signingSecret: string = process.env.STORAGE_SIGNING_SECRET ??
-      process.env.JWT_SECRET ??
-      'hisabche-local-storage-signing-key',
+    signingSecret?: string,
     private readonly baseUrl: string = process.env.PUBLIC_STORAGE_URL ?? 'https://storage.local',
   ) {
     this.resolvedRoot = resolve(rootDir)
+    this.signingSecret = resolveLocalSigningSecret(signingSecret)
   }
 
-  private safeResolve(bucket: string, objectPath: string): { bucketDir: string; fullPath: string } {
+  private safeResolve(
+    bucket: string,
+    objectPath: string,
+    expectedTenantPrefix?: string,
+  ): { bucketDir: string; fullPath: string; cleanPath: string } {
     const cleanBucket = bucket.replace(/[^a-zA-Z0-9._-]/g, '')
     if (!cleanBucket || cleanBucket.includes('..')) {
       throw new Error(`[LocalFilesystemStorageProvider] Unsafe bucket name: ${bucket}`)
     }
+    const cleanPath = objectPath
+      ? validateStorageObjectPath(cleanBucket, objectPath, expectedTenantPrefix).cleanPath
+      : ''
     const bucketDir = resolve(this.resolvedRoot, cleanBucket)
-    const candidate = resolve(bucketDir, objectPath)
+    const candidate = resolve(bucketDir, cleanPath)
     if (candidate !== bucketDir && !candidate.startsWith(bucketDir + sep)) {
       throw new Error(
         `[LocalFilesystemStorageProvider] Path traversal blocked for ${bucket}/${objectPath}`,
       )
     }
-    return { bucketDir, fullPath: candidate }
+    return { bucketDir, fullPath: candidate, cleanPath }
   }
 
   async upload(
@@ -402,15 +506,16 @@ export class LocalFilesystemStorageProvider implements StorageProvider {
     fileData: Buffer,
     options?: StorageUploadOptions,
   ): Promise<{ path: string; publicUrl?: string | undefined }> {
-    const { fullPath } = this.safeResolve(bucket, path)
+    validateUploadPayload(fileData, options)
+    const { fullPath, cleanPath } = this.safeResolve(bucket, path, options?.expectedTenantPrefix)
     await mkdir(dirname(fullPath), { recursive: true })
     const tmpPath = `${fullPath}.${process.pid}.${Date.now()}.tmp`
     await writeFile(tmpPath, fileData, options?.upsert === false ? { flag: 'wx' } : undefined)
     await rename(tmpPath, fullPath)
     return {
-      path,
+      path: cleanPath,
       publicUrl: options?.isPublic
-        ? `${this.baseUrl.replace(/\/$/, '')}/${bucket}/${path.replace(/^\/+/, '')}`
+        ? `${this.baseUrl.replace(/\/$/, '')}/${bucket}/${cleanPath}`
         : undefined,
     }
   }
@@ -421,12 +526,13 @@ export class LocalFilesystemStorageProvider implements StorageProvider {
   }
 
   async getSignedUrl(bucket: string, path: string, expiresInSeconds: number): Promise<string> {
-    this.safeResolve(bucket, path)
-    const exp = Math.floor(Date.now() / 1000) + Math.max(1, Math.floor(expiresInSeconds))
+    const { cleanPath } = this.safeResolve(bucket, path)
+    const ttl = validateSignedUrlTtl(expiresInSeconds)
+    const exp = Math.floor(Date.now() / 1000) + ttl
     const sig = createHmac('sha256', this.signingSecret)
-      .update(`${bucket}:${path}:${exp}`)
+      .update(`${bucket}:${cleanPath}:${exp}`)
       .digest('hex')
-    return `${this.baseUrl.replace(/\/$/, '')}/${bucket}/${encodeRfc3986Path(path)}?exp=${exp}&sig=${sig}`
+    return `${this.baseUrl.replace(/\/$/, '')}/${bucket}/${encodeRfc3986Path(cleanPath)}?exp=${exp}&sig=${sig}`
   }
 
   verifySignedToken(
@@ -486,26 +592,36 @@ export class MemoryStorageProvider implements StorageProvider {
     bucket: string,
     path: string,
     fileData: Buffer,
-    _options?: StorageUploadOptions,
+    options?: StorageUploadOptions,
   ): Promise<{ path: string; publicUrl?: string | undefined }> {
-    const key = `${bucket}/${path}`
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(
+      bucket,
+      path,
+      options?.expectedTenantPrefix,
+    )
+    validateUploadPayload(fileData, options)
+    const key = `${cleanBucket}/${cleanPath}`
     this.store.set(key, fileData)
-    return { path, publicUrl: `https://storage.local/${key}` }
+    return { path: cleanPath, publicUrl: `https://storage.local/${key}` }
   }
 
   async download(bucket: string, path: string): Promise<Buffer> {
-    const key = `${bucket}/${path}`
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(bucket, path)
+    const key = `${cleanBucket}/${cleanPath}`
     const data = this.store.get(key)
     if (!data) throw new Error(`[MemoryStorageProvider] File not found: ${key}`)
     return data
   }
 
   async getSignedUrl(bucket: string, path: string, expiresInSeconds: number): Promise<string> {
-    return `https://storage.local/${bucket}/${path}?signed=true&exp=${Math.floor(Date.now() / 1000) + expiresInSeconds}`
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(bucket, path)
+    const ttl = validateSignedUrlTtl(expiresInSeconds)
+    return `https://storage.local/${cleanBucket}/${cleanPath}?signed=true&exp=${Math.floor(Date.now() / 1000) + ttl}`
   }
 
   async delete(bucket: string, path: string): Promise<void> {
-    this.store.delete(`${bucket}/${path}`)
+    const { cleanBucket, cleanPath } = validateStorageObjectPath(bucket, path)
+    this.store.delete(`${cleanBucket}/${cleanPath}`)
   }
 
   async list(bucket: string, prefix?: string): Promise<string[]> {

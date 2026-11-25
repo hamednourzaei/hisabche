@@ -4,14 +4,35 @@
  */
 
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs'
-import { join, resolve, relative, normalize } from 'node:path'
+import { join, dirname, resolve, relative, normalize } from 'node:path'
 import { execSync } from 'node:child_process'
 import crypto from 'node:crypto'
 import { computeConfigFingerprint } from './incremental-indexer.mjs'
+import { classifyFileDomainAndPlatform } from './domain-classifier.mjs'
+import {
+  expandQueryTokens,
+  queryLexicalIndex,
+  tokenizeText,
+  MAX_INDEX_FILE_BYTES,
+  MAX_QUERY_LENGTH,
+} from './lexical-index.mjs'
 
 const ROOT = process.cwd()
 const GRAPH_PATH = join(ROOT, '.ai', 'codebase', 'graph.json')
 const CACHE_PATH = join(ROOT, '.ai', 'codebase', 'cache.json')
+const LEXICAL_PATH = join(ROOT, '.ai', 'codebase', 'lexical.json')
+
+const FORBIDDEN_PATH_PATTERNS = ['.env', '.pem', '.key', '.p12', '.pfx', '.secret', 'node_modules']
+
+function isForbiddenPath(filePath) {
+  const lower = (filePath || '').toLowerCase()
+  return FORBIDDEN_PATH_PATTERNS.some((pat) => lower.includes(pat))
+}
+
+function estimateTokens(objOrStr) {
+  const str = typeof objOrStr === 'string' ? objOrStr : JSON.stringify(objOrStr)
+  return Math.ceil(str.length / 4)
+}
 
 /**
  * Normalizes file path to forward slashes relative to root
@@ -37,8 +58,13 @@ export class CodeIntelQueryEngine {
   constructor(options = {}) {
     const opts = typeof options === 'string' ? { graphPath: options } : options
     this.graphPath = opts.graphPath || GRAPH_PATH
+    this.cachePath = opts.cachePath || join(dirname(this.graphPath), 'cache.json')
+    this.lexicalPath = opts.lexicalPath || join(dirname(this.graphPath), 'lexical.json')
     this.preloadedIndex = opts.preloadedIndex || null
+    this.preloadedLexical = opts.preloadedLexical || null
     this.graph = null
+    this.lexical = null
+    this.queryCache = new Map()
     this.symbolsById = new Map()
     this.symbolsByName = new Map()
     this.symbolsByFile = new Map()
@@ -139,8 +165,59 @@ export class CodeIntelQueryEngine {
       }
     }
 
+    // 3. Load persisted lexical index or construct lightweight in-memory index from graph
+    if (this.preloadedLexical) {
+      this.lexical = this.preloadedLexical
+    } else if (!this.preloadedIndex && existsSync(this.lexicalPath)) {
+      try {
+        this.lexical = JSON.parse(readFileSync(this.lexicalPath, 'utf8'))
+      } catch {
+        this.lexical = this._buildInMemoryLexicalFallback()
+      }
+    } else {
+      this.lexical = this._buildInMemoryLexicalFallback()
+    }
+
     this.loaded = true
     return this
+  }
+
+  _buildInMemoryLexicalFallback() {
+    const docs = {}
+    const postings = {}
+    let totalLen = 0
+    let count = 0
+    for (const [file, meta] of Object.entries(this.graph?.files || {})) {
+      const syms = this.symbolsByFile.get(file) || []
+      const text = `${file} ${syms.map((s) => `${s.name} ${s.signature || ''} ${s.doc || ''}`).join(' ')}`
+      const tokens = tokenizeText(text)
+      const tfMap = new Map()
+      for (const tok of tokens) tfMap.set(tok, (tfMap.get(tok) || 0) + 1)
+      const classified = classifyFileDomainAndPlatform(file)
+      docs[file] = {
+        len: tokens.length || 1,
+        pkg: meta?.pkg || 'unknown',
+        domain: Array.isArray(meta?.domain) ? meta.domain[0] : meta?.domain || classified.domain,
+        platform: Array.isArray(meta?.platform)
+          ? meta.platform[0]
+          : meta?.platform || classified.platform,
+        layer: meta?.layer || classified.layer,
+        errors: [],
+      }
+      for (const [tok, tf] of tfMap.entries()) {
+        if (!postings[tok]) postings[tok] = []
+        postings[tok].push([file, tf])
+      }
+      totalLen += docs[file].len
+      count++
+    }
+    return {
+      schemaVersion: 1,
+      docCount: count,
+      avgDocLength: count > 0 ? totalLen / count : 1,
+      docs,
+      postings,
+    }
   }
 
   /**
@@ -206,6 +283,12 @@ export class CodeIntelQueryEngine {
       if (filters.file && !sym.file.includes(filters.file)) continue
       if (filters.domain && sym.domain !== filters.domain) continue
       if (filters.exported !== undefined && sym.exported !== filters.exported) continue
+      if (
+        filters.returns &&
+        !(sym.signature || '').toLowerCase().includes(String(filters.returns).toLowerCase())
+      ) {
+        continue
+      }
 
       results.push(sym)
       if (results.length >= limit) break
@@ -637,7 +720,7 @@ export class CodeIntelQueryEngine {
     }
 
     // Check forbidden files
-    if (targetFile.includes('.env') || targetFile.includes('node_modules')) {
+    if (isForbiddenPath(targetFile)) {
       return {
         success: false,
         error: 'Security rejection: Access to sensitive or excluded files is forbidden.',
@@ -648,6 +731,13 @@ export class CodeIntelQueryEngine {
       return {
         success: false,
         error: `Source file '${targetFile}' does not exist on disk.`,
+      }
+    }
+
+    if (statSync(resolvedPath).size > MAX_INDEX_FILE_BYTES) {
+      return {
+        success: false,
+        error: `Security rejection: File '${targetFile}' exceeds max readable limit (${MAX_INDEX_FILE_BYTES} bytes).`,
       }
     }
 
@@ -715,27 +805,39 @@ export class CodeIntelQueryEngine {
 
     // 1. Check configuration fingerprint
     let configMatch = true
-    if (existsSync(CACHE_PATH)) {
+    let cachedFingerprints = null
+    if (existsSync(this.cachePath)) {
       try {
-        const cacheData = JSON.parse(readFileSync(CACHE_PATH, 'utf8'))
+        const cacheData = JSON.parse(readFileSync(this.cachePath, 'utf8'))
+        cachedFingerprints = cacheData.fileFingerprints || null
         const currentConfig = computeConfigFingerprint(ROOT)
         if (cacheData.configHash && cacheData.configHash !== currentConfig) {
           configMatch = false
           stalenessReasons.push(
-            'Configuration or path aliases modified (tsconfig/package.json changed)',
+            'Configuration or path aliases modified (tsconfig/package.json/.d.ts changed)',
           )
         }
       } catch {}
     }
 
-    // 2. Check git staleness
+    // 2. Check git staleness + dirty working tree
     let currentGitHead = 'unknown'
+    let dirtyFiles = []
     try {
       currentGitHead = execSync('git rev-parse HEAD', {
         cwd: ROOT,
         encoding: 'utf8',
         stdio: 'pipe',
       }).trim()
+      const porcelain = execSync('git status --porcelain -- apps packages backend', {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      })
+      dirtyFiles = porcelain
+        .split(/\r?\n/)
+        .map((l) => l.trim().replace(/^[AMDTR?]+\s+/, ''))
+        .filter((f) => f && /\.(ts|tsx|js|jsx|mjs|mts|json)$/.test(f))
     } catch {}
 
     const gitMatch =
@@ -746,43 +848,67 @@ export class CodeIntelQueryEngine {
       )
     }
 
-    // 3. Sample 20 files to check hash match
-    let sampledFilesCount = 0
+    // 3. Full manifest SHA-256 verification across all tracked files (eliminates 20-file sampling bug)
+    let checkedFilesCount = 0
     let staleFilesCount = 0
+    const staleFileExamples = []
 
-    const filesToSample = Object.keys(this.graph.files || {}).slice(0, 20)
-    for (const f of filesToSample) {
+    const fingerprintMap = cachedFingerprints || {}
+    const filesToVerify =
+      Object.keys(fingerprintMap).length > 0
+        ? Object.keys(fingerprintMap)
+        : Object.keys(this.graph.files || {})
+
+    for (const f of filesToVerify) {
       const full = join(ROOT, f)
+      checkedFilesCount++
       if (existsSync(full)) {
-        sampledFilesCount++
-        const code = readFileSync(full, 'utf8')
-        const h = computeSha256(code)
-        // Check symbol in file
-        const syms = this.symbolsByFile.get(f) || []
-        if (syms.length > 0 && syms[0].fileHash && syms[0].fileHash !== h) {
+        try {
+          const st = statSync(full)
+          if (!st.isFile() || st.size > MAX_INDEX_FILE_BYTES) continue
+          const expectedHash =
+            fingerprintMap[f]?.hash || (this.symbolsByFile.get(f) || [])[0]?.fileHash || null
+          if (expectedHash) {
+            const code = readFileSync(full, 'utf8')
+            const h = computeSha256(code)
+            if (h !== expectedHash) {
+              staleFilesCount++
+              if (staleFileExamples.length < 10) staleFileExamples.push(f)
+            }
+          }
+        } catch {
           staleFilesCount++
         }
       } else {
         staleFilesCount++
+        if (staleFileExamples.length < 10) staleFileExamples.push(f)
       }
     }
 
+    const unindexedDirtyFiles = dirtyFiles.filter((f) => !fingerprintMap[f])
+
     if (staleFilesCount > 0) {
       stalenessReasons.push(
-        `${staleFilesCount} of ${sampledFilesCount} sampled files have modified content on disk`,
+        `${staleFilesCount} of ${checkedFilesCount} indexed files differ on disk`,
+      )
+    }
+    if (unindexedDirtyFiles.length > 0 && staleFilesCount === 0) {
+      stalenessReasons.push(
+        `${unindexedDirtyFiles.length} new uncommitted workspace file(s) not yet indexed`,
       )
     }
 
     let status = 'FRESH'
     if (!configMatch) {
       status = 'STALE'
-    } else if (!gitMatch || staleFilesCount > 0) {
-      status = staleFilesCount > 5 ? 'STALE' : 'PARTIALLY_STALE'
+    } else if (!gitMatch || staleFilesCount > 0 || unindexedDirtyFiles.length > 0) {
+      status = staleFilesCount > 5 || unindexedDirtyFiles.length > 5 ? 'STALE' : 'PARTIALLY_STALE'
     }
 
     return {
       status,
       schemaVersion: 2,
+      codeIntelVersion: '3.0.0',
       stalenessReasons,
       indexedGitHash: metadata.gitHash,
       currentGitHead,
@@ -796,8 +922,340 @@ export class CodeIntelQueryEngine {
       totalPackages: metadata.totalPackages,
       astStats: metadata.astStats,
       relationshipStats: metadata.relationshipStats,
-      sampledFilesChecked: sampledFilesCount,
-      sampledStaleFiles: staleFilesCount,
+      totalFilesChecked: checkedFilesCount,
+      staleFilesCount,
+      staleFileExamples,
+      dirtyWorkingTreeCount: dirtyFiles.length,
     }
+  }
+
+  /**
+   * Hybrid AST + BM25 lexical search with strict token budgeting (Gap 31-40).
+   */
+  searchCode(query, options = {}) {
+    this._ensureLoaded()
+    const cleanQuery = String(query || '')
+      .trim()
+      .slice(0, MAX_QUERY_LENGTH)
+    if (!cleanQuery) {
+      return { status: 'INSUFFICIENT_EVIDENCE', query: '', totalMatches: 0, results: [] }
+    }
+
+    const cacheKey = `search:${cleanQuery}:${JSON.stringify(options)}`
+    if (this.queryCache.has(cacheKey)) {
+      return this.queryCache.get(cacheKey)
+    }
+
+    const limit = Math.min(options.limit || 10, 25)
+    const bm25Hits = queryLexicalIndex(this.lexical, cleanQuery, {
+      package: options.package || options.pkg,
+      domain: options.domain,
+      layer: options.layer,
+      limit: limit * 2,
+    })
+
+    const symHits = this.findSymbols(cleanQuery, {
+      package: options.package || options.pkg,
+      domain: options.domain,
+      limit: limit,
+    }).results
+
+    const byFile = new Map()
+    for (const hit of bm25Hits) {
+      byFile.set(hit.file, {
+        file: hit.file,
+        score: hit.score,
+        domain: hit.domain,
+        platform: hit.platform,
+        layer: hit.layer,
+        pkg: hit.pkg,
+        matchedTokens: hit.matchedTokens || [],
+        symbols: (this.symbolsByFile.get(hit.file) || []).slice(0, 4).map((s) => ({
+          id: s.id,
+          name: s.name,
+          kind: s.kind,
+          startLine: s.startLine,
+          signature: s.signature,
+        })),
+      })
+    }
+
+    for (const sym of symHits) {
+      const existing = byFile.get(sym.file)
+      if (existing) {
+        existing.score += 5
+      } else {
+        const classified = classifyFileDomainAndPlatform(sym.file)
+        byFile.set(sym.file, {
+          file: sym.file,
+          score: 5,
+          domain: sym.domain || classified.domain,
+          platform: sym.platform || classified.platform,
+          layer: classified.layer,
+          pkg: sym.package,
+          matchedTokens: [sym.name.toLowerCase()],
+          symbols: [
+            {
+              id: sym.id,
+              name: sym.name,
+              kind: sym.kind,
+              startLine: sym.startLine,
+              signature: sym.signature,
+            },
+          ],
+        })
+      }
+    }
+
+    const ranked = [...byFile.values()].sort((a, b) => b.score - a.score).slice(0, limit)
+    const results = ranked.map((entry) => {
+      const targetSym = entry.symbols[0]
+      const excerpt = targetSym
+        ? this.getSourceExcerpt(targetSym.id, { contextLines: 2 })
+        : this.getSourceExcerpt(entry.file, { startLine: 1, endLine: 12, contextLines: 0 })
+      const snippet = excerpt.success
+        ? excerpt.excerpt.split(/\r?\n/).slice(0, 12).join('\n')
+        : null
+      return {
+        ...entry,
+        snippet,
+      }
+    })
+
+    const out = {
+      status: results.length > 0 ? 'FOUND' : 'INSUFFICIENT_EVIDENCE',
+      query: cleanQuery,
+      totalMatches: results.length,
+      results,
+    }
+    if (this.queryCache.size > 200) this.queryCache.clear()
+    this.queryCache.set(cacheKey, out)
+    return out
+  }
+
+  /**
+   * Discovers an end-to-end Feature Graph across UI -> Hook -> Validation -> Route -> Service -> DB -> Sync -> Tests (Gap 41, 43).
+   */
+  discoverFeature(featureName, options = {}) {
+    this._ensureLoaded()
+    const clean = String(featureName || '')
+      .trim()
+      .slice(0, MAX_QUERY_LENGTH)
+    if (!clean) {
+      return { status: 'INSUFFICIENT_EVIDENCE', feature: '', layers: {}, nodes: [], edges: [] }
+    }
+
+    const hits = this.searchCode(clean, { limit: options.limit || 20 })
+    if (hits.results.length === 0) {
+      return { status: 'INSUFFICIENT_EVIDENCE', feature: clean, layers: {}, nodes: [], edges: [] }
+    }
+
+    const layers = {
+      ui: [],
+      hook: [],
+      validation: [],
+      route: [],
+      service: [],
+      db: [],
+      sync: [],
+      test: [],
+      other: [],
+    }
+    const seenFiles = new Set()
+    const edges = []
+
+    const addFileToLayer = (file, explicitScore = 1) => {
+      if (!file || seenFiles.has(file) || isForbiddenPath(file)) return
+      seenFiles.add(file)
+      const meta = this.graph.files?.[file] || {}
+      const classified = classifyFileDomainAndPlatform(file)
+      const layer = meta.layer || classified.layer || 'other'
+      const bucket = layers[layer] ? layer : 'other'
+      layers[bucket].push({
+        file,
+        domain: Array.isArray(meta.domain) ? meta.domain[0] : meta.domain || classified.domain,
+        platform: Array.isArray(meta.platform)
+          ? meta.platform[0]
+          : meta.platform || classified.platform,
+        score: explicitScore,
+        exports: meta.exports || [],
+      })
+    }
+
+    for (const hit of hits.results) {
+      addFileToLayer(hit.file, hit.score)
+      const outgoing = this.fileOutgoingRels.get(hit.file) || []
+      for (const rel of outgoing.slice(0, 10)) {
+        if (rel.status === 'RESOLVED' && rel.targetId && !rel.targetId.includes('#')) {
+          addFileToLayer(rel.targetId, hit.score * 0.6)
+          edges.push({ from: hit.file, to: rel.targetId, type: rel.type })
+        }
+      }
+      const incoming = this.fileIncomingRels.get(hit.file) || []
+      for (const rel of incoming.slice(0, 10)) {
+        if (rel.file) {
+          addFileToLayer(rel.file, hit.score * 0.5)
+          edges.push({ from: rel.file, to: hit.file, type: rel.type })
+        }
+      }
+    }
+
+    return {
+      status: 'FOUND',
+      feature: clean,
+      totalNodes: seenFiles.size,
+      layers,
+      edges: edges.slice(0, 80),
+    }
+  }
+
+  /**
+   * Generates a strictly token-budgeted Context Pack (<= 4000 tokens) for an agent task (Phase 2).
+   */
+  getContextPack(taskDescription, options = {}) {
+    this._ensureLoaded()
+    const task = String(taskDescription || '')
+      .trim()
+      .slice(0, MAX_QUERY_LENGTH)
+    const maxTokens = Math.min(options.maxTokens || 3500, 4000)
+
+    const { allTokens } = expandQueryTokens(task)
+    const searchRes = this.searchCode(task, {
+      package: options.package,
+      domain: options.domain,
+      limit: 10,
+    })
+
+    if (searchRes.results.length === 0) {
+      return {
+        status: 'INSUFFICIENT_EVIDENCE',
+        task,
+        keywords: allTokens,
+        tokenEstimate: 0,
+        maxTokens,
+        truncated: false,
+        relevantFiles: [],
+        symbols: [],
+        snippets: [],
+        secondarySignatures: [],
+        relatedTests: [],
+        securityAndSyncWarnings: [],
+      }
+    }
+
+    const snippets = []
+    const secondarySignatures = []
+    const relatedTests = new Set()
+    const securityAndSyncWarnings = new Set()
+    const relevantFiles = []
+    const symbols = []
+
+    for (const hit of searchRes.results) {
+      relevantFiles.push({
+        file: hit.file,
+        domain: hit.domain,
+        platform: hit.platform,
+        layer: hit.layer,
+        score: hit.score,
+      })
+
+      if (
+        hit.layer === 'sync' ||
+        hit.platform === 'OFFLINE_ENGINE' ||
+        hit.file.includes('outbox')
+      ) {
+        securityAndSyncWarnings.add(
+          `Offline/Sync dependency in ${hit.file}: preserve idempotency keys & local-engine parity.`,
+        )
+      }
+      if (
+        hit.domain === 'Auth' ||
+        hit.file.includes('middleware') ||
+        hit.file.includes('fencing') ||
+        hit.file.includes('rls')
+      ) {
+        securityAndSyncWarnings.add(
+          `Security boundary in ${hit.file}: preserve workspace_id tenancy, capability checks & fail-closed guards.`,
+        )
+      }
+
+      const fileSyms = this.symbolsByFile.get(hit.file) || []
+      for (const s of fileSyms.slice(0, 3)) {
+        symbols.push({
+          id: s.id,
+          name: s.name,
+          kind: s.kind,
+          file: s.file,
+          startLine: s.startLine,
+          endLine: s.endLine,
+          signature: s.signature,
+        })
+
+        // Bounded snippet (<= 15 lines) for top symbols within budget
+        if (snippets.length < 6) {
+          const ex = this.getSourceExcerpt(s.id, { contextLines: 1 })
+          if (ex.success) {
+            const bounded = ex.excerpt.split(/\r?\n/).slice(0, 15).join('\n')
+            snippets.push({
+              file: ex.file,
+              symbolId: s.id,
+              startLine: ex.contextFromLine,
+              endLine: Math.min(ex.contextToLine, ex.contextFromLine + 14),
+              code: bounded,
+            })
+          }
+        } else {
+          secondarySignatures.push({
+            id: s.id,
+            file: s.file,
+            line: s.startLine,
+            signature: s.signature,
+          })
+        }
+
+        const relTests = this.getRelatedTests(s.id)
+        for (const t of relTests.tests || []) {
+          relatedTests.add(t.testFile)
+        }
+      }
+
+      // Also check file-level test relationships
+      for (const rel of this.fileIncomingRels.get(hit.file) || []) {
+        if (rel.type === 'TESTS' && rel.file) relatedTests.add(rel.file)
+      }
+    }
+
+    // Enforce hard <= maxTokens budget
+    let truncated = false
+    const pack = {
+      status: 'READY',
+      task,
+      keywords: allTokens.slice(0, 20),
+      maxTokens,
+      truncated: false,
+      relevantFiles,
+      symbols,
+      snippets,
+      secondarySignatures: secondarySignatures.slice(0, 15),
+      relatedTests: [...relatedTests].slice(0, 15),
+      securityAndSyncWarnings: [...securityAndSyncWarnings],
+    }
+
+    while (estimateTokens(pack) > maxTokens && pack.snippets.length > 1) {
+      pack.snippets.pop()
+      truncated = true
+    }
+    while (estimateTokens(pack) > maxTokens && pack.secondarySignatures.length > 0) {
+      pack.secondarySignatures.pop()
+      truncated = true
+    }
+    while (estimateTokens(pack) > maxTokens && pack.symbols.length > 3) {
+      pack.symbols.pop()
+      truncated = true
+    }
+
+    pack.truncated = truncated
+    pack.tokenEstimate = estimateTokens(pack)
+    return pack
   }
 }

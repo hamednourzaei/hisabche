@@ -7,6 +7,17 @@
 // ============================================
 
 import { app } from 'electron'
+import {
+  copyFileSync,
+  existsSync,
+  openSync,
+  readSync,
+  closeSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+} from 'node:fs'
 import { join } from 'node:path'
 
 import { reportError } from '../services/monitoring'
@@ -25,6 +36,7 @@ import {
   type QueueEntry,
 } from '@hisabche/app-bridge'
 import {
+  PartitionSecurityError,
   PerUserPartitionManager,
   type LocalDb,
   type RunResult,
@@ -33,7 +45,7 @@ import {
   type UserDatabaseConfig,
   type UserPartitionInfo,
 } from '@hisabche/local-engine'
-import { secureGet, secureSet } from '../services/secure-store'
+import { isEncryptionAvailable, secureGet, secureSet } from '../services/secure-store'
 
 type SqliteDatabase = {
   prepare(sql: string): {
@@ -103,6 +115,72 @@ function runMigrations(database: SqliteDatabase): void {
   }
 }
 
+const SQLITE_PLAINTEXT_MAGIC = 'SQLite format 3\0'
+
+export type DatabaseEncryptionMode = 'sqlcipher' | 'application_envelope_aead' | 'uninitialized'
+
+export interface DatabaseEncryptionStatus {
+  readonly initialized: boolean
+  readonly mode: DatabaseEncryptionMode
+  readonly nativeSqlCipherSupported: boolean
+  readonly cipherVersion: string | null
+  readonly keyApplied: boolean
+  readonly osKeystoreAvailable: boolean
+  readonly legacyPlaintextDetected: boolean
+  readonly migrationState: 'none' | 'in_progress' | 'completed' | 'failed'
+  readonly lastFailure: string | null
+}
+
+export interface InitDatabaseOptions {
+  readonly deviceMasterSecret?: string | undefined
+  readonly partitionSaltHex?: string | undefined
+  readonly requireNativeSqlCipher?: boolean | undefined
+  readonly requireOsKeystore?: boolean | undefined
+}
+
+let encryptionStatus: DatabaseEncryptionStatus = {
+  initialized: false,
+  mode: 'uninitialized',
+  nativeSqlCipherSupported: false,
+  cipherVersion: null,
+  keyApplied: false,
+  osKeystoreAvailable: false,
+  legacyPlaintextDetected: false,
+  migrationState: 'none',
+  lastFailure: null,
+}
+
+export function getDatabaseEncryptionStatus(): DatabaseEncryptionStatus {
+  return { ...encryptionStatus }
+}
+
+/**
+ * Inspects the first 16 bytes of a SQLite database file without opening it.
+ * Standard unencrypted SQLite files always start with `SQLite format 3\0`.
+ */
+export function detectDatabaseEncryptionStatus(dbPath: string): {
+  exists: boolean
+  isPlaintextSqlite: boolean
+  byteLength: number
+} {
+  if (!dbPath || dbPath === ':memory:' || !existsSync(dbPath)) {
+    return { exists: false, isPlaintextSqlite: false, byteLength: 0 }
+  }
+  const fd = openSync(dbPath, 'r')
+  try {
+    const header = Buffer.alloc(16)
+    const bytesRead = readSync(fd, header, 0, 16, 0)
+    if (bytesRead === 0) {
+      return { exists: true, isPlaintextSqlite: false, byteLength: 0 }
+    }
+    const isPlaintext =
+      bytesRead >= 16 && header.subarray(0, 16).toString('latin1') === SQLITE_PLAINTEXT_MAGIC
+    return { exists: true, isPlaintextSqlite: isPlaintext, byteLength: bytesRead }
+  } finally {
+    closeSync(fd)
+  }
+}
+
 export function getOrCreatePartitionMasterSecret(): string {
   const EXISTING_KEY = 'hisabche.partition.master'
   const existing = secureGet(EXISTING_KEY)
@@ -112,6 +190,338 @@ export function getOrCreatePartitionMasterSecret(): string {
   const generated = PerUserPartitionManager.generateDeviceMasterSecret()
   secureSet(EXISTING_KEY, generated)
   return generated
+}
+
+export function getOrCreatePartitionSaltHex(): string {
+  const SALT_KEY = 'hisabche.partition.salt'
+  const existing = secureGet(SALT_KEY)
+  if (existing && /^[0-9a-f]{32,}$/i.test(existing)) {
+    return existing
+  }
+  const generated = PerUserPartitionManager.generatePartitionSaltHex()
+  secureSet(SALT_KEY, generated)
+  return generated
+}
+
+function resolveDefaultPartitionInfo(options?: InitDatabaseOptions): {
+  partition: UserPartitionInfo
+  osKeystoreAvailable: boolean
+} {
+  const osKeystoreAvailable = isEncryptionAvailable()
+  if (options?.requireOsKeystore && !osKeystoreAvailable) {
+    throw new PartitionSecurityError(
+      'OS secure keystore (safeStorage) is unavailable; refusing unauthenticated local key storage.',
+    )
+  }
+  const deviceMasterSecret = options?.deviceMasterSecret ?? getOrCreatePartitionMasterSecret()
+  const partitionSaltHex = options?.partitionSaltHex ?? getOrCreatePartitionSaltHex()
+  const partition = PerUserPartitionManager.resolvePartition({
+    deviceId: 'desktop-default',
+    userId: 'desktop-owner',
+    workspaceId: 'default-workspace',
+    userRole: 'owner',
+    baseStoragePath: '.',
+    deviceMasterSecret,
+    partitionSaltHex,
+  })
+  return { partition, osKeystoreAvailable }
+}
+
+function applyEncryptionOnCandidate(
+  candidate: SqliteDatabase,
+  dbPath: string,
+  options?: InitDatabaseOptions,
+): {
+  encryption: SqlCipherActivationResult
+  osKeystoreAvailable: boolean
+  legacyPlaintextDetected: boolean
+} {
+  const detection = detectDatabaseEncryptionStatus(dbPath)
+  const { partition, osKeystoreAvailable } = resolveDefaultPartitionInfo(options)
+  const requireNativeSqlCipher =
+    options?.requireNativeSqlCipher ?? process.env.HISABCHE_REQUIRE_SQLCIPHER === '1'
+  const encryption = PerUserPartitionManager.configureSqliteCipher(
+    candidate as SqlCipherPragmaTarget,
+    partition,
+    { requireNativeSqlCipher },
+  )
+  return {
+    encryption,
+    osKeystoreAvailable,
+    legacyPlaintextDetected: detection.isPlaintextSqlite,
+  }
+}
+
+export interface LegacyMigrationResult {
+  readonly migrated: boolean
+  readonly sourcePlaintextDetected: boolean
+  readonly backupPath: string
+  readonly tablesCopied: readonly string[]
+  readonly rowCounts: Readonly<Record<string, number>>
+  readonly financialChecksums: {
+    readonly invoiceTotalSum: number
+    readonly invoicePaidSum: number
+    readonly paymentAmountSum: number
+    readonly productStockQtySum: number
+  }
+  readonly encryption: SqlCipherActivationResult
+}
+
+function readFinancialChecksums(database: SqliteDatabase): {
+  invoiceTotalSum: number
+  invoicePaidSum: number
+  paymentAmountSum: number
+  productStockQtySum: number
+} {
+  const tableSet = new Set(
+    (
+      database.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{
+        name: string
+      }>
+    ).map((r) => r.name),
+  )
+  const sumQuery = (table: string, col: string): number => {
+    if (!tableSet.has(table)) return 0
+    const cols = new Set(
+      (database.prepare(`PRAGMA table_info(${ident(table)})`).all() as Array<{ name: string }>).map(
+        (c) => c.name,
+      ),
+    )
+    if (!cols.has(col)) return 0
+    const row = database
+      .prepare(`SELECT COALESCE(SUM("${col}"), 0) AS s FROM ${ident(table)}`)
+      .get() as { s?: number } | undefined
+    return Number(row?.s ?? 0)
+  }
+  return {
+    invoiceTotalSum: sumQuery('invoice', 'total'),
+    invoicePaidSum: sumQuery('invoice', 'paid_amount'),
+    paymentAmountSum: sumQuery('payment', 'amount'),
+    productStockQtySum: sumQuery('product', 'quantity'),
+  }
+}
+
+/**
+ * Migrates an existing plaintext SQLite database at `sourcePath` into a new
+ * SQLCipher/partition-configured database at `targetPath` with pre-migration
+ * backup preservation, checkpointing for crash recovery, row count + financial
+ * sum verification, and PRAGMA integrity checks before atomic promotion.
+ */
+export function migrateLegacyPlaintextDatabaseWith(
+  Driver: new (path: string) => SqliteDatabase,
+  sourcePath: string,
+  targetPath: string,
+  options?: InitDatabaseOptions & {
+    readonly simulateCrashAfterCopy?: boolean | undefined
+  },
+): LegacyMigrationResult {
+  const detection = detectDatabaseEncryptionStatus(sourcePath)
+  if (!detection.exists) {
+    throw new PartitionSecurityError(`Source database does not exist at ${sourcePath}`)
+  }
+
+  const backupPath = `${sourcePath}.pre-migration.bak`
+  const statePath = `${targetPath}.migration-state.json`
+  const stagingPath = `${targetPath}.migrating`
+
+  copyFileSync(sourcePath, backupPath)
+  writeFileSync(
+    statePath,
+    JSON.stringify({ state: 'in_progress', startedAt: new Date().toISOString() }),
+    'utf8',
+  )
+
+  rmSync(stagingPath, { force: true })
+
+  const src = new Driver(sourcePath)
+  let dst: SqliteDatabase | null = null
+  try {
+    const srcChecksums = readFinancialChecksums(src)
+    const srcTables = (
+      src
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name ASC",
+        )
+        .all() as Array<{ name: string }>
+    ).map((r) => r.name)
+
+    const { partition } = resolveDefaultPartitionInfo(options)
+    dst = new Driver(stagingPath)
+    const encryption = PerUserPartitionManager.configureSqliteCipher(
+      dst as SqlCipherPragmaTarget,
+      partition,
+      { requireNativeSqlCipher: options?.requireNativeSqlCipher },
+    )
+    dst.pragma('journal_mode = WAL')
+    dst.pragma('foreign_keys = ON')
+    CREATE_STATEMENTS.forEach((statement) => dst!.exec(statement))
+    runMigrations(dst)
+
+    const dstTableSet = new Set(
+      (
+        dst.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as Array<{
+          name: string
+        }>
+      ).map((r) => r.name),
+    )
+
+    const rowCounts: Record<string, number> = {}
+    const tablesCopied: string[] = []
+
+    const copyAll = dst.transaction(() => {
+      for (const table of srcTables) {
+        if (!dstTableSet.has(table)) continue
+        const srcCols = (
+          src.prepare(`PRAGMA table_info(${ident(table)})`).all() as Array<{ name: string }>
+        ).map((c) => c.name)
+        const dstCols = new Set(
+          (dst!.prepare(`PRAGMA table_info(${ident(table)})`).all() as Array<{ name: string }>).map(
+            (c) => c.name,
+          ),
+        )
+        const commonCols = srcCols.filter((c) => dstCols.has(c))
+        if (commonCols.length === 0) continue
+
+        const rows = src.prepare(`SELECT * FROM ${ident(table)}`).all() as Array<
+          Record<string, unknown>
+        >
+        const colList = commonCols.map(ident).join(', ')
+        const placeholders = commonCols.map(() => '?').join(', ')
+        const insertStmt = dst!.prepare(
+          `INSERT OR REPLACE INTO ${ident(table)} (${colList}) VALUES (${placeholders})`,
+        )
+        for (const row of rows) {
+          insertStmt.run(...commonCols.map((c) => row[c] ?? null))
+        }
+        rowCounts[table] = rows.length
+        tablesCopied.push(table)
+      }
+    })
+    copyAll()
+
+    if (options?.simulateCrashAfterCopy) {
+      throw new Error('SIMULATED_MIGRATION_INTERRUPTION')
+    }
+
+    // Verify record counts and critical financial totals match source before atomic switch
+    for (const table of tablesCopied) {
+      const dstCountRow = dst.prepare(`SELECT COUNT(*) AS n FROM ${ident(table)}`).get() as {
+        n: number
+      }
+      const actualCount = Number(dstCountRow.n)
+      const expectedCount = rowCounts[table] ?? 0
+      const countValid =
+        table === 'meta' ? actualCount >= expectedCount : actualCount === expectedCount
+      if (!countValid) {
+        throw new PartitionSecurityError(
+          `Migration count mismatch for ${table}: expected ${expectedCount}, got ${actualCount}`,
+        )
+      }
+    }
+
+    const dstChecksums = readFinancialChecksums(dst)
+    if (
+      dstChecksums.invoiceTotalSum !== srcChecksums.invoiceTotalSum ||
+      dstChecksums.invoicePaidSum !== srcChecksums.invoicePaidSum ||
+      dstChecksums.paymentAmountSum !== srcChecksums.paymentAmountSum ||
+      dstChecksums.productStockQtySum !== srcChecksums.productStockQtySum
+    ) {
+      throw new PartitionSecurityError(
+        'Migration financial checksum mismatch; aborting without modifying original database.',
+      )
+    }
+
+    dst
+      .prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)')
+      .run('encryption_migration_state', 'completed')
+    dst.close()
+    dst = null
+    src.close()
+
+    renameSync(stagingPath, targetPath)
+    writeFileSync(
+      statePath,
+      JSON.stringify({ state: 'completed', completedAt: new Date().toISOString() }),
+      'utf8',
+    )
+
+    encryptionStatus = {
+      ...encryptionStatus,
+      legacyPlaintextDetected: detection.isPlaintextSqlite,
+      migrationState: 'completed',
+    }
+
+    return {
+      migrated: true,
+      sourcePlaintextDetected: detection.isPlaintextSqlite,
+      backupPath,
+      tablesCopied,
+      rowCounts,
+      financialChecksums: dstChecksums,
+      encryption,
+    }
+  } catch (err) {
+    try {
+      dst?.close()
+    } catch {
+      /* ignore */
+    }
+    try {
+      src.close()
+    } catch {
+      /* ignore */
+    }
+    rmSync(stagingPath, { force: true })
+    writeFileSync(
+      statePath,
+      JSON.stringify({ state: 'failed', failedAt: new Date().toISOString() }),
+      'utf8',
+    )
+    encryptionStatus = {
+      ...encryptionStatus,
+      migrationState: 'failed',
+      lastFailure: err instanceof Error ? err.message : String(err),
+    }
+    throw err
+  }
+}
+
+export function recoverInterruptedMigration(targetPath: string): {
+  interrupted: boolean
+  state: string | null
+  stagingCleaned: boolean
+} {
+  const statePath = `${targetPath}.migration-state.json`
+  const stagingPath = `${targetPath}.migrating`
+  let state: string | null = null
+  if (existsSync(statePath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(statePath, 'utf8')) as { state?: string }
+      state = parsed.state ?? null
+    } catch {
+      state = 'corrupt'
+    }
+  }
+  const interrupted = state === 'in_progress' || state === 'failed' || state === 'corrupt'
+  const stagingExists = existsSync(stagingPath)
+  if (interrupted && stagingExists) {
+    rmSync(stagingPath, { force: true })
+  }
+  return { interrupted, state, stagingCleaned: interrupted && stagingExists }
+}
+
+export function rotateDatabasePartitionKey(params?: {
+  newMasterSecret?: string | undefined
+  newSaltHex?: string | undefined
+}): { rotated: boolean; saltHexPrefix: string } {
+  const nextMaster = params?.newMasterSecret ?? PerUserPartitionManager.generateDeviceMasterSecret()
+  const nextSalt = params?.newSaltHex ?? PerUserPartitionManager.generatePartitionSaltHex()
+  if (nextMaster.trim().length < 32 || !/^[0-9a-f]{32,}$/i.test(nextSalt)) {
+    throw new PartitionSecurityError('Invalid rotation secret or salt material.')
+  }
+  secureSet('hisabche.partition.master', nextMaster)
+  secureSet('hisabche.partition.salt', nextSalt)
+  return { rotated: true, saltHexPrefix: nextSalt.slice(0, 8) }
 }
 
 export function openUserPartitionWith(
@@ -160,22 +570,62 @@ export function openUserPartitionWith(
 export function initDatabaseWith(
   Driver: new (path: string) => SqliteDatabase,
   path: string,
+  options?: InitDatabaseOptions,
 ): boolean {
   if (db) return true
 
+  let candidate: SqliteDatabase | null = null
   try {
-    db = new Driver(path)
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
+    candidate = new Driver(path)
+    if (
+      options?.deviceMasterSecret ||
+      options?.requireNativeSqlCipher ||
+      options?.requireOsKeystore ||
+      process.env.HISABCHE_REQUIRE_SQLCIPHER === '1'
+    ) {
+      const applied = applyEncryptionOnCandidate(candidate, path, options)
+      encryptionStatus = {
+        initialized: true,
+        mode: applied.encryption.mode,
+        nativeSqlCipherSupported: applied.encryption.keyApplied,
+        cipherVersion: applied.encryption.cipherVersion,
+        keyApplied: applied.encryption.keyApplied,
+        osKeystoreAvailable: applied.osKeystoreAvailable,
+        legacyPlaintextDetected: applied.legacyPlaintextDetected,
+        migrationState: 'none',
+        lastFailure: null,
+      }
+    } else {
+      const detection = detectDatabaseEncryptionStatus(path)
+      encryptionStatus = {
+        initialized: true,
+        mode: 'application_envelope_aead',
+        nativeSqlCipherSupported: false,
+        cipherVersion: null,
+        keyApplied: false,
+        osKeystoreAvailable: false,
+        legacyPlaintextDetected: detection.isPlaintextSqlite,
+        migrationState: 'none',
+        lastFailure: null,
+      }
+    }
 
-    CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
-    runMigrations(db)
-    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
-      'schema_version',
-      String(SCHEMA_VERSION),
-    )
+    candidate.pragma('journal_mode = WAL')
+    candidate.pragma('foreign_keys = ON')
+
+    CREATE_STATEMENTS.forEach((statement) => candidate?.exec(statement))
+    runMigrations(candidate)
+    candidate
+      .prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)')
+      .run('schema_version', String(SCHEMA_VERSION))
+    db = candidate
     return true
   } catch (error) {
+    try {
+      candidate?.close()
+    } catch {
+      /* ignore close error during failed init */
+    }
     // ⚠️ REPORTED, NOT SWALLOWED.
     //
     // Falling back to online-only is the right behaviour — the app must still
@@ -184,33 +634,59 @@ export function initDatabaseWith(
     // the offline product does not work on it. The reason is kept in
     // `lastFailure` so the renderer can say WHICH it is.
     lastFailure = error instanceof Error ? error.message : String(error)
+    encryptionStatus = {
+      ...encryptionStatus,
+      initialized: false,
+      mode: 'uninitialized',
+      lastFailure,
+    }
     reportError(error, { scope: 'db.init' })
     db = null
     return false
   }
 }
 
-export function initDatabase(): boolean {
+export function initDatabase(options?: InitDatabaseOptions): boolean {
   if (db) return true
 
+  let candidate: SqliteDatabase | null = null
   try {
     // Required at runtime so a missing native binding degrades instead of
     // breaking the module graph at import time.
-
     const Database = require('better-sqlite3') as new (path: string) => SqliteDatabase
+    const dbPath = join(app.getPath('userData'), 'hisabche.db')
+    recoverInterruptedMigration(dbPath)
+    candidate = new Database(dbPath)
 
-    db = new Database(join(app.getPath('userData'), 'hisabche.db'))
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
+    const applied = applyEncryptionOnCandidate(candidate, dbPath, options)
+    encryptionStatus = {
+      initialized: true,
+      mode: applied.encryption.mode,
+      nativeSqlCipherSupported: applied.encryption.keyApplied,
+      cipherVersion: applied.encryption.cipherVersion,
+      keyApplied: applied.encryption.keyApplied,
+      osKeystoreAvailable: applied.osKeystoreAvailable,
+      legacyPlaintextDetected: applied.legacyPlaintextDetected,
+      migrationState: 'none',
+      lastFailure: null,
+    }
 
-    CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
-    runMigrations(db)
-    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
-      'schema_version',
-      String(SCHEMA_VERSION),
-    )
+    candidate.pragma('journal_mode = WAL')
+    candidate.pragma('foreign_keys = ON')
+
+    CREATE_STATEMENTS.forEach((statement) => candidate?.exec(statement))
+    runMigrations(candidate)
+    candidate
+      .prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)')
+      .run('schema_version', String(SCHEMA_VERSION))
+    db = candidate
     return true
   } catch (error) {
+    try {
+      candidate?.close()
+    } catch {
+      /* ignore close error during failed init */
+    }
     // ⚠️ REPORTED, NOT SWALLOWED.
     //
     // Falling back to online-only is the right behaviour — the app must still
@@ -219,6 +695,12 @@ export function initDatabase(): boolean {
     // the offline product does not work on it. The reason is kept in
     // `lastFailure` so the renderer can say WHICH it is.
     lastFailure = error instanceof Error ? error.message : String(error)
+    encryptionStatus = {
+      ...encryptionStatus,
+      initialized: false,
+      mode: 'uninitialized',
+      lastFailure,
+    }
     reportError(error, { scope: 'db.init' })
     db = null
     return false

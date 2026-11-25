@@ -14,12 +14,65 @@ if (replicaUrl && serviceKey) {
   })
 }
 
+export type ReplicationLagSource = 'wal_replay' | 'rtt_fallback' | 'unavailable'
+
+export interface ReplicationLagMeasurement {
+  readonly lagMs: number | null
+  readonly rttMs: number | null
+  readonly source: ReplicationLagSource
+  readonly measuredAt: string
+}
+
+export interface ReplicaObservabilityMetrics {
+  readonly currentLagMs: number | null
+  readonly lastRttMs: number | null
+  readonly lastMeasuredAt: string | null
+  readonly measurementAgeMs: number | null
+  readonly source: ReplicationLagSource
+  readonly fallbackCount: number
+  readonly consecutiveFailures: number
+  readonly circuitBreakerState: string
+}
+
 export type ReplicationLagProbe = (client: SupabaseClient) => Promise<{
   lagMs: number | null
-  source: 'wal_replay' | 'rtt_fallback' | 'unavailable'
+  rttMs?: number | null | undefined
+  source: ReplicationLagSource
 }>
 
 let customLagProbe: ReplicationLagProbe | null = null
+let lastLagMs: number | null = null
+let lastRttMs: number | null = null
+let lastMeasuredAtMs: number | null = null
+let lastLagSource: ReplicationLagSource = 'unavailable'
+let fallbackCount = 0
+
+export function recordReplicaFallback(): void {
+  fallbackCount += 1
+}
+
+export function getReplicaObservabilityMetrics(
+  nowMs: number = Date.now(),
+): ReplicaObservabilityMetrics {
+  return {
+    currentLagMs: lastLagMs,
+    lastRttMs,
+    lastMeasuredAt: lastMeasuredAtMs !== null ? new Date(lastMeasuredAtMs).toISOString() : null,
+    measurementAgeMs: lastMeasuredAtMs !== null ? Math.max(0, nowMs - lastMeasuredAtMs) : null,
+    source: lastLagSource,
+    fallbackCount,
+    consecutiveFailures: replicaCircuitBreaker.getFailureCount(),
+    circuitBreakerState: replicaCircuitBreaker.getState(),
+  }
+}
+
+export function resetReplicaMetricsForTest(): void {
+  lastLagMs = null
+  lastRttMs = null
+  lastMeasuredAtMs = null
+  lastLagSource = 'unavailable'
+  fallbackCount = 0
+}
 
 export function setReplicaClientForTest(client: SupabaseClient | null): void {
   replicaClient = client
@@ -59,33 +112,58 @@ export function getReplicaClientOrPrimary(): {
   return { client: primaryDb, isReplica: false }
 }
 
-export async function measureReplicaLagDetails(): Promise<{
-  lagMs: number | null
-  source: 'wal_replay' | 'rtt_fallback' | 'unavailable'
-}> {
-  if (!replicaClient) return { lagMs: null, source: 'unavailable' }
+export async function measureReplicaLagDetails(): Promise<ReplicationLagMeasurement> {
+  const nowMs = Date.now()
+  const measuredAt = new Date(nowMs).toISOString()
+  if (!replicaClient) {
+    lastLagMs = null
+    lastLagSource = 'unavailable'
+    return { lagMs: null, rttMs: null, source: 'unavailable', measuredAt }
+  }
 
   if (customLagProbe) {
     try {
       const probed = await customLagProbe(replicaClient)
-      if (probed.lagMs === null || !Number.isFinite(probed.lagMs) || probed.lagMs < 0) {
+      const rttMs =
+        probed.rttMs !== undefined && probed.rttMs !== null && Number.isFinite(probed.rttMs)
+          ? probed.rttMs
+          : null
+      if (
+        probed.source !== 'wal_replay' ||
+        probed.lagMs === null ||
+        !Number.isFinite(probed.lagMs) ||
+        probed.lagMs < 0
+      ) {
         replicaCircuitBreaker.recordFailure()
-        return { lagMs: null, source: 'unavailable' }
+        lastLagMs = null
+        lastRttMs = rttMs
+        lastMeasuredAtMs = nowMs
+        lastLagSource = probed.source === 'rtt_fallback' ? 'rtt_fallback' : 'unavailable'
+        return { lagMs: null, rttMs, source: lastLagSource, measuredAt }
       }
       replicaCircuitBreaker.recordSuccess()
-      return probed
+      lastLagMs = probed.lagMs
+      lastRttMs = rttMs
+      lastMeasuredAtMs = nowMs
+      lastLagSource = 'wal_replay'
+      return { lagMs: probed.lagMs, rttMs, source: 'wal_replay', measuredAt }
     } catch {
       replicaCircuitBreaker.recordFailure()
-      return { lagMs: null, source: 'unavailable' }
+      lastLagMs = null
+      lastMeasuredAtMs = nowMs
+      lastLagSource = 'unavailable'
+      return { lagMs: null, rttMs: null, source: 'unavailable', measuredAt }
     }
   }
 
   // 1. Prefer genuine PostgreSQL WAL replay lag RPC when installed on replica
   try {
+    const start = Date.now()
     const rpcRes = (await replicaClient.rpc('get_replication_lag_ms')) as {
       data: unknown
       error: { code?: string; message?: string } | null
     }
+    const rpcRtt = Date.now() - start
     if (!rpcRes.error && rpcRes.data !== null && rpcRes.data !== undefined) {
       const numericLag = Number(
         typeof rpcRes.data === 'object' && rpcRes.data !== null && 'lag_ms' in rpcRes.data
@@ -94,7 +172,11 @@ export async function measureReplicaLagDetails(): Promise<{
       )
       if (Number.isFinite(numericLag) && numericLag >= 0) {
         replicaCircuitBreaker.recordSuccess()
-        return { lagMs: numericLag, source: 'wal_replay' }
+        lastLagMs = numericLag
+        lastRttMs = rpcRtt
+        lastMeasuredAtMs = nowMs
+        lastLagSource = 'wal_replay'
+        return { lagMs: numericLag, rttMs: rpcRtt, source: 'wal_replay', measuredAt }
       }
     }
     const missingRpc =
@@ -103,26 +185,41 @@ export async function measureReplicaLagDetails(): Promise<{
       typeof replicaClient.rpc !== 'function'
     if (rpcRes.error && !missingRpc) {
       replicaCircuitBreaker.recordFailure()
-      return { lagMs: null, source: 'unavailable' }
+      lastLagMs = null
+      lastRttMs = rpcRtt
+      lastMeasuredAtMs = nowMs
+      lastLagSource = 'unavailable'
+      return { lagMs: null, rttMs: rpcRtt, source: 'unavailable', measuredAt }
     }
   } catch {
-    // Fall through to RTT probe only if `.rpc` is unavailable in simple mocks
+    // Fall through to connectivity probe ONLY to measure network RTT (never replication lag)
   }
 
-  // 2. Connectivity + RTT fallback when WAL lag RPC is absent
+  // 2. Connectivity probe ONLY: network RTT is NEVER substituted for WAL replication lag.
   const start = Date.now()
   try {
     const { error } = await replicaClient.from('products').select('id').limit(1)
+    const latency = Date.now() - start
     if (error) {
       replicaCircuitBreaker.recordFailure()
-      return { lagMs: null, source: 'unavailable' }
+      lastLagMs = null
+      lastRttMs = latency
+      lastMeasuredAtMs = nowMs
+      lastLagSource = 'unavailable'
+      return { lagMs: null, rttMs: latency, source: 'unavailable', measuredAt }
     }
-    const latency = Date.now() - start
-    replicaCircuitBreaker.recordSuccess()
-    return { lagMs: latency, source: 'rtt_fallback' }
+    // Connectivity succeeded, but real replication lag remains unknown -> fail-closed
+    lastLagMs = null
+    lastRttMs = latency
+    lastMeasuredAtMs = nowMs
+    lastLagSource = 'unavailable'
+    return { lagMs: null, rttMs: latency, source: 'unavailable', measuredAt }
   } catch {
     replicaCircuitBreaker.recordFailure()
-    return { lagMs: null, source: 'unavailable' }
+    lastLagMs = null
+    lastMeasuredAtMs = nowMs
+    lastLagSource = 'unavailable'
+    return { lagMs: null, rttMs: null, source: 'unavailable', measuredAt }
   }
 }
 
@@ -133,28 +230,43 @@ export async function measureReplicaLagMs(): Promise<number | null> {
 
 /**
  * End-to-end read routing that measures current replica lag (failing closed to
- * primary whenever lag is unknown or exceeds `maxLagMs`) before selecting client.
+ * primary whenever lag is unknown, unverified, or exceeds `maxLagMs`) before selecting client.
  */
 export async function queryReadClient(params: {
   callerPath: string
   maxLagMs?: number | undefined
+  consistency?: 'strong' | 'bounded_staleness' | 'eventual' | undefined
+  maxMeasurementAgeMs?: number | undefined
 }): Promise<{
   client: SupabaseClient
   target: 'primary' | 'replica'
   reason: string
   measuredLagMs: number | null
+  rttMs: number | null
+  measurementSource: ReplicationLagSource
 }> {
   const lagDetail = replicaClient
     ? await measureReplicaLagDetails()
-    : { lagMs: null, source: 'unavailable' as const }
+    : {
+        lagMs: null,
+        rttMs: null,
+        source: 'unavailable' as const,
+        measuredAt: new Date().toISOString(),
+      }
   const routed = selectReadClient({
     callerPath: params.callerPath,
     replicaLagMs: lagDetail.lagMs,
     maxLagMs: params.maxLagMs,
+    consistency: params.consistency,
+    measurementSource: lagDetail.source,
+    measurementAgeMs: 0,
+    maxMeasurementAgeMs: params.maxMeasurementAgeMs,
   })
   return {
     ...routed,
     measuredLagMs: lagDetail.lagMs,
+    rttMs: lagDetail.rttMs,
+    measurementSource: lagDetail.source,
   }
 }
 
