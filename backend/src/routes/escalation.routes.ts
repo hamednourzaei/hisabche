@@ -91,4 +91,39 @@ export async function escalationRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // X08: Customer-facing support / incident SLA ticket intake
+  fastify.post(
+    '/api/v1/support-tickets',
+    { preHandler: READ },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const body = z
+          .object({
+            subject: z.string().trim().min(3).max(160),
+            priority: z.enum(['low', 'normal', 'high', 'critical']).default('normal'),
+            category: z.enum(['billing', 'sync', 'accounting', 'pos', 'other']).default('other'),
+            description: z.string().trim().min(5).max(2000),
+          })
+          .strict()
+          .parse(request.body)
+        const slaHoursByPriority = { critical: 2, high: 4, normal: 24, low: 48 } as const
+        const slaHours = slaHoursByPriority[body.priority]
+        const responseDueAt = new Date(Date.now() + slaHours * 3600_000).toISOString()
+        return reply.code(201).send({
+          data: {
+            ticketCode: `HSB-${Date.now().toString(36).toUpperCase()}`,
+            workspaceId: request.tenancy.workspaceId,
+            priority: body.priority,
+            category: body.category,
+            slaHours,
+            responseDueAt,
+            status: 'open',
+          },
+        })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to create support ticket')
+      }
+    },
+  )
 }

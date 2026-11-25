@@ -104,4 +104,45 @@ export async function qualityRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // G41: Quality inspection evaluation (pass/fail disposition, defect rate bps, quarantine)
+  fastify.post(
+    '/api/quality-events/inspect',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.configure')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            batchId: z.string().min(1).max(80),
+            inspectedQty: z.number().int().min(1),
+            defectiveQty: z.number().int().min(0),
+            maxDefectBps: z.number().int().min(0).max(10000).default(200),
+          })
+          .strict()
+          .parse(request.body)
+        if (body.defectiveQty > body.inspectedQty) {
+          return reply.code(422).send({
+            error: 'DEFECTIVE_EXCEEDS_INSPECTED',
+            code: 'DEFECTIVE_EXCEEDS_INSPECTED',
+          })
+        }
+        const defectBps = Math.round((body.defectiveQty * 10000) / body.inspectedQty)
+        const passed = defectBps <= body.maxDefectBps
+        return reply.send({
+          data: {
+            batchId: body.batchId,
+            inspectedQty: body.inspectedQty,
+            defectiveQty: body.defectiveQty,
+            defectBps,
+            passed,
+            disposition: passed ? 'release' : 'quarantine',
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to evaluate quality inspection')
+      }
+    },
+  )
 }

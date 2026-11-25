@@ -58,8 +58,8 @@ function resetWorld() {
   ])
   db.seed('workspace_members', [
     member(SHOP, OWNER.id, 'owner'),
-    // employee role has invoice.read, lacks payroll.read/payroll.write & payment.record
-    member(SHOP, STYLIST.id, 'employee'),
+    // seller role has invoice.read, lacks payroll.read/payroll.write & payment.record
+    member(SHOP, STYLIST.id, 'seller'),
     member(OTHER, STRANGER.id, 'owner'),
   ])
   db.seed('employees', [

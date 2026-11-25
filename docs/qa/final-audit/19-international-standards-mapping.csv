@@ -1,0 +1,25 @@
+Standard_ID,Version,Requirement_ID,Summary,Applicability,Risk,QA_Engine,Test_Evidence_Anchor,Result
+ISO-25010,2023,25010-FS,"Functional Suitability (completeness, correctness)",APPLICABLE,CRITICAL,01-Registry + 03-Workflow,packages/validation + backend Vitest,PARTIAL
+ISO-25010,2023,25010-PE,"Performance Efficiency (latency, RAM, CPU)",APPLICABLE,HIGH,08-Performance-Scale,backend/src/services/capacity/,PARTIAL_ISOLATED
+ISO-25010,2023,25010-CO,"Compatibility (Web, Electron Desktop, Android Mobile)",APPLICABLE,HIGH,07-UI + 09-Industry,"apps/{web,admin,desktop,mobile} type-check & jest",PARTIAL_NO_LIVE_E2E
+ISO-25010,2023,25010-IC,"Interaction Capability (UX, RTL/LTR, fa/af/en)",APPLICABLE,HIGH,07-UI-Visual,packages/i18n + packages/ui (2941/2944),PARTIAL
+ISO-25010,2023,25010-RE,"Reliability (fault tolerance, crash recovery)",APPLICABLE,CRITICAL,06-Offline-Chaos,packages/local-engine + packages/sync + dr-restore-drill,PASS_UNIT
+ISO-25010,2023,25010-SE,"Security (tenancy isolation, authz, secrets)",APPLICABLE,CRITICAL,05-Security-Tenant,"tenancy-isolation, viewer-authorization-contract, admin-gate",PARTIAL_PG_BLOCKED
+ISO-25010,2023,25010-MA,"Maintainability (modularity, testability, type safety)",APPLICABLE,MEDIUM,10-Remediation-Regression,"tsc --noEmit (14/14), eslint, check-undeclared-deps",PARTIAL
+ISO-25010,2023,25010-FL,Flexibility (67-industry profile resolution),APPLICABLE,HIGH,09-Industry-Matrix,sellable-industries.test.ts + industry-coverage-table.test.ts,PASS
+ISO-25010,2023,25010-SA,"Safety (financial immutability, zero unknown-as-zero)",APPLICABLE,CRITICAL,04-Financial-Invariants,"unknown-is-not-zero.test.ts, financial-and-inventory-golden.test.ts",PASS_UNIT
+ISO-25023,2016,25023-METRIC,"Measurable product quality metrics (latency, error rate, capacity)",APPLICABLE,HIGH,08-Performance-Scale,packages/validation/src/capacity-intelligence.ts,IMPLEMENTED_NOT_LIVE_VERIFIED
+ISO-29119,2022,29119-1..4,"Test planning, traceability, BVA/EP/state-transition, evidence",APPLICABLE,HIGH,ALL-10-ENGINES,docs/qa/final-audit/CHECKPOINT-LEDGER.md,IN_PROGRESS
+ISO-20246,2017/2022,20246-REV,"Work product reviews (code, schema, migrations, security)",APPLICABLE,HIGH,10-Remediation-Regression,docs/MIGRATIONS-REGISTRY.json + schema-contract-parity.test.ts,PARTIAL
+ISO-12207,2026,12207-LC,Software lifecycle traceability & verification,APPLICABLE,MEDIUM,01-Registry-Discovery,docs/qa/final-audit/01-repository-discovery.md,PASS
+ISO-27001,2022,27001-ISMS,"Access control, audit logging, backup/restore controls",APPLICABLE,CRITICAL,05-Security + 06-Recovery,"audit.routes.ts, dr-restore-drill.mjs",PARTIAL
+OWASP-ASVS,5.0.0,ASVS-AUTH-AC,"Authentication, session, workspace tenancy, RBAC/capability enforcement",APPLICABLE,CRITICAL,05-Security-Tenant,"workspace-membership-integrity.test.ts, viewer-cannot-write.test.ts",PARTIAL_PG_BLOCKED
+OWASP-WSTG,4.2,WSTG-ATHZ-IDOR,"Multi-tenant IDOR, privilege escalation, upload security",APPLICABLE,CRITICAL,05-Security-Tenant,"brand-assets.test.ts, sync-security.test.ts",PARTIAL
+OWASP-API,2023,API1-BOLA,Broken Object Level Authorization & workspace_id boundary,APPLICABLE,CRITICAL,05-Security-Tenant,"tenancy-isolation.test.ts, v59-http-routes.test.ts",PASS_HTTP_INJECT
+NIST-SSDF,1.1,SP-800-218,"Dependency hygiene, secret protection, regression prevention",APPLICABLE,HIGH,10-Remediation-Regression,scripts/check-undeclared-deps.mjs (6 open),PARTIAL
+WCAG,2.2-AA,WCAG-2.2-AA,"Keyboard, focus, contrast, ARIA, RTL/LTR accessibility",APPLICABLE,HIGH,07-UI-Visual,packages/ui design-token-existence.test.ts; live axe/Playwright pending,UNVERIFIED_LIVE
+ISTQB-CTFL,4.0.1,ISTQB-TECH,"EP, BVA, decision tables, state transitions, regression",APPLICABLE,MEDIUM,03-Workflow + 04-Financial,backend/src/__tests__/accounting-close-and-ledger.test.ts,PASS
+PCI-DSS,4.0.1,PCI-SCOPE,Cardholder data scope boundary (external gateways only),CONDITIONAL,MEDIUM,05-Security-Tenant,backend/src/routes/payment-webhook.routes.ts,UNVERIFIED_SCOPE
+ISO-22301,2019,22301-BC,"Business continuity, backup & deterministic DR restore",APPLICABLE,HIGH,06-Offline-Chaos,scripts/dr-restore-drill.mjs (Total Debit=Credit=170000),PASS_DRILL
+ISO-31000,2018,31000-RISK,Risk-based QA prioritization (P0..P4),APPLICABLE,MEDIUM,ALL-10-ENGINES,docs/audits/FINAL-PRODUCT-WIDE-QA-PLAN.md,PASS
+OTEL,1.x,OTEL-OBS,"Tracing, metrics & runtime observability",APPLICABLE,MEDIUM,08-Performance-Scale,backend/src/routes/system-metrics.routes.ts,PARTIAL

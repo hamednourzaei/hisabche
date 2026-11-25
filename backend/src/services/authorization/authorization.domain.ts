@@ -33,16 +33,19 @@
 // that decides anything.
 // ============================================
 
-export type WorkspaceRole = 'owner' | 'manager' | 'seller'
+import {
+  CANONICAL_ROLE_RANK,
+  CAPABILITY_CONTRACTS,
+  canonicalRoleAtLeast,
+  type CanonicalWorkspaceRole,
+} from '@hisabche/validation'
 
-export const ROLE_RANK: Record<WorkspaceRole, number> = {
-  owner: 3,
-  manager: 2,
-  seller: 1,
-}
+export type WorkspaceRole = CanonicalWorkspaceRole
+
+export const ROLE_RANK: Record<WorkspaceRole, number> = CANONICAL_ROLE_RANK
 
 export function roleAtLeast(role: WorkspaceRole, minimum: WorkspaceRole): boolean {
-  return ROLE_RANK[role] >= ROLE_RANK[minimum]
+  return canonicalRoleAtLeast(role, minimum)
 }
 
 // ─── Capabilities ────────────────────────────────────────────────────────────
@@ -123,81 +126,60 @@ export type Capability = (typeof CAPABILITIES)[number]
  * Each of those last four rewrites what has already been reported.
  */
 const MIN_ROLE: Record<Capability, WorkspaceRole> = {
-  'ledger.read': 'manager',
-  'ledger.post': 'manager',
-  'ledger.reverse': 'owner',
-  'ledger.lock_period': 'owner',
-  'account.manage': 'manager',
+  'ledger.read': CAPABILITY_CONTRACTS['ledger.read'].minRole,
+  'ledger.post': CAPABILITY_CONTRACTS['ledger.post'].minRole,
+  'ledger.reverse': CAPABILITY_CONTRACTS['ledger.reverse'].minRole,
+  'ledger.lock_period': CAPABILITY_CONTRACTS['ledger.lock_period'].minRole,
+  'account.manage': CAPABILITY_CONTRACTS['account.manage'].minRole,
 
-  'payment.read': 'seller',
-  'payment.record': 'seller',
-  'payment.cancel': 'manager',
+  'payment.read': CAPABILITY_CONTRACTS['payment.read'].minRole,
+  'payment.record': CAPABILITY_CONTRACTS['payment.record'].minRole,
+  'payment.cancel': CAPABILITY_CONTRACTS['payment.cancel'].minRole,
 
-  'inventory.read': 'seller',
-  // The cost of stock is the shop's margin. A seller sells at the sell price
-  // and has no reason to know what it was bought for.
-  'inventory.cost.read': 'manager',
-  'inventory.configure': 'owner',
-  // The owner can hand it to an employee through a custom role (module «انبار و کالا», write level).
-  'stock.adjust': 'manager',
+  'inventory.read': CAPABILITY_CONTRACTS['inventory.read'].minRole,
+  'inventory.cost.read': CAPABILITY_CONTRACTS['inventory.cost.read'].minRole,
+  'inventory.configure': CAPABILITY_CONTRACTS['inventory.configure'].minRole,
+  'stock.adjust': CAPABILITY_CONTRACTS['stock.adjust'].minRole,
 
-  'invoice.read': 'seller',
-  'invoice.create': 'seller',
-  'invoice.update': 'seller',
-  'invoice.delete': 'owner',
-  // A manager decides to extend credit past the limit; a seller can only be told it is exceeded.
-  'credit.override': 'manager',
+  'invoice.read': CAPABILITY_CONTRACTS['invoice.read'].minRole,
+  'invoice.create': CAPABILITY_CONTRACTS['invoice.create'].minRole,
+  'invoice.update': CAPABILITY_CONTRACTS['invoice.update'].minRole,
+  'invoice.delete': CAPABILITY_CONTRACTS['invoice.delete'].minRole,
+  'credit.override': CAPABILITY_CONTRACTS['credit.override'].minRole,
 
-  'customer.read': 'seller',
-  'customer.write': 'seller',
-  'product.read': 'seller',
-  'product.write': 'manager',
+  'customer.read': CAPABILITY_CONTRACTS['customer.read'].minRole,
+  'customer.write': CAPABILITY_CONTRACTS['customer.write'].minRole,
+  'product.read': CAPABILITY_CONTRACTS['product.read'].minRole,
+  'product.write': CAPABILITY_CONTRACTS['product.write'].minRole,
 
-  'report.operational.read': 'seller',
-  'report.financial.read': 'manager',
+  'report.operational.read': CAPABILITY_CONTRACTS['report.operational.read'].minRole,
+  'report.financial.read': CAPABILITY_CONTRACTS['report.financial.read'].minRole,
 
-  // A budget exposes the shop's financial plan, so reading it is a manager's
-  // view like the P&L. Approving or revising one changes a spending limit
-  // everyone else is held to — the owner's decision.
-  'budget.read': 'manager',
-  'budget.manage': 'manager',
-  'budget.approve': 'owner',
+  'budget.read': CAPABILITY_CONTRACTS['budget.read'].minRole,
+  'budget.manage': CAPABILITY_CONTRACTS['budget.manage'].minRole,
+  'budget.approve': CAPABILITY_CONTRACTS['budget.approve'].minRole,
 
-  // An import creates thousands of rows with opening balances in one act. A
-  // seller creates customers one at a time at a counter; this is a different
-  // operation with a different blast radius.
-  'data.import': 'manager',
+  'data.import': CAPABILITY_CONTRACTS['data.import'].minRole,
 
-  // ⚠️ SEEING WHO IS ONLINE IS A FACT ABOUT PEOPLE, NOT ABOUT THE BOOKS.
-  //
-  // It tells a colleague when someone started work and when they stopped, so
-  // it is off for a seller by default and the owner turns it on per profile
-  // — which is exactly what was asked for. `seller` would have made it a
-  // default of «everyone can watch everyone».
-  'people.presence.read': 'manager',
+  'people.presence.read': CAPABILITY_CONTRACTS['people.presence.read'].minRole,
 
-  'member.manage': 'owner',
-  'workspace.manage': 'owner',
+  'member.manage': CAPABILITY_CONTRACTS['member.manage'].minRole,
+  'workspace.manage': CAPABILITY_CONTRACTS['workspace.manage'].minRole,
 
-  'payroll.read': 'manager',
-  'payroll.write': 'manager',
-  'payroll.post': 'manager',
-  'employee.read': 'manager',
-  'employee.write': 'manager',
-  'leave.read': 'seller',
-  'leave.write': 'manager',
+  'payroll.read': CAPABILITY_CONTRACTS['payroll.read'].minRole,
+  'payroll.write': CAPABILITY_CONTRACTS['payroll.write'].minRole,
+  'payroll.post': CAPABILITY_CONTRACTS['payroll.post'].minRole,
+  'employee.read': CAPABILITY_CONTRACTS['employee.read'].minRole,
+  'employee.write': CAPABILITY_CONTRACTS['employee.write'].minRole,
+  'leave.read': CAPABILITY_CONTRACTS['leave.read'].minRole,
+  'leave.write': CAPABILITY_CONTRACTS['leave.write'].minRole,
 
-  // Ordering stock commits money to a supplier; receiving it moves stock and
-  // writes its cost layer; completing a count writes the ADJUSTMENT movements.
-  // Membership alone used to be enough for all of them. The default is the
-  // owner and the admin; the owner can move any of them in the permissions matrix.
-  'purchase.write': 'manager',
-  'purchase.receive': 'manager',
-  'stocktake.write': 'manager',
-  'stocktake.complete': 'manager',
-  'license.manage': 'manager',
-  // Changing an approval rule changes who can approve money; running one stays open.
-  'workflow.manage': 'manager',
+  'purchase.write': CAPABILITY_CONTRACTS['purchase.write'].minRole,
+  'purchase.receive': CAPABILITY_CONTRACTS['purchase.receive'].minRole,
+  'stocktake.write': CAPABILITY_CONTRACTS['stocktake.write'].minRole,
+  'stocktake.complete': CAPABILITY_CONTRACTS['stocktake.complete'].minRole,
+  'license.manage': CAPABILITY_CONTRACTS['license.manage'].minRole,
+  'workflow.manage': CAPABILITY_CONTRACTS['workflow.manage'].minRole,
 }
 
 /**
@@ -296,6 +278,18 @@ export function recordScope(
   userId: string,
 ): RecordScope {
   if (roleAtLeast(role, 'manager')) return { kind: 'all' }
+
+  if (role === 'viewer') {
+    switch (entity) {
+      case 'invoice':
+      case 'payment':
+      case 'customer':
+      case 'product':
+        return { kind: 'all' }
+      case 'journal_entry':
+        return { kind: 'none' }
+    }
+  }
 
   switch (entity) {
     case 'invoice':

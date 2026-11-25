@@ -356,7 +356,7 @@ export interface CloseRequest {
   /** Set when an owner is closing somebody else's abandoned session. */
   force?: boolean | undefined
   /** The role of whoever is closing. Force-close is an owner's act. */
-  role: 'owner' | 'manager' | 'seller'
+  role: 'owner' | 'manager' | 'seller' | 'viewer'
 }
 
 /**
@@ -645,6 +645,80 @@ export function buildDrawerLedger(
   return { entries, expectedCashMinor: balance }
 }
 
+// ─── Z-Report (G31) ──────────────────────────────────────────────────────────
+
+export interface ZReport {
+  sessionId: string
+  label: string | null
+  currency: string
+  status: SessionStatus
+  openedAt: string
+  closedAt: string | null
+  openedBy: string
+  closedBy: string | null
+  openingFloatMinor: number
+  orderCount: number
+  voidedCount: number
+  grossSalesMinor: number
+  voidedTotalMinor: number
+  byMethod: Record<PosPaymentMethod, number>
+  cashInMinor: number
+  cashOutMinor: number
+  transfersNetMinor: number
+  settlementsNetMinor: number
+  expectedCashMinor: number
+  countedCashMinor: number | null
+  varianceMinor: number | null
+}
+
+/**
+ * Pure shift Z-report computed from the exact same session, order, movement,
+ * and settlement rows used by `summarise()` and `buildDrawerLedger()`.
+ * Unknown counts stay `null` (never coerced to 0).
+ */
+export function buildZReport(
+  session: PosSession,
+  orders: PosOrder[],
+  movements: CashMovement[],
+  settlements: CashSettlement[] = [],
+): ZReport {
+  const totals = summarise(session, orders, movements, settlements)
+  const voidedTotalMinor = orders
+    .filter((o) => o.status !== 'completed')
+    .reduce((sum, o) => sum + o.totalMinor, 0)
+
+  let cashInMinor = 0
+  let cashOutMinor = 0
+  for (const m of movements) {
+    if (m.kind === 'cash_in') cashInMinor += m.amountMinor
+    else if (m.kind === 'cash_out') cashOutMinor += m.amountMinor
+  }
+
+  return {
+    sessionId: session.id,
+    label: session.label ?? null,
+    currency: session.currency ?? '',
+    status: session.status,
+    openedAt: session.openedAt,
+    closedAt: session.closedAt ?? null,
+    openedBy: session.openedBy,
+    closedBy: session.closedBy ?? null,
+    openingFloatMinor: session.openingFloatMinor,
+    orderCount: totals.orderCount,
+    voidedCount: totals.voidedCount,
+    grossSalesMinor: totals.grossSalesMinor,
+    voidedTotalMinor,
+    byMethod: totals.byMethod,
+    cashInMinor,
+    cashOutMinor,
+    transfersNetMinor: totals.transfersMinor,
+    settlementsNetMinor: totals.settlementsMinor,
+    expectedCashMinor: totals.expectedCashMinor,
+    countedCashMinor: totals.countedCashMinor,
+    varianceMinor: totals.varianceMinor,
+  }
+}
+
 // ─── Cash flow by day ────────────────────────────────────────────────────────
 
 export interface CashEvent {
@@ -694,4 +768,32 @@ export function dailyCashFlow(
     row.netMinor += event.amountMinor
   }
   return out
+}
+
+// X10: Offline card-processor payment state machine
+export const OFFLINE_CARD_PAYMENT_STATES = [
+  'queued_offline',
+  'pending_capture',
+  'captured',
+  'declined',
+  'voided',
+] as const
+
+export type OfflineCardPaymentState = (typeof OFFLINE_CARD_PAYMENT_STATES)[number]
+
+const OFFLINE_CARD_TRANSITIONS: Readonly<
+  Record<OfflineCardPaymentState, readonly OfflineCardPaymentState[]>
+> = {
+  queued_offline: ['pending_capture', 'voided'],
+  pending_capture: ['captured', 'declined', 'voided'],
+  captured: ['voided'],
+  declined: ['queued_offline', 'voided'],
+  voided: [],
+}
+
+export function canTransitionOfflineCardPayment(
+  from: OfflineCardPaymentState,
+  to: OfflineCardPaymentState,
+): boolean {
+  return OFFLINE_CARD_TRANSITIONS[from].includes(to)
 }

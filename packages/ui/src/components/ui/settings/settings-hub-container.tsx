@@ -22,6 +22,7 @@ import { Plug, Settings } from 'lucide-react'
 
 import { PageHub } from '../page-hub'
 import { SettingsPage } from './settings-page'
+import { RoleOnboardingPanel, WorkspaceOpsPanel } from '../extended-ops'
 
 const DevelopersContainer = lazy(() =>
   import('../developers/containers/developers-container').then((m) => ({
@@ -57,38 +58,42 @@ export function SettingsHubContainer({ general = webSettings }: SettingsHubProps
 function SettingsHub({ general }: { general: () => ReactNode }) {
   const t = useTranslations()
   return (
-    <PageHub
-      lookId="settings"
-      label={t('nav.settings')}
-      sectionsLabel={t('settingsHub.sectionsLabel')}
-      loadingLabel={t('settingsHub.loading')}
-      tabs={[
-        {
-          id: 'general',
-          label: t('settingsHub.tabs.general'),
-          icon: Settings,
-          sections: [{ id: 'general', label: t('nav.settings'), render: general }],
-        },
-        {
-          id: 'integrations',
-          label: t('settingsHub.tabs.integrations'),
-          icon: Plug,
-          sections: [
-            {
-              id: 'developers',
-              label: t('settingsHub.sections.developers'),
-              source: SETTINGS_HUB_SOURCES.developers,
-              render: () => <DevelopersContainer />,
-            },
-            {
-              id: 'marketplace',
-              label: t('settingsHub.sections.marketplace'),
-              source: SETTINGS_HUB_SOURCES.marketplace,
-              render: () => <MarketplaceContainer />,
-            },
-          ],
-        },
-      ]}
-    />
+    <>
+      <PageHub
+        lookId="settings"
+        label={t('nav.settings')}
+        sectionsLabel={t('settingsHub.sectionsLabel')}
+        loadingLabel={t('settingsHub.loading')}
+        tabs={[
+          {
+            id: 'general',
+            label: t('settingsHub.tabs.general'),
+            icon: Settings,
+            sections: [{ id: 'general', label: t('nav.settings'), render: general }],
+          },
+          {
+            id: 'integrations',
+            label: t('settingsHub.tabs.integrations'),
+            icon: Plug,
+            sections: [
+              {
+                id: 'developers',
+                label: t('settingsHub.sections.developers'),
+                source: SETTINGS_HUB_SOURCES.developers,
+                render: () => <DevelopersContainer />,
+              },
+              {
+                id: 'marketplace',
+                label: t('settingsHub.sections.marketplace'),
+                source: SETTINGS_HUB_SOURCES.marketplace,
+                render: () => <MarketplaceContainer />,
+              },
+            ],
+          },
+        ]}
+      />
+      <RoleOnboardingPanel />
+      <WorkspaceOpsPanel />
+    </>
   )
 }

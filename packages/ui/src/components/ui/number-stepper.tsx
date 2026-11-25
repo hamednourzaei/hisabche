@@ -213,7 +213,6 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
         {/* Width collapses to zero when idle, so the arrows can never overflow
             the cell they live in. Always visible on touch — see above. */}
         <div
-          aria-hidden="true"
           className={cn(
             'flex shrink-0 flex-col self-stretch overflow-hidden',
             'transition-[width,opacity] duration-150 motion-reduce:transition-none',
@@ -226,8 +225,9 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
             type="button"
             tabIndex={-1}
             disabled={disabled}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => bump(1)}
-            aria-hidden="true"
+            aria-label="+"
             className={arrow}
           >
             <ChevronUp className="size-3" />
@@ -236,8 +236,9 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
             type="button"
             tabIndex={-1}
             disabled={disabled}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => bump(-1)}
-            aria-hidden="true"
+            aria-label="-"
             className={arrow}
           >
             <ChevronDown className="size-3" />

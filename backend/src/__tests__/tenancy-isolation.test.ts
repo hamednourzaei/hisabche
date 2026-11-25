@@ -271,18 +271,17 @@ describe('the active workspace is never guessed', () => {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('roles do not escalate', () => {
-  it('an unrecognised role degrades to the least privilege', async () => {
+  it('an unrecognised role fails closed instead of escalating', async () => {
     members = [member({ workspace_id: WS_A, user_id: OWNER_A, role: 'wizard' })]
 
-    // The replaced middleware defaulted a MISSING membership to 'admin', which
-    // workflow.service.ts accepts as an approver override. Unknown must mean
-    // less, never more.
-    await expect(requireWorkspace(OWNER_A)).resolves.toMatchObject({ role: 'seller' })
+    // Unknown stored roles fail closed so a malformed or tampered role value
+    // never grants access.
+    await expect(requireWorkspace(OWNER_A)).rejects.toThrow('No active workspace membership')
   })
 
-  it('a NULL role degrades to the least privilege', async () => {
+  it('a NULL role fails closed instead of escalating', async () => {
     members = [member({ workspace_id: WS_A, user_id: OWNER_A, role: null })]
-    await expect(requireWorkspace(OWNER_A)).resolves.toMatchObject({ role: 'seller' })
+    await expect(requireWorkspace(OWNER_A)).rejects.toThrow('No active workspace membership')
   })
 
   it('requireRole ranks owner above manager above seller', async () => {

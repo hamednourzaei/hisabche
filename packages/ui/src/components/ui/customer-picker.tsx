@@ -62,6 +62,12 @@ export const CustomerPicker = memo(
         return () => clearTimeout(timer)
       }, [search])
 
+      // Reset stale search terms when switching between customer and supplier modes.
+      useEffect(() => {
+        setSearch('')
+        setDebouncedSearch('')
+      }, [partyType])
+
       const { data: customerData, isLoading: isCustomersLoading } = useCustomers({
         page: 1,
         limit: 25,
@@ -78,17 +84,23 @@ export const CustomerPicker = memo(
 
       const filtered: CustomerOption[] = useMemo(() => {
         if (isSupplier) {
-          return (supplierData || []).slice(0, 25).map((s) => ({
-            id: s.id,
-            name: s.name,
-            phone: s.phone ?? '',
-          }))
+          return (supplierData || [])
+            .filter((s) => Boolean(s.id))
+            .slice(0, 25)
+            .map((s) => ({
+              id: s.id,
+              name: s.name,
+              phone: s.phone ?? '',
+            }))
         }
-        return (customerData?.customers || []).slice(0, 25).map((c) => ({
-          id: c.id ?? '',
-          name: c.fullName,
-          phone: c.phone ?? '',
-        }))
+        return (customerData?.customers || [])
+          .filter((c) => Boolean(c.id))
+          .slice(0, 25)
+          .map((c) => ({
+            id: c.id ?? '',
+            name: c.fullName,
+            phone: c.phone ?? '',
+          }))
       }, [isSupplier, supplierData, customerData])
 
       const handleSelect = useCallback(

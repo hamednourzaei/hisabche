@@ -10,6 +10,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   REPAIR_STATUSES,
+  checkImeiBlacklist,
   repairBillCreateSchema,
   repairPartReserveSchema,
   repairTicketCreateSchema,
@@ -201,6 +202,34 @@ export async function repairRoutes(fastify: FastifyInstance) {
         return reply.code(201).send({ data })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to bill repair ticket')
+      }
+    },
+  )
+
+  // G45: IMEI Luhn & blacklist verification on the shared repair/serialized core
+  fastify.post(
+    '/api/repair-tickets/imei/check',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            imei: z.string().min(1).max(32),
+            blacklist: z
+              .array(
+                z.object({
+                  imei: z.string().min(1),
+                  reason: z.string().min(1),
+                  reportedAt: z.string().min(1),
+                }),
+              )
+              .default([]),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send({ data: checkImeiBlacklist(body.imei, body.blacklist) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to verify IMEI')
       }
     },
   )

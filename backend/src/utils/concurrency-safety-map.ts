@@ -2142,6 +2142,72 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/restore',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: 'backend/src/routes/workspace.routes.ts', text: 'RESTORE_LOCAL_ONLY' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async createWorkspace(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'PATCH /api/workspaces/:id',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async updateWorkspace(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'PATCH /api/workspaces/:id/members/role',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async updateMemberRole(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'DELETE /api/workspaces/:id/members/:memberId',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async removeMember(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/:id/leave',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async leaveWorkspace(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/:id/invites',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async createInvite(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/accept-invite',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async acceptInvite(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/:id/members/direct',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async createMemberDirect(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'PATCH /api/workspaces/:id/members/suspension',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async setMemberSuspension(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'DELETE /api/workspaces/:id/invites/:inviteId',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/workspace.service.ts`, text: 'async cancelInvite(' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
     route: 'POST /api/workspaces/:id/brand-assets/:assetType',
     mechanisms: ['check-then-write'],
     evidence: [{ file: `${SVC}/brand-asset.service.ts`, text: 'replaceBrandAsset' }],
@@ -2151,6 +2217,108 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     route: 'DELETE /api/workspaces/:id/brand-assets/:assetType',
     mechanisms: ['check-then-write'],
     evidence: [{ file: `${SVC}/brand-asset.service.ts`, text: 'deleteBrandAsset' }],
+  },
+  // ─── STEP-B stateless / compute routes on covered files ──────────────────
+  {
+    routeFile: 'product.routes.ts',
+    route: 'POST /api/products/:id/barcode-label',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/product.routes.ts`, text: "'/api/products/:id/barcode-label'" }],
+  },
+  {
+    routeFile: 'quality.routes.ts',
+    route: 'POST /api/quality-events/inspect',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/quality.routes.ts`, text: "'/api/quality-events/inspect'" }],
+  },
+  {
+    routeFile: 'repair.routes.ts',
+    route: 'POST /api/repair-tickets/imei/check',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/repair.routes.ts`, text: "'/api/repair-tickets/imei/check'" }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/deliveries/cod/reconcile-batch',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/transport.routes.ts`, text: "'/api/deliveries/cod/reconcile-batch'" },
+    ],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/purchase-orders/supplier-score',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/purchasing.routes.ts`, text: "'/api/purchase-orders/supplier-score'" },
+    ],
+  },
+  {
+    routeFile: 'purchasing.routes.ts',
+    route: 'POST /api/purchase-orders/landed-cost-allocate',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/purchasing.routes.ts`, text: "'/api/purchase-orders/landed-cost-allocate'" },
+    ],
+  },
+  // ─── STEP-A / STEP-C stateless / compute routes on covered files ─────────
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/exchange/trade-in/quote',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/exchange.routes.ts`, text: "'/api/exchange/trade-in/quote'" }],
+  },
+  {
+    routeFile: 'exchange.routes.ts',
+    route: 'POST /api/fx/kyc/evaluate',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/exchange.routes.ts`, text: "'/api/fx/kyc/evaluate'" }],
+  },
+  {
+    routeFile: 'transport.routes.ts',
+    route: 'POST /api/transport/fleet/compliance',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/transport.routes.ts`, text: "'/api/transport/fleet/compliance'" }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /consolidated-summary',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/accounting.routes.ts`, text: "'/consolidated-summary'" }],
+  },
+  {
+    routeFile: 'billing.routes.ts',
+    route: 'POST /api/billing/tco-estimate',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/billing.routes.ts`, text: "'/api/billing/tco-estimate'" }],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/table-service/bill-summary',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/orders.routes.ts`, text: "'/api/orders/table-service/bill-summary'" },
+    ],
+  },
+  {
+    routeFile: 'orders.routes.ts',
+    route: 'POST /api/orders/layaway',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/orders.routes.ts`, text: "'/api/orders/layaway'" }],
+  },
+  {
+    routeFile: 'appointment.routes.ts',
+    route: 'POST /api/appointments/waitlist/allocate',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/appointment.routes.ts`, text: "'/api/appointments/waitlist/allocate'" },
+    ],
+  },
+  {
+    routeFile: 'appointment.routes.ts',
+    route: 'POST /api/appointments/no-show-fee',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/appointment.routes.ts`, text: "'/api/appointments/no-show-fee'" }],
   },
 ]
 

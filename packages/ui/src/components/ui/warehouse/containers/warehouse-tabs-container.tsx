@@ -65,6 +65,7 @@ import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
 import { SegmentedControl } from '../../segmented-control'
 import { TransferRequestsSection } from '../../business-packs/transfer-requests-section'
+import { WarehouseDiagnosticsPanel } from '../../extended-ops/warehouse-diagnostics-panel'
 
 // «پیشنهاد سفارش» and «کالای راکد» (were on /operations): the same products.
 const OpsSectionContainer = lazy(() =>
@@ -317,6 +318,7 @@ function WarehouseHub() {
           </>
         )}
       </div>
+      <WarehouseDiagnosticsPanel />
     </div>
   )
 }

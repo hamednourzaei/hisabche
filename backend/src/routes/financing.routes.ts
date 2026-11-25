@@ -164,4 +164,44 @@ export async function financingRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // G23 / G24 / X17: Bank feed auto-matching on the shared financing/banking core
+  fastify.post(
+    '/api/financing/bank-match',
+    { preHandler: BOOKS },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const body = z
+          .object({
+            maxDateDiffDays: z.number().int().min(0).max(30).default(3),
+            feed: z.array(
+              z.object({
+                id: z.string().min(1),
+                date: z.string().min(4),
+                currency: currencyCodeSchema,
+                amountMinor: z.number().int(),
+                reference: z.string(),
+              }),
+            ),
+            candidates: z.array(
+              z.object({
+                id: z.string().min(1),
+                date: z.string().min(4),
+                currency: currencyCodeSchema,
+                amountMinor: z.number().int(),
+                reference: z.string(),
+              }),
+            ),
+          })
+          .strict()
+          .parse(request.body)
+        const { matchBankTransactions } = await import('@hisabche/validation')
+        return reply.send({
+          data: matchBankTransactions(body.feed, body.candidates, body.maxDateDiffDays),
+        })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to match bank transactions')
+      }
+    },
+  )
 }

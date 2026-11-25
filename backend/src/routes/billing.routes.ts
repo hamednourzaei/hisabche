@@ -1091,4 +1091,41 @@ export async function billingRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // X07: Transparent Plan + Add-on TCO breakdown in minor units
+  fastify.post(
+    '/api/billing/tco-estimate',
+    { preHandler: [authenticate] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const body = z
+        .object({
+          basePlanMonthlyMinor: z.number().int().min(0),
+          extraUsers: z.number().int().min(0).default(0),
+          perUserMonthlyMinor: z.number().int().min(0).default(0),
+          extraBranches: z.number().int().min(0).default(0),
+          perBranchMonthlyMinor: z.number().int().min(0).default(0),
+          addonsMonthlyMinor: z.number().int().min(0).default(0),
+          annualDiscountBps: z.number().int().min(0).max(5000).default(1500),
+          currency: z.string().trim().min(3).max(3),
+        })
+        .strict()
+        .parse(request.body)
+      const monthlyTotalMinor =
+        body.basePlanMonthlyMinor +
+        body.extraUsers * body.perUserMonthlyMinor +
+        body.extraBranches * body.perBranchMonthlyMinor +
+        body.addonsMonthlyMinor
+      const annualGrossMinor = monthlyTotalMinor * 12
+      const annualDiscountMinor = Math.round((annualGrossMinor * body.annualDiscountBps) / 10000)
+      return reply.send({
+        data: {
+          currency: body.currency.toUpperCase(),
+          monthlyTotalMinor,
+          annualGrossMinor,
+          annualDiscountMinor,
+          annualNetMinor: annualGrossMinor - annualDiscountMinor,
+        },
+      })
+    },
+  )
 }

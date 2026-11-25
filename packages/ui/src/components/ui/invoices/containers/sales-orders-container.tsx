@@ -50,6 +50,7 @@ import { DataTable, type TableColumn } from '../../data-table'
 import { SegmentedControl } from '../../segmented-control'
 import { SelectField } from '../../select-field'
 import { useToast } from '../../toast-provider'
+import { OrdersExpressPanel } from '../../extended-ops/orders-express-panel'
 
 export const ORDER_VIEWS = ['orders', 'delivery'] as const
 export type OrderSubView = (typeof ORDER_VIEWS)[number]
@@ -1052,6 +1053,7 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
           />
         </div>
       )}
+      <OrdersExpressPanel />
     </section>
   )
 })

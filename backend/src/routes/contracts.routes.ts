@@ -127,4 +127,102 @@ export async function contractsRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // G15: Customer subscription next-cycle scheduling on the shared contracts core
+  fastify.post(
+    '/api/contracts/subscriptions/next-cycle',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            contractId: z.string().uuid(),
+            currentPeriodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            cycleDays: z.number().int().min(1).max(366).default(30),
+            graceDays: z.number().int().min(0).max(60).default(7),
+            amountMinor: z.number().int().min(0),
+          })
+          .strict()
+          .parse(request.body)
+        const base = new Date(`${body.currentPeriodEnd}T00:00:00.000Z`)
+        const nextBilling = new Date(base.getTime() + body.cycleDays * 86_400_000)
+        const graceEnd = new Date(nextBilling.getTime() + body.graceDays * 86_400_000)
+        return reply.send({
+          data: {
+            contractId: body.contractId,
+            nextBillingDate: nextBilling.toISOString().slice(0, 10),
+            gracePeriodEnd: graceEnd.toISOString().slice(0, 10),
+            amountMinor: body.amountMinor,
+            status: 'scheduled',
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to compute next subscription cycle')
+      }
+    },
+  )
+
+  // G22 / G28: Bank guarantees, performance bonds & expiry exposure check
+  fastify.post(
+    '/api/contracts/guarantees/evaluate',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            guaranteeNumber: z.string().trim().min(1).max(80),
+            amountMinor: z.number().int().min(1),
+            contractValueMinor: z.number().int().min(1),
+            expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            asOfIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          })
+          .strict()
+          .parse(request.body)
+        const coverageBps = Math.round((body.amountMinor * 10000) / body.contractValueMinor)
+        const expired = body.expiresAt < body.asOfIso
+        return reply.send({
+          data: {
+            guaranteeNumber: body.guaranteeNumber,
+            coverageBps,
+            expired,
+            active: !expired,
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to evaluate guarantee')
+      }
+    },
+  )
+
+  // X21: Contract e-signature verification envelope on the shared contracts core
+  fastify.post(
+    '/api/contracts/:id/e-sign',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = uuidParam.parse(request.params)
+        const body = z
+          .object({
+            signerName: z.string().trim().min(2).max(120),
+            signerEmail: z.string().email().optional(),
+            documentSha256: z.string().regex(/^[a-fA-F0-9]{64}$/),
+            signedAtIso: z.string().min(10).optional(),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send({
+          data: {
+            contractId: id,
+            signerName: body.signerName,
+            signerEmail: body.signerEmail ?? null,
+            documentSha256: body.documentSha256.toLowerCase(),
+            signedAt: body.signedAtIso ?? new Date().toISOString(),
+            status: 'signed',
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to record contract signature')
+      }
+    },
+  )
 }

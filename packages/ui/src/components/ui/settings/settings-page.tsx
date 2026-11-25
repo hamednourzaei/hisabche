@@ -716,7 +716,7 @@ const BrandImageSlot = memo(function BrandImageSlot({
               type="button"
               onClick={() => void handleConfirmRemove()}
               disabled={isBusy}
-              className="rounded-md bg-[hsl(var(--color-destructive))] px-2.5 py-1 text-xs font-medium text-[hsl(var(--fg-on-accent))] disabled:opacity-40"
+              className="rounded-md bg-[hsl(var(--color-destructive))] px-2.5 py-1 text-xs font-medium text-[hsl(var(--color-destructive-fg))] disabled:opacity-40"
             >
               {t('settings.brandAssets.confirmDeleteButton')}
             </button>

@@ -5,6 +5,8 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { z } from 'zod'
+import { normalizeVin } from '@hisabche/validation'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireProfileCapability } from '../middleware/profile-capability.middleware'
@@ -90,6 +92,26 @@ export async function fitmentRoutes(fastify: FastifyInstance) {
       const workspaceId = request.tenancy.workspaceId
       const vehicle = await service.createVehicle(workspaceId, body)
       return reply.status(201).send({ data: vehicle })
+    },
+  )
+
+  // G47: ISO 3779 VIN normalization & validation on the shared vehicle/fitment core
+  fastify.post(
+    '/api/vehicles/vin/decode',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = z
+        .object({ vin: z.string().min(1).max(40) })
+        .strict()
+        .safeParse(request.body)
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'Invalid VIN payload',
+          code: 'VALIDATION_ERROR',
+          details: parsed.error.issues,
+        })
+      }
+      return reply.send({ data: normalizeVin(parsed.data.vin) })
     },
   )
 }

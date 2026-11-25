@@ -20,6 +20,7 @@ import {
 import { ServersClient } from '../servers/servers-client'
 import { InfrastructurePanel } from './infrastructure-panel'
 import { MonitorPanel } from './monitor/monitor-panel'
+import { CapacityPanel } from './capacity/capacity-panel'
 import { EmailDeliveryPanel } from './email-delivery-panel'
 import { MaintenancePanel } from './maintenance-panel'
 import { MigrationsPanel } from './migrations-panel'
@@ -36,7 +37,14 @@ import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
 import { adminDateTime, UNKNOWN_VALUE } from '@/lib/admin-format'
 
-const OPERATIONS_TABS = ['health', 'monitor', 'servers', 'jobs', 'announcements'] as const
+const OPERATIONS_TABS = [
+  'health',
+  'monitor',
+  'capacity',
+  'servers',
+  'jobs',
+  'announcements',
+] as const
 type OperationsTab = (typeof OPERATIONS_TABS)[number]
 
 export function OperationsClient() {
@@ -50,6 +58,7 @@ export function OperationsClient() {
         items={[
           { id: 'health', label: t('admin.hubs.operations.health') },
           { id: 'monitor', label: t('admin.operations.monitor.tabLabel') },
+          { id: 'capacity', label: t('admin.operations.capacity.tabLabel') },
           { id: 'servers', label: t('admin.hubs.operations.servers') },
           { id: 'jobs', label: t('admin.hubs.operations.jobs') },
           { id: 'announcements', label: t('admin.hubs.operations.announcements') },
@@ -76,6 +85,7 @@ export function OperationsClient() {
         />
       )}
       {tab === 'monitor' && <MonitorPanel />}
+      {tab === 'capacity' && <CapacityPanel />}
       {tab === 'servers' && (
         <TabSections
           label={t('admin.hubs.operations.servers')}

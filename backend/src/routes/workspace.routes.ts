@@ -680,4 +680,27 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       return reply.code(404).send({ error: 'Brand asset not found', code: 'WORKSPACE_NOT_FOUND' })
     }
   })
+
+  // X06: Self-serve pre-cancel tenant export bundle manifest & backup
+  fastify.get(
+    '/api/workspaces/:id/export-bundle',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = req.params as { id: string }
+      if (req.tenancy.workspaceId !== id) {
+        return reply.code(403).send({ error: 'WORKSPACE_MISMATCH', code: 'PERMISSION_DENIED' })
+      }
+      const data = await backupSvc.export(req.tenancy)
+      const markdown = backupToMarkdown(data)
+      return reply.send({
+        data: {
+          workspaceId: id,
+          exportedAt: new Date().toISOString(),
+          formats: ['json', 'markdown'],
+          markdownBytes: Buffer.byteLength(markdown, 'utf8'),
+          backup: data,
+        },
+      })
+    },
+  )
 }

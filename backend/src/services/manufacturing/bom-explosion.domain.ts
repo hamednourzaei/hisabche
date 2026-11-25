@@ -234,3 +234,44 @@ export function explodeMultiLevelBom(
     unitCostMinor,
   }
 }
+
+// ─── G53: Material Requirements Planning (MRP) ────────────────────────────────
+
+export interface MrpLinePlan {
+  readonly productId: string
+  readonly label: string
+  readonly requiredQty: number
+  readonly onHandQty: number
+  readonly onOrderQty: number
+  readonly safetyStockQty: number
+  readonly netShortageQty: number
+  readonly estimatedShortageCostMinor: number
+}
+
+/**
+ * Computes net material shortages from exploded BOM requirements against
+ * current on-hand stock, open purchase orders, and safety stock thresholds.
+ */
+export function computeMrpPlan(
+  leafMaterials: readonly ExplodedLeafItem[],
+  onHandByProduct: Readonly<Record<string, number>>,
+  onOrderByProduct: Readonly<Record<string, number>> = {},
+  safetyStockByProduct: Readonly<Record<string, number>> = {},
+): MrpLinePlan[] {
+  return leafMaterials.map((item) => {
+    const onHand = Math.max(0, onHandByProduct[item.productId] ?? 0)
+    const onOrder = Math.max(0, onOrderByProduct[item.productId] ?? 0)
+    const safety = Math.max(0, safetyStockByProduct[item.productId] ?? 0)
+    const netShortage = Math.max(0, item.totalGrossQuantity + safety - (onHand + onOrder))
+    return {
+      productId: item.productId,
+      label: item.label,
+      requiredQty: item.totalGrossQuantity,
+      onHandQty: onHand,
+      onOrderQty: onOrder,
+      safetyStockQty: safety,
+      netShortageQty: netShortage,
+      estimatedShortageCostMinor: Math.round(netShortage * item.unitCostMinor),
+    }
+  })
+}

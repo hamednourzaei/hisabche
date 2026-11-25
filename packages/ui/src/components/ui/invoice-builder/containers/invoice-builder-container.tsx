@@ -138,7 +138,13 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     }
     setOptimisticKind(null)
     const wanted = tradingSideOf(typeParam)
-    if (wanted && useInvoiceDraftStore.getState().transactionType !== wanted) {
+    const current = useInvoiceDraftStore.getState()
+    if (wanted && current.transactionType !== wanted) {
+      const targetParty = wanted === 'purchase' ? 'supplier' : 'customer'
+      const compatible = current.customers.filter((c) => c.partyType === targetParty)
+      if (compatible.length !== current.customers.length) {
+        setDraftField('customers', compatible)
+      }
       setDraftField('transactionType', wanted)
     }
   }, [typeParam, setDraftField])
@@ -150,7 +156,13 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
       pendingKindRef.current = typeParam === kind ? null : kind
       setOptimisticKind(typeParam === kind ? null : kind)
       const side = tradingSideOf(kind)
-      if (side && useInvoiceDraftStore.getState().transactionType !== side) {
+      const current = useInvoiceDraftStore.getState()
+      if (side && current.transactionType !== side) {
+        const targetParty = side === 'purchase' ? 'supplier' : 'customer'
+        const compatible = current.customers.filter((c) => c.partyType === targetParty)
+        if (compatible.length !== current.customers.length) {
+          setDraftField('customers', compatible)
+        }
         setDraftField('transactionType', side)
       }
       replace(`/invoices/new?type=${kind}`)

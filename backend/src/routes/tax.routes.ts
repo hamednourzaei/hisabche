@@ -237,4 +237,43 @@ export async function taxRoutes(fastify: FastifyInstance) {
       return reply.send({ data: INVOICE_TEMPLATE_REGISTRY })
     },
   )
+
+  // G33 / G34: Multi-currency VAT return summary on the shared tax core
+  fastify.post(
+    '/return/currency-summary',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            lines: z
+              .array(
+                z.object({
+                  currency: z.string().trim().min(3).max(3),
+                  kind: z.enum(['sale', 'purchase']),
+                  netMinor: z.number().int().min(0),
+                  vatMinor: z.number().int().min(0),
+                }),
+              )
+              .min(1),
+          })
+          .strict()
+          .parse(request.body)
+        const { computeVatReturnByCurrency } = await import('@hisabche/validation')
+        return reply.send({
+          data: computeVatReturnByCurrency(
+            body.lines.map((l) => ({ ...l, currency: l.currency.toUpperCase() })),
+          ),
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to compute VAT return summary')
+      }
+    },
+  )
 }

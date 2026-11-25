@@ -38,6 +38,7 @@ export interface InvoiceDraftCustomer {
   phone?: string | null
   email?: string | null
   address?: string | null
+  partyType?: 'customer' | 'supplier' | undefined
 }
 
 /** Books-currency dual-side price record for an app-filled invoice line. */

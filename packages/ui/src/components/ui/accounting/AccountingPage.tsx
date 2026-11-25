@@ -17,6 +17,7 @@ import { BranchScopeProvider } from '../branch/branch-scope'
 import { BookOpen, FileBarChart, Landmark } from 'lucide-react'
 import { PageHub } from '../page-hub'
 import { useLocaleReplace } from '../../../hooks/use-locale-push'
+import { FinanceCompliancePanel } from '../extended-ops/finance-compliance-panel'
 
 //
 // Seven tabs in a row became two, each with one switch:
@@ -243,6 +244,7 @@ function AccountingHub() {
             },
           ]}
         />
+        <FinanceCompliancePanel />
       </div>
     </BranchScopeProvider>
   )

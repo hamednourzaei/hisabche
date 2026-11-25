@@ -25,9 +25,11 @@ import {
   promotionInputSchema,
   promotionsFor,
   quotePrice,
+  quoteTieredPrice,
   toSavedPromotion as toSaved,
   type PriceQuote,
   type PromotionInput,
+  type QuantityBreak,
   type PromotionRow,
   type SavedPromotion,
 } from '@hisabche/validation'
@@ -109,8 +111,14 @@ export class PromotionService {
    */
   async quote(
     ctx: TenancyContext,
-    input: { productId: string; customerId: string | null; quantity: number; currency: string },
-  ): Promise<PriceQuote & { currency: string }> {
+    input: {
+      productId: string
+      customerId: string | null
+      quantity: number
+      currency: string
+      quantityBreaks?: readonly QuantityBreak[] | undefined
+    },
+  ): Promise<PriceQuote & { currency: string; tierMinQty?: number | null }> {
     const { data: product, error } = await supabase
       .from('products')
       .select('id, sell_price')
@@ -128,23 +136,29 @@ export class PromotionService {
       input.currency,
       today,
     )
-    const quote = quotePrice(
-      {
-        productId: input.productId,
-        kind: 'sale',
-        customerId: input.customerId,
-        priceListId: onList.priceListId,
-        quantity: input.quantity,
-      },
-      // No floor is passed: the shop has configured none, and absent means none.
-      {
-        productId: input.productId,
-        baseUnitPrice: Number((product as { sell_price: unknown }).sell_price),
-        listPrices: onList.listPrices,
-      },
-      promotions,
-      today,
-    )
+    const requestPayload = {
+      productId: input.productId,
+      kind: 'sale' as const,
+      customerId: input.customerId,
+      priceListId: onList.priceListId,
+      quantity: input.quantity,
+    }
+    const basePricing = {
+      productId: input.productId,
+      baseUnitPrice: Number((product as { sell_price: unknown }).sell_price),
+      listPrices: onList.listPrices,
+    }
+    if (input.quantityBreaks && input.quantityBreaks.length > 0) {
+      const tiered = quoteTieredPrice(
+        requestPayload,
+        basePricing,
+        input.quantityBreaks,
+        promotions,
+        today,
+      )
+      return { ...tiered, currency: input.currency }
+    }
+    const quote = quotePrice(requestPayload, basePricing, promotions, today)
     return { ...quote, currency: input.currency }
   }
 

@@ -500,7 +500,12 @@ export function DashboardContainer() {
           locale={intlLocale}
           from={toIsoDay(dateRange.from)}
           to={toIsoDay(dateRange.to)}
-          enabled={may('payroll.read')}
+          enabled={
+            access !== undefined &&
+            access.capabilities.includes('payroll.read') &&
+            (profile.isGeneric ||
+              profile.primaryDefinition.requestedCapabilities.includes('resource_capacity'))
+          }
         />
       ) : null}
 

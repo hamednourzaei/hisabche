@@ -478,8 +478,8 @@ export function CommissionSection() {
   const toast = useToast()
   const money = useMoneyText()
   const capabilities = useMyCapabilities()
-  const mayWriteCommission = capabilities.can('payroll.write') !== false
-  const mayReadTeam = capabilities.can('payroll.read') !== false
+  const mayWriteCommission = capabilities.can('payroll.write') === true
+  const mayReadTeam = capabilities.can('payroll.read') === true
   const staff = useEmployeeOptions()
   const rates = useCommissionRates()
   const setRate = useSetCommissionRate()

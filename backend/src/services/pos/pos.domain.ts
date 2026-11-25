@@ -11,6 +11,7 @@
 export {
   buildDrawerLedger,
   buildPosting,
+  buildZReport,
   cashTakenMinor,
   checkSuspendChange,
   dailyCashFlow,
@@ -44,4 +45,5 @@ export type {
   SessionPosting,
   SessionStatus,
   SessionTotals,
+  ZReport,
 } from '@hisabche/validation'

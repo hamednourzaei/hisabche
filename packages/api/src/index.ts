@@ -616,6 +616,19 @@ export {
   type PriceListDetail,
 } from './hooks/price-lists'
 
+// ─── Gift cards, store credit & loyalty (G01/G02/G65) ─────
+export {
+  useGiftCards,
+  useIssueGiftCard,
+  useRedeemGiftCard,
+  useStoreCredit,
+  useIssueStoreCredit,
+  useLoyaltyBalance,
+  useMutateLoyaltyPoints,
+  loyaltyCreditKeys,
+  type GiftCardRow,
+} from './hooks/loyalty-credit'
+
 // ─── Notes on a record (#103) ─────────────────────────────
 export {
   useEntityNotes,
@@ -977,6 +990,7 @@ export {
   useBankTransfer,
   useRecordOpeningCapital,
   useCashFlow,
+  usePosZReport,
   type CashFlowDay,
   type DrawerEntry,
   type DrawerEntryKind,
@@ -1556,3 +1570,5 @@ export * from './hooks/purchasing-rfq'
 export * from './hooks/org-chart'
 export * from './hooks/erp-registers'
 export * from './hooks/admin-infrastructure'
+export * from './hooks/loyalty-credit'
+export * from './hooks/extended-capabilities'

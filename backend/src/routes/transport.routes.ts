@@ -9,6 +9,7 @@
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { evaluateFleetCompliance, reconcileCodBatch } from '@hisabche/validation'
 import { sendFailure } from '../errors/http-failure'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -345,6 +346,56 @@ export async function transportRoutes(fastify: FastifyInstance) {
         return reply.status(201).send({ data: pod })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to record proof of delivery')
+      }
+    },
+  )
+
+  // G14: COD courier batch settlement reconciliation on the shared transport core
+  fastify.post(
+    '/api/deliveries/cod/reconcile-batch',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            parcels: z
+              .array(
+                z.object({
+                  parcelId: z.string().min(1),
+                  collectedMinor: z.number().int().min(0),
+                  courierFeeMinor: z.number().int().min(0),
+                  delivered: z.boolean(),
+                }),
+              )
+              .min(1),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send({ data: reconcileCodBatch(body.parcels) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to reconcile COD batch')
+      }
+    },
+  )
+
+  // G49 / G50 / G100: Fleet service interval & insurance compliance gate
+  fastify.post(
+    '/api/transport/fleet/compliance',
+    { preHandler: read },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            currentKm: z.number().int().min(0),
+            nextServiceKm: z.number().int().min(0),
+            insuranceExpiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            asOfIso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send({ data: evaluateFleetCompliance(body) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to evaluate fleet compliance')
       }
     },
   )

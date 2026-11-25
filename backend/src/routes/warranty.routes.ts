@@ -5,6 +5,8 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { z } from 'zod'
+import { resolveRmaDisposition } from '@hisabche/validation'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
 import { requireProfileCapability } from '../middleware/profile-capability.middleware'
@@ -48,6 +50,35 @@ export async function warrantyRoutes(fastify: FastifyInstance) {
       }
       const warranty = await service.registerWarranty(workspaceId, body)
       return reply.status(201).send({ data: warranty })
+    },
+  )
+
+  // G44: RMA disposition routing on the shared warranty core
+  fastify.post(
+    '/api/warranties/rma/disposition',
+    { preHandler: write },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = z
+        .object({
+          condition: z.enum([
+            'defective_doa',
+            'repairable',
+            'damaged_customer',
+            'sealed_resellable',
+          ]),
+          underWarranty: z.boolean(),
+        })
+        .strict()
+        .safeParse(request.body)
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'Invalid RMA disposition payload',
+          code: 'VALIDATION_ERROR',
+          details: parsed.error.issues,
+        })
+      }
+      const resolution = resolveRmaDisposition(parsed.data.condition, parsed.data.underWarranty)
+      return reply.send({ data: { ...parsed.data, resolution } })
     },
   )
 }

@@ -539,4 +539,40 @@ export async function projectRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // X16: Project change-order budget impact & margin tracking
+  fastify.post(
+    '/api/projects/:id/change-orders',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = z
+          .object({
+            title: z.string().trim().min(1).max(160),
+            originalBudgetMinor: z.number().int().min(0),
+            deltaMinor: z.number().int(),
+            estimatedCostDeltaMinor: z.number().int().default(0),
+            approved: z.boolean().default(false),
+          })
+          .strict()
+          .parse(request.body)
+        const revisedBudgetMinor = Math.max(0, body.originalBudgetMinor + body.deltaMinor)
+        const netMarginDeltaMinor = body.deltaMinor - body.estimatedCostDeltaMinor
+        return reply.code(201).send({
+          data: {
+            projectId: id,
+            title: body.title,
+            originalBudgetMinor: body.originalBudgetMinor,
+            deltaMinor: body.deltaMinor,
+            revisedBudgetMinor,
+            netMarginDeltaMinor,
+            status: body.approved ? 'approved' : 'pending_approval',
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to record project change order')
+      }
+    },
+  )
 }

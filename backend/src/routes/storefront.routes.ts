@@ -181,6 +181,42 @@ export function buildStorefrontRoutes(
         return reply.send(view)
       }),
     )
+
+    // G09 / G10 / G62 / G63: QR menu + WhatsApp catalog link on the shared storefront core
+    fastify.get(
+      `${STOREFRONT_PREFIX}/catalog/qr-whatsapp`,
+      { preHandler: requireStorefront },
+      handle(async (request, reply) => {
+        const query = z
+          .object({
+            tableNumber: z.string().trim().max(32).optional(),
+            whatsappPhone: z.string().trim().max(32).optional(),
+          })
+          .parse(request.query)
+        const catalog = await orders.catalog(request.storefront.workspaceId, {
+          limit: 100,
+          offset: 0,
+        })
+        const items = catalog.products
+        const tableSuffix = query.tableNumber
+          ? `?table=${encodeURIComponent(query.tableNumber)}`
+          : ''
+        const qrMenuPath = `${STOREFRONT_PREFIX}/catalog${tableSuffix}`
+        const whatsappUrl = query.whatsappPhone
+          ? `https://wa.me/${query.whatsappPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+              `Order (${items.length} items)${query.tableNumber ? ` - Table ${query.tableNumber}` : ''}`,
+            )}`
+          : null
+        return reply.send({
+          data: {
+            items,
+            qrMenuPath,
+            whatsappUrl,
+            tableNumber: query.tableNumber ?? null,
+          },
+        })
+      }),
+    )
   }
 }
 

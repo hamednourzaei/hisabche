@@ -41,6 +41,7 @@ import { type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
 
 import { Button } from '../../button'
 import { CustomerPicker } from '../../customer-picker'
+import { tradingSideOf } from '../../../../lib/invoices/exchange-rate'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -405,14 +406,24 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
 
           <CustomerPicker
             value={null}
+            partyType={tradingSideOf(transactionType) === 'purchase' ? 'supplier' : 'customer'}
             onChange={(next) => {
               if (!next) return
-              onAddCustomer({ id: next.id, name: next.name, phone: next.phone })
+              onAddCustomer({
+                id: next.id,
+                name: next.name,
+                phone: next.phone,
+                partyType: tradingSideOf(transactionType) === 'purchase' ? 'supplier' : 'customer',
+              })
             }}
             placeholder={
               parties.length
-                ? t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
-                : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
+                ? tradingSideOf(transactionType) === 'purchase'
+                  ? t('invoiceBuilder.customer.addAnotherSupplier', 'افزودن تأمین‌کننده دیگر…')
+                  : t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
+                : tradingSideOf(transactionType) === 'purchase'
+                  ? t('invoiceBuilder.customer.supplier', 'انتخاب تأمین‌کننده')
+                  : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
             }
           />
 

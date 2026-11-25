@@ -23,6 +23,11 @@ import {
   updateWorkOrderSchema,
 } from '@hisabche/validation'
 import { ManufacturingService } from '../services/manufacturing.service'
+import {
+  computeMrpPlan,
+  explodeMultiLevelBom,
+  type BomDefinition,
+} from '../services/manufacturing/bom-explosion.domain'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -220,6 +225,63 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
         return reply.send(workOrder)
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to update work order')
+      }
+    },
+  )
+
+  // G53: Material Requirements Planning (MRP) net shortage calculation
+  fastify.post(
+    '/api/manufacturing/mrp/plan',
+    { preHandler: READ },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const body = z
+          .object({
+            rootProductId: uuid,
+            requestedQuantity: z.number().positive(),
+            boms: z.record(
+              z.object({
+                productId: uuid,
+                label: z.string().min(1),
+                version: z.number().int().positive(),
+                components: z.array(
+                  z.object({
+                    productId: uuid,
+                    label: z.string().min(1),
+                    quantity: z.number().positive(),
+                    unitCostMinor: z.number().int().nonnegative(),
+                    scrapPercent: z.number().min(0).max(100).optional(),
+                    unit: z.string().optional(),
+                  }),
+                ),
+                laborCostMinor: z.number().int().nonnegative().optional(),
+                otherCostMinor: z.number().int().nonnegative().optional(),
+              }),
+            ),
+            onHandByProduct: z.record(z.number().nonnegative()).default({}),
+            onOrderByProduct: z.record(z.number().nonnegative()).default({}),
+            safetyStockByProduct: z.record(z.number().nonnegative()).default({}),
+          })
+          .parse(request.body)
+
+        const bomMap = new Map<string, BomDefinition>(
+          Object.entries(body.boms).map(([k, v]) => [k, v as BomDefinition]),
+        )
+        const explosion = explodeMultiLevelBom(body.rootProductId, body.requestedQuantity, bomMap)
+        const lines = computeMrpPlan(
+          explosion.leafMaterials,
+          body.onHandByProduct,
+          body.onOrderByProduct,
+          body.safetyStockByProduct,
+        )
+        return reply.send({
+          rootProductId: body.rootProductId,
+          requestedQuantity: body.requestedQuantity,
+          totalRolledUpCostMinor: explosion.totalRolledUpCostMinor,
+          lines,
+        })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to compute MRP plan')
       }
     },
   )

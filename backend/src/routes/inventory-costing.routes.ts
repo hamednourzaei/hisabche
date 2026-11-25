@@ -294,16 +294,13 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
         const body = settingsSchema.parse(request.body)
         const before = await costingService.getSettings(request.tenancy)
         const after = await costingService.setSettings(request.tenancy, body)
-        // A change of costing method changes how every LATER sale is costed
-        // (owner, 18 Oct 2026: «تغییر آن محدود و audit شود»). Who, when, from
-        // what to what — in the workspace's own governance log. A failed log
-        // write never undoes the change already saved.
+        let auditRecorded = true
         if (
           before.costingMethod !== after.costingMethod ||
           before.negativeStock !== after.negativeStock
         ) {
-          await new AuditService()
-            .log({
+          try {
+            await new AuditService().log({
               userId: request.tenancy.userId,
               workspaceId: request.tenancy.workspaceId,
               action: 'update',
@@ -314,9 +311,13 @@ export async function inventoryCostingRoutes(fastify: FastifyInstance) {
               ipAddress: request.ip,
               userAgent: request.headers['user-agent'],
             })
-            .catch((err: unknown) => request.log.error(err, 'inventory settings audit failed'))
+          } catch (err: unknown) {
+            auditRecorded = false
+            request.log.error(err, 'inventory settings audit failed')
+            reply.header('X-Audit-Recorded', 'false')
+          }
         }
-        return reply.send(after)
+        return reply.send({ ...after, auditRecorded })
       } catch (err) {
         return fail(reply, err, 'Failed to save inventory settings')
       }

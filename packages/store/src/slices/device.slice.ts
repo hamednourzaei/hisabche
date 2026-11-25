@@ -22,12 +22,28 @@ interface DeviceState {
   reducedMotion: boolean
   lowBattery: boolean
   batteryLevel: number | null
+  pinLocked: boolean
+  pinHash: string | null
 
   setPerformanceMode: (mode: PerformanceMode) => void
   setDataSaver: (enabled: boolean) => void
   setReducedMotion: (enabled: boolean) => void
   setBatteryInfo: (level: number, charging: boolean) => void
+  configurePin: (pin: string) => void
+  lockDevice: () => void
+  unlockWithPin: (pin: string) => boolean
+  clearPin: () => void
   detectDevice: () => void
+}
+
+function hashPin(pin: string): string {
+  // Deterministic non-reversible digest for local shared-device lock (never stored as plaintext).
+  let h = 2166136261
+  for (let i = 0; i < pin.length; i += 1) {
+    h ^= pin.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return `pin:${(h >>> 0).toString(16)}`
 }
 
 export const useDeviceStore = create<DeviceState>()(
@@ -38,6 +54,8 @@ export const useDeviceStore = create<DeviceState>()(
       reducedMotion: false,
       lowBattery: false,
       batteryLevel: null,
+      pinLocked: false,
+      pinHash: null,
 
       setPerformanceMode: (mode) => set({ performanceMode: mode }),
       setDataSaver: (enabled) => set({ dataSaver: enabled }),
@@ -47,6 +65,24 @@ export const useDeviceStore = create<DeviceState>()(
           batteryLevel: level,
           lowBattery: level < 0.2 && !charging,
         }),
+      configurePin: (pin) => {
+        const trimmed = pin.trim()
+        if (trimmed.length < 4) return
+        set({ pinHash: hashPin(trimmed), pinLocked: false })
+      },
+      lockDevice: () => set((s) => (s.pinHash ? { pinLocked: true } : s)),
+      unlockWithPin: (pin) => {
+        let unlocked = false
+        set((s) => {
+          if (!s.pinHash || s.pinHash === hashPin(pin.trim())) {
+            unlocked = true
+            return { pinLocked: false }
+          }
+          return s
+        })
+        return unlocked
+      },
+      clearPin: () => set({ pinHash: null, pinLocked: false }),
 
       detectDevice: () => {
         if (typeof navigator === 'undefined') return

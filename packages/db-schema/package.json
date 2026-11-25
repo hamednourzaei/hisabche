@@ -6,6 +6,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.0",
+    "postgres": "^3.4.9"
+  },
   "peerDependencies": {
     "drizzle-orm": "^0.45.2",
     "@nozbe/watermelondb": "^0.27.0"

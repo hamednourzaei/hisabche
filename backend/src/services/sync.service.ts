@@ -827,6 +827,19 @@ const REFUSED_FIELDS: readonly string[] = [
   'rate_minor',
 ]
 
+const SYNC_ENVELOPE_METADATA_FIELDS = new Set([
+  'workspace_id',
+  'user_id',
+  'version',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'origin',
+  'sync_state',
+  'dirty',
+  'synced_at',
+])
+
 function pickWritable(entity: SyncEntity, payload: Record<string, unknown>) {
   const refused = REFUSED_FIELDS.filter((field) => field in payload)
   if (refused.length > 0) {
@@ -838,6 +851,18 @@ function pickWritable(entity: SyncEntity, payload: Record<string, unknown>) {
   }
 
   const allowed = WRITABLE[entity]
+  const allowedSet = new Set(allowed)
+  const unsupported = Object.keys(payload).filter(
+    (key) =>
+      payload[key] !== undefined && !allowedSet.has(key) && !SYNC_ENVELOPE_METADATA_FIELDS.has(key),
+  )
+  if (unsupported.length > 0) {
+    throw new SyncError(
+      'validation_failed',
+      `UNSUPPORTED_FIELD: ${unsupported.join(', ')} on ${entity} — cannot silently discard fields`,
+    )
+  }
+
   const out: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in payload) out[key] = payload[key]

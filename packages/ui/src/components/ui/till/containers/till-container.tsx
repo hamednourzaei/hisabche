@@ -33,6 +33,7 @@ import {
 import { useLocalePush } from '../../../../hooks/use-locale-push'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import { TillView } from '../till-view'
+import { TillLoyaltyPanel } from '../../extended-ops/till-loyalty-panel'
 import { ArrowLeftRight, Wallet } from 'lucide-react'
 import { PageHub } from '../../page-hub'
 import {
@@ -355,29 +356,32 @@ const EXCHANGE_LABEL: Record<ExchangeView, string> = {
 export function TillContainer() {
   const t = useTranslations()
   return (
-    <PageHub
-      label={t('tillHub.label')}
-      sectionsLabel={t('tillHub.sectionsLabel')}
-      loadingLabel={t('tillHub.loading')}
-      lookId="till"
-      tabs={[
-        {
-          id: 'till',
-          label: t('tillHub.tabs.till'),
-          icon: Wallet,
-          sections: [{ id: 'till', label: t('tillHub.tabs.till'), render: () => <TillDrawer /> }],
-        },
-        {
-          id: 'exchange',
-          label: t('tillHub.tabs.exchange'),
-          icon: ArrowLeftRight,
-          sections: EXCHANGE_VIEWS.map((view) => ({
-            id: view,
-            label: t(EXCHANGE_LABEL[view]),
-            render: () => <ExchangeSection view={view} />,
-          })),
-        },
-      ]}
-    />
+    <>
+      <PageHub
+        label={t('tillHub.label')}
+        sectionsLabel={t('tillHub.sectionsLabel')}
+        loadingLabel={t('tillHub.loading')}
+        lookId="till"
+        tabs={[
+          {
+            id: 'till',
+            label: t('tillHub.tabs.till'),
+            icon: Wallet,
+            sections: [{ id: 'till', label: t('tillHub.tabs.till'), render: () => <TillDrawer /> }],
+          },
+          {
+            id: 'exchange',
+            label: t('tillHub.tabs.exchange'),
+            icon: ArrowLeftRight,
+            sections: EXCHANGE_VIEWS.map((view) => ({
+              id: view,
+              label: t(EXCHANGE_LABEL[view]),
+              render: () => <ExchangeSection view={view} />,
+            })),
+          },
+        ]}
+      />
+      <TillLoyaltyPanel />
+    </>
   )
 }

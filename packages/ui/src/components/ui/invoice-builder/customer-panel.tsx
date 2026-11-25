@@ -186,7 +186,12 @@ export const CustomerPanel = memo(function CustomerPanel({
             partyType={isPurchase ? 'supplier' : 'customer'}
             onChange={(next) => {
               if (!next) return
-              onAddCustomer({ id: next.id, name: next.name, phone: next.phone })
+              onAddCustomer({
+                id: next.id,
+                name: next.name,
+                phone: next.phone,
+                partyType: isPurchase ? 'supplier' : 'customer',
+              })
             }}
             placeholder={
               parties.length

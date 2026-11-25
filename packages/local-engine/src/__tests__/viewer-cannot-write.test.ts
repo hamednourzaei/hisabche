@@ -36,6 +36,8 @@ const VIEWER_MAY: Readonly<Record<string, string>> = {
   'POST /operations/budgets/check': 'a calculation; writes nothing',
   'POST /operations/batches/plan-issue':
     'a calculation; consumes nothing — the FEFO plan only (V55 final completion)',
+  'POST /orders/:id/deposits/:depositId/forfeiture-decision':
+    'a calculation; writes nothing — previews deposit forfeiture decision',
   'POST /tax/preview': 'a calculation; writes nothing',
 }
 
@@ -109,7 +111,7 @@ describe('the device and the server name the same lowest role', () => {
     baseCurrency: 'AFN',
     timeZone: 'Asia/Kabul',
   })
-  const rank = { seller: 1, manager: 2, owner: 3 } as const
+  const rank = { viewer: 0, seller: 1, manager: 2, owner: 3 } as const
   const allowed = (role: WorkspaceRole, capability: string) => {
     try {
       requireCapability(ctxOf(role), capability)

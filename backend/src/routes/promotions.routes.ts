@@ -66,6 +66,15 @@ export async function promotionRoutes(fastify: FastifyInstance) {
             customerId: z.string().uuid().nullable().default(null),
             quantity: z.number().positive(),
             currency: currencyCodeSchema,
+            quantityBreaks: z
+              .array(
+                z.object({
+                  minQty: z.number().positive(),
+                  unitPrice: z.number().positive(),
+                }),
+              )
+              .max(25)
+              .optional(),
           })
           .parse(request.body)
         return reply.send(await promotionService.quote(request.tenancy, input))

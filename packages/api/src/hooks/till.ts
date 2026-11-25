@@ -110,6 +110,7 @@ export const tillKeys = {
   session: (id: string) => [...tillKeys.all, 'session', id] as const,
   abandoned: () => [...tillKeys.all, 'abandoned'] as const,
   ledger: (id: string) => [...tillKeys.all, 'ledger', id] as const,
+  zReport: (id: string) => [...tillKeys.all, 'z-report', id] as const,
   cashFlow: (days: number, currency?: string) =>
     [...tillKeys.all, 'cash-flow', days, currency ?? ''] as const,
   labels: () => [...tillKeys.all, 'labels'] as const,
@@ -163,6 +164,45 @@ export function useSessionLedger(sessionId: string | null) {
     enabled: ready && !!sessionId,
     staleTime: 5_000,
     refetchOnWindowFocus: true,
+  })
+}
+
+export interface ZReport {
+  sessionId: string
+  label: string | null
+  currency: string
+  status: PosSession['status']
+  openedAt: string
+  closedAt: string | null
+  openedBy: string
+  closedBy: string | null
+  openingFloatMinor: number
+  orderCount: number
+  voidedCount: number
+  grossSalesMinor: number
+  voidedTotalMinor: number
+  byMethod: Record<PosPaymentMethod, number>
+  cashInMinor: number
+  cashOutMinor: number
+  transfersNetMinor: number
+  settlementsNetMinor: number
+  expectedCashMinor: number
+  countedCashMinor: number | null
+  varianceMinor: number | null
+}
+
+/** Shift Z-report aggregated by the server or offline local-engine from the same session rows. */
+export function usePosZReport(sessionId: string | null) {
+  const ready = useAuthReady()
+
+  return useQuery({
+    queryKey: tillKeys.zReport(sessionId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/pos/sessions/${sessionId}/z-report`)
+      return data as ZReport
+    },
+    enabled: ready && !!sessionId,
+    staleTime: 5_000,
   })
 }
 

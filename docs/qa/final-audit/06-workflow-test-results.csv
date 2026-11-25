@@ -1,0 +1,11 @@
+ID,Workflow,Owner_Core,Execution_Level,Test_Evidence_Anchor,Status,Notes
+QA-WF-001,Sales Invoice Lifecycle & Business Day,Sales,L2-HTTP-INJECT,backend/src/__tests__/http-e2e-business-day.test.ts; financial-flows-e2e.test.ts,PASS,Postgres & live browser pending
+QA-WF-002,Accounting Period Close & Double-Entry Ledger,Accounting,L2-UNIT-INTEGRATION,backend/src/__tests__/accounting-close-and-ledger.test.ts,PASS,Debit=Credit verified
+QA-WF-003,Inventory Costing (FIFO/AVCO) & Stock Movements,Inventory,L2-UNIT-INTEGRATION,backend/src/__tests__/inventory-costing-rules.test.ts; financial-and-inventory-golden.test.ts,PASS,Audit-failure surfacing verified
+QA-WF-004,Multi-Currency & AFN Zero-Decimal Reconciliation,Financial,L2-HTTP-INJECT,backend/src/__tests__/v59-http-routes.test.ts; packages/formatting currency-policy.test.ts,PASS,AFN 0-decimal verified
+QA-WF-005,Offline Write Outbox & Sync Conflict Safety,Sync,L2-L3-CHAOS,packages/local-engine sync-chaos.test.ts; backend sync-invariants.test.ts; sync-unsupported-fields.test.ts,PASS,No LWW on financial sync
+QA-WF-006,Multi-Tenant Isolation & Role Enforcement,Security,L2-HTTP-INJECT,backend/src/__tests__/tenancy-isolation.test.ts; viewer-authorization-contract.test.ts; workspace-membership-integrity.test.ts,PASS_HTTP_PG_BLOCKED,PG RLS suite blocked on Windows initdb
+QA-WF-007,Disaster Recovery SQLite Restore Drill,Reliability,L3-DRILL,scripts/dr-restore-drill.mjs,PASS,Total Debit=Credit=170000 in 2ms
+QA-WF-008,V76 Capacity & Noisy-Neighbor Isolation (10 Suites),Performance,L2-ISOLATED,backend/src/__tests__/capacity-intelligence.test.ts,PASS_ISOLATED,Staging live cluster unverified
+QA-WF-009,All 67 Industries Profile & Workflow Resolution,Industry,L2-CONTRACT,packages/validation/src/__tests__/sellable-industries.test.ts; industry-coverage-table.test.ts,PASS_UNIT_PG_BLOCKED,67/67 workflowVerified; 0/67 postgresEvidence
+QA-WF-010,Live Browser End-to-End & WCAG 2.2 AA Flow,UI,L3-BROWSER,Playwright + axe-core,UNVERIFIED_LIVE,Not executed in live browser

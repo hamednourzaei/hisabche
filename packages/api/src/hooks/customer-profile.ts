@@ -78,6 +78,11 @@ export function useCustomerProfile(customerId?: string) {
     queryFn: async () =>
       unwrap<CustomerProfile>(await apiClient.get(`/customers/${customerId}/profile`)),
     enabled: authReady && !!customerId,
+    retry: (failureCount, error) =>
+      (error as { status?: number; response?: { status?: number } })?.status === 404 ||
+      (error as { response?: { status?: number } })?.response?.status === 404
+        ? false
+        : failureCount < 2,
   })
 }
 
@@ -107,6 +112,11 @@ export function useCustomerDocuments(customerId?: string) {
       }
     },
     enabled: authReady && !!customerId,
+    retry: (failureCount, error) =>
+      (error as { status?: number; response?: { status?: number } })?.status === 404 ||
+      (error as { response?: { status?: number } })?.response?.status === 404
+        ? false
+        : failureCount < 2,
   })
 }
 
@@ -225,6 +235,11 @@ export function useCustomerAccounting(customerId?: string) {
       }
     },
     enabled: authReady && !!customerId,
+    retry: (failureCount, error) =>
+      (error as { status?: number; response?: { status?: number } })?.status === 404 ||
+      (error as { response?: { status?: number } })?.response?.status === 404
+        ? false
+        : failureCount < 2,
   })
 }
 
@@ -239,5 +254,10 @@ export function useCustomerInsights(customerId?: string) {
       return { asOf: String(body?.asOf ?? ''), insights: asList<CustomerInsight>(body?.insights) }
     },
     enabled: authReady && !!customerId,
+    retry: (failureCount, error) =>
+      (error as { status?: number; response?: { status?: number } })?.status === 404 ||
+      (error as { response?: { status?: number } })?.response?.status === 404
+        ? false
+        : failureCount < 2,
   })
 }

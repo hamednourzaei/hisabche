@@ -129,6 +129,7 @@ import { attendanceLinkRoutes } from './routes/attendance-link.routes'
 import { attendanceDeviceRoutes } from './routes/attendance-device.routes'
 import { promotionRoutes } from './routes/promotions.routes'
 import { priceListRoutes } from './routes/price-lists.routes'
+import { loyaltyCreditRoutes } from './routes/loyalty-credit.routes'
 import { lateFeeRoutes } from './routes/late-fees.routes'
 import { translateRoutes } from './routes/translate.routes'
 import { ingestRoutes } from './routes/ingest.routes'
@@ -179,6 +180,7 @@ import adminOpsRoutes from './routes/admin-ops.routes'
 import adminSecretsRoutes from './routes/admin-secrets.routes'
 import adminGatewaysRoutes from './routes/admin-gateways.routes'
 import adminMonitorRoutes from './routes/admin-monitor.routes'
+import capacityRoutes from './routes/capacity.routes'
 import adminAiRoutes from './routes/admin-ai.routes'
 import adminInsightsRoutes from './routes/admin-insights.routes'
 import adminInfrastructureRoutes from './routes/admin-infrastructure.routes'
@@ -1040,6 +1042,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
   await server.register(attendanceDeviceRoutes)
   await server.register(promotionRoutes)
   await server.register(priceListRoutes)
+  await server.register(loyaltyCreditRoutes)
   await server.register(lateFeeRoutes)
   await server.register(translateRoutes)
   await server.register(ingestRoutes)
@@ -1108,6 +1111,7 @@ export async function buildServer(options: { testRuntime?: boolean } = {}): Prom
   await server.register(adminSecretsRoutes)
   await server.register(adminGatewaysRoutes)
   await server.register(adminMonitorRoutes)
+  await server.register(capacityRoutes)
   await server.register(adminAiRoutes)
   await server.register(adminInsightsRoutes)
   await server.register(adminInfrastructureRoutes)

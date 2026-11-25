@@ -92,6 +92,6 @@ describe('the required role is a real one for every capability', () => {
   it.each(CAPABILITIES)('%s resolves to a workspace role', (capability) => {
     // This is what lets the answer say "a manager can do this" rather than
     // printing `ledger.post` at somebody.
-    expect(['owner', 'manager', 'seller']).toContain(minRoleFor(capability))
+    expect(['owner', 'manager', 'seller', 'viewer']).toContain(minRoleFor(capability))
   })
 })

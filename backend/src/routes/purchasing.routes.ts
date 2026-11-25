@@ -9,6 +9,7 @@ import { z } from 'zod'
 import {
   createDraftFromSuggestionsSchema,
   createPurchaseOrderSchema,
+  scoreSupplierPerformance,
   updatePurchaseOrderSchema,
 } from '@hisabche/validation'
 import PurchasingService from '../services/purchasing.service'
@@ -362,6 +363,80 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
         })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to save contract price')
+      }
+    },
+  )
+
+  // G72: Supplier performance scorecard on the shared purchasing core
+  fastify.post(
+    '/api/purchase-orders/supplier-score',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('inventory.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            totalOrders: z.number().int().min(0),
+            onTimeOrders: z.number().int().min(0),
+            defectiveOrders: z.number().int().min(0),
+          })
+          .strict()
+          .parse(request.body)
+        return reply.send({ data: scoreSupplierPerformance(body) })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to score supplier performance')
+      }
+    },
+  )
+
+  // G59 / G73 / G74 / G76: Landed cost (freight, customs, insurance) allocation across PO lines
+  fastify.post(
+    '/api/purchase-orders/landed-cost-allocate',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('purchase.write')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            freightMinor: z.number().int().min(0).default(0),
+            customsMinor: z.number().int().min(0).default(0),
+            insuranceMinor: z.number().int().min(0).default(0),
+            lines: z
+              .array(
+                z.object({
+                  lineId: z.string().min(1),
+                  quantity: z.number().int().min(1),
+                  lineValueMinor: z.number().int().min(0),
+                }),
+              )
+              .min(1),
+          })
+          .strict()
+          .parse(request.body)
+        const totalExtraMinor = body.freightMinor + body.customsMinor + body.insuranceMinor
+        const totalValueMinor = body.lines.reduce((s, l) => s + l.lineValueMinor, 0)
+        let allocatedSoFar = 0
+        const allocations = body.lines.map((line, idx) => {
+          const isLast = idx === body.lines.length - 1
+          const share =
+            totalValueMinor === 0
+              ? isLast
+                ? totalExtraMinor - allocatedSoFar
+                : Math.floor(totalExtraMinor / body.lines.length)
+              : isLast
+                ? totalExtraMinor - allocatedSoFar
+                : Math.round((totalExtraMinor * line.lineValueMinor) / totalValueMinor)
+          allocatedSoFar += share
+          return {
+            lineId: line.lineId,
+            allocatedExtraMinor: share,
+            landedLineTotalMinor: line.lineValueMinor + share,
+            landedUnitMinor: Math.round((line.lineValueMinor + share) / line.quantity),
+          }
+        })
+        return reply.send({
+          data: { totalExtraMinor, totalValueMinor, allocations },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to allocate landed cost')
       }
     },
   )

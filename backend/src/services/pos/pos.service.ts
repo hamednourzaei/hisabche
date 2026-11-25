@@ -21,6 +21,7 @@ import { businessDayOf } from '../../utils/local-day'
 
 import {
   buildDrawerLedger,
+  buildZReport,
   checkSuspendChange,
   type SessionStatus,
   buildPosting,
@@ -442,6 +443,12 @@ export class PosService {
    * WHY the drawer should hold what it should. Derived from the same rows as
    * the totals; the final balance equals `expectedCashMinor`.
    */
+  async sessionZReport(ctx: TenancyContext, sessionId: string) {
+    const session = await this.getSession(ctx, sessionId)
+    const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
+    return buildZReport(session, orders, movements, settlements)
+  }
+
   async sessionLedger(ctx: TenancyContext, sessionId: string) {
     const session = await this.getSession(ctx, sessionId)
     const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)

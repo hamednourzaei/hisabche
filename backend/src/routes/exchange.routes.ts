@@ -203,4 +203,59 @@ export async function exchangeRoutes(fastify: FastifyInstance) {
       201,
     ),
   )
+
+  // G46: Trade-in / exchange appraisal quote on the shared exchange/commerce core
+  fastify.post(
+    '/api/exchange/trade-in/quote',
+    { preHandler: record },
+    handle('Failed to quote trade-in', async (r) => {
+      const body = z
+        .object({
+          newItemPriceMinor: z.number().int().min(0),
+          tradeInAppraisedMinor: z.number().int().min(0),
+          conditionDeductionMinor: z.number().int().min(0).default(0),
+          currency: z.string().trim().min(3).max(3),
+        })
+        .strict()
+        .parse(r.body)
+      const netTradeInCreditMinor = Math.max(
+        0,
+        body.tradeInAppraisedMinor - body.conditionDeductionMinor,
+      )
+      const customerPayableMinor = Math.max(0, body.newItemPriceMinor - netTradeInCreditMinor)
+      const storeCreditOverpaymentMinor = Math.max(
+        0,
+        netTradeInCreditMinor - body.newItemPriceMinor,
+      )
+      return {
+        currency: body.currency.toUpperCase(),
+        newItemPriceMinor: body.newItemPriceMinor,
+        tradeInAppraisedMinor: body.tradeInAppraisedMinor,
+        conditionDeductionMinor: body.conditionDeductionMinor,
+        netTradeInCreditMinor,
+        customerPayableMinor,
+        storeCreditOverpaymentMinor,
+      }
+    }),
+  )
+
+  // KYC/AML / X22: Currency exchange daily cap & identity verification gate
+  fastify.post(
+    '/api/fx/kyc/evaluate',
+    { preHandler: read },
+    handle('Failed to evaluate FX KYC limit', async (r) => {
+      const body = z
+        .object({
+          dailyAccumulatedMinor: z.number().int().min(0),
+          requestedMinor: z.number().int().min(1),
+          kycThresholdMinor: z.number().int().min(0),
+          dailyCapMinor: z.number().int().min(1),
+          hasVerifiedIdDocument: z.boolean(),
+        })
+        .strict()
+        .parse(r.body)
+      const { evaluateExchangeKycLimit } = await import('@hisabche/validation')
+      return evaluateExchangeKycLimit(body)
+    }),
+  )
 }

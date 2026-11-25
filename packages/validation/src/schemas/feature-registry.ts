@@ -396,6 +396,9 @@ export const FEATURE_REGISTRY = {
   'data.snapshots': { execution: 'server', plans: ALL },
   // Owner decision (12 Nov 2026): sales per seller, a read.
   'sales.by_seller': { execution: 'server', plans: ALL, alwaysAllowed: true },
+  'pos.gift_cards': { execution: 'server', plans: ALL },
+  'pos.store_credit': { execution: 'server', plans: ALL },
+  'crm.loyalty': { execution: 'server', plans: ALL },
 } as const satisfies Record<string, FeatureDefinition>
 
 /** The key of a feature in the registry. */

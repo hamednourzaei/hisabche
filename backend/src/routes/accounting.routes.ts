@@ -1027,4 +1027,56 @@ export async function accountingRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // G80: Multi-company consolidated summary grouped strictly by currency
+  fastify.post(
+    '/consolidated-summary',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = z
+          .object({
+            entities: z
+              .array(
+                z.object({
+                  entityId: z.string().min(1),
+                  currency: z.string().trim().min(3).max(3),
+                  revenueMinor: z.number().int().min(0),
+                  expenseMinor: z.number().int().min(0),
+                  intercompanyEliminationMinor: z.number().int().min(0).default(0),
+                }),
+              )
+              .min(1),
+          })
+          .strict()
+          .parse(request.body)
+        const byCurrency = new Map<
+          string,
+          { revenueMinor: number; expenseMinor: number; eliminationMinor: number }
+        >()
+        for (const e of body.entities) {
+          const cur = e.currency.toUpperCase()
+          const acc = byCurrency.get(cur) ?? {
+            revenueMinor: 0,
+            expenseMinor: 0,
+            eliminationMinor: 0,
+          }
+          acc.revenueMinor += e.revenueMinor
+          acc.expenseMinor += e.expenseMinor
+          acc.eliminationMinor += e.intercompanyEliminationMinor
+          byCurrency.set(cur, acc)
+        }
+        const summaries = [...byCurrency.entries()].map(([currency, v]) => ({
+          currency,
+          grossRevenueMinor: v.revenueMinor,
+          consolidatedRevenueMinor: v.revenueMinor - v.eliminationMinor,
+          totalExpenseMinor: v.expenseMinor,
+          netProfitMinor: v.revenueMinor - v.eliminationMinor - v.expenseMinor,
+        }))
+        return reply.send({ data: summaries })
+      } catch (err) {
+        return fail(reply, err, 'Failed to compute consolidated summary')
+      }
+    },
+  )
 }

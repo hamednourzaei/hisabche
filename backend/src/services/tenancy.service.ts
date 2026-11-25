@@ -45,80 +45,38 @@
 // into read access over every customer's books.
 // ============================================
 
+import {
+  CANONICAL_ROLE_RANK,
+  CANONICAL_WORKSPACE_ROLES,
+  isCanonicalWorkspaceRole,
+  resolveCanonicalRole,
+  type CanonicalWorkspaceRole,
+} from '@hisabche/validation'
+
 import { supabase } from '../db'
 import { ForbiddenError } from '../errors/auth.error'
 import { DatabaseError } from '../errors/database.error'
 
 /** The workspace roles. Platform admin is deliberately absent — see above. */
-export const WORKSPACE_ROLES = ['owner', 'manager', 'seller'] as const
-export type WorkspaceRole = (typeof WORKSPACE_ROLES)[number]
+export const WORKSPACE_ROLES = CANONICAL_WORKSPACE_ROLES
+export type WorkspaceRole = CanonicalWorkspaceRole
 
 export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
-  return typeof value === 'string' && (WORKSPACE_ROLES as readonly string[]).includes(value)
-}
-
-/**
- * ═══════════════════════════════════════════════════════════════════════════
- * ⚠️ TWO VOCABULARIES WRITE TO ONE COLUMN.
- *
- * `workspace_members.role` is written by `workspace.service.ts` — invites,
- * `createMemberDirect`, `updateMemberRole` — using the client vocabulary:
- *
- *     owner | admin | member | viewer
- *
- * and read here, and by every route guard through `request.tenancy.role`,
- * using the server vocabulary:
- *
- *     owner | manager | seller
- *
- * `isWorkspaceRole('admin')` is FALSE. So the old line —
- *
- *     role: isWorkspaceRole(row.role) ? row.role : 'seller'
- *
- * — silently gave an ADMIN the LOWEST privilege in the product. An owner
- * granted someone admin, and that person could not post a journal entry, read
- * the ledger, cancel a payment or manage the catalogue. Nothing failed; they
- * were simply refused everywhere, and the members screen showed «admin».
- *
- * The degradation to least privilege is the right instinct for an UNKNOWN
- * value and the wrong answer for a KNOWN one. Known values are now translated;
- * genuinely unrecognised ones still degrade.
- *
- * ⚠️ `viewer` IS A KNOWN GAP, NOT A DECISION MADE HERE.
- *
- * There is no read-only rung in the server vocabulary: the lowest is `seller`,
- * who may create invoices and record payments. So a member invited as
- * «viewer» can sell. That is what happens TODAY through the degradation
- * branch, and mapping it explicitly changes nothing — it makes the over-grant
- * visible instead of accidental.
- *
- * Fixing it properly means a role below `seller` and a decision about what a
- * read-only member may see, which is a product policy, not a translation.
- * Until that policy exists, inventing a rung here would be guessing at it.
- * `tenancy-role-vocabulary.test.ts` asserts this gap so it cannot be forgotten.
- * ═══════════════════════════════════════════════════════════════════════════
- */
-const CLIENT_ROLE_TO_SERVER: Record<string, WorkspaceRole> = {
-  owner: 'owner',
-  admin: 'manager',
-  member: 'seller',
-  // See the warning above. Not an endorsement — a record of the status quo.
-  viewer: 'seller',
+  return isCanonicalWorkspaceRole(value)
 }
 
 /**
  * The server role for a stored value, whichever vocabulary wrote it.
  *
- * An unrecognised value degrades to the least privilege, exactly as before:
- * the old code defaulted a missing membership to 'admin', which
- * `workflow.service.ts` then accepted as an approver override.
+ * Unknown or missing roles fail closed by throwing ForbiddenError instead of
+ * defaulting to a privileged role.
  */
 export function resolveWorkspaceRole(stored: unknown): WorkspaceRole {
-  if (isWorkspaceRole(stored)) return stored
-  if (typeof stored === 'string' && stored in CLIENT_ROLE_TO_SERVER) {
-    return CLIENT_ROLE_TO_SERVER[stored]!
+  const resolved = resolveCanonicalRole(stored)
+  if (!resolved) {
+    throw new ForbiddenError('Invalid or missing workspace role')
   }
-  return 'seller'
+  return resolved
 }
 
 /**
@@ -178,13 +136,11 @@ export async function listAuthorizedWorkspaces(userId: string): Promise<TenancyC
 
   return (data ?? [])
     .filter((row): row is MembershipRow => Boolean(row?.workspace_id))
-    .map((row) => ({
-      workspaceId: row.workspace_id,
-      userId,
-      // Translates the client vocabulary and degrades anything genuinely
-      // unrecognised — see `resolveWorkspaceRole`.
-      role: resolveWorkspaceRole(row.role),
-    }))
+    .flatMap((row) => {
+      const role = resolveCanonicalRole(row.role)
+      if (!role) return []
+      return [{ workspaceId: row.workspace_id, userId, role }]
+    })
 }
 
 /**
@@ -252,10 +208,11 @@ export function chooseWorkspace(
  * membership has been verified — the type makes the unsafe ordering
  * unexpressible.
  */
-const ROLE_RANK: Record<WorkspaceRole, number> = { seller: 1, manager: 2, owner: 3 }
+const ROLE_RANK: Record<WorkspaceRole, number> = CANONICAL_ROLE_RANK
 
 export function requireRole(ctx: TenancyContext, minimum: WorkspaceRole): void {
-  if (ROLE_RANK[ctx.role] < ROLE_RANK[minimum]) {
+  const rank = ROLE_RANK[ctx.role]
+  if (rank === undefined || rank < ROLE_RANK[minimum]) {
     throw new ForbiddenError(`Requires ${minimum} role in this workspace`)
   }
 }

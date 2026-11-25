@@ -23,6 +23,7 @@ import { useActionAvailability } from '../../../../lib/capability/use-action-ava
 import { CloudRequiredNotice } from '../../cloud-required-notice'
 import { PageHub } from '../../page-hub'
 import { BillingContainer } from './BillingContainer'
+import { WorkspaceOpsPanel } from '../../extended-ops'
 
 const WalletContainer = lazy(() =>
   import('../../wallet/wallet-container').then((m) => ({ default: m.WalletContainer })),
@@ -92,6 +93,7 @@ function BillingHub() {
           },
         ]}
       />
+      <WorkspaceOpsPanel />
     </div>
   )
 }

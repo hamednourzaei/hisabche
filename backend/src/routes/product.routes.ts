@@ -6,6 +6,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import {
+  buildBarcodeLabelHtml,
+  buildBarcodeLabelZpl,
   flagFilter,
   type CreateProduct,
   type UpdateProduct,
@@ -528,6 +530,45 @@ export async function productRoutes(fastify: FastifyInstance) {
         return reply.send({ data })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to update translations')
+      }
+    },
+  )
+
+  // G60: Thermal ZPL & printable HTML barcode label generation on the shared product core
+  fastify.post(
+    '/api/products/:id/barcode-label',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('product.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = z
+          .object({
+            title: z.string().trim().min(1).max(120),
+            barcode: z.string().trim().min(1).max(80),
+            priceLabel: z.string().trim().min(1).max(40),
+            sku: z.string().trim().max(40).optional(),
+            variantLabel: z.string().trim().max(60).optional(),
+            expiryDate: z.string().trim().max(20).optional(),
+          })
+          .strict()
+          .parse(request.body)
+        const input = {
+          title: body.title,
+          barcode: body.barcode,
+          priceLabel: body.priceLabel,
+          ...(body.sku !== undefined ? { sku: body.sku } : {}),
+          ...(body.variantLabel !== undefined ? { variantLabel: body.variantLabel } : {}),
+          ...(body.expiryDate !== undefined ? { expiryDate: body.expiryDate } : {}),
+        }
+        return reply.send({
+          data: {
+            productId: id,
+            zpl: buildBarcodeLabelZpl(input),
+            html: buildBarcodeLabelHtml(input),
+          },
+        })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to generate barcode label')
       }
     },
   )

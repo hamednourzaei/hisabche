@@ -18,9 +18,12 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import {
   ORDER_STATUSES,
+  computeServiceChargeAndTip,
   orderConfirmSchema,
   orderCreateSchema,
   orderDeliveryCreateSchema,
+  poolTipsEqually,
+  splitTableBill,
   storefrontSettingsSchema,
 } from '@hisabche/validation'
 
@@ -185,6 +188,90 @@ export function buildOrdersRoutes(orders: OrdersService) {
       handle(async (request, reply) => {
         const settings = storefrontSettingsSchema.parse(request.body)
         return reply.send(await orders.saveSettings(request.tenancy, settings))
+      }),
+    )
+
+    // G04 / G05 / G06: Table-service bill summary, service charge, tip pool, and seat split
+    fastify.post(
+      '/api/orders/table-service/bill-summary',
+      { preHandler: read },
+      handle(async (request, reply) => {
+        const body = z
+          .object({
+            subtotalMinor: z.number().int().min(0),
+            serviceChargeBps: z.number().int().min(0).max(5000).default(0),
+            tipMinor: z.number().int().min(0).default(0),
+            staffIds: z.array(z.string().min(1)).optional(),
+            seatAmountsMinor: z.array(z.number().int().min(0)).optional(),
+          })
+          .strict()
+          .parse(request.body)
+        const summary = computeServiceChargeAndTip(
+          body.subtotalMinor,
+          body.serviceChargeBps,
+          body.tipMinor,
+        )
+        const tipPool = body.staffIds ? poolTipsEqually(summary.tipMinor, body.staffIds) : null
+        let seatSplit: number[] | null = null
+        if (body.seatAmountsMinor) {
+          seatSplit = splitTableBill(summary.grandTotalMinor, body.seatAmountsMinor)
+          if (!seatSplit) {
+            return reply.code(422).send({
+              error: 'SEAT_SPLIT_MISMATCH',
+              code: 'SEAT_SPLIT_MISMATCH',
+            })
+          }
+        }
+        return reply.send({
+          data: {
+            subtotalMinor: body.subtotalMinor,
+            ...summary,
+            tipPool,
+            seatSplit,
+          },
+        })
+      }),
+    )
+
+    // G03: Layaway / reserve-with-deposit schedule on the shared sales-order core
+    fastify.post(
+      '/api/orders/layaway',
+      { preHandler: write },
+      handle(async (request, reply) => {
+        const body = z
+          .object({
+            orderId: z.string().uuid().optional(),
+            totalMinor: z.number().int().min(1),
+            depositMinor: z.number().int().min(1),
+            installmentCount: z.number().int().min(1).max(36).default(3),
+            currency: z.string().trim().min(3).max(3),
+          })
+          .strict()
+          .parse(request.body)
+        if (body.depositMinor > body.totalMinor) {
+          return reply.code(422).send({
+            error: 'DEPOSIT_EXCEEDS_TOTAL',
+            code: 'DEPOSIT_EXCEEDS_TOTAL',
+          })
+        }
+        const remainingMinor = body.totalMinor - body.depositMinor
+        const baseInstallment = Math.floor(remainingMinor / body.installmentCount)
+        const remainder = remainingMinor % body.installmentCount
+        const installments = Array.from({ length: body.installmentCount }, (_, index) => ({
+          sequence: index + 1,
+          amountMinor: baseInstallment + (index === 0 ? remainder : 0),
+        }))
+        return reply.code(201).send({
+          data: {
+            mode: 'layaway',
+            orderId: body.orderId ?? null,
+            currency: body.currency.toUpperCase(),
+            totalMinor: body.totalMinor,
+            depositMinor: body.depositMinor,
+            remainingMinor,
+            installments,
+          },
+        })
       }),
     )
   }

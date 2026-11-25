@@ -25,6 +25,7 @@ import {
   buildCashFlowView,
   buildDrawerLedger,
   buildPosting,
+  buildZReport,
   cashFlowSince,
   checkSuspendChange,
   closeColumns,
@@ -330,6 +331,12 @@ export function registerTillRoutes(router: Router): void {
       days: parsed.days,
       offsetMinutes: parsed.offsetMinutes,
     })
+  })
+
+  router.get('/pos/sessions/:id/z-report', ({ db, ctx, params }: RouteHandlerContext) => {
+    const session = getSession(db, ctx, params.id ?? '')
+    const { orders, movements, settlements } = loadContents(db, ctx, session.id)
+    return buildZReport(session, orders, movements, settlements)
   })
 
   router.get('/pos/sessions/:id/ledger', ({ db, ctx, params }: RouteHandlerContext) => {

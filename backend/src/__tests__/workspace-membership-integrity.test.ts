@@ -85,46 +85,44 @@ describe('the role vocabularies are bridged', () => {
     expect(resolveWorkspaceRole('member')).toBe('seller')
   })
 
-  it('⚠️ an unrecognised value STILL degrades to least privilege', () => {
-    // The bridge must not become a reason to trust arbitrary strings. The old
-    // code defaulted a missing membership to 'admin', which the workflow
-    // service accepted as an approver override.
-    expect(resolveWorkspaceRole('superuser')).toBe('seller')
-    expect(resolveWorkspaceRole(null)).toBe('seller')
-    expect(resolveWorkspaceRole(undefined)).toBe('seller')
-    expect(resolveWorkspaceRole(42)).toBe('seller')
-    expect(resolveWorkspaceRole('')).toBe('seller')
+  it('unknown or missing roles fail closed by throwing ForbiddenError', () => {
+    expect(() => resolveWorkspaceRole('superuser')).toThrow()
+    expect(() => resolveWorkspaceRole(null)).toThrow()
+    expect(() => resolveWorkspaceRole(undefined)).toThrow()
+    expect(() => resolveWorkspaceRole(42)).toThrow()
+    expect(() => resolveWorkspaceRole('')).toThrow()
   })
 
-  it('degrading never reaches owner or manager', () => {
+  it('unknown or missing roles never reach any role', () => {
     for (const value of ['administrator', 'root', 'Admin', 'OWNER', {}, []]) {
-      expect(resolveWorkspaceRole(value)).toBe('seller')
+      expect(() => resolveWorkspaceRole(value)).toThrow()
     }
   })
 
-  it('the two vocabularies really are different — this is not a no-op', () => {
-    // If `admin` ever became a server role, the bridge would be dead code and
-    // this file would be testing nothing.
+  it('client vocabulary aliases resolve to canonical roles', () => {
     expect(isWorkspaceRole('admin')).toBe(false)
     expect(isWorkspaceRole('member')).toBe(false)
-    expect(isWorkspaceRole('viewer')).toBe(false)
+    expect(isWorkspaceRole('viewer')).toBe(true)
+    expect(resolveWorkspaceRole('viewer')).toBe('viewer')
   })
 })
 
-describe('⚠️ the viewer over-grant, recorded so it cannot be forgotten', () => {
-  it('a viewer currently gets seller privileges, and can therefore sell', () => {
-    // NOT an endorsement. There is no read-only rung in the server vocabulary,
-    // so this is what the degradation branch already did before the bridge
-    // existed — mapping it explicitly makes it visible rather than accidental.
-    //
-    // Fixing it means a role below `seller` plus a decision about what a
-    // read-only member may see, which is a product policy and not a
-    // translation. This test fails the day such a role is added, which is the
-    // moment to revisit the mapping.
+describe('viewer role is strictly read-only', () => {
+  it('viewer resolves to viewer and cannot perform any write capability', () => {
     const role = resolveWorkspaceRole('viewer')
-    expect(role).toBe('seller')
-    expect(can(role, 'invoice.create')).toBe(true)
-    expect(can(role, 'payment.record')).toBe(true)
+    expect(role).toBe('viewer')
+    expect(can(role, 'invoice.create')).toBe(false)
+    expect(can(role, 'invoice.update')).toBe(false)
+    expect(can(role, 'payment.record')).toBe(false)
+    expect(can(role, 'customer.write')).toBe(false)
+    expect(can(role, 'product.write')).toBe(false)
+    expect(can(role, 'stock.adjust')).toBe(false)
+    expect(can(role, 'workspace.manage')).toBe(false)
+    expect(can(role, 'invoice.read')).toBe(true)
+    expect(can(role, 'customer.read')).toBe(true)
+    expect(can(role, 'product.read')).toBe(true)
+    expect(can(role, 'ledger.read')).toBe(false)
+    expect(can(role, 'report.financial.read')).toBe(false)
   })
 })
 

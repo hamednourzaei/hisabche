@@ -86,6 +86,11 @@ export function useCustomerPriceList(
     },
     enabled: ready && !!customerId && options.enabled !== false,
     staleTime: 60_000,
+    retry: (failureCount, error) =>
+      (error as { status?: number; response?: { status?: number } })?.status === 404 ||
+      (error as { response?: { status?: number } })?.response?.status === 404
+        ? false
+        : failureCount < 2,
   })
 }
 
