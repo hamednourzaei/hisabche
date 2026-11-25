@@ -176,13 +176,174 @@ export function registerPaymentRoutes(router: Router): void {
       [id, workspaceId],
     )
 
+    const procRow = db.get<{
+      processor_state: string
+      gateway_name: string | null
+      external_ref: string | null
+      fee_minor: number
+      reason: string | null
+      updated_at: string
+    }>(
+      'SELECT processor_state, gateway_name, external_ref, fee_minor, reason, updated_at FROM local_payment_gateway_states WHERE payment_id = ? AND workspace_id = ?',
+      [id, workspaceId],
+    )
+
     return {
       ...mapPayment(payment),
+      processorState:
+        procRow?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline'),
+      gatewayName: procRow?.gateway_name ?? null,
+      externalRef: procRow?.external_ref ?? null,
+      feeMinor: procRow?.fee_minor ?? null,
       allocations: allocations.map((a) => ({
         id: a.id,
         invoiceId: a.invoice_id,
         amount: a.amount,
       })),
+    }
+  })
+
+  // ─── GET /payments/:id/processor-state ───────────────────────
+  router.get('/payments/:id/processor-state', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    requireCapability(ctx, 'payment.record')
+    const payment = db.get<PaymentRow>(
+      'SELECT * FROM payment WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [params.id, ctx.workspaceId],
+    )
+    if (!payment) throw new NotFoundError('Payment', params.id)
+    const row = db.get<{
+      id: string
+      payment_id: string
+      processor_state: string
+      gateway_name: string | null
+      external_ref: string | null
+      fee_minor: number
+      currency: string
+      reason: string | null
+      updated_at: string
+    }>('SELECT * FROM local_payment_gateway_states WHERE payment_id = ? AND workspace_id = ?', [
+      params.id,
+      ctx.workspaceId,
+    ])
+    return {
+      data: row
+        ? {
+            paymentId: row.payment_id,
+            processorState: row.processor_state,
+            gatewayName: row.gateway_name,
+            externalRef: row.external_ref,
+            feeMinor: row.fee_minor,
+            currency: row.currency,
+            reason: row.reason,
+            updatedAt: row.updated_at,
+          }
+        : {
+            paymentId: payment.id,
+            processorState: payment.method === 'cash' ? 'captured' : 'queued_offline',
+            gatewayName: null,
+            externalRef: null,
+            feeMinor: 0,
+            currency: payment.currency,
+            reason: null,
+            updatedAt: payment.updated_at,
+          },
+    }
+  })
+
+  // ─── POST /payments/:id/processor-state ──────────────────────
+  const ALLOWED_PROCESSOR_TRANSITIONS: Readonly<Record<string, readonly string[]>> = {
+    queued_offline: ['pending_capture', 'voided'],
+    pending_capture: ['captured', 'declined', 'voided'],
+    declined: ['pending_capture', 'voided'],
+    captured: ['voided'],
+    voided: [],
+  }
+
+  router.post('/payments/:id/processor-state', (c: RouteHandlerContext) => {
+    const { db, ctx, params, body } = c
+    requireCapability(ctx, 'payment.record')
+    const raw = (body || {}) as Record<string, unknown>
+    const nextState = typeof raw.processorState === 'string' ? raw.processorState.trim() : ''
+    if (
+      !['queued_offline', 'pending_capture', 'captured', 'declined', 'voided'].includes(nextState)
+    ) {
+      throw new ValidationError('PROCESSOR_STATE_INVALID')
+    }
+    const feeMinor = raw.feeMinor === undefined ? 0 : Number(raw.feeMinor)
+    if (!Number.isSafeInteger(feeMinor) || feeMinor < 0) {
+      throw new ValidationError('PROCESSOR_FEE_MINOR_INVALID')
+    }
+    const payment = db.get<PaymentRow>(
+      'SELECT * FROM payment WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [params.id, ctx.workspaceId],
+    )
+    if (!payment) throw new NotFoundError('Payment', params.id)
+
+    const existing = db.get<{ id: string; processor_state: string }>(
+      'SELECT id, processor_state FROM local_payment_gateway_states WHERE payment_id = ? AND workspace_id = ?',
+      [params.id, ctx.workspaceId],
+    )
+    const current =
+      existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
+    if (
+      current !== nextState &&
+      !(ALLOWED_PROCESSOR_TRANSITIONS[current] ?? []).includes(nextState)
+    ) {
+      throw new ConflictError(
+        'PROCESSOR_STATE_TRANSITION_NOT_ALLOWED',
+        `Cannot transition processor state from ${current} to ${nextState}`,
+      )
+    }
+    const now = new Date().toISOString()
+    const gatewayName =
+      typeof raw.gatewayName === 'string' && raw.gatewayName.trim() ? raw.gatewayName.trim() : null
+    const externalRef =
+      typeof raw.externalRef === 'string' && raw.externalRef.trim() ? raw.externalRef.trim() : null
+    const reason = typeof raw.reason === 'string' && raw.reason.trim() ? raw.reason.trim() : null
+
+    if (existing) {
+      db.run(
+        `UPDATE local_payment_gateway_states
+         SET processor_state = ?, gateway_name = COALESCE(?, gateway_name), external_ref = COALESCE(?, external_ref),
+             fee_minor = ?, reason = ?, updated_at = ?
+         WHERE id = ? AND workspace_id = ?`,
+        [nextState, gatewayName, externalRef, feeMinor, reason, now, existing.id, ctx.workspaceId],
+      )
+    } else {
+      db.run(
+        `INSERT INTO local_payment_gateway_states
+         (id, workspace_id, payment_id, processor_state, gateway_name, external_ref, fee_minor, currency, reason, created_at, updated_at, origin, sync_state)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
+        [
+          generateUuid(),
+          ctx.workspaceId,
+          payment.id,
+          nextState,
+          gatewayName,
+          externalRef,
+          feeMinor,
+          payment.currency,
+          reason,
+          now,
+          now,
+        ],
+      )
+    }
+    return {
+      __status: 200,
+      __data: {
+        data: {
+          paymentId: payment.id,
+          processorState: nextState,
+          gatewayName,
+          externalRef,
+          feeMinor,
+          currency: payment.currency,
+          reason,
+          updatedAt: now,
+        },
+      },
     }
   })
 
@@ -518,6 +679,14 @@ export function registerPaymentRoutes(router: Router): void {
       const journalId = outcome.status === 'skipped' ? null : outcome.entryId
       db.run('UPDATE payment SET journal_entry_id = ? WHERE id = ?', [journalId, paymentId])
 
+      const initialProcessorState = method === 'cash' ? 'captured' : 'queued_offline'
+      db.run(
+        `INSERT OR IGNORE INTO local_payment_gateway_states
+         (id, workspace_id, payment_id, processor_state, gateway_name, external_ref, fee_minor, currency, reason, created_at, updated_at, origin, sync_state)
+         VALUES (?, ?, ?, ?, NULL, NULL, 0, ?, NULL, ?, ?, 'local', 'local_only')`,
+        [generateUuid(), workspaceId, paymentId, initialProcessorState, currency, now, now],
+      )
+
       if (c.headers?.['x-hisabche-queue'] === '1') {
         const enqueue = buildEnqueue({
           entity: 'payment',
@@ -534,6 +703,7 @@ export function registerPaymentRoutes(router: Router): void {
       const inserted = db.get<PaymentRow>('SELECT * FROM payment WHERE id = ?', [paymentId])
       return {
         ...mapPayment(inserted!),
+        processorState: initialProcessorState,
         // What no invoice was named for: visible, traceable, and nothing was settled on its behalf.
         unallocated: unallocatedOf(amount, rawAllocations),
       }

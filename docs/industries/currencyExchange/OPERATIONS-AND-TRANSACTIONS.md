@@ -15,7 +15,7 @@
 
 | موتور | قابلیت‌ها | آفلاین |
 | --- | --- | --- |
-| `exchange` | `currency_exchange` | فقط آنلاین · `online_required` |
+| `exchange` | `currency_exchange` | فقط آنلاین · `partial` |
 
 ## DNA عملیاتی
 

@@ -2,7 +2,7 @@
 
 <!-- GENERATED from code by packages/ui/src/__tests__/industry-docs — do not edit by hand. Update: `node scripts/industry/generate-industry-docs.mjs` -->
 
-695 endpoint: 222 آفلاین در دسترس · 453 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
+742 endpoint: 225 آفلاین در دسترس · 497 فقط آنلاین · 20 در نسخه‌ی آفلاین نیست.
 
 | قابلیت | در دسترس | فقط آنلاین | نیست |
 | --- | ---: | ---: | ---: |
@@ -13,6 +13,7 @@
 | `accounting.journal` | 2 | 0 | 0 |
 | `accounting.legacy_transactions` | 0 | 3 | 0 |
 | `accounting.period_close` | 0 | 2 | 0 |
+| `accounting.period_lock` | 0 | 3 | 0 |
 | `accounting.post_to_ledger` | 0 | 2 | 0 |
 | `accounting.profit_report` | 1 | 0 | 0 |
 | `accounting.reports` | 2 | 0 | 0 |
@@ -26,17 +27,18 @@
 | `ai.cashflow_forecast` | 0 | 1 | 0 |
 | `analysis.benchmark` | 0 | 1 | 0 |
 | `analysis.reports` | 5 | 0 | 0 |
-| `approvals.workflows` | 0 | 9 | 0 |
+| `approvals.workflows` | 0 | 12 | 0 |
 | `asset.fixed` | 0 | 5 | 0 |
 | `audit.trail` | 0 | 5 | 0 |
 | `auth.cloud_session` | 0 | 0 | 10 |
 | `automation.rules` | 0 | 7 | 0 |
-| `bank.import` | 0 | 7 | 0 |
-| `billing.portal` | 0 | 17 | 0 |
+| `bank.import` | 0 | 8 | 0 |
+| `billing.portal` | 0 | 18 | 0 |
 | `blog.public` | 0 | 0 | 10 |
 | `branch.manage` | 3 | 0 | 0 |
 | `budget.manage` | 10 | 0 | 0 |
-| `commerce.contracts` | 0 | 6 | 0 |
+| `commerce.contracts` | 0 | 9 | 0 |
+| `crm.loyalty` | 0 | 2 | 0 |
 | `crm.rfm` | 0 | 1 | 0 |
 | `custom.fields` | 0 | 4 | 0 |
 | `custom.reports` | 0 | 8 | 0 |
@@ -67,7 +69,7 @@
 | `employee.list` | 1 | 0 | 0 |
 | `employee.upsert` | 4 | 0 | 0 |
 | `expiry.batches` | 0 | 3 | 0 |
-| `finance.currency_exchange` | 0 | 17 | 0 |
+| `finance.currency_exchange` | 0 | 19 | 0 |
 | `governance.permission_matrix` | 0 | 18 | 0 |
 | `hr.attendance` | 2 | 0 | 0 |
 | `hr.attendance_devices` | 0 | 9 | 0 |
@@ -88,7 +90,7 @@
 | `inventory.reservations` | 0 | 5 | 0 |
 | `inventory.serial_holds` | 0 | 3 | 0 |
 | `inventory.serial_items` | 3 | 0 | 0 |
-| `inventory.serial_returns` | 0 | 1 | 0 |
+| `inventory.serial_returns` | 0 | 2 | 0 |
 | `inventory.transfer_requests` | 0 | 4 | 0 |
 | `inventory.variant_stock` | 0 | 3 | 0 |
 | `inventory.waste` | 0 | 1 | 0 |
@@ -113,24 +115,26 @@
 | `manufacturing.report` | 0 | 1 | 0 |
 | `manufacturing.runs` | 0 | 2 | 0 |
 | `manufacturing.work_orders` | 0 | 3 | 0 |
-| `marketplace.apps` | 0 | 10 | 0 |
+| `marketplace.apps` | 0 | 11 | 0 |
 | `notes.entity` | 0 | 2 | 0 |
 | `ocr.receipt` | 0 | 2 | 0 |
 | `operations.package_grants` | 0 | 1 | 0 |
 | `operations.pkg_suspension` | 0 | 1 | 0 |
-| `operations.quality` | 0 | 4 | 0 |
-| `operations.repairs` | 0 | 10 | 0 |
+| `operations.quality` | 0 | 5 | 0 |
+| `operations.repairs` | 0 | 12 | 0 |
 | `operations.resource_bookings` | 3 | 0 | 0 |
 | `operations.salon_setup` | 0 | 7 | 0 |
 | `operations.service_delivery` | 13 | 0 | 0 |
 | `order.advances` | 0 | 3 | 0 |
 | `order.deposits` | 6 | 0 | 0 |
 | `payment.cancel` | 1 | 0 | 0 |
-| `payment.record` | 2 | 0 | 0 |
+| `payment.record` | 4 | 0 | 0 |
 | `payments.cheques` | 0 | 3 | 0 |
+| `pos.gift_cards` | 0 | 3 | 0 |
+| `pos.store_credit` | 0 | 2 | 0 |
 | `pricing.price_lists` | 7 | 0 | 0 |
 | `pricing.promotions` | 3 | 0 | 0 |
-| `product.barcode` | 0 | 3 | 0 |
+| `product.barcode` | 0 | 4 | 0 |
 | `product.barcode_lookup` | 0 | 1 | 0 |
 | `product.bundles` | 0 | 2 | 0 |
 | `product.detail` | 1 | 0 | 0 |
@@ -139,14 +143,16 @@
 | `product.list` | 2 | 0 | 0 |
 | `product.upsert` | 3 | 0 | 0 |
 | `product.variants` | 2 | 0 | 0 |
-| `project.manage` | 0 | 17 | 0 |
+| `project.manage` | 0 | 20 | 0 |
 | `purchase.orders` | 7 | 0 | 0 |
 | `purchase.rfq` | 0 | 6 | 0 |
-| `purchase.three_way_match` | 0 | 3 | 0 |
+| `purchase.three_way_match` | 0 | 5 | 0 |
 | `referral.program` | 0 | 1 | 0 |
 | `sales.by_seller` | 0 | 1 | 0 |
-| `sales.orders` | 0 | 9 | 0 |
+| `sales.orders` | 0 | 11 | 0 |
 | `saved.views` | 0 | 4 | 0 |
+| `settings.business_profile` | 0 | 1 | 0 |
+| `settings.business_profile_edit` | 0 | 3 | 0 |
 | `settings.currencies` | 5 | 0 | 0 |
 | `settings.currency_catalogue` | 0 | 1 | 0 |
 | `settings.custom_units` | 0 | 2 | 0 |
@@ -165,25 +171,25 @@
 | `stockcount.create` | 0 | 2 | 0 |
 | `stockcount.list` | 0 | 1 | 0 |
 | `stockcount.record_line` | 0 | 1 | 0 |
-| `storefront.public` | 0 | 2 | 0 |
+| `storefront.public` | 0 | 3 | 0 |
 | `sync.conflicts` | 0 | 3 | 0 |
 | `sync.overview` | 0 | 1 | 0 |
 | `team.members` | 0 | 8 | 0 |
 | `till.cash_movement` | 2 | 0 | 0 |
 | `till.labels` | 2 | 0 | 0 |
 | `till.ledger` | 2 | 0 | 0 |
-| `till.open_close` | 3 | 0 | 0 |
+| `till.open_close` | 4 | 0 | 0 |
 | `till.opening_capital` | 1 | 0 | 0 |
 | `till.order` | 2 | 0 | 0 |
 | `till.session` | 4 | 0 | 0 |
 | `till.shift_history` | 1 | 0 | 0 |
 | `till.suspend` | 2 | 0 | 0 |
 | `timesheet.manage` | 0 | 5 | 0 |
-| `trade.agriculture` | 0 | 2 | 0 |
-| `trade.appointments` | 0 | 2 | 0 |
-| `trade.courier` | 0 | 2 | 0 |
+| `trade.agriculture` | 0 | 4 | 0 |
+| `trade.appointments` | 0 | 4 | 0 |
+| `trade.courier` | 0 | 3 | 0 |
 | `trade.delivery_notes` | 0 | 3 | 0 |
-| `trade.freight` | 0 | 2 | 0 |
+| `trade.freight` | 0 | 3 | 0 |
 | `trade.gold_ledger` | 0 | 6 | 0 |
 | `trade.metal_rates` | 2 | 0 | 0 |
 | `trade.vehicles` | 2 | 0 | 0 |

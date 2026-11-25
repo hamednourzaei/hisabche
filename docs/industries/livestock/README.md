@@ -49,8 +49,6 @@
 | `multi_unit` | `EXISTING_AND_VERIFIED` | `sales_invoice` · available | `packages/ui/src/__tests__/product-unit-set.test.ts` |
 | `serialized_items` | `EXISTING_BUT_INCOMPLETE` | `inventory_catalog` · partial | `SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY` |
 
-**خواسته‌شده و ساخته‌نشده** (`NEW_CAPABILITY_REQUIRED`): `livestock_register`
-
 ## تفاوت با خانواده‌ی «تولید»
 
 ### هویت و مدل کسب‌وکار
@@ -83,4 +81,4 @@
 
 ### شکاف‌ها و نیازمندی‌ها
 
-ساخته‌نشده: `livestock_register`. نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)
+نیمه‌کاره: `serialized_items` (`SERIAL_HOLDS_AND_RETURNS_ONLINE_ONLY`). سند: [GAPS-AND-REQUIREMENTS.md](./GAPS-AND-REQUIREMENTS.md)

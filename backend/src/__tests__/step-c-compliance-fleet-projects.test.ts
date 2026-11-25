@@ -18,7 +18,9 @@ import { FakeDatabase, createFakeDb, fakeId } from './helpers/fake-supabase'
 const db = new FakeDatabase()
 const OWNER = { id: '11111111-1111-4111-8111-111111111111', token: 'token-owner' }
 const SHOP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const OTHER_SHOP = '99999999-9999-4999-8999-999999999999'
 const PROJ = 'bbbbbbbb-0000-4000-8000-000000000001'
+const OTHER_PROJ = 'bbbbbbbb-0000-4000-8000-000000000002'
 
 const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
 vi.mock('../db', () => createFakeDb(db, users))
@@ -37,7 +39,13 @@ beforeEach(() => {
   db.failures.clear()
   db.seed('workspaces', [
     { id: SHOP, name: 'Enterprise Group', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
+    { id: OTHER_SHOP, name: 'Other Group', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
   ])
+  db.seed('projects', [
+    { id: PROJ, workspace_id: SHOP, name: 'Tower Build', budget: 10000 },
+    { id: OTHER_PROJ, workspace_id: OTHER_SHOP, name: 'Other Build', budget: 5000 },
+  ])
+  db.seed('project_change_orders', [])
   db.seed('workspace_members', [
     {
       id: fakeId('mem'),
@@ -168,6 +176,22 @@ describe('STEP-C — Compliance, Banking, KYC, Fleet, Guarantees, Projects & Con
     expect(co.json().data.revisedBudgetMinor).toBe(1200000)
     expect(co.json().data.netMarginDeltaMinor).toBe(60000)
     expect(co.json().data.status).toBe('approved')
+
+    const listCo = await app.inject({
+      method: 'GET',
+      url: `/api/projects/${PROJ}/change-orders`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+    })
+    expect(listCo.statusCode).toBe(200)
+    expect(listCo.json().data).toHaveLength(1)
+
+    const crossTenantCo = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${OTHER_PROJ}/change-orders`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { title: 'IDOR attempt', originalBudgetMinor: 1000, deltaMinor: 500 },
+    })
+    expect(crossTenantCo.statusCode).toBe(404)
 
     const cons = await app.inject({
       method: 'POST',

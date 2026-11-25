@@ -953,3 +953,102 @@ export const REPAIR_TICKETS_STATEMENTS: readonly string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_repair_ticket_events_ticket ON repair_ticket_events(ticket_id, created_at)`,
 ]
+
+// ─── 8. Extended Local Ops (v40, X10 + Offline Assets / Agriculture / BOM / Approvals) ───
+export const EXTENDED_LOCAL_OPS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_payment_gateway_states (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    payment_id TEXT NOT NULL,
+    processor_state TEXT NOT NULL
+      CHECK (processor_state IN ('queued_offline', 'pending_capture', 'captured', 'declined', 'voided')),
+    gateway_name TEXT,
+    external_ref TEXT,
+    fee_minor INTEGER NOT NULL DEFAULT 0 CHECK (fee_minor >= 0),
+    currency TEXT NOT NULL,
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_local_proc_state_payment
+    ON local_payment_gateway_states(workspace_id, payment_id)`,
+  `CREATE TABLE IF NOT EXISTS local_assets (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    cost_minor INTEGER NOT NULL CHECK (cost_minor > 0),
+    salvage_minor INTEGER NOT NULL DEFAULT 0 CHECK (salvage_minor >= 0),
+    method TEXT NOT NULL CHECK (method IN ('straight_line', 'declining', 'declining_then_straight')),
+    periods INTEGER NOT NULL CHECK (periods >= 1),
+    period_months INTEGER NOT NULL DEFAULT 1,
+    first_period_on TEXT NOT NULL,
+    acquired_on TEXT NOT NULL,
+    currency TEXT NOT NULL,
+    disposed_on TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_assets_ws ON local_assets(workspace_id, acquired_on DESC)`,
+  `CREATE TABLE IF NOT EXISTS local_crop_cycles (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    land_unit_id TEXT NOT NULL,
+    crop_name TEXT NOT NULL,
+    planting_date TEXT NOT NULL,
+    expected_harvest_date TEXT,
+    status TEXT NOT NULL DEFAULT 'planted',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_crop_cycles_ws ON local_crop_cycles(workspace_id, planting_date DESC)`,
+  `CREATE TABLE IF NOT EXISTS local_livestock_groups (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    category TEXT NOT NULL,
+    head_count INTEGER NOT NULL CHECK (head_count >= 0),
+    birth_or_acquisition_date TEXT NOT NULL,
+    location_barn TEXT,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_livestock_ws ON local_livestock_groups(workspace_id, category)`,
+  `CREATE TABLE IF NOT EXISTS local_manufacturing_defs (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    product_id TEXT NOT NULL,
+    definition_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS uq_local_mfg_def ON local_manufacturing_defs(workspace_id, product_id)`,
+  `CREATE TABLE IF NOT EXISTS local_approval_queue (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    document_type TEXT NOT NULL,
+    document_id TEXT NOT NULL,
+    requested_by TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending_offline'
+      CHECK (status IN ('pending_offline', 'approved_offline', 'rejected_offline')),
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    origin TEXT NOT NULL DEFAULT 'local',
+    sync_state TEXT NOT NULL DEFAULT 'local_only'
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_approval_queue_ws ON local_approval_queue(workspace_id, status)`,
+]

@@ -60,6 +60,10 @@ import { registerTaxRoutes } from './routes/tax'
 import { registerWarehouseRoutes } from './routes/warehouses'
 import { registerWorkspaceProfileRoutes } from './routes/workspace-profile'
 import { registerWorkspaceRoutes } from './routes/workspace'
+import { registerAssetRoutes } from './routes/assets'
+import { registerAgricultureRoutes } from './routes/agriculture'
+import { registerManufacturingLocalRoutes } from './routes/manufacturing-local'
+import { registerApprovalsLocalRoutes } from './routes/approvals-local'
 import type {
   LocalContext,
   LocalEngineRequest,
@@ -138,6 +142,10 @@ export function createLocalEngine(db: LocalDb): LocalEngine {
   registerServiceDeliveryRoutes(router)
   registerBookingsRoutes(router)
   registerTaxRoutes(router)
+  registerAssetRoutes(router)
+  registerAgricultureRoutes(router)
+  registerManufacturingLocalRoutes(router)
+  registerApprovalsLocalRoutes(router)
 
   return {
     routeTable: () => router.table(),

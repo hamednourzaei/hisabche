@@ -640,6 +640,8 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /package-credits/grants/:x/suspension': ['operations.pkg_suspension', 'online_required'],
   'POST /package-credits/reverse': ['operations.service_delivery', 'available'],
   'POST /payments': ['payment.record', 'available'],
+  'GET /payments/:x/processor-state': ['payment.record', 'available'],
+  'POST /payments/:x/processor-state': ['payment.record', 'available'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],
   'POST /payrolls': ['hr.payroll', 'available'],
   // Re-posting a paid salary to the ledger. The device books at the moment it settles
@@ -817,12 +819,23 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /purchase-orders/landed-cost-allocate': ['purchase.three_way_match', 'online_required'],
   'POST /tax/return/currency-summary': ['accounting.period_lock', 'online_required'],
   'POST /financing/bank-match': ['bank.import', 'online_required'],
+  'GET /projects/:x/change-orders': ['project.manage', 'online_required'],
   'POST /projects/:x/change-orders': ['project.manage', 'online_required'],
+  'POST /projects/:x/change-orders/:x/decide': ['project.manage', 'online_required'],
   'POST /accounting/consolidated-summary': ['accounting.period_lock', 'online_required'],
+  'POST /accounting/reconcile-cross-core': ['accounting.period_lock', 'online_required'],
   'GET /workspaces/:x/export-bundle': ['settings.business_profile', 'online_required'],
+  'POST /workspaces/:x/export-restore-preview': [
+    'settings.business_profile_edit',
+    'online_required',
+  ],
   'POST /billing/tco-estimate': ['billing.portal', 'online_required'],
+  'GET /v1/support-tickets': ['approvals.workflows', 'online_required'],
   'POST /v1/support-tickets': ['approvals.workflows', 'online_required'],
+  'PATCH /v1/support-tickets/:x/status': ['approvals.workflows', 'online_required'],
   'GET /marketplace/integrations/health': ['marketplace.apps', 'online_required'],
+  'GET /agriculture/livestock': ['trade.agriculture', 'online_required'],
+  'POST /agriculture/livestock': ['trade.agriculture', 'online_required'],
 }
 
 /**

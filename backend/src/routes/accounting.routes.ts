@@ -31,6 +31,9 @@ import {
 import { AccountingService } from '../services/accounting'
 import { runMonthEnd } from '../services/accounting/month-end.service'
 import { BaseError } from '../errors/base.error'
+import { DatabaseError } from '../errors/database.error'
+import { supabase } from '../db'
+import { fetchAllPages } from '../utils/fetch-all-pages'
 import { authenticate } from '../middleware/auth.middleware'
 import { readClientRequestId } from '../utils/client-request'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -1076,6 +1079,213 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         return reply.send({ data: summaries })
       } catch (err) {
         return fail(reply, err, 'Failed to compute consolidated summary')
+      }
+    },
+  )
+
+  // P0 / X04: Cross-core financial reconciliation (Invoices ↔ Allocations ↔ Payments ↔ Ledger)
+  fastify.post(
+    '/reconcile-cross-core',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const wsId = request.tenancy.workspaceId
+        const invoices = await fetchAllPages<{
+          id: string
+          currency: string
+          paid_amount: number
+          status: string
+        }>(
+          (from, to) =>
+            supabase
+              .from('invoices')
+              .select('id, currency, paid_amount, status')
+              .eq('workspace_id', wsId)
+              .neq('status', 'cancelled')
+              .order('id', { ascending: true })
+              .range(from, to),
+          'Failed to read workspace invoices for reconciliation',
+        )
+
+        const payments = await fetchAllPages<{
+          id: string
+          currency: string
+          amount: number
+          status: string
+        }>(
+          (from, to) =>
+            supabase
+              .from('payments')
+              .select('id, currency, amount, status')
+              .eq('workspace_id', wsId)
+              .neq('status', 'cancelled')
+              .order('id', { ascending: true })
+              .range(from, to),
+          'Failed to read workspace payments for reconciliation',
+        )
+
+        const allocations = await fetchAllPages<{
+          payment_id: string
+          invoice_id: string
+          amount: number
+        }>(
+          (from, to) =>
+            supabase
+              .from('payment_allocations')
+              .select('payment_id, invoice_id, amount')
+              .eq('workspace_id', wsId)
+              .order('payment_id', { ascending: true })
+              .order('invoice_id', { ascending: true })
+              .range(from, to),
+          'Failed to read payment allocations for reconciliation',
+        )
+
+        const journalEntries = await fetchAllPages<{
+          id: string
+          source_type: string | null
+          source_id: string | null
+          status: string
+        }>(
+          (from, to) =>
+            supabase
+              .from('journal_entries')
+              .select('id, source_type, source_id, status')
+              .eq('workspace_id', wsId)
+              .eq('status', 'posted')
+              .order('id', { ascending: true })
+              .range(from, to),
+          'Failed to read posted journal entries for reconciliation',
+        )
+
+        const journalLines = await fetchAllPages<{
+          debit: number
+          credit: number
+        }>(
+          (from, to) =>
+            supabase
+              .from('journal_lines')
+              .select('debit, credit')
+              .eq('workspace_id', wsId)
+              .order('id', { ascending: true })
+              .range(from, to),
+          'Failed to read journal lines for reconciliation',
+        )
+
+        const invoiceById = new Map(invoices.map((i) => [i.id, i]))
+        const allocByInvoice = new Map<string, number>()
+        const allocByPayment = new Map<string, number>()
+        for (const a of allocations) {
+          const amt = Number(a.amount)
+          if (!Number.isFinite(amt)) {
+            throw new DatabaseError('CORRUPT_ALLOCATION_AMOUNT', new Error(a.invoice_id))
+          }
+          allocByInvoice.set(a.invoice_id, (allocByInvoice.get(a.invoice_id) ?? 0) + amt)
+          allocByPayment.set(a.payment_id, (allocByPayment.get(a.payment_id) ?? 0) + amt)
+        }
+
+        const currencyBuckets = new Map<
+          string,
+          {
+            invoicePaidMinor: number
+            allocatedToInvoicesMinor: number
+            paymentsTotalMinor: number
+            overAllocatedPaymentsCount: number
+          }
+        >()
+
+        for (const inv of invoices) {
+          const cur = inv.currency.toUpperCase()
+          const bucket = currencyBuckets.get(cur) ?? {
+            invoicePaidMinor: 0,
+            allocatedToInvoicesMinor: 0,
+            paymentsTotalMinor: 0,
+            overAllocatedPaymentsCount: 0,
+          }
+          bucket.invoicePaidMinor += Number(inv.paid_amount)
+          bucket.allocatedToInvoicesMinor += allocByInvoice.get(inv.id) ?? 0
+          currencyBuckets.set(cur, bucket)
+        }
+
+        for (const pay of payments) {
+          const cur = pay.currency.toUpperCase()
+          const bucket = currencyBuckets.get(cur) ?? {
+            invoicePaidMinor: 0,
+            allocatedToInvoicesMinor: 0,
+            paymentsTotalMinor: 0,
+            overAllocatedPaymentsCount: 0,
+          }
+          const allocated = allocByPayment.get(pay.id) ?? 0
+          bucket.paymentsTotalMinor += Number(pay.amount)
+          if (allocated > Number(pay.amount)) bucket.overAllocatedPaymentsCount += 1
+          currencyBuckets.set(cur, bucket)
+        }
+
+        const postedInvoiceIds = new Set(
+          journalEntries
+            .filter((j) => j.source_type === 'invoice' && j.source_id)
+            .map((j) => j.source_id!),
+        )
+        const postedPaymentIds = new Set(
+          journalEntries
+            .filter((j) => j.source_type === 'payment' && j.source_id)
+            .map((j) => j.source_id!),
+        )
+
+        const unpostedInvoicesCount = invoices.filter(
+          (i) => i.status === 'completed' && !postedInvoiceIds.has(i.id),
+        ).length
+        const unpostedPaymentsCount = payments.filter(
+          (p) => p.status === 'posted' && !postedPaymentIds.has(p.id),
+        ).length
+
+        let postedDebitMinor = 0
+        let postedCreditMinor = 0
+        for (const l of journalLines) {
+          postedDebitMinor += Number(l.debit)
+          postedCreditMinor += Number(l.credit)
+        }
+        const debitCreditVarianceMinor = postedDebitMinor - postedCreditMinor
+
+        const perCurrency = [...currencyBuckets.entries()].map(([currency, b]) => ({
+          currency,
+          invoicePaidMinor: b.invoicePaidMinor,
+          allocatedToInvoicesMinor: b.allocatedToInvoicesMinor,
+          invoicePaidVsAllocationsVarianceMinor: b.invoicePaidMinor - b.allocatedToInvoicesMinor,
+          paymentsTotalMinor: b.paymentsTotalMinor,
+          overAllocatedPaymentsCount: b.overAllocatedPaymentsCount,
+        }))
+
+        const orphanAllocationsCount = allocations.filter(
+          (a) => !invoiceById.has(a.invoice_id),
+        ).length
+        const balanced =
+          debitCreditVarianceMinor === 0 &&
+          unpostedInvoicesCount === 0 &&
+          unpostedPaymentsCount === 0 &&
+          orphanAllocationsCount === 0 &&
+          perCurrency.every(
+            (c) =>
+              c.invoicePaidVsAllocationsVarianceMinor === 0 && c.overAllocatedPaymentsCount === 0,
+          )
+
+        return reply.send({
+          data: {
+            workspaceId: wsId,
+            checkedAt: new Date().toISOString(),
+            balanced,
+            orphanAllocationsCount,
+            perCurrency,
+            ledger: {
+              postedDebitMinor,
+              postedCreditMinor,
+              debitCreditVarianceMinor,
+              unpostedInvoicesCount,
+              unpostedPaymentsCount,
+            },
+          },
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to reconcile cross-core ledger')
       }
     },
   )

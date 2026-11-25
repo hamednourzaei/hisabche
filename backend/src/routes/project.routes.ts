@@ -540,7 +540,37 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // X16: Project change-order budget impact & margin tracking
+  // X16: Project change-orders with real DB persistence, workspace ownership check & manager approval
+  fastify.get(
+    '/api/projects/:id/change-orders',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const { supabase } = await import('../db')
+        const { data: proj, error: projErr } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (projErr) throw projErr
+        if (!proj)
+          return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+        const { data, error } = await supabase
+          .from('project_change_orders')
+          .select('*')
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .eq('project_id', id)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        return reply.send({ data: data ?? [] })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to list project change orders')
+      }
+    },
+  )
+
   fastify.post(
     '/api/projects/:id/change-orders',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')] },
@@ -557,21 +587,125 @@ export async function projectRoutes(fastify: FastifyInstance) {
           })
           .strict()
           .parse(request.body)
+        if (body.approved) requireRole(request.tenancy, 'manager')
+        const { supabase } = await import('../db')
+        const { data: proj, error: projErr } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (projErr) throw projErr
+        if (!proj)
+          return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+
+        const idemKey = readClientRequestId(request)
+        if (idemKey) {
+          const { data: existing } = await supabase
+            .from('project_change_orders')
+            .select('*')
+            .eq('workspace_id', request.tenancy.workspaceId)
+            .eq('idempotency_key', idemKey)
+            .maybeSingle()
+          if (existing) return reply.code(200).send({ data: existing, replay: true })
+        }
+
         const revisedBudgetMinor = Math.max(0, body.originalBudgetMinor + body.deltaMinor)
         const netMarginDeltaMinor = body.deltaMinor - body.estimatedCostDeltaMinor
+        const status = body.approved ? 'approved' : 'pending_approval'
+        const now = new Date().toISOString()
+        const { data: created, error } = await supabase
+          .from('project_change_orders')
+          .insert({
+            workspace_id: request.tenancy.workspaceId,
+            project_id: id,
+            title: body.title,
+            original_budget_minor: body.originalBudgetMinor,
+            delta_minor: body.deltaMinor,
+            revised_budget_minor: revisedBudgetMinor,
+            estimated_cost_delta_minor: body.estimatedCostDeltaMinor,
+            net_margin_delta_minor: netMarginDeltaMinor,
+            status,
+            idempotency_key: idemKey ?? null,
+            created_by: request.tenancy.userId,
+            decided_by: body.approved ? request.tenancy.userId : null,
+            decided_at: body.approved ? now : null,
+          })
+          .select()
+          .single()
+        if (error) throw error
+        if (body.approved) {
+          await supabase
+            .from('projects')
+            .update({ budget: revisedBudgetMinor / 100, updated_at: now })
+            .eq('id', id)
+            .eq('workspace_id', request.tenancy.workspaceId)
+        }
         return reply.code(201).send({
           data: {
+            ...created,
             projectId: id,
-            title: body.title,
             originalBudgetMinor: body.originalBudgetMinor,
             deltaMinor: body.deltaMinor,
             revisedBudgetMinor,
             netMarginDeltaMinor,
-            status: body.approved ? 'approved' : 'pending_approval',
+            status,
           },
         })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to record project change order')
+      }
+    },
+  )
+
+  fastify.post(
+    '/api/projects/:id/change-orders/:orderId/decide',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        requireRole(request.tenancy, 'manager')
+        const { id, orderId } = z
+          .object({ id: z.string().uuid(), orderId: z.string().uuid() })
+          .parse(request.params)
+        const { decision } = z
+          .object({ decision: z.enum(['approved', 'rejected']) })
+          .strict()
+          .parse(request.body)
+        const { supabase } = await import('../db')
+        const now = new Date().toISOString()
+        const { data: updated, error } = await supabase
+          .from('project_change_orders')
+          .update({
+            status: decision,
+            decided_by: request.tenancy.userId,
+            decided_at: now,
+            updated_at: now,
+          })
+          .eq('id', orderId)
+          .eq('project_id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .eq('status', 'pending_approval')
+          .select()
+          .maybeSingle()
+        if (error) throw error
+        if (!updated) {
+          return reply
+            .code(409)
+            .send({ error: 'CHANGE_ORDER_NOT_PENDING', code: 'CHANGE_ORDER_NOT_PENDING' })
+        }
+        if (decision === 'approved') {
+          const revised = Number(
+            (updated as { revised_budget_minor?: number }).revised_budget_minor ?? 0,
+          )
+          await supabase
+            .from('projects')
+            .update({ budget: revised / 100, updated_at: now })
+            .eq('id', id)
+            .eq('workspace_id', request.tenancy.workspaceId)
+        }
+        return reply.send({ data: updated })
+      } catch (err) {
+        return sendFailure(reply, fastify.log, err, 'Failed to decide change order')
       }
     },
   )

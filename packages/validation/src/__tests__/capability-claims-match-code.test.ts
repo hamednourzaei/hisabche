@@ -243,10 +243,8 @@ describe('the rules fire on the registry defect they exist for', () => {
   })
 
   it('a «planned» capability that carries a limitation is refused', () => {
-    // `livestock_register` is still genuinely planned (no domain/engine on disk).
-    // `table_service` used to be this example until WP-10 wired it to the shared
-    // order core, so the rule is now exercised with a capability that is still planned.
-    const input = patch('livestock_register', { limitations: ['NO_SERVER_ROUTE_OR_UI_PICKER'] })
+    // `room_nights` is still genuinely planned (no domain/engine on disk).
+    const input = patch('room_nights', { limitations: ['NO_SERVER_ROUTE_OR_UI_PICKER'] })
     expect(codesOf(input)).toContain('PLANNED_WITH_LIMITATION')
   })
 

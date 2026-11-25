@@ -14714,7 +14714,11 @@
       "OVERHEAD_ALLOCATION_NOT_CONFIGURED": "No overhead rule is set; net profit stays «unknown».",
       "PROCUREMENT_MATCH_APPROVAL_GATE_PARTIAL": "A purchase mismatch warns but does not stop payment by itself.",
       "FORECAST_HORIZON_FIXED": "The forecast horizon is fixed.",
-      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "No forecast figure until there is enough payment history."
+      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "No forecast figure until there is enough payment history.",
+      "FREIGHT_MANIFEST_SERVER_ONLY": "Courier parcels and fleet runs work offline; freight dispatch manifests require the server.",
+      "DEPRECIATION_POSTING_ONLINE_ONLY": "Fixed assets can be registered offline; depreciation posting and disposal sync on the server.",
+      "HARVEST_SETTLEMENT_ONLINE_ONLY": "Crop cycles and livestock counts record offline; harvest valuation syncs on the server.",
+      "MRP_SCHEDULING_SERVER_ONLY": "Production BOM recipes save locally; full MRP run execution syncs with the server."
     },
     "area_pricing": {
       "label": "Price by area"
@@ -15349,7 +15353,13 @@
       "issueGiftCard": "Issue Gift Card",
       "customerId": "Customer ID (UUID)",
       "issueCredit": "Grant Store Credit",
-      "addLoyaltyPoints": "Add 100 Loyalty Points"
+      "addLoyaltyPoints": "Add 100 Loyalty Points",
+      "processorPaymentId": "Payment ID (UUID)",
+      "processorGateway": "Gateway / Terminal name",
+      "processorRef": "Processor reference",
+      "processorFetchBtn": "Check Processor State",
+      "processorTransitionBtn": "Advance State",
+      "redeemGiftCard": "Redeem Gift Card"
     },
     "orders": {
       "sectionTitle": "Table Service, Layaway, QR Menu & Trade-In",
@@ -15393,7 +15403,15 @@
       "fleetTitle": "COD Batch Reconciliation & Fleet Compliance",
       "currentKm": "Current odometer (km)",
       "nextServiceKm": "Next service (km)",
-      "checkFleetCod": "Check Fleet & COD"
+      "checkFleetCod": "Check Fleet & COD",
+      "agriTitle": "Agriculture Crops & Livestock Register",
+      "landUnitId": "Land unit / Plot ID",
+      "cropName": "Crop name",
+      "plantingDate": "Planting date (YYYY-MM-DD)",
+      "saveCropBtn": "Record Crop Cycle",
+      "livestockCategory": "Livestock category",
+      "headCount": "Head count",
+      "saveLivestockBtn": "Record Livestock Group"
     },
     "finance": {
       "sectionTitle": "Multi-Currency VAT, Bank Match, FX KYC & Consolidation",
@@ -15417,7 +15435,12 @@
       "signerName": "Signer full name",
       "signContract": "Record E-Signature & Cycle",
       "waitlistTitle": "Appointment Waitlist & No-Show Policy",
-      "evaluateWaitlist": "Evaluate Capacity & No-Show"
+      "evaluateWaitlist": "Evaluate Capacity & No-Show",
+      "reconcileTitle": "Cross-Core Reconciliation (AR/AP/Ledger)",
+      "reconcileBtn": "Run Cross-Core Reconcile",
+      "loadChangeOrdersBtn": "Load Project Change Orders",
+      "approveOrder": "Approve",
+      "rejectOrder": "Reject"
     },
     "ops": {
       "onboardingTitle": "Role-Based Setup & Onboarding Checklist",
@@ -15446,7 +15469,14 @@
       "ticketSubject": "Ticket subject",
       "ticketDesc": "Description",
       "submitTicket": "Submit Support Ticket",
-      "integrationsTitle": "Integration Channels & SLA Health"
+      "integrationsTitle": "Integration Channels & SLA Health",
+      "restorePreviewBtn": "Validate Backup Archive (Dry Run)",
+      "restoreDisclosure": "Non-restorable cap: max 5,000 rows/table · full restore via SQL backup",
+      "acknowledgeBtn": "Acknowledge",
+      "escalateBtn": "Escalate",
+      "resolveBtn": "Resolve + Save RCA",
+      "rcaPlaceholder": "Root-cause analysis summary (RCA)",
+      "loadTicketsBtn": "Refresh SLA Tickets"
     }
   }
 }

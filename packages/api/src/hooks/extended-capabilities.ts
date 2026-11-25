@@ -12,7 +12,7 @@
 // ============================================
 
 import { useMutation, useQuery } from '@tanstack/react-query'
-import apiClient from '../lib/client'
+import apiClient, { localRequest } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
 export interface TableBillSummaryResult {
@@ -92,6 +92,11 @@ export interface TcoEstimateResult {
 export interface WorkspaceExportBundleResult {
   workspaceId: string
   exportedAt: string
+  restorable: false
+  rowCapPerTable: number
+  truncatedTables: string[]
+  failedTables: Array<{ name: string; error: string }>
+  checksumSha256: string
   formats: string[]
   markdownBytes: number
   backup: unknown
@@ -586,6 +591,101 @@ export function useWorkspaceExportBundle() {
   })
 }
 
+export function useWorkspaceRestorePreview() {
+  return useMutation({
+    mutationFn: async ({
+      workspaceId,
+      backup,
+    }: {
+      workspaceId: string
+      backup: {
+        meta: { workspaceId: string; schemaVersion: string; truncatedTables?: string[] }
+        data: Record<string, Array<Record<string, unknown>>>
+      }
+    }) => {
+      const { data } = await apiClient.post<{
+        data: {
+          dryRunOnly: true
+          valid: boolean
+          workspaceMatch: boolean
+          schemaVersion: string
+          truncatedInSource: string[]
+          tableCounts: Record<string, number>
+        }
+      }>(`/workspaces/${workspaceId}/export-restore-preview`, backup)
+      return data.data
+    },
+  })
+}
+
+export function useProjectChangeOrders(projectId: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['projects', projectId ?? '', 'change-orders'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Array<Record<string, unknown>> }>(
+        `/projects/${projectId}/change-orders`,
+      )
+      return data.data
+    },
+    enabled: ready && !!projectId,
+  })
+}
+
+export function useDecideChangeOrder() {
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      orderId,
+      decision,
+    }: {
+      projectId: string
+      orderId: string
+      decision: 'approved' | 'rejected'
+    }) => {
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        `/projects/${projectId}/change-orders/${orderId}/decide`,
+        { decision },
+      )
+      return data.data
+    },
+  })
+}
+
+export function useSupportTickets() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['support', 'tickets'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Array<Record<string, unknown>> }>(
+        '/v1/support-tickets',
+      )
+      return data.data
+    },
+    enabled: ready,
+  })
+}
+
+export function useUpdateSupportTicketStatus() {
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      status,
+      rcaSummary,
+    }: {
+      ticketId: string
+      status: 'acknowledged' | 'escalated' | 'resolved' | 'closed'
+      rcaSummary?: string | undefined
+    }) => {
+      const { data } = await apiClient.patch<{ data: Record<string, unknown> }>(
+        `/v1/support-tickets/${ticketId}/status`,
+        { status, ...(rcaSummary !== undefined ? { rcaSummary } : {}) },
+      )
+      return data.data
+    },
+  })
+}
+
 export function useQrWhatsappCatalog() {
   return useMutation({
     mutationFn: async (input: {
@@ -609,5 +709,132 @@ export function useQrWhatsappCatalog() {
       })
       return data.data
     },
+  })
+}
+
+export interface PaymentProcessorStateResult {
+  paymentId: string
+  processorState: 'queued_offline' | 'pending_capture' | 'captured' | 'declined' | 'voided'
+  gatewayName: string | null
+  externalRef: string | null
+  feeMinor: number
+  currency: string
+  reason: string | null
+  updatedAt: string
+}
+
+export function usePaymentProcessorState(paymentId: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['payments', paymentId ?? '', 'processor-state'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: PaymentProcessorStateResult }>(
+        `/payments/${paymentId}/processor-state`,
+      )
+      return data.data
+    },
+    enabled: ready && !!paymentId,
+  })
+}
+
+export function useTransitionPaymentProcessorState() {
+  return useMutation({
+    mutationFn: async ({
+      paymentId,
+      processorState,
+      gatewayName,
+      externalRef,
+      feeMinor,
+      reason,
+    }: {
+      paymentId: string
+      processorState: 'queued_offline' | 'pending_capture' | 'captured' | 'declined' | 'voided'
+      gatewayName?: string | undefined
+      externalRef?: string | undefined
+      feeMinor?: number | undefined
+      reason?: string | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: PaymentProcessorStateResult }>(
+        `/payments/${paymentId}/processor-state`,
+        {
+          processorState,
+          ...(gatewayName !== undefined ? { gatewayName } : {}),
+          ...(externalRef !== undefined ? { externalRef } : {}),
+          ...(feeMinor !== undefined ? { feeMinor } : {}),
+          ...(reason !== undefined ? { reason } : {}),
+        },
+      )
+      return data.data
+    },
+  })
+}
+
+export interface CrossCoreReconciliationResult {
+  workspaceId: string
+  checkedAt: string
+  balanced: boolean
+  orphanAllocationsCount: number
+  perCurrency: ReadonlyArray<{
+    currency: string
+    invoicePaidMinor: number
+    allocatedToInvoicesMinor: number
+    invoicePaidVsAllocationsVarianceMinor: number
+    paymentsTotalMinor: number
+    overAllocatedPaymentsCount: number
+  }>
+  ledger: {
+    postedDebitMinor: number
+    postedCreditMinor: number
+    debitCreditVarianceMinor: number
+    unpostedInvoicesCount: number
+    unpostedPaymentsCount: number
+  }
+}
+
+export function useReconcileCrossCore() {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{ data: CrossCoreReconciliationResult }>(
+        '/accounting/reconcile-cross-core',
+        {},
+      )
+      return data.data
+    },
+  })
+}
+
+export function useLocalOpsRegisters() {
+  return useMutation({
+    mutationFn: async (input: {
+      kind: 'asset' | 'manufacturing' | 'approval'
+      payload: Record<string, unknown>
+    }) => {
+      if (input.kind === 'asset') {
+        return localRequest('POST', '/local-ops/assets', input.payload)
+      }
+      if (input.kind === 'manufacturing') {
+        return localRequest('POST', '/local-ops/manufacturing-defs', input.payload)
+      }
+      return localRequest('POST', '/local-ops/approvals', input.payload)
+    },
+  })
+}
+
+export function useReadLocalOpsRegister(
+  kind: 'assets' | 'manufacturing-defs' | 'approvals' | null,
+) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['local-ops', kind ?? 'none'] as const,
+    queryFn: async () => {
+      if (kind === 'assets') {
+        return localRequest('GET', '/local-ops/assets')
+      }
+      if (kind === 'manufacturing-defs') {
+        return localRequest('GET', '/local-ops/manufacturing-defs')
+      }
+      return localRequest('GET', '/local-ops/approvals')
+    },
+    enabled: ready && kind !== null,
   })
 }

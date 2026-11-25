@@ -19,7 +19,8 @@ import type { AdvanceDocument, AdvanceDocumentInput, AdvanceUsageState } from '@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { asList } from '../lib/as-list'
-import { apiClient } from '../lib/client'
+import { apiClient, localRequest } from '../lib/client'
+import { executionSiteFor } from '../lib/execution-site'
 import { useIntentKey } from '../lib/intent-key'
 import { useAuthReady } from './useAuthReady'
 import { invoiceKeys } from './invoices'
@@ -1058,6 +1059,13 @@ export function useCropCycles() {
   return useQuery({
     queryKey: universalCoreKeys.crops(),
     queryFn: async () => {
+      if (executionSiteFor('invoice.create') === 'device') {
+        const res = await localRequest<{ data?: CropCycleRecord[] }>(
+          'GET',
+          '/local-ops/crop-cycles',
+        )
+        return asList<CropCycleRecord>(res?.data ?? res, '/local-ops/crop-cycles')
+      }
       const { data } = await apiClient.get<{ data?: CropCycleRecord[] }>('/agriculture/crops')
       return asList<CropCycleRecord>(data?.data, '/agriculture/crops')
     },
@@ -1074,6 +1082,14 @@ export function useCreateCropCycle() {
       plantingDate: string
       expectedHarvestDate?: string | undefined
     }) => {
+      if (executionSiteFor('invoice.create') === 'device') {
+        const res = await localRequest<{ data?: CropCycleRecord }>(
+          'POST',
+          '/local-ops/crop-cycles',
+          input,
+        )
+        return (res?.data ?? res) as CropCycleRecord
+      }
       const { data } = await apiClient.post<{ data: CropCycleRecord }>('/agriculture/crops', input)
       return data.data
     },

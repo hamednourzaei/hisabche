@@ -39,6 +39,7 @@ beforeEach(() => {
   db.seed('workspaces', [
     { id: SHOP, name: 'Hisabche Demo', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
   ])
+  db.seed('support_tickets', [])
   db.seed('workspace_members', [
     {
       id: fakeId('mem'),
@@ -86,6 +87,25 @@ describe('STEP-D — Market Research X06-X21 capabilities', () => {
     expect(ticket.statusCode, ticket.body).toBe(201)
     expect(ticket.json().data.slaHours).toBe(4)
     expect(ticket.json().data.status).toBe('open')
+
+    const listTickets = await app.inject({
+      method: 'GET',
+      url: '/api/v1/support-tickets',
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+    })
+    expect(listTickets.statusCode).toBe(200)
+    expect(listTickets.json().data).toHaveLength(1)
+
+    const ticketId = ticket.json().data.id
+    const resolveRes = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { status: 'resolved', rcaSummary: 'Adjusted ESC/POS margin offset to 4mm.' },
+    })
+    expect(resolveRes.statusCode, resolveRes.body).toBe(200)
+    expect(resolveRes.json().data.status).toBe('resolved')
+    expect(resolveRes.json().data.rca_summary).toContain('4mm')
 
     const health = await app.inject({
       method: 'GET',

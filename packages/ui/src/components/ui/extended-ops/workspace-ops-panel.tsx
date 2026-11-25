@@ -7,7 +7,12 @@ import {
   useCreateSupportTicket,
   useEstimateBillingTco,
   useIntegrationHealth,
+  useLocalOpsRegisters,
+  useReadLocalOpsRegister,
+  useSupportTickets,
+  useUpdateSupportTicketStatus,
   useWorkspaceExportBundle,
+  useWorkspaceRestorePreview,
 } from '@hisabche/api'
 import { useWorkspaceStore } from '@hisabche/store'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
@@ -23,14 +28,20 @@ export function WorkspaceOpsPanel() {
   const workspaceId = useWorkspaceStore((s) => s.workspaceId)
 
   const exportBundle = useWorkspaceExportBundle()
+  const restorePreview = useWorkspaceRestorePreview()
   const estimateTco = useEstimateBillingTco()
   const submitTicket = useCreateSupportTicket()
+  const ticketsQuery = useSupportTickets()
+  const updateTicketStatus = useUpdateSupportTicketStatus()
   const integrationHealth = useIntegrationHealth()
+  const localApprovals = useReadLocalOpsRegister('approvals')
+  const writeLocalOp = useLocalOpsRegisters()
 
   const [basePlan, setBasePlan] = useState('4900')
   const [extraUsers, setExtraUsers] = useState('2')
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
+  const [rcaSummary, setRcaSummary] = useState('')
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'critical'>('normal')
 
   return (
@@ -48,11 +59,39 @@ export function WorkspaceOpsPanel() {
           >
             {t('ops.exportBundleBtn')}
           </Button>
+          <p className="text-xs text-[hsl(var(--fg-secondary))]">{t('ops.restoreDisclosure')}</p>
+          {exportBundle.data && workspaceId ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-[44px] w-full"
+              disabled={restorePreview.isPending}
+              onClick={() =>
+                restorePreview.mutate({
+                  workspaceId,
+                  backup: {
+                    meta: {
+                      workspaceId,
+                      schemaVersion: '1',
+                      truncatedTables: exportBundle.data.truncatedTables,
+                    },
+                    data: {},
+                  },
+                })
+              }
+            >
+              {t('ops.restorePreviewBtn')}
+            </Button>
+          ) : null}
           <ExpressResultBox
             label={t('common.result')}
-            data={exportBundle.data}
+            data={restorePreview.data ?? exportBundle.data ?? null}
             error={
-              exportBundle.error ? apiErrorMessage(exportBundle.error, t('common.error')) : null
+              restorePreview.error
+                ? apiErrorMessage(restorePreview.error, t('common.error'))
+                : exportBundle.error
+                  ? apiErrorMessage(exportBundle.error, t('common.error'))
+                  : null
             }
           />
         </ExpressCard>
@@ -141,23 +180,92 @@ export function WorkspaceOpsPanel() {
           >
             {t('ops.submitTicket')}
           </Button>
+          <Input
+            value={rcaSummary}
+            onChange={(e) => setRcaSummary(e.target.value)}
+            placeholder={t('ops.rcaPlaceholder')}
+            className="min-h-[44px]"
+          />
+          {Array.isArray(ticketsQuery.data) && ticketsQuery.data.length > 0 ? (
+            <div className="space-y-1 pt-1">
+              {ticketsQuery.data.slice(0, 3).map((tk) => {
+                const tkId = String(tk.id ?? '')
+                return (
+                  <div
+                    key={tkId}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[hsl(var(--border-default))] px-2 py-1 text-xs"
+                  >
+                    <span className="truncate font-medium">
+                      {String(tk.ticket_code ?? tk.subject ?? tkId)} · {String(tk.status ?? '')}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-[36px] px-2 text-xs"
+                        onClick={() =>
+                          updateTicketStatus.mutate({ ticketId: tkId, status: 'escalated' })
+                        }
+                      >
+                        {t('ops.escalateBtn')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="min-h-[36px] px-2 text-xs"
+                        onClick={() =>
+                          updateTicketStatus.mutate({
+                            ticketId: tkId,
+                            status: 'resolved',
+                            rcaSummary: rcaSummary.trim() || undefined,
+                          })
+                        }
+                      >
+                        {t('ops.resolveBtn')}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
           <ExpressResultBox
             label={t('common.result')}
-            data={submitTicket.data}
+            data={updateTicketStatus.data ?? submitTicket.data ?? ticketsQuery.data ?? null}
             error={
-              submitTicket.error ? apiErrorMessage(submitTicket.error, t('common.error')) : null
+              updateTicketStatus.error
+                ? apiErrorMessage(updateTicketStatus.error, t('common.error'))
+                : submitTicket.error
+                  ? apiErrorMessage(submitTicket.error, t('common.error'))
+                  : null
             }
           />
         </ExpressCard>
 
         <ExpressCard title={t('ops.integrationsTitle')}>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-[44px] w-full"
+            disabled={!workspaceId || writeLocalOp.isPending}
+            onClick={() =>
+              workspaceId &&
+              writeLocalOp.mutate({
+                kind: 'approval',
+                payload: { documentType: 'support_check', documentId: workspaceId },
+              })
+            }
+          >
+            {t('ops.loadTicketsBtn')}
+          </Button>
           <ExpressResultBox
             label={t('common.result')}
-            data={
-              integrationHealth.data ?? {
+            data={{
+              integrations: integrationHealth.data ?? {
                 status: integrationHealth.isLoading ? 'loading' : 'ready',
-              }
-            }
+              },
+              localQueue: localApprovals.data ?? writeLocalOp.data ?? null,
+            }}
             error={
               integrationHealth.error
                 ? apiErrorMessage(integrationHealth.error, t('common.error'))

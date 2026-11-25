@@ -12,6 +12,8 @@
 
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { supabase } from '../db'
+import { DatabaseError, NotFoundError, ConflictError } from '../errors/database.error'
 
 import {
   recordPaymentSchema,
@@ -371,6 +373,168 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
         return reply.send({ data: updated })
       } catch (err) {
         return fail(reply, err, 'Failed to transition cheque')
+      }
+    },
+  )
+
+  // ─── X10: OFFLINE/GATEWAY PAYMENT PROCESSOR STATE ──────────────────────
+  const processorTransitionSchema = z
+    .object({
+      processorState: z.enum([
+        'queued_offline',
+        'pending_capture',
+        'captured',
+        'declined',
+        'voided',
+      ]),
+      gatewayName: z.string().trim().max(80).optional(),
+      externalRef: z.string().trim().max(120).optional(),
+      feeMinor: z.number().int().min(0).default(0),
+      reason: z.string().trim().max(300).optional(),
+    })
+    .strict()
+
+  const ALLOWED_PROCESSOR_FSM: Readonly<Record<string, readonly string[]>> = {
+    queued_offline: ['pending_capture', 'voided'],
+    pending_capture: ['captured', 'declined', 'voided'],
+    declined: ['pending_capture', 'voided'],
+    captured: ['voided'],
+    voided: [],
+  }
+
+  fastify.get(
+    '/:id/processor-state',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { data: payment, error: pErr } = await supabase
+          .from('payments')
+          .select('id, method, currency, updated_at')
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (pErr) throw new DatabaseError('Failed to verify payment', pErr)
+        if (!payment) throw new NotFoundError('Payment')
+
+        const { data: stateRow, error: sErr } = await supabase
+          .from('payment_gateway_states')
+          .select('*')
+          .eq('payment_id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (sErr) throw new DatabaseError('Failed to read payment processor state', sErr)
+
+        return reply.send({
+          data: stateRow
+            ? {
+                paymentId: stateRow.payment_id,
+                processorState: stateRow.processor_state,
+                gatewayName: stateRow.gateway_name,
+                externalRef: stateRow.external_ref,
+                feeMinor: stateRow.fee_minor,
+                currency: stateRow.currency,
+                reason: stateRow.reason,
+                updatedAt: stateRow.updated_at,
+              }
+            : {
+                paymentId: payment.id,
+                processorState: payment.method === 'cash' ? 'captured' : 'queued_offline',
+                gatewayName: null,
+                externalRef: null,
+                feeMinor: 0,
+                currency: payment.currency,
+                reason: null,
+                updatedAt: payment.updated_at,
+              },
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to read payment processor state')
+      }
+    },
+  )
+
+  fastify.post(
+    '/:id/processor-state',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')],
+      schema: {
+        body: toJsonSchema(processorTransitionSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = processorTransitionSchema.parse(request.body)
+        const { data: payment, error: pErr } = await supabase
+          .from('payments')
+          .select('id, method, currency')
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (pErr) throw new DatabaseError('Failed to verify payment', pErr)
+        if (!payment) throw new NotFoundError('Payment')
+
+        const { data: existing, error: eErr } = await supabase
+          .from('payment_gateway_states')
+          .select('*')
+          .eq('payment_id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (eErr) throw new DatabaseError('Failed to read processor state', eErr)
+
+        const current =
+          existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
+        if (
+          current !== body.processorState &&
+          !(ALLOWED_PROCESSOR_FSM[current] ?? []).includes(body.processorState)
+        ) {
+          throw new ConflictError('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')
+        }
+
+        const now = new Date().toISOString()
+        const payload = {
+          workspace_id: request.tenancy.workspaceId,
+          payment_id: id,
+          processor_state: body.processorState,
+          gateway_name: body.gatewayName ?? existing?.gateway_name ?? null,
+          external_ref: body.externalRef ?? existing?.external_ref ?? null,
+          fee_minor: body.feeMinor,
+          currency: payment.currency,
+          reason: body.reason ?? null,
+          updated_by: request.tenancy.userId,
+          updated_at: now,
+        }
+
+        const { data: saved, error: wErr } = existing
+          ? await supabase
+              .from('payment_gateway_states')
+              .update(payload)
+              .eq('id', existing.id)
+              .eq('workspace_id', request.tenancy.workspaceId)
+              .select('*')
+              .single()
+          : await supabase.from('payment_gateway_states').insert(payload).select('*').single()
+        if (wErr) throw new DatabaseError('Failed to save processor state', wErr)
+
+        return reply.send({
+          data: {
+            paymentId: saved.payment_id,
+            processorState: saved.processor_state,
+            gatewayName: saved.gateway_name,
+            externalRef: saved.external_ref,
+            feeMinor: saved.fee_minor,
+            currency: saved.currency,
+            reason: saved.reason,
+            updatedAt: saved.updated_at,
+          },
+        })
+      } catch (err) {
+        return fail(reply, err, 'Failed to update payment processor state')
       }
     },
   )

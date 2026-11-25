@@ -6,10 +6,16 @@ import { OFFLINE_CARD_PAYMENT_STATES } from '@hisabche/validation'
 import {
   apiErrorMessage,
   useCurrentSession,
+  useGiftCards,
   useIssueGiftCard,
   useIssueStoreCredit,
+  useLoyaltyBalance,
   useMutateLoyaltyPoints,
+  usePaymentProcessorState,
   usePosZReport,
+  useRedeemGiftCard,
+  useStoreCredit,
+  useTransitionPaymentProcessorState,
 } from '@hisabche/api'
 import { useDeviceStore } from '@hisabche/store'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
@@ -33,11 +39,21 @@ export function TillLoyaltyPanel() {
   const [pinInput, setPinInput] = useState('')
 
   const issueGiftCard = useIssueGiftCard()
+  const redeemGiftCard = useRedeemGiftCard()
+  const giftCardsQuery = useGiftCards()
   const issueStoreCredit = useIssueStoreCredit()
   const mutateLoyalty = useMutateLoyaltyPoints()
   const [cardCode, setCardCode] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [amountMinor, setAmountMinor] = useState('5000')
+  const storeCreditQuery = useStoreCredit(customerId.trim() || null)
+  const loyaltyBalanceQuery = useLoyaltyBalance(customerId.trim() || null)
+  const [paymentIdInput, setPaymentIdInput] = useState('')
+  const [gatewayName, setGatewayName] = useState('')
+  const [externalRef, setExternalRef] = useState('')
+
+  const processorState = usePaymentProcessorState(paymentIdInput.trim() || null)
+  const transitionProcessor = useTransitionPaymentProcessorState()
 
   const currency = bookCurrency || ''
 
@@ -118,6 +134,55 @@ export function TillLoyaltyPanel() {
                 </span>
               ))}
             </div>
+            <div className="mt-2 space-y-2">
+              <Input
+                value={paymentIdInput}
+                onChange={(e) => setPaymentIdInput(e.target.value)}
+                placeholder={t('till.processorPaymentId')}
+                className="min-h-[44px]"
+              />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Input
+                  value={gatewayName}
+                  onChange={(e) => setGatewayName(e.target.value)}
+                  placeholder={t('till.processorGateway')}
+                  className="min-h-[44px]"
+                />
+                <Input
+                  value={externalRef}
+                  onChange={(e) => setExternalRef(e.target.value)}
+                  placeholder={t('till.processorRef')}
+                  className="min-h-[44px]"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-[44px] w-full"
+                disabled={!paymentIdInput.trim() || transitionProcessor.isPending}
+                onClick={() =>
+                  transitionProcessor.mutate({
+                    paymentId: paymentIdInput.trim(),
+                    processorState: 'pending_capture',
+                    gatewayName: gatewayName.trim() || undefined,
+                    externalRef: externalRef.trim() || undefined,
+                  })
+                }
+              >
+                {t('till.processorTransitionBtn')}
+              </Button>
+              <ExpressResultBox
+                label={t('common.result')}
+                data={transitionProcessor.data ?? processorState.data ?? null}
+                error={
+                  transitionProcessor.error
+                    ? apiErrorMessage(transitionProcessor.error, t('common.error'))
+                    : processorState.error
+                      ? apiErrorMessage(processorState.error, t('common.error'))
+                      : null
+                }
+              />
+            </div>
           </div>
         </ExpressCard>
 
@@ -176,30 +241,64 @@ export function TillLoyaltyPanel() {
               {t('till.issueCredit')}
             </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-[44px] w-full"
-            disabled={!customerId.trim() || mutateLoyalty.isPending}
-            onClick={() =>
-              mutateLoyalty.mutate({
-                customerId: customerId.trim(),
-                kind: 'earn',
-                points: 100,
-                reason: 'POS loyalty award',
-                idempotencyKey: `loy-${Date.now()}`,
-              })
-            }
-          >
-            {t('till.addLoyaltyPoints')}
-          </Button>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-[44px]"
+              disabled={!cardCode.trim() || !currency || redeemGiftCard.isPending}
+              onClick={() =>
+                redeemGiftCard.mutate({
+                  code: cardCode.trim(),
+                  currency,
+                  amountMinor: Math.max(1, Number(amountMinor) || 0),
+                  idempotencyKey: `gc-red-${Date.now()}`,
+                })
+              }
+            >
+              {t('till.redeemGiftCard')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-[44px]"
+              disabled={!customerId.trim() || mutateLoyalty.isPending}
+              onClick={() =>
+                mutateLoyalty.mutate({
+                  customerId: customerId.trim(),
+                  kind: 'earn',
+                  points: 100,
+                  reason: 'POS loyalty award',
+                  idempotencyKey: `loy-${Date.now()}`,
+                })
+              }
+            >
+              {t('till.addLoyaltyPoints')}
+            </Button>
+          </div>
           <ExpressResultBox
             label={t('common.result')}
-            data={issueGiftCard.data ?? issueStoreCredit.data ?? mutateLoyalty.data}
+            data={{
+              action:
+                issueGiftCard.data ??
+                redeemGiftCard.data ??
+                issueStoreCredit.data ??
+                mutateLoyalty.data ??
+                null,
+              giftCardsCount: giftCardsQuery.data?.length ?? null,
+              storeCredit: storeCreditQuery.data ?? null,
+              loyalty: loyaltyBalanceQuery.data ?? null,
+            }}
             error={
-              issueGiftCard.error || issueStoreCredit.error || mutateLoyalty.error
+              issueGiftCard.error ||
+              redeemGiftCard.error ||
+              issueStoreCredit.error ||
+              mutateLoyalty.error
                 ? apiErrorMessage(
-                    issueGiftCard.error ?? issueStoreCredit.error ?? mutateLoyalty.error,
+                    issueGiftCard.error ??
+                      redeemGiftCard.error ??
+                      issueStoreCredit.error ??
+                      mutateLoyalty.error,
                     t('common.error'),
                   )
                 : null

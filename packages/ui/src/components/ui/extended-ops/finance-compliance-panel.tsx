@@ -2,16 +2,20 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { toIsoDay } from '@hisabche/formatting'
 import {
   apiErrorMessage,
   useAllocateWaitlist,
   useConsolidatedSummary,
   useCreateChangeOrder,
+  useDecideChangeOrder,
   useESignContract,
   useEvaluateContractGuarantee,
   useEvaluateFxKyc,
   useEvaluateNoShowFee,
   useMatchBankTransactions,
+  useProjectChangeOrders,
+  useReconcileCrossCore,
   useScheduleSubscriptionCycle,
   useVatCurrencySummary,
 } from '@hisabche/api'
@@ -35,6 +39,8 @@ export function FinanceCompliancePanel() {
   const guarantee = useEvaluateContractGuarantee()
   const waitlist = useAllocateWaitlist()
   const noShow = useEvaluateNoShowFee()
+  const reconcileCrossCore = useReconcileCrossCore()
+  const decideChangeOrder = useDecideChangeOrder()
 
   const [netMinor, setNetMinor] = useState('100000')
   const [vatMinor, setVatMinor] = useState('10000')
@@ -42,6 +48,7 @@ export function FinanceCompliancePanel() {
   const [fxReqMinor, setFxReqMinor] = useState('100000')
   const [dailyCapMinor, setDailyCapMinor] = useState('500000')
   const [projectId, setProjectId] = useState('')
+  const changeOrdersQuery = useProjectChangeOrders(projectId.trim() || null)
   const [changeDelta, setChangeDelta] = useState('25000')
   const [contractId, setContractId] = useState('')
   const [signerName, setSignerName] = useState('')
@@ -107,7 +114,7 @@ export function FinanceCompliancePanel() {
             className="min-h-[44px] w-full"
             disabled={!currency || bankMatch.isPending}
             onClick={() => {
-              const today = new Date().toISOString().slice(0, 10)
+              const today = toIsoDay(new Date())
               const cleanRef = refCode.trim()
               bankMatch.mutate({
                 maxDateDiffDays: 3,
@@ -217,11 +224,69 @@ export function FinanceCompliancePanel() {
           <ExpressResultBox
             label={t('common.result')}
             data={
-              consolidate.data || changeOrder.data
-                ? { consolidated: consolidate.data ?? null, changeOrder: changeOrder.data ?? null }
+              consolidate.data ||
+              changeOrder.data ||
+              changeOrdersQuery.data ||
+              decideChangeOrder.data
+                ? {
+                    consolidated: consolidate.data ?? null,
+                    changeOrder: changeOrder.data ?? null,
+                    persistedOrders: changeOrdersQuery.data ?? null,
+                    lastDecision: decideChangeOrder.data ?? null,
+                  }
                 : null
             }
           />
+          {Array.isArray(changeOrdersQuery.data) && changeOrdersQuery.data.length > 0 ? (
+            <div className="space-y-1 pt-1">
+              {changeOrdersQuery.data.slice(0, 3).map((co) => {
+                const orderId = String(co.id ?? '')
+                const status = String(co.status ?? 'pending')
+                return (
+                  <div
+                    key={orderId}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[hsl(var(--border-default))] px-2 py-1 text-xs"
+                  >
+                    <span className="truncate font-medium">
+                      {String(co.title ?? orderId)} ({status})
+                    </span>
+                    {status === 'pending' && projectId.trim() ? (
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-[36px] px-2 text-xs"
+                          onClick={() =>
+                            decideChangeOrder.mutate({
+                              projectId: projectId.trim(),
+                              orderId,
+                              decision: 'approved',
+                            })
+                          }
+                        >
+                          {t('finance.approveOrder')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-[36px] px-2 text-xs"
+                          onClick={() =>
+                            decideChangeOrder.mutate({
+                              projectId: projectId.trim(),
+                              orderId,
+                              decision: 'rejected',
+                            })
+                          }
+                        >
+                          {t('finance.rejectOrder')}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
         </ExpressCard>
 
         <ExpressCard title={t('finance.contractEsignTitle')}>
@@ -244,7 +309,7 @@ export function FinanceCompliancePanel() {
             disabled={!contractId.trim()}
             onClick={() => {
               const cid = contractId.trim()
-              const today = new Date().toISOString().slice(0, 10)
+              const today = toIsoDay(new Date())
               subCycle.mutate({
                 contractId: cid,
                 currentPeriodEnd: today,
@@ -311,6 +376,26 @@ export function FinanceCompliancePanel() {
             data={
               waitlist.data || noShow.data
                 ? { waitlist: waitlist.data ?? null, noShowFee: noShow.data ?? null }
+                : null
+            }
+          />
+        </ExpressCard>
+
+        <ExpressCard title={t('finance.reconcileTitle')}>
+          <Button
+            type="button"
+            className="min-h-[44px] w-full"
+            disabled={reconcileCrossCore.isPending}
+            onClick={() => reconcileCrossCore.mutate()}
+          >
+            {t('finance.reconcileBtn')}
+          </Button>
+          <ExpressResultBox
+            label={t('common.result')}
+            data={reconcileCrossCore.data ?? null}
+            error={
+              reconcileCrossCore.error
+                ? apiErrorMessage(reconcileCrossCore.error, t('common.error'))
                 : null
             }
           />

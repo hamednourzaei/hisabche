@@ -11,6 +11,8 @@ export {
   registerLocalTransport,
   requestSyncSoon,
   onSyncRequested,
+  registerSyncCoordinator,
+  runRegisteredSync,
   registerFallbackTransport,
   localRequest,
   onOfflineRefusal,
@@ -1572,3 +1574,4 @@ export * from './hooks/erp-registers'
 export * from './hooks/admin-infrastructure'
 export * from './hooks/loyalty-credit'
 export * from './hooks/extended-capabilities'
+export * from './hooks/agriculture'

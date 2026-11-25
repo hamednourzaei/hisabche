@@ -68,8 +68,8 @@
 | 46 | `barber` | آرایشگاه و سلمانی / آرایشگاه و سلمانی / Barber and salon | صنف | `NAIL_TECH_BEAUTY` | `NAIL_TECH_BEAUTY` | — | partial: resource_capacity | `core` | `booking_services` |
 | 47 | `beautySalon` | ناخن و سالن زیبایی / ناخن و سالون زیبایی / Nails and beauty salon | صنف | `SALON_MULTI_STAFF` | `SALON_MULTI_STAFF` | — | partial: resource_capacity | `core` | `booking_services` |
 | 48 | `optician` | عینک‌فروشی / عینک‌فروشی / Optician | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit · partial: batch_expiry, serialized_items | planned: optical_prescription, lens_order | `core` | `health` |
-| 49 | `agriculture` | زراعت و کشاورزی / زراعت و کشاورزی / Agriculture and farming | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: batch_expiry | planned: crop_cycle | `core` | `production_project_land` |
-| 50 | `livestock` | مالداری و دامداری / مالداری و دامداری / Livestock | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: serialized_items | planned: livestock_register | `core` | `production_project_land` |
+| 49 | `agriculture` | زراعت و کشاورزی / زراعت و کشاورزی / Agriculture and farming | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: batch_expiry | partial: crop_cycle | `core` | `production_project_land` |
+| 50 | `livestock` | مالداری و دامداری / مالداری و دامداری / Livestock | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: serialized_items | partial: livestock_register | `core` | `production_project_land` |
 | 51 | `seedsFertilizer` | تخم و کود / تخم و کود / Seeds and fertiliser | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit · partial: batch_expiry | — | `core` | `wholesale_measurement` |
 | 52 | `flowers` | گل و گیاه / گل و گیاه / Flowers and plants | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit | partial: batch_expiry | `core` | `everyday_sales` |
 | 53 | `transport` | ترانسپورت و باربری / ترانسپورت و باربری / Transport and freight | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit | partial: fleet_dispatch, delivery_pod | `core` | `transport_travel` |
@@ -77,7 +77,7 @@
 | 55 | `passengerTransport` | مسافربری / مسافربری / Passenger transport | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit | partial: fleet_dispatch | `core` | `transport_travel` |
 | 56 | `courier` | پیک و تحویل بسته / پیک و رساندن بسته / Courier and delivery | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | — | partial: fleet_dispatch, delivery_pod | `core` | `transport_travel` |
 | 57 | `travelAgency` | آژانس مسافرتی / آژانس مسافرتی / Travel agency | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit | partial: deposits_liability, installments · planned: travel_booking, supplier_settlement | `core` | `transport_travel` |
-| 58 | `realEstate` | املاک و مشاورین / املاک و مشاورین / Real estate | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit | partial: contracts_recurring · planned: asset_rental | `core` | `production_project_land` |
+| 58 | `realEstate` | املاک و مشاورین / املاک و مشاورین / Real estate | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit | partial: asset_rental, contracts_recurring | `core` | `production_project_land` |
 | 59 | `printing` | چاپ و تبلیغات / چاپ و تبلیغات / Printing and advertising | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: measurement, multi_unit | planned: print_job, production_batch | `core` | `production_project_land` |
 | 60 | `photography` | عکاسی و فیلم‌برداری / عکاسی و فیلم‌برداری / Photography and video | صنف | `GENERIC_BUSINESS` | `RETAIL_STORE` | available: multi_unit | partial: resource_capacity, deposits_liability | `core` | `booking_services` |
 | 61 | `education` | آموزشگاه و کورس / آموزشگاه و کورس / Training and courses | صنف | `LANGUAGE_TEACHER` | `LANGUAGE_TEACHER` | partial: package_credits | partial: installments | `core, workforce` | `booking_services` |
@@ -122,7 +122,7 @@
 | `health` | سلامت | 3 | `pharmacy`، `clinic`، `optician` | `appointments_resources`, `inventory_catalog`, `sales_invoice` | 3 از 3 |
 | `booking_services` | نوبت و خدمات | 6 | `barber`، `beautySalon`، `photography`، `education`، `laundry`، `wedding` | `appointments_resources`, `contracts_recurring`, `deposits_installments`, `package_credits`, `sales_invoice`, `work_orders_repair` | 6 از 6 |
 | `repair_ticket` | تعمیر و تیکت | 3 | `itServices`، `mechanic`، `repairs` | `contracts_recurring`, `quality_claims`, `work_orders_repair` | 3 از 3 |
-| `production_project_land` | تولید، پروژه و زمین | 8 | `construction`، `manufacturing`، `agriculture`، `livestock`، `realEstate`، `printing`، `security`، `consulting` | `contracts_recurring`, `costing_ledger`, `deposits_installments`, `inventory_catalog`, `production_bom`, `projects_time`, `quality_claims`, `sales_invoice` | 8 از 8 |
+| `production_project_land` | تولید، پروژه و زمین | 8 | `construction`، `manufacturing`، `agriculture`، `livestock`، `realEstate`، `printing`، `security`، `consulting` | `agriculture_livestock`, `assets_rental`, `contracts_recurring`, `costing_ledger`, `deposits_installments`, `inventory_catalog`, `production_bom`, `projects_time`, `quality_claims`, `sales_invoice` | 8 از 8 |
 | `transport_travel` | حمل‌ونقل و سفر | 5 | `transport`، `freightTransport`، `passengerTransport`، `courier`، `travelAgency` | `delivery_logistics`, `deposits_installments`, `sales_invoice` | 5 از 5 |
 | `generic` | مدل عمومی | 1 | `other` | — | 0 از 1 |
 

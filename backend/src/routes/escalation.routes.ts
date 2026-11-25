@@ -92,7 +92,26 @@ export async function escalationRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // X08: Customer-facing support / incident SLA ticket intake
+  // X08: Customer-facing support / incident SLA ticket lifecycle (persistent, workspace-scoped)
+  fastify.get(
+    '/api/v1/support-tickets',
+    { preHandler: READ },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const { supabase } = await import('../db')
+        const { data, error } = await supabase
+          .from('support_tickets')
+          .select('*')
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        return reply.send({ data: data ?? [] })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to list support tickets')
+      }
+    },
+  )
+
   fastify.post(
     '/api/v1/support-tickets',
     { preHandler: READ },
@@ -107,12 +126,46 @@ export async function escalationRoutes(fastify: FastifyInstance) {
           })
           .strict()
           .parse(request.body)
+        const { supabase } = await import('../db')
+        const { readClientRequestId } = await import('../utils/client-request')
+        const idemKey = readClientRequestId(request)
+        if (idemKey) {
+          const { data: existing } = await supabase
+            .from('support_tickets')
+            .select('*')
+            .eq('workspace_id', request.tenancy.workspaceId)
+            .eq('idempotency_key', idemKey)
+            .maybeSingle()
+          if (existing) return reply.code(200).send({ data: existing, replay: true })
+        }
+
         const slaHoursByPriority = { critical: 2, high: 4, normal: 24, low: 48 } as const
         const slaHours = slaHoursByPriority[body.priority]
         const responseDueAt = new Date(Date.now() + slaHours * 3600_000).toISOString()
+        const ticketCode = `HSB-${Date.now().toString(36).toUpperCase()}`
+        const { data: created, error } = await supabase
+          .from('support_tickets')
+          .insert({
+            workspace_id: request.tenancy.workspaceId,
+            ticket_code: ticketCode,
+            subject: body.subject,
+            priority: body.priority,
+            category: body.category,
+            description: body.description,
+            sla_hours: slaHours,
+            response_due_at: responseDueAt,
+            status: 'open',
+            escalation_level: 0,
+            idempotency_key: idemKey ?? null,
+            created_by: request.tenancy.userId,
+          })
+          .select()
+          .single()
+        if (error) throw error
         return reply.code(201).send({
           data: {
-            ticketCode: `HSB-${Date.now().toString(36).toUpperCase()}`,
+            ...created,
+            ticketCode,
             workspaceId: request.tenancy.workspaceId,
             priority: body.priority,
             category: body.category,
@@ -123,6 +176,45 @@ export async function escalationRoutes(fastify: FastifyInstance) {
         })
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to create support ticket')
+      }
+    },
+  )
+
+  fastify.patch(
+    '/api/v1/support-tickets/:id/status',
+    { preHandler: READ },
+    async (request: FastifyRequest, reply) => {
+      try {
+        const { id } = idParams.parse(request.params)
+        const body = z
+          .object({
+            status: z.enum(['acknowledged', 'escalated', 'resolved', 'closed']),
+            rcaSummary: z.string().trim().max(2000).optional(),
+          })
+          .strict()
+          .parse(request.body)
+        const { supabase } = await import('../db')
+        const now = new Date().toISOString()
+        const patch: Record<string, unknown> = {
+          status: body.status,
+          updated_at: now,
+          ...(body.rcaSummary !== undefined ? { rca_summary: body.rcaSummary } : {}),
+          ...(body.status === 'escalated' ? { escalated_at: now, escalation_level: 1 } : {}),
+          ...(body.status === 'resolved' || body.status === 'closed' ? { resolved_at: now } : {}),
+        }
+        const { data: updated, error } = await supabase
+          .from('support_tickets')
+          .update(patch)
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .select()
+          .maybeSingle()
+        if (error) throw error
+        if (!updated)
+          return reply.code(404).send({ error: 'TICKET_NOT_FOUND', code: 'TICKET_NOT_FOUND' })
+        return reply.send({ data: updated })
+      } catch (err) {
+        return fail(fastify, reply, err, 'Failed to update support ticket')
       }
     },
   )

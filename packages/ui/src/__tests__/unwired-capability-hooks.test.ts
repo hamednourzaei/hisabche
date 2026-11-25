@@ -81,8 +81,6 @@ const UNWIRED: Record<string, { capability?: CapabilityKey; reason: string }> = 
   },
   useAppointments: { reason: 'appointment API only; no scheduling screen' },
   useCreateAppointment: { reason: 'appointment API only; no scheduling screen' },
-  useCropCycles: { reason: 'crop-cycle API only; no farm screen' },
-  useCreateCropCycle: { reason: 'crop-cycle API only; no farm screen' },
   useConsumePackageCredit: { reason: 'package credits are consumed by the service-delivery path' },
   useReversePackageCredit: { reason: 'package credit API only; no screen' },
   useExpirePackageCredit: { reason: 'package credit API only; no screen' },

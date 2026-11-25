@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { toIsoDay } from '@hisabche/formatting'
 import {
   apiErrorMessage,
   useAllocateLandedCost,
@@ -277,7 +278,7 @@ export function WarehouseDiagnosticsPanel() {
             variant="outline"
             className="min-h-[44px] w-full"
             onClick={() => {
-              const today = new Date().toISOString().slice(0, 10)
+              const today = toIsoDay(new Date())
               fleetCompliance.mutate({
                 currentKm: Math.max(0, Number(currentKm) || 0),
                 nextServiceKm: Math.max(0, Number(nextServiceKm) || 0),

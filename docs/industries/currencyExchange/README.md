@@ -44,7 +44,7 @@
 
 | قابلیت | وضعیت | موتور · آفلاین | شاهد یا محدودیت |
 | --- | --- | --- | --- |
-| `currency_exchange` | `EXISTING_BUT_INCOMPLETE` | `exchange` · online_required | `FX_TRADE_CONFIRMATION_ONLINE_ONLY` |
+| `currency_exchange` | `EXISTING_BUT_INCOMPLETE` | `exchange` · partial | `FX_TRADE_CONFIRMATION_ONLINE_ONLY` |
 
 ## تفاوت با خانواده‌ی «مالی و بازرگانی»
 

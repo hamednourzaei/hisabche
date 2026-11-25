@@ -19,7 +19,7 @@
 
 | صنف | پروفایل | archetype | قابلیت‌های روشن | ساخته‌نشده |
 | --- | --- | --- | --- | --- |
-| [املاک و مشاورین](../realEstate/README.md) (`realEstate`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | `asset_rental` |
+| [املاک و مشاورین](../realEstate/README.md) (`realEstate`) | `specialized` | `GENERIC_BUSINESS` | `measurement`، `multi_unit` | — |
 | [خدمات امنیتی](../security/README.md) (`security`) | `specialized` | `GENERIC_BUSINESS` | `multi_unit` | — |
 | [مشاوره و حسابداری](../consulting/README.md) (`consulting`) | `generic` | `GENERIC_BUSINESS` | — | — |
 
@@ -90,7 +90,7 @@
 
 ## شکاف‌های خانواده
 
-قابلیت‌هایی که صنف‌های این خانواده خواسته‌اند و ساخته نشده (`NEW_CAPABILITY_REQUIRED`): `asset_rental`.
+هیچ قابلیت ساخته‌نشده‌ای در رجیستری برای این خانواده ثبت نیست.
 
 ## بر اساس اندازه
 

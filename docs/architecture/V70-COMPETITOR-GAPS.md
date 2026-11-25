@@ -17,8 +17,8 @@
 
 | id | خانواده | شکاف | fa / en | رقیب مرجع | probe (route/service/table/feature) | صنف‌ها | فاز |
 | --- | --- | --- | --- | --- | --- | ---: | --- |
-| G01 | صندوق و فروش خرد | کارت هدیه | کارت هدیه / Gift cards | Square · Loyverse · Toast | ۰/۰/۰/۰ | 67 | V71 |
-| G02 | صندوق و فروش خرد | اعتبار فروشگاه | اعتبار فروشگاه / Store credit | Shopify POS · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
+| G01 | صندوق و فروش خرد | کیف پول اپل/گوگل کارت هدیه | کیف پول اپل/گوگل کارت هدیه / Apple/Google Wallet Gift Passes | Square · Loyverse · Toast | ۰/۰/۰/۰ | 67 | V71 |
+| G02 | صندوق و فروش خرد | گزارش قانونی اسقاط اعتبارهای راکد | گزارش قانونی اسقاط اعتبارهای راکد / Store credit escheatment reporting | Shopify POS · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
 | G03 | صندوق و فروش خرد | فروش امانی/اقساطی | فروش امانی/اقساطی / Layaway | Lightspeed · Jewelry POS | ۰/۰/۰/۰ | 62 | V71 |
 | G04 | صندوق و فروش خرد | انعام و تقسیم آن | انعام و تقسیم آن / Tips and tip pooling | Toast · Square | ۰/۰/۰/۰ | 7 | V71 |
 | G05 | صندوق و فروش خرد | حق سرویس | حق سرویس / Service charge | Toast · Mindbody | ۰/۰/۰/۰ | 5 | V71 |
@@ -59,7 +59,7 @@
 | G60 | صندوق و فروش خرد | چاپ برچسب بارکد | چاپ برچسب بارکد / Barcode label printing | Loyverse · Square · inFlow | ۰/۰/۰/۰ | 62 | V71 |
 | G62 | اتصال و اکوسیستم | همگام‌سازی فروشگاه آنلاین | همگام‌سازی فروشگاه آنلاین / Online store sync | Shopify · WooCommerce · Salla · Zid | ۰/۰/۰/۰ | 62 | V72 |
 | G63 | اتصال و اکوسیستم | کاتالوگ واتساپ | کاتالوگ واتساپ / WhatsApp catalog | Salla · Zid · WhatsApp Business | ۰/۰/۰/۰ | 67 | V72 |
-| G65 | سایر | باشگاه مشتریان و امتیاز | باشگاه مشتریان و امتیاز / Loyalty points | Loyverse · Square · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
+| G65 | سایر | شبکه تبادل امتیاز بین فروشگاهی | شبکه تبادل امتیاز بین فروشگاهی / Coalition loyalty exchange | Loyverse · Square · Lightspeed | ۰/۰/۰/۰ | 62 | V71 |
 | G67 | خدمات و نوبت | حق عضویت | حق عضویت / Membership fees | Mindbody · Fresha | ۰/۰/۰/۰ | 5 | V71 |
 | G68 | خدمات و نوبت | ظرفیت کلاس | ظرفیت کلاس / Class capacity | Mindbody · TeamUp | ۰/۰/۰/۰ | 1 | V71 |
 | G69 | خدمات و نوبت | لیست انتظار | لیست انتظار / Waitlist | Fresha · Mindbody | ۰/۰/۰/۰ | 6 | V71 |

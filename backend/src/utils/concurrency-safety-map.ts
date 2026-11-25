@@ -2320,6 +2320,26 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     mechanisms: ['state-idempotent'],
     evidence: [{ file: `${RT}/appointment.routes.ts`, text: "'/api/appointments/no-show-fee'" }],
   },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/:id/export-restore-preview',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${RT}/workspace.routes.ts`, text: "'/api/workspaces/:id/export-restore-preview'" },
+    ],
+  },
+  {
+    routeFile: 'payments.routes.ts',
+    route: 'POST /:id/processor-state',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/processor-state'" }],
+  },
+  {
+    routeFile: 'accounting.routes.ts',
+    route: 'POST /reconcile-cross-core',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/accounting.routes.ts`, text: "'/reconcile-cross-core'" }],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

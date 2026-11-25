@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getAppEdition, onSyncRequested } from '@hisabche/api'
+import { getAppEdition, onSyncRequested, registerSyncCoordinator } from '@hisabche/api'
 
 import { bridge } from '@/shared/lib/bridge'
 import { loadSyncedTables, resetSyncedTables } from './device-sync-state'
@@ -92,6 +92,11 @@ export function useBackgroundSync(workspaceId: string | null): void {
 
     trigger()
     const unsubSyncRequested = onSyncRequested(trigger)
+    const unsubCoordinator = registerSyncCoordinator(async () => {
+      await runSync(queryClient)
+      await queryClient.invalidateQueries({ queryKey: QUEUE_KEY })
+      return true
+    })
     window.addEventListener('online', onReconnect)
     const timer = window.setInterval(trigger, BACKGROUND_INTERVAL_MS)
     // Near-realtime: another device's sale reaches this one within seconds.
@@ -100,6 +105,7 @@ export function useBackgroundSync(workspaceId: string | null): void {
 
     return () => {
       unsubSyncRequested()
+      unsubCoordinator()
       window.removeEventListener('online', onReconnect)
       window.clearInterval(timer)
       stream?.stop()

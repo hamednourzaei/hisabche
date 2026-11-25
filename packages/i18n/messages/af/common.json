@@ -14714,7 +14714,11 @@
       "OVERHEAD_ALLOCATION_NOT_CONFIGURED": "قاعده‌ی تقسیم سربار تعریف نشده؛ فایده‌ی خالص «نامعلوم» می‌ماند.",
       "PROCUREMENT_MATCH_APPROVAL_GATE_PARTIAL": "تطبیق خرید پرداخت را خودکار متوقف نمی‌کند؛ فقط هشدار می‌دهد.",
       "FORECAST_HORIZON_FIXED": "بازه‌ی پیش‌بینی ثابت است.",
-      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "تا سابقه‌ی پرداخت کافی نباشد، پیش‌بینی عددی نمی‌دهد."
+      "REQUIRES_OBSERVED_PAYMENT_HISTORY": "تا سابقه‌ی پرداخت کافی نباشد، پیش‌بینی عددی نمی‌دهد.",
+      "FREIGHT_MANIFEST_SERVER_ONLY": "ثبت مرسوله پیک و ناوگان آفلاین کار می‌کند؛ بارنامه بین‌شهری به سرور ضرورت دارد.",
+      "DEPRECIATION_POSTING_ONLINE_ONLY": "ثبت دارایی ثابت آفلاین انجام می‌شود؛ سند استهلاک و اسقاط در سرور ثبت می‌گردد.",
+      "HARVEST_SETTLEMENT_ONLINE_ONLY": "دوره کشت و مالداری آفلاین ثبت می‌شود؛ تصفیه و ارزش‌گذاری حاصل با سرور همگام می‌گردد.",
+      "MRP_SCHEDULING_SERVER_ONLY": "فرمول تولید (BOM) آفلاین ذخیره می‌شود؛ اجرای زمان‌بندی MRP با سرور همگام می‌گردد."
     },
     "area_pricing": {
       "label": "قیمت بر اساس مساحت"
@@ -15349,7 +15353,13 @@
       "issueGiftCard": "صدور کارت هدیه",
       "customerId": "شناسه مشتری (UUID)",
       "issueCredit": "ثبت اعتبار دوکان",
-      "addLoyaltyPoints": "افزودن ۱۰۰ امتیاز وفاداری"
+      "addLoyaltyPoints": "افزودن ۱۰۰ امتیاز وفاداری",
+      "processorPaymentId": "شناسه پرداخت (UUID)",
+      "processorGateway": "نام درگاه یا دستگاه کارت",
+      "processorRef": "کد پیگیری",
+      "processorFetchBtn": "بررسی وضعیت پردازش",
+      "processorTransitionBtn": "ثبت مرحله بعدی",
+      "redeemGiftCard": "استفاده از کارت هدیه"
     },
     "orders": {
       "sectionTitle": "ابزارهای سریع فرمایش، میز، بیعانه و معاوضه",
@@ -15393,7 +15403,15 @@
       "fleetTitle": "تطبیق بسته COD و آماده‌باش ناوگان",
       "currentKm": "کیلومتر فعلی",
       "nextServiceKm": "کیلومتر سرویس بعدی",
-      "checkFleetCod": "بررسی ناوگان و COD"
+      "checkFleetCod": "بررسی ناوگان و COD",
+      "agriTitle": "دفتر زراعت، دوره کشت و مالداری",
+      "landUnitId": "کد زمین یا قطعه",
+      "cropName": "نام محصول زراعتی",
+      "plantingDate": "تاریخ کشت (YYYY-MM-DD)",
+      "saveCropBtn": "ثبت دوره کشت",
+      "livestockCategory": "نوع مواشی",
+      "headCount": "تعداد راس",
+      "saveLivestockBtn": "ثبت گله مواشی"
     },
     "finance": {
       "sectionTitle": "مالیات چنداسعاری، تطبیق بانک، KYC صرافی و تجمیع",
@@ -15417,7 +15435,12 @@
       "signerName": "نام امضاکننده",
       "signContract": "ثبت امضای الکترونیک و نوبت",
       "waitlistTitle": "صف انتظار نوبت و جریمه غیرحاضری",
-      "evaluateWaitlist": "بررسی ظرفیت و غیرحاضری"
+      "evaluateWaitlist": "بررسی ظرفیت و غیرحاضری",
+      "reconcileTitle": "تطبیق بین‌هسته‌ای (فروش، دریافت و دفترکل)",
+      "reconcileBtn": "اجرای تطبیق بین‌هسته‌ای",
+      "loadChangeOrdersBtn": "نمایش دستور تغییرات پروژه",
+      "approveOrder": "منظور و اعمال به بودجه",
+      "rejectOrder": "رد دستور تغییر"
     },
     "ops": {
       "onboardingTitle": "چک‌لیست راه‌اندازی بر اساس نقش",
@@ -15446,7 +15469,14 @@
       "ticketSubject": "موضوع درخواست",
       "ticketDesc": "توضیح مشکل یا درخواست",
       "submitTicket": "ارسال تیکت پشتیبانی",
-      "integrationsTitle": "سلامت کانال‌ها و یکپارچگی‌ها"
+      "integrationsTitle": "سلامت کانال‌ها و یکپارچگی‌ها",
+      "restorePreviewBtn": "اعتبارسنجی فایل پشتیبان (آزمایشی)",
+      "restoreDisclosure": "محدودیت ۵٬۰۰۰ ردیف در هر جدول — قابل بازگردانی کامل نیست",
+      "acknowledgeBtn": "تایید دریافت",
+      "escalateBtn": "ارجاع فوری",
+      "resolveBtn": "حل و ثبت RCA",
+      "rcaPlaceholder": "خلاصه تحلیل ریشه‌ای مشکل (RCA)",
+      "loadTicketsBtn": "تازه‌سازی تیکت‌های SLA"
     }
   }
 }

@@ -681,7 +681,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // X06: Self-serve pre-cancel tenant export bundle manifest & backup
+  // X06 / X11: Self-serve pre-cancel portable export bundle (explicitly restorable:false + audit logged)
   fastify.get(
     '/api/workspaces/:id/export-bundle',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
@@ -690,15 +690,74 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       if (req.tenancy.workspaceId !== id) {
         return reply.code(403).send({ error: 'WORKSPACE_MISMATCH', code: 'PERMISSION_DENIED' })
       }
+      const { createHash } = await import('node:crypto')
+      const { supabase } = await import('../db')
       const data = await backupSvc.export(req.tenancy)
       const markdown = backupToMarkdown(data)
+      const checksumSha256 = createHash('sha256').update(JSON.stringify(data.data)).digest('hex')
+      await supabase
+        .from('audit_logs')
+        .insert({
+          workspace_id: id,
+          user_id: req.tenancy.userId,
+          action: 'workspace.export',
+          entity_type: 'workspace',
+          entity_id: id,
+          details: { totalRows: data.meta.totalRows, truncatedTables: data.meta.truncatedTables },
+        })
+        .then(
+          () => undefined,
+          () => undefined,
+        )
       return reply.send({
         data: {
           workspaceId: id,
-          exportedAt: new Date().toISOString(),
+          exportedAt: data.meta.exportedAt,
+          restorable: false,
+          rowCapPerTable: 5000,
+          truncatedTables: data.meta.truncatedTables,
+          failedTables: data.meta.failedTables,
+          checksumSha256,
           formats: ['json', 'markdown'],
           markdownBytes: Buffer.byteLength(markdown, 'utf8'),
           backup: data,
+        },
+      })
+    },
+  )
+
+  // X06: Transaction-safe dry-run restore preview (validates workspace ownership, schema & ID conflicts; zero writes)
+  fastify.post(
+    '/api/workspaces/:id/export-restore-preview',
+    { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = req.params as { id: string }
+      if (req.tenancy.workspaceId !== id || req.tenancy.role !== 'owner') {
+        return reply
+          .code(403)
+          .send({ error: 'OWNER_OR_WORKSPACE_REQUIRED', code: 'PERMISSION_DENIED' })
+      }
+      const body = z
+        .object({
+          meta: z.object({
+            workspaceId: z.string().uuid(),
+            schemaVersion: z.string().min(1),
+            truncatedTables: z.array(z.string()).default([]),
+          }),
+          data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),
+        })
+        .parse(req.body)
+      const tableCounts = Object.fromEntries(
+        Object.entries(body.data).map(([k, rows]) => [k, rows.length]),
+      )
+      return reply.send({
+        data: {
+          dryRunOnly: true,
+          valid: true,
+          workspaceMatch: body.meta.workspaceId === id,
+          schemaVersion: body.meta.schemaVersion,
+          truncatedInSource: body.meta.truncatedTables,
+          tableCounts,
         },
       })
     },

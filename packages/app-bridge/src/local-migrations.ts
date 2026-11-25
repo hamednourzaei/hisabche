@@ -36,6 +36,7 @@ import {
   SERIALS_STATEMENTS,
   BATCHES_STATEMENTS,
   REPAIR_TICKETS_STATEMENTS,
+  EXTENDED_LOCAL_OPS_STATEMENTS,
   SERVICE_CANCELLATION_REASON_ALTERS,
   SERVICE_DELIVERY_AUDIT_ALTERS,
   SERVICE_DELIVERY_STATEMENTS,
@@ -983,6 +984,14 @@ const V39_ORDER_DEPOSIT_SOURCE_TYPE: LocalMigration = {
   ],
 }
 
+/**
+ * v40 — offline payment processor lifecycle & extended local ops tables.
+ */
+const V40_EXTENDED_LOCAL_OPS: LocalMigration = {
+  to: 40,
+  statements: [...EXTENDED_LOCAL_OPS_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -1022,6 +1031,7 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V37_SESSION_SUBJECT_PARTICIPANTS,
   V38_ORDER_DEPOSIT_PARTY_IDENTITY,
   V39_ORDER_DEPOSIT_SOURCE_TYPE,
+  V40_EXTENDED_LOCAL_OPS,
 ]
 
 /**

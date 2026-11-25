@@ -220,6 +220,31 @@ export function onSyncRequested(listener: SyncRequestedListener): () => void {
   }
 }
 
+type SyncCoordinator = () => Promise<boolean>
+let registeredSyncCoordinator: SyncCoordinator | null = null
+
+/** Register the host's push+pull sync coordinator so Sync Center executes real sync. */
+export function registerSyncCoordinator(coordinator: SyncCoordinator): () => void {
+  registeredSyncCoordinator = coordinator
+  return () => {
+    if (registeredSyncCoordinator === coordinator) registeredSyncCoordinator = null
+  }
+}
+
+/** Runs the registered push+pull sync coordinator and reports honest outcome. */
+export async function runRegisteredSync(): Promise<'synced' | 'failed' | 'no_coordinator'> {
+  if (!registeredSyncCoordinator) {
+    requestSyncSoon()
+    return 'no_coordinator'
+  }
+  try {
+    const ok = await registeredSyncCoordinator()
+    return ok ? 'synced' : 'failed'
+  } catch {
+    return 'failed'
+  }
+}
+
 /**
  * Header the local engine reads to decide whether a write must ALSO be queued
  * for the server. Set by `localRequest` alone; the offline edition never sends

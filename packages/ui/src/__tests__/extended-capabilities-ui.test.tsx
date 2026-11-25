@@ -14,6 +14,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  AgriculturePanel,
   FinanceCompliancePanel,
   OrdersExpressPanel,
   RoleOnboardingPanel,
@@ -69,6 +70,9 @@ describe('Extended Single-Core Responsive UI & Role Onboarding', () => {
 
     const opsHtml = renderWithQuery(<WorkspaceOpsPanel />)
     expect(opsHtml).toContain('data-extended-panel="workspace-ops"')
+
+    const agriHtml = renderWithQuery(<AgriculturePanel />)
+    expect(agriHtml).toContain('data-extended-panel="agriculture-ops"')
   })
 
   it('obeys UI discipline: zero raw <select>, zero hardcoded hex colors, zero physical left/right utilities', () => {

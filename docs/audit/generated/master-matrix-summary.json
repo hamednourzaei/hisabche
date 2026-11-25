@@ -12,16 +12,16 @@
     "CLIENT_UTILITY_ACTIVE": 3
   },
   "routeClassCounts": {
-    "CUSTOMER_FACING_NO_UI": 413,
-    "UI_VIA_NON_HOOK": 99,
+    "UI_VIA_NON_HOOK": 164,
+    "CUSTOMER_FACING_NO_UI": 348,
     "PUBLIC_API": 28,
     "INFRASTRUCTURE": 248,
     "PUBLIC_PAGE_API": 28,
     "CLIENT_ONLY": 5
   },
   "routeNoHookClassCounts": {
-    "CUSTOMER_FACING_NO_UI": 100,
-    "UI_VIA_NON_HOOK": 18,
+    "CUSTOMER_FACING_NO_UI": 97,
+    "UI_VIA_NON_HOOK": 21,
     "PUBLIC_API": 14,
     "INFRASTRUCTURE": 180,
     "PUBLIC_PAGE_API": 21
@@ -55,8 +55,8 @@
     "Client-Only": 5
   },
   "riskCounts": {
-    "LOW": 516,
-    "MEDIUM": 276,
+    "LOW": 542,
+    "MEDIUM": 250,
     "HIGH": 29
   },
   "offlineCounts": {
@@ -76,8 +76,9 @@
     "HOOK_UTILITY_WITHOUT_ROUTE": 3
   },
   "hookNoUiConsumerClasses": {
-    "DEAD_CANDIDATE": 71,
-    "TEST_ONLY": 1
+    "DEAD_CANDIDATE": 46,
+    "CALLED_DYNAMICALLY_OR_INDIRECT": 19,
+    "TEST_ONLY": 7
   },
   "duplicateHookNames": [
     "useUnreadCount",
@@ -136,15 +137,6 @@
       "capabilities": "account.manage"
     },
     {
-      "id": "GET /api/accounting/journal/:id",
-      "method": "GET",
-      "path": "/api/accounting/journal/:id",
-      "file": "backend/src/routes/accounting.routes.ts:230",
-      "domain": "Accounting",
-      "tables": "none",
-      "capabilities": "ledger.read"
-    },
-    {
       "id": "POST /api/accounting/journal/:id/post",
       "method": "POST",
       "path": "/api/accounting/journal/:id/post",
@@ -152,15 +144,6 @@
       "domain": "Accounting",
       "tables": "none",
       "capabilities": "ledger.post"
-    },
-    {
-      "id": "POST /api/accounting/journal/:id/reverse",
-      "method": "POST",
-      "path": "/api/accounting/journal/:id/reverse",
-      "file": "backend/src/routes/accounting.routes.ts:292",
-      "domain": "Accounting",
-      "tables": "none",
-      "capabilities": "ledger.reverse"
     },
     {
       "id": "GET /api/accounting/period-lock",
@@ -811,15 +794,6 @@
       "capabilities": "invoice.read"
     },
     {
-      "id": "PATCH /api/purchase-orders/:id",
-      "method": "PATCH",
-      "path": "/api/purchase-orders/:id",
-      "file": "backend/src/routes/purchasing.routes.ts:109",
-      "domain": "Purchasing",
-      "tables": "none",
-      "capabilities": "none"
-    },
-    {
       "id": "GET /api/rules/:id",
       "method": "GET",
       "path": "/api/rules/:id",
@@ -1057,8 +1031,8 @@
       "file": "packages/api/src/hooks/audit.ts:118",
       "route": "/api/audit/verify",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/audit/containers/audit-container.tsx"
     },
     {
       "name": "useLogin",
@@ -1137,8 +1111,8 @@
       "file": "packages/api/src/hooks/expiry.ts:99",
       "route": "/api/operations/serials",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/business-packs/repair-tickets-section.tsx"
     },
     {
       "name": "useLotTrail",
@@ -1153,8 +1127,8 @@
       "file": "packages/api/src/hooks/expiry.ts:174",
       "route": "/api/operations/serials",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/warehouse-detail/product-serials-panel.tsx"
     },
     {
       "name": "useSoD",
@@ -1185,16 +1159,16 @@
       "file": "packages/api/src/hooks/inventory-operations.ts:60",
       "route": "/api/products/:id/units",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/warehouse-detail/product-units-panel.tsx"
     },
     {
       "name": "useSaveProductUnits",
       "file": "packages/api/src/hooks/inventory-operations.ts:83",
       "route": "/api/products/:id/units",
       "method": "PUT",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/warehouse-detail/product-units-panel.tsx"
     },
     {
       "name": "useDraftPOFromReorder",
@@ -1345,8 +1319,8 @@
       "file": "packages/api/src/hooks/purchasing.ts:42",
       "route": "/api/purchase-orders",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/inventory-ops/inventory-ops-view.tsx"
     },
     {
       "name": "usePurchaseOrder",
@@ -1433,152 +1407,152 @@
       "file": "packages/api/src/hooks/universal-core.ts:225",
       "route": "/api/metal-rates/latest",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/promotions/gold-rate-board-panel.tsx"
     },
     {
       "name": "useRecordMetalRate",
       "file": "packages/api/src/hooks/universal-core.ts:237",
       "route": "/api/metal-rates",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/promotions/gold-rate-board-panel.tsx"
     },
     {
       "name": "useVehicles",
       "file": "packages/api/src/hooks/universal-core.ts:290",
       "route": "/api/vehicles",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useCreateVehicle",
       "file": "packages/api/src/hooks/universal-core.ts:302",
       "route": "/api/vehicles",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useRegisterWarranty",
       "file": "packages/api/src/hooks/universal-core.ts:339",
       "route": "/api/warranties",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useInvoiceReturns",
       "file": "packages/api/src/hooks/universal-core.ts:361",
       "route": "/api/invoices/:id/returns",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx"
     },
     {
       "name": "useOrderDeposits",
       "file": "packages/api/src/hooks/universal-core.ts:406",
       "route": "/api/orders/:id/deposits",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useCreateOrderDeposit",
       "file": "packages/api/src/hooks/universal-core.ts:420",
       "route": "/api/orders/:id/deposits",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/service-delivery/session-deposit-panel.tsx"
     },
     {
       "name": "useAppointments",
       "file": "packages/api/src/hooks/universal-core.ts:442",
       "route": "/api/appointments",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useCreateAppointment",
       "file": "packages/api/src/hooks/universal-core.ts:454",
       "route": "/api/appointments",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "TEST_ONLY",
+      "evidence": "packages/ui/src/__tests__/unwired-capability-hooks.test.ts"
     },
     {
       "name": "useCropCycles",
       "file": "packages/api/src/hooks/universal-core.ts:476",
       "route": "/api/agriculture/crops",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/api/src/hooks/agriculture.ts"
     },
     {
       "name": "useCreateCropCycle",
       "file": "packages/api/src/hooks/universal-core.ts:488",
       "route": "/api/agriculture/crops",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/api/src/hooks/agriculture.ts"
     },
     {
       "name": "useFreightTrips",
       "file": "packages/api/src/hooks/universal-core.ts:508",
       "route": "/api/transport/trips",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useCreateFreightTrip",
       "file": "packages/api/src/hooks/universal-core.ts:520",
       "route": "/api/transport/trips",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useCourierDeliveries",
       "file": "packages/api/src/hooks/universal-core.ts:541",
       "route": "/api/deliveries/courier",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useCreateCourierDelivery",
       "file": "packages/api/src/hooks/universal-core.ts:555",
       "route": "/api/deliveries/courier",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useProgressCourierCod",
       "file": "packages/api/src/hooks/universal-core.ts:577",
       "route": "/api/deliveries/courier/:id/progress-cod",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useDeliveryNotes",
       "file": "packages/api/src/hooks/universal-core.ts:595",
       "route": "/api/deliveries/notes",
       "method": "GET",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useCreateDeliveryNote",
       "file": "packages/api/src/hooks/universal-core.ts:609",
       "route": "/api/deliveries/notes",
       "method": "POST",
-      "cls": "DEAD_CANDIDATE",
-      "evidence": ""
+      "cls": "CALLED_DYNAMICALLY_OR_INDIRECT",
+      "evidence": "packages/ui/src/components/ui/invoices/containers/sales-orders-container.tsx"
     },
     {
       "name": "useStartWorkflowInstance",

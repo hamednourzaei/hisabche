@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueryClient } from '@tanstack/react-query'
+import { runRegisteredSync } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { SyncCenterPage } from '../sync-center-page'
 import type { SyncCenterPageProps } from '../sync-center-page'
@@ -12,7 +13,8 @@ import { BackupRestorePanel } from '../backup-restore-panel'
 export function SyncCenterContainer() {
   const t = useTranslations()
   const queryClient = useQueryClient()
-  const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
+  const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced, setSyncing } =
+    useSyncStore()
   const { backups, addBackup, createBackup } = useBackupStore()
 
   const safeT = useCallback(
@@ -37,13 +39,20 @@ export function SyncCenterContainer() {
     [t],
   )
 
-  // ✅ FIX: قبلاً «همگام‌سازی الآن» فقط یک ساعت محلی را عوض می‌کرد و هیچ
-  // کاری واقعی انجام نمی‌داد. حالا واقعاً تمام کش‌های TanStack Query را
-  // invalidate می‌کند تا داده‌ی هر صفحه از سرور دوباره خوانده شود.
-  const handleSync = useCallback(() => {
-    queryClient.invalidateQueries()
-    setLastSynced(Date.now())
-  }, [queryClient, setLastSynced])
+  // Triggers actual push+pull coordinator when available and only advances
+  // `lastSyncedAt` when real sync succeeds; query invalidation alone never spoofs sync.
+  const handleSync = useCallback(async () => {
+    setSyncing(true)
+    try {
+      const outcome = isOnline ? await runRegisteredSync() : 'failed'
+      await queryClient.invalidateQueries()
+      if (outcome === 'synced') {
+        setLastSynced(Date.now())
+      }
+    } finally {
+      setSyncing(false)
+    }
+  }, [isOnline, queryClient, setLastSynced, setSyncing])
 
   // Read on every render: a backup just taken changes it, and the loop is cheap.
   const localStorageSize = (() => {

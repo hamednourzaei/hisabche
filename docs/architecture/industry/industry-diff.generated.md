@@ -15,7 +15,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | General-purpose baseline | 15 |
 | Exact match with `JOURNEY_INDUSTRIES` | 14 |
 | Available capabilities | 4 |
-| Partial capabilities | 33 |
+| Partial capabilities | 36 |
 
 ## Industry registry
 
@@ -125,14 +125,14 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `package_credits` | partial | فعال (جزئی) |
 | `delivery_pod` | partial | فعال (جزئی) |
 | `fleet_dispatch` | partial | فعال (جزئی) |
-| `asset_rental` | planned | فعال نیست |
+| `asset_rental` | partial | فعال (جزئی) |
 | `quality_inspection` | partial | فعال (جزئی) |
 | `warranty_claims` | partial | فعال (جزئی) |
 | `cost_allocation` | partial | فعال (جزئی) |
 | `approval_workflow` | partial | فعال (جزئی) |
 | `owner_forecast` | partial | فعال (جزئی) |
-| `livestock_register` | planned | فعال نیست |
-| `crop_cycle` | planned | فعال نیست |
+| `livestock_register` | partial | فعال (جزئی) |
+| `crop_cycle` | partial | فعال (جزئی) |
 | `room_nights` | planned | فعال نیست |
 | `currency_exchange` | partial | فعال (جزئی) |
 | `gold_trade` | partial | فعال (جزئی) |
