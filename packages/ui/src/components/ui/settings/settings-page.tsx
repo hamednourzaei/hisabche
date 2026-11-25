@@ -6,7 +6,23 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
-import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche/api'
+import {
+  useWorkspaces,
+  useUpdateWorkspace,
+  useUploadBrandAsset,
+  useDeleteBrandAsset,
+  useWorkspaceBackup,
+} from '@hisabche/api'
+import {
+  BRAND_ASSET_ERROR_TAXONOMY,
+  type BrandAssetErrorCode,
+  type BrandAssetType,
+} from '@hisabche/validation'
+import {
+  BrandImageProcessingError,
+  processBrandAssetFile,
+  type ProcessedBrandAsset,
+} from '../../../lib/brand-image-processor'
 import { cn } from '../../../lib/utils'
 import { SettingsCollapsible, SettingsLinkRow, SettingsQuickChips } from './settings-compact'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
@@ -309,34 +325,62 @@ AccountSection.displayName = 'AccountSection'
  * not exist yet (`workspace-stamp-migration.sql`, `workspace-signature-01`) —
  * no amount of retrying will help and "try again" would be a lie.
  */
-function imageErrorMessage(error: unknown, t: (key: string, fallback?: string) => string): string {
-  const message = error instanceof Error ? error.message : String(error ?? '')
+type TranslateFn = (key: string, values?: Record<string, string | number>) => string
 
-  if (/not supported|-migration|signature-01/i.test(message)) {
+function resolveBrandAssetError(error: unknown, t: TranslateFn): string {
+  if (error instanceof BrandImageProcessingError) {
+    const spec = BRAND_ASSET_ERROR_TAXONOMY[error.code]
+    return t(spec.i18nKey)
+  }
+  const maybeAxios = error as {
+    name?: string
+    code?: string
+    response?: { status?: number; data?: { code?: string; error?: string } }
+    message?: string
+  } | null
+  const serverCode = maybeAxios?.response?.data?.code as BrandAssetErrorCode | undefined
+  if (serverCode && serverCode in BRAND_ASSET_ERROR_TAXONOMY) {
+    return t(BRAND_ASSET_ERROR_TAXONOMY[serverCode].i18nKey)
+  }
+  const status = maybeAxios?.response?.status
+  if (status === 401) return t(BRAND_ASSET_ERROR_TAXONOMY.AUTH_EXPIRED.i18nKey)
+  if (status === 403) return t(BRAND_ASSET_ERROR_TAXONOMY.PERMISSION_DENIED.i18nKey)
+  if (status === 429) return t(BRAND_ASSET_ERROR_TAXONOMY.RATE_LIMITED.i18nKey)
+  if (maybeAxios?.code === 'ECONNABORTED') {
+    return t(BRAND_ASSET_ERROR_TAXONOMY.UPLOAD_TIMEOUT.i18nKey)
+  }
+  if (maybeAxios?.message && /network/i.test(maybeAxios.message)) {
+    return t(BRAND_ASSET_ERROR_TAXONOMY.NETWORK_INTERRUPTION.i18nKey)
+  }
+  if (maybeAxios?.message && /not supported|-migration|signature-01/i.test(maybeAxios.message)) {
     return t('settings.imageNotSupported')
   }
-
   return t('settings.stampUploadFailed')
 }
-
-const ALLOWED_STAMP_TYPES = ['image/png', 'image/svg+xml']
-const MAX_STAMP_SIZE = 1024 * 1024 // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
 
 type BrandImageField = 'logoUrl' | 'stampUrl' | 'signatureUrl'
 type BrandImageColumn = 'logo_url' | 'stamp_url' | 'signature_url'
 
 const BRAND_IMAGES: ReadonlyArray<{
+  assetType: BrandAssetType
   field: BrandImageField
   column: BrandImageColumn
   labelKey: string
 }> = [
-  { field: 'logoUrl', column: 'logo_url', labelKey: 'settings.brandImages.logo' },
   {
+    assetType: 'logo',
+    field: 'logoUrl',
+    column: 'logo_url',
+    labelKey: 'settings.brandImages.logo',
+  },
+  {
+    assetType: 'stamp',
     field: 'stampUrl',
     column: 'stamp_url',
     labelKey: 'settings.brandImages.stamp',
   },
   {
+    assetType: 'signature',
     field: 'signatureUrl',
     column: 'signature_url',
     labelKey: 'settings.brandImages.signature',
@@ -351,105 +395,212 @@ type WorkspaceImages = {
   myRole?: string
 }
 
-/** One image: its preview, «بارگذاری» and «حذف». */
+/** One image: drag-and-drop, format-aware optimization preview, cancelable upload, confirmed delete. */
 const BrandImageSlot = memo(function BrandImageSlot({
   t,
   workspaceId,
   label,
+  assetType,
   field,
   column,
   current,
 }: {
-  t: (key: string, fallback?: string) => string
+  t: TranslateFn
   workspaceId: string | undefined
   label: string
+  assetType: BrandAssetType
   field: BrandImageField
   column: BrandImageColumn
   current: string | null
 }) {
-  const updateWorkspace = useUpdateWorkspace()
+  const uploadBrandAsset = useUploadBrandAsset()
+  const deleteBrandAsset = useDeleteBrandAsset()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [error, setError] = useState<string | null>(null)
-  const toast = useToast()
-  const isSaving = updateWorkspace.isPending
+  const abortRef = useRef<AbortController | null>(null)
+  const activeWorkspaceRef = useRef<string | undefined>(workspaceId)
 
-  const handlePickFile = useCallback(() => fileInputRef.current?.click(), [])
+  const [error, setError] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'idle' | 'processing' | 'uploading' | 'deleting'>('idle')
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [lastProcessed, setLastProcessed] = useState<ProcessedBrandAsset | null>(null)
+
+  const toast = useToast()
+  const isBusy = phase !== 'idle' || uploadBrandAsset.isPending || deleteBrandAsset.isPending
+
+  useEffect(() => {
+    if (
+      activeWorkspaceRef.current &&
+      activeWorkspaceRef.current !== workspaceId &&
+      abortRef.current
+    ) {
+      abortRef.current.abort()
+      abortRef.current = null
+      setPhase('idle')
+      setUploadPercent(null)
+      setError(t(BRAND_ASSET_ERROR_TAXONOMY.WORKSPACE_SWITCHED.i18nKey))
+    }
+    activeWorkspaceRef.current = workspaceId
+    setConfirmDelete(false)
+  }, [workspaceId, t])
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
+  }, [])
+
+  const handlePickFile = useCallback(() => {
+    if (isBusy) return
+    fileInputRef.current?.click()
+  }, [isBusy])
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setPhase('idle')
+    setUploadPercent(null)
+    setError(t('settings.brandAssets.cancelled'))
+  }, [t])
+
+  const processAndUploadFile = useCallback(
+    async (file: File) => {
+      if (isBusy) return
+      if (!workspaceId) {
+        setError(t('settings.stampNoWorkspace'))
+        return
+      }
+      const targetWorkspaceId = workspaceId
+      const controller = new AbortController()
+      abortRef.current = controller
+      setError(null)
+      setConfirmDelete(false)
+      setUploadPercent(null)
+      setPhase('processing')
+
+      try {
+        const processed = await processBrandAssetFile(file, assetType, controller.signal)
+        if (controller.signal.aborted || activeWorkspaceRef.current !== targetWorkspaceId) {
+          throw new BrandImageProcessingError(
+            'WORKSPACE_SWITCHED',
+            'Workspace changed during upload.',
+          )
+        }
+        setLastProcessed(processed)
+        setPhase('uploading')
+
+        const commaIdx = processed.previewDataUrl.indexOf(',')
+        const dataBase64 = commaIdx >= 0 ? processed.previewDataUrl.slice(commaIdx + 1) : ''
+
+        const res = await uploadBrandAsset.mutateAsync({
+          workspaceId: targetWorkspaceId,
+          assetType,
+          mimeType: processed.mimeType,
+          dataBase64,
+          originalBytes: processed.originalBytes,
+          processingDurationMs: processed.processingMs,
+          signal: controller.signal,
+          onProgress: (pct: number) => {
+            if (!controller.signal.aborted) setUploadPercent(pct)
+          },
+        })
+
+        const saved = (res.workspace as Record<string, unknown> | undefined)?.[column]
+        if (saved) {
+          toast.success(t('settings.imageSaved'))
+          setError(null)
+        } else {
+          setError(t('settings.imageNotSupported'))
+        }
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError' || controller.signal.aborted) {
+          if (activeWorkspaceRef.current !== targetWorkspaceId) {
+            setError(t(BRAND_ASSET_ERROR_TAXONOMY.WORKSPACE_SWITCHED.i18nKey))
+          }
+        } else {
+          setError(resolveBrandAssetError(err, t))
+        }
+      } finally {
+        if (abortRef.current === controller) {
+          abortRef.current = null
+        }
+        setPhase('idle')
+        setUploadPercent(null)
+      }
+    },
+    [isBusy, workspaceId, assetType, column, uploadBrandAsset, t, toast],
+  )
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       e.target.value = ''
       if (!file) return
-      if (!workspaceId) {
-        // Picking a file before the workspace query resolves used to do
-        // nothing at all, with no explanation.
-        setError(t('settings.stampNoWorkspace'))
-        return
-      }
-
-      if (!ALLOWED_STAMP_TYPES.includes(file.type)) {
-        setError(t('settings.stampInvalidType'))
-        return
-      }
-      if (file.size > MAX_STAMP_SIZE) {
-        setError(t('settings.stampTooLarge'))
-        return
-      }
-      setError(null)
-
-      const reader = new FileReader()
-      reader.onload = () => {
-        const dataUrl = reader.result as string
-        updateWorkspace.mutate(
-          { id: workspaceId, [field]: dataUrl },
-          {
-            onSuccess: (updated) => {
-              setError(null)
-              // A server without the column answers 200 and drops the field.
-              // That is a FAILURE from the user's side — never «saved».
-              const saved = (updated as Record<string, unknown> | undefined)?.[column]
-              if (saved) {
-                toast.success(t('settings.imageSaved'))
-              } else {
-                setError(t('settings.imageNotSupported'))
-              }
-            },
-            onError: (err) => setError(imageErrorMessage(err, t)),
-          },
-        )
-      }
-      reader.onerror = () => setError(t('settings.stampUploadFailed'))
-      reader.readAsDataURL(file)
+      void processAndUploadFile(file)
     },
-    [workspaceId, updateWorkspace, field, column, t, toast],
+    [processAndUploadFile],
   )
 
-  const handleRemove = useCallback(() => {
-    if (!workspaceId) return
-    updateWorkspace.mutate(
-      { id: workspaceId, [field]: null },
-      {
-        onSuccess: () => {
-          setError(null)
-          toast.success(t('settings.imageRemoved'))
-        },
-        onError: (err) => setError(imageErrorMessage(err, t)),
-      },
-    )
-  }, [workspaceId, updateWorkspace, field, t, toast])
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      setIsDragging(false)
+      if (isBusy) return
+      const file = e.dataTransfer.files?.[0]
+      if (file) void processAndUploadFile(file)
+    },
+    [isBusy, processAndUploadFile],
+  )
+
+  const handleConfirmRemove = useCallback(async () => {
+    if (!workspaceId || isBusy) return
+    setPhase('deleting')
+    setError(null)
+    try {
+      const res = await deleteBrandAsset.mutateAsync({ workspaceId, assetType })
+      const persisted = (res.workspace as Record<string, unknown> | undefined)?.[column]
+      if (persisted === null || persisted === undefined) {
+        setConfirmDelete(false)
+        setLastProcessed(null)
+        toast.success(t('settings.imageRemoved'))
+      } else {
+        setError(t('settings.stampUploadFailed'))
+      }
+    } catch (err) {
+      setError(resolveBrandAssetError(err, t))
+    } finally {
+      setPhase('idle')
+    }
+  }, [workspaceId, isBusy, deleteBrandAsset, assetType, column, t, toast])
+
+  const previewSrc =
+    current ?? (phase === 'uploading' ? (lastProcessed?.previewDataUrl ?? null) : null)
 
   return (
     <div
-      className="space-y-2 rounded-xl border border-[hsl(var(--border-default))] p-3"
+      onDragOver={(e) => {
+        e.preventDefault()
+        if (!isBusy) setIsDragging(true)
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={handleDrop}
+      className={cn(
+        'space-y-2 rounded-xl border p-3 transition-colors duration-150 motion-reduce:transition-none',
+        isDragging
+          ? 'border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.04)]'
+          : 'border-[hsl(var(--border-default))]',
+      )}
       data-brand-image={field}
     >
       <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{label}</p>
-      <div className="flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))]">
-        {current ? (
+      <div className="flex h-24 w-full items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))] p-2">
+        {previewSrc ? (
           <span
             aria-hidden="true"
-            className="block h-16 w-full bg-contain bg-center bg-no-repeat"
-            style={{ backgroundImage: `url(${JSON.stringify(current)})` }}
+            className="block h-20 w-full bg-contain bg-center bg-no-repeat"
+            style={{ backgroundImage: `url(${JSON.stringify(previewSrc)})` }}
           />
         ) : (
           <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
@@ -458,50 +609,139 @@ const BrandImageSlot = memo(function BrandImageSlot({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={handlePickFile}
-          disabled={isSaving || !workspaceId}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
-            'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
-            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-            'transition-colors duration-150 disabled:opacity-40',
-            'motion-reduce:transition-none',
-          )}
-        >
-          {isSaving ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Upload className="size-4" aria-hidden="true" />
-          )}
-          {t('settings.uploadStamp')}
-        </button>
+      <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+        {t('settings.brandAssets.dropHint')}
+      </p>
 
-        {current && (
+      {lastProcessed && (
+        <div className="space-y-0.5 text-[11px] text-[hsl(var(--fg-secondary))]">
+          {lastProcessed.outputWidth && lastProcessed.outputHeight && (
+            <p>
+              {t('settings.brandAssets.dimensions', {
+                width: lastProcessed.outputWidth,
+                height: lastProcessed.outputHeight,
+              })}
+            </p>
+          )}
+          <p>
+            {t('settings.brandAssets.optimizedInfo', {
+              size: formatBytes(lastProcessed.optimizedBytes, 'fa'),
+              original: formatBytes(lastProcessed.originalBytes, 'fa'),
+            })}
+          </p>
+        </div>
+      )}
+
+      {phase === 'processing' && (
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('settings.brandAssets.processing')}
+        </p>
+      )}
+      {phase === 'uploading' && (
+        <div className="space-y-1">
+          <p className="text-xs text-[hsl(var(--fg-secondary))]">
+            {uploadPercent !== null
+              ? t('settings.brandAssets.uploadingProgress', { percent: uploadPercent })
+              : t('settings.brandAssets.uploading')}
+          </p>
+          {uploadPercent !== null && (
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[hsl(var(--surface-muted))]">
+              <div
+                className="h-full bg-[hsl(var(--color-primary))] transition-all duration-150 motion-reduce:transition-none"
+                style={{ width: `${uploadPercent}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleRemove}
-            disabled={isSaving}
+            onClick={handlePickFile}
+            disabled={isBusy || !workspaceId}
+            className={cn(
+              'inline-flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
+              'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
+              'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+              'transition-colors duration-150 disabled:opacity-40',
+              'motion-reduce:transition-none',
+            )}
+          >
+            {isBusy ? (
+              <Loader2
+                className="size-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            ) : (
+              <Upload className="size-4" aria-hidden="true" />
+            )}
+            {current ? t('settings.brandAssets.replace') : t('settings.uploadStamp')}
+          </button>
+
+          {(phase === 'processing' || phase === 'uploading') && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center justify-center rounded-full border border-[hsl(var(--border-default))] px-3 py-2 text-xs font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              {t('settings.brandAssets.cancel')}
+            </button>
+          )}
+        </div>
+
+        {current && !confirmDelete && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            disabled={isBusy}
             className={cn(
               'inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium',
               'text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)]',
-              'transition-colors duration-150 disabled:opacity-40',
+              'transition-colors duration-150 disabled:opacity-40 motion-reduce:transition-none',
             )}
           >
             <X className="size-4" aria-hidden="true" />
             {t('settings.removeStamp')}
           </button>
         )}
+
+        {current && confirmDelete && (
+          <div className="flex items-center gap-2 rounded-lg border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.05)] p-2">
+            <span className="flex-1 text-xs text-[hsl(var(--color-destructive))]">
+              {t('settings.brandAssets.confirmDelete')}
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleConfirmRemove()}
+              disabled={isBusy}
+              className="rounded-md bg-[hsl(var(--color-destructive))] px-2.5 py-1 text-xs font-medium text-[hsl(var(--fg-on-accent))] disabled:opacity-40"
+            >
+              {t('settings.brandAssets.confirmDeleteButton')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              disabled={isBusy}
+              className="rounded-md border border-[hsl(var(--border-default))] px-2.5 py-1 text-xs text-[hsl(var(--fg-secondary))]"
+            >
+              {t('settings.brandAssets.cancelDeleteButton')}
+            </button>
+          </div>
+        )}
       </div>
 
-      {error && <p className="text-xs text-[hsl(var(--color-destructive))]">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+          {error}
+        </p>
+      )}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/svg+xml"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -512,10 +752,16 @@ BrandImageSlot.displayName = 'BrandImageSlot'
 
 export const BusinessStampSection = memo(function BusinessStampSection() {
   const tOriginal = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
-    return v && v !== key ? v : (fallback ?? key)
-  }
+  const t: TranslateFn = useCallback(
+    (key, values) => {
+      const v = (tOriginal as (k: string, vals?: Record<string, string | number>) => string)(
+        key,
+        values,
+      )
+      return v && v !== key ? v : key
+    },
+    [tOriginal],
+  )
   const { data: workspaces } = useWorkspaces()
   const stampAvailability = useActionAvailability('settings.business_stamp')
 
@@ -554,6 +800,7 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
               t={t}
               workspaceId={workspace?.id}
               label={t(image.labelKey)}
+              assetType={image.assetType}
               field={image.field}
               column={image.column}
               current={workspace?.[image.column] ?? null}

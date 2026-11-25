@@ -29,15 +29,22 @@ export function readProducts(data: unknown): PickerProduct[] {
   return Array.isArray(list) ? (list as PickerProduct[]) : []
 }
 
+export interface ProductPriceSource {
+  sell_price?: number | null | undefined
+  sellPrice?: number | null | undefined
+  buy_price?: number | null | undefined
+  buyPrice?: number | null | undefined
+}
+
 /**
  * What the business PAID for it, whichever casing the row came back in — the
  * figure a production component is costed at. 0 when it was never recorded.
  */
-export function productCost(product: PickerProduct): number {
+export function productCost(product: ProductPriceSource): number {
   return Number(product.buyPrice ?? product.buy_price ?? 0) || 0
 }
 
 /** The sell price, whichever casing the row came back in. */
-export function productPrice(product: PickerProduct): number {
+export function productPrice(product: ProductPriceSource): number {
   return Number(product.sellPrice ?? product.sell_price ?? 0) || 0
 }

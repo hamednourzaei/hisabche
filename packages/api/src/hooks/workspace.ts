@@ -80,6 +80,91 @@ export function useUpdateWorkspace() {
   })
 }
 
+export interface UploadBrandAssetInput {
+  workspaceId: string
+  assetType: 'logo' | 'stamp' | 'signature'
+  mimeType: string
+  dataBase64: string
+  originalBytes?: number | undefined
+  processingDurationMs?: number | undefined
+  signal?: AbortSignal | undefined
+  onProgress?: ((percent: number) => void) | undefined
+}
+
+export interface UploadBrandAssetResponse {
+  workspaceId: string
+  assetType: 'logo' | 'stamp' | 'signature'
+  field: 'logoUrl' | 'stampUrl' | 'signatureUrl'
+  column: 'logo_url' | 'stamp_url' | 'signature_url'
+  url: string
+  mimeType: string
+  originalBytes: number
+  storedBytes: number
+  width: number | null
+  height: number | null
+  sha256: string
+  traceId: string
+  workspace: Record<string, unknown>
+}
+
+export function useUploadBrandAsset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: UploadBrandAssetInput): Promise<UploadBrandAssetResponse> => {
+      const { data } = await apiClient.post<UploadBrandAssetResponse>(
+        `/workspaces/${input.workspaceId}/brand-assets/${input.assetType}`,
+        {
+          mimeType: input.mimeType,
+          dataBase64: input.dataBase64,
+          originalBytes: input.originalBytes,
+          processingDurationMs: input.processingDurationMs,
+        },
+        {
+          ...(input.signal ? { signal: input.signal } : {}),
+          onUploadProgress: (evt) => {
+            if (evt.lengthComputable && evt.total && evt.total > 0 && input.onProgress) {
+              input.onProgress(Math.min(100, Math.round((evt.loaded / evt.total) * 100)))
+            }
+          },
+        },
+      )
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.all })
+      qc.invalidateQueries({ queryKey: workspaceKeys.detail(variables.workspaceId) })
+    },
+  })
+}
+
+export interface DeleteBrandAssetInput {
+  workspaceId: string
+  assetType: 'logo' | 'stamp' | 'signature'
+  signal?: AbortSignal | undefined
+}
+
+export function useDeleteBrandAsset() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: DeleteBrandAssetInput) => {
+      const { data } = await apiClient.delete<{
+        deleted: boolean
+        storageCleaned: boolean
+        traceId: string
+        workspace: Record<string, unknown>
+      }>(`/workspaces/${input.workspaceId}/brand-assets/${input.assetType}`, {
+        data: { confirm: true },
+        ...(input.signal ? { signal: input.signal } : {}),
+      })
+      return data
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: workspaceKeys.all })
+      qc.invalidateQueries({ queryKey: workspaceKeys.detail(variables.workspaceId) })
+    },
+  })
+}
+
 export function useInviteMember() {
   const qc = useQueryClient()
   return useMutation({

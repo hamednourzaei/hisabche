@@ -2140,6 +2140,18 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
       { file: `${SVC}/transport/transport.service.ts`, text: 'pod_recorded_at: recordedAt' },
     ],
   },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'POST /api/workspaces/:id/brand-assets/:assetType',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/brand-asset.service.ts`, text: 'replaceBrandAsset' }],
+  },
+  {
+    routeFile: 'workspace.routes.ts',
+    route: 'DELETE /api/workspaces/:id/brand-assets/:assetType',
+    mechanisms: ['check-then-write'],
+    evidence: [{ file: `${SVC}/brand-asset.service.ts`, text: 'deleteBrandAsset' }],
+  },
 ]
 
 /** Route files whose every mutating handler must appear above. */

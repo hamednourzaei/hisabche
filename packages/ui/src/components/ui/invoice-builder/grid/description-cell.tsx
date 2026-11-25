@@ -32,7 +32,7 @@ import { ChevronDown, Package, Search } from 'lucide-react'
 
 import { cn } from '../../../../lib/utils'
 import type { PickerRow } from '../../../../lib/invoices/picker-rows'
-import { usePickerRows } from '../../../../hooks/invoices/use-picker-rows'
+import { usePickerRows, type PickedProduct } from '../../../../hooks/invoices/use-picker-rows'
 
 export interface DescriptionCellProps {
   value: string
@@ -52,7 +52,7 @@ export interface DescriptionCellProps {
    * reason to buy it, not a reason to hide it from the recipe.
    */
   pickAs?: 'sale' | 'component' | undefined
-  onPickProduct: (product: { id: string; name: string; price: string; unit: string }) => void
+  onPickProduct: (product: PickedProduct) => void
   onKeyDown: (event: KeyboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => void
 }
 

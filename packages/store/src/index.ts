@@ -33,6 +33,8 @@ export { usePreferencesStore } from './slices/preferences.slice'
 export {
   useInvoiceDraftStore,
   invoiceDraftSnapshot,
+  type DraftAutoPricedLine,
+  type RepricedLineUpdate,
   type InvoiceDraftState,
   type InvoiceDraftCustomer,
   type InvoiceDraftSnapshot,

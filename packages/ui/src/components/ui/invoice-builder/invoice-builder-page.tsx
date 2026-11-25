@@ -35,6 +35,7 @@ import { InvoiceSummaryPanel } from './invoice-summary-panel'
 import { TableSettingsDialog } from './table-settings-dialog'
 import { GridToolbar } from './grid/grid-toolbar'
 import { InvoiceItemsGrid } from './grid/invoice-items-grid'
+import type { PickedProduct } from '../../../hooks/invoices/use-picker-rows'
 import { ColumnsSheet } from './mobile/columns-sheet'
 import { InvoiceBuilderMobile } from './mobile/invoice-builder-mobile'
 import { ItemEditorSheet } from './mobile/item-editor-sheet'
@@ -79,10 +80,7 @@ export interface InvoiceBuilderPageProps {
   onRemoveRow: (rowId: string) => void
   onDuplicateRow: (rowId: string) => void
   onRemoveLastRow: () => void
-  onPickProduct: (
-    rowId: string,
-    product: { id: string; name: string; price: string; unit: string },
-  ) => void
+  onPickProduct: (rowId: string, product: PickedProduct) => void
   /** The size / colour of a line whose product has variants. */
   onPickVariant: (rowId: string, variantId: string | undefined) => void
   onAddColumn: (column: InvoiceColumn) => void

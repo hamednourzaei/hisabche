@@ -34,6 +34,7 @@ import { Switch } from '../../switch'
 import { cn } from '../../../../lib/utils'
 import { UNIT_CHOICES } from '../grid/grid-cell'
 import { ProductSearchSheet } from './product-search-sheet'
+import type { PickedProduct } from '../../../../hooks/invoices/use-picker-rows'
 import { RowVariantPicker } from '../row-variant-picker'
 
 export interface ItemEditorSheetProps {
@@ -45,10 +46,7 @@ export interface ItemEditorSheetProps {
   columns: readonly InvoiceColumn[]
   ctx: GridMoneyContext
   onCellChange: (rowId: string, columnId: string, value: string) => void
-  onPickProduct: (
-    rowId: string,
-    product: { id: string; name: string; price: string; unit: string },
-  ) => void
+  onPickProduct: (rowId: string, product: PickedProduct) => void
   /** The size / colour of a line whose product has variants. */
   onPickVariant: (rowId: string, variantId: string | undefined) => void
 }

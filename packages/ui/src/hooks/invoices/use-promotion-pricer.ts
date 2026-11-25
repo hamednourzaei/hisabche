@@ -33,6 +33,7 @@ import {
 } from '@hisabche/validation'
 
 import { productPrice, type PickerProduct } from '../../lib/invoices/products'
+import { tradingSideOf } from '../../lib/invoices/exchange-rate'
 
 export interface PickedPrice {
   price: number
@@ -45,11 +46,13 @@ export interface PickedPrice {
   goldSnapshot?: GoldLineSnapshot | undefined
 }
 
-export function usePromotionPricer(): (product: PickerProduct) => PickedPrice {
-  const transactionType = useInvoiceDraftStore((s) => s.transactionType)
+export function usePromotionPricer(
+  overrideKind?: string | null,
+): (product: PickerProduct) => PickedPrice {
+  const storedType = useInvoiceDraftStore((s) => s.transactionType)
   const customerId = useInvoiceDraftStore((s) => s.customers[0]?.id ?? null)
   const currency = useCurrencyStore((s) => s.primaryCurrency)
-  const isSale = transactionType === 'sale'
+  const isSale = tradingSideOf(overrideKind ?? storedType) === 'sale'
   const saved = usePromotions({ activeOnly: true, enabled: isSale })
   const customerList = useCustomerPriceList(customerId, { enabled: isSale })
   const metalRate = useLatestMetalRate()

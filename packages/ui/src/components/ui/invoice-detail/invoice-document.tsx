@@ -622,10 +622,10 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
               <div className="text-center">
                 {business.stampUrl || business.signatureUrl ? (
                   <div className="flex items-end justify-center gap-6" data-seller-marks="">
-                    {[business.stampUrl, business.signatureUrl].map((src) =>
+                    {[business.stampUrl, business.signatureUrl].map((src, idx) =>
                       src ? (
                         <Image
-                          key={src}
+                          key={`${idx}-${src}`}
                           unoptimized
                           loading="eager"
                           width={160}

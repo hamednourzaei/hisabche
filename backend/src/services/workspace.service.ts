@@ -844,7 +844,7 @@ export class WorkspaceService {
   }
 
   // ─── Permission Helpers ─────────────────────────────────────
-  private async requireMember(userId: string, workspaceId: string) {
+  public async requireMember(userId: string, workspaceId: string) {
     const { data, error } = await supabase
       .from('workspace_members')
       .select('role')
@@ -856,7 +856,7 @@ export class WorkspaceService {
     return data
   }
 
-  private async requireRole(userId: string, workspaceId: string, requiredRole: string) {
+  public async requireRole(userId: string, workspaceId: string, requiredRole: string) {
     const member = await this.requireMember(userId, workspaceId)
     const hierarchy: Record<string, number> = { owner: 4, admin: 3, member: 2, viewer: 1 }
 

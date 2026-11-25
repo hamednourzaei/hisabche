@@ -111,3 +111,8 @@ sometimes a copy of `fa` and sometimes its own wording.
   copy afterwards.
 - Edit source while a build is running in the background.
 - `cat > file` without a heredoc, or `python -` — both hang here.
+
+## Syncing `.agents/skills/` and `.claude/skills/`
+
+- `.prettierignore:4` excludes `.claude/`. Running `npx prettier --write` on both `.agents/skills/...` and `.claude/skills/...` reformats `.agents/skills/` (for example widening Markdown tables) while silently skipping `.claude/skills/`.
+- **Rule:** When authoring or updating any mirrored `hisabche-*` skill, format the `.agents/skills/<name>/SKILL.md` copy with Prettier first, then mirror those exact formatted bytes into `.claude/skills/<name>/SKILL.md`.

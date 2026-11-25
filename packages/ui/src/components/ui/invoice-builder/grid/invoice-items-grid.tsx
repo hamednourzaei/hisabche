@@ -37,6 +37,7 @@ import { cn } from '../../../../lib/utils'
 import { DescriptionCell } from './description-cell'
 import { GridCell } from './grid-cell'
 import { nameOfCurrency } from '../../../../lib/currency-name'
+import type { PickedProduct } from '../../../../hooks/invoices/use-picker-rows'
 import { RowVariantPicker } from '../row-variant-picker'
 
 export interface InvoiceItemsGridProps {
@@ -48,10 +49,7 @@ export interface InvoiceItemsGridProps {
   selectedColumnId: string | null
   onSelectColumn: (id: string | null) => void
   onCellChange: (rowId: string, columnId: string, value: string) => void
-  onPickProduct: (
-    rowId: string,
-    product: { id: string; name: string; price: string; unit: string },
-  ) => void
+  onPickProduct: (rowId: string, product: PickedProduct) => void
   /** The size / colour of a line whose product has variants. Absent where lines are not sold (a recipe). */
   onPickVariant?: ((rowId: string, variantId: string | undefined) => void) | undefined
   onMoveColumn: (id: string, direction: -1 | 1) => void

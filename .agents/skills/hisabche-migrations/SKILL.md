@@ -135,3 +135,22 @@ error and return the true answer. Any other failure stays a failure.
 
 `Post-migration verification query generated — PENDING HUMAN CONFIRMATION`,
 and the scripts listed in the order they must be run.
+
+## Bundling & Re-Running Historical Migrations Safely (`ROOT-CAUSE CONFIRMED`)
+
+Re-running or combining historical `docs/*-migration.sql` files onto a live database whose schema has already moved forward triggers specific repeatable failures:
+
+1. **Immutable / Append-Only Table Backfills (`23505: AUDIT_LOG_IMMUTABLE`)**
+   - **Cause:** `docs/live-reconciliation-migration.sql:236-259` executes an unguarded `UPDATE audit_logs SET workspace_id = ...`. Once `docs/admin-02-security-migration.sql` is live, `audit_logs_immutable_trigger` blocks all `UPDATE`/`DELETE` on `audit_logs`.
+   - **Fix & Prevention:** Guard any backfill `UPDATE` on trigger-protected append-only tables by checking `pg_trigger` first (`NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'audit_logs_immutable_trigger' AND NOT tgisinternal)`).
+
+2. **Dropping & Narrowing Already-Widened CHECK Constraints (`23514` on `accounts_role_check`)**
+   - **Cause:** Early scripts (`docs/accounting-core-migration.sql:28-35`) run `ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_role_check; ALTER TABLE accounts ADD CONSTRAINT accounts_role_check CHECK (...)` with only the initial roles, while later additive migrations (e.g. `docs/accounts-role-deferred-and-loss-01-migration.sql:26-41`) widened the allowlist. Re-running the earlier definition fails with `23514` against rows holding newer roles.
+   - **Fix & Prevention:** Never emit bare unguarded `DROP CONSTRAINT IF EXISTS` + narrower re-creation in a combined or re-runnable bundle; guard with `pg_constraint` checks (keeping wider constraints intact), add new `CHECK`/`FOREIGN KEY` constraints with `NOT VALID`, and guard standalone `VALIDATE CONSTRAINT` with `EXCEPTION` handling or pre-checks when legacy dirty rows may exist.
+
+3. **Service Code Deployed Ahead of Live SQL (`42703` / `PGRST202`)**
+   - **Cause:** Queries selecting columns added later (e.g. `suppliers.notes` in `backend/src/services/supplier/supplier.service.ts:29` vs `docs/base-schema-migration.sql:696-706`) raise `42703`, and fail-closed RPC calls (e.g. `invoice_write_document` with `p_payments` in `backend/src/services/invoice.service.ts:3105-3127`) intentionally raise `INVOICE_PAYMENT_ATOMIC_MIGRATION_REQUIRED` (`PGRST202`) until `docs/invoice-write-payment-01-migration.sql` runs.
+   - **Diagnostic Rule:** Check `docs/MIGRATIONS-PENDING.md` and `information_schema.columns` / `pg_proc` before assuming a backend bug.
+
+4. **Regression Verification**
+   - Validate bundled migration SQL before execution using `scripts/__tests__/combined-bundle-safety.test.mjs` (verifies `audit_logs_immutable_trigger` guard, zero unguarded top-level `DROP CONSTRAINT`, `NOT VALID` on `CHECK`/`FOREIGN KEY`, guarded `VALIDATE CONSTRAINT`, balanced `BEGIN`/`COMMIT`, zero `CONCURRENTLY`).

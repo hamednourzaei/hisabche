@@ -112,3 +112,8 @@ cd apps/desktop && npx electron-vite build     # catches shim/import breakage
 - Adding a web route without the desktop route.
 - Hardcoded colors, or `text-gray-500` where a semantic token exists.
 - Assuming a prop typed `string` is present at runtime — server data is optional.
+
+## Invoice Builder Pricing (`ROOT-CAUSE CONFIRMED`)
+
+- **One pricing engine for `sale`, `purchase`, `pre_sale`, and `pre_purchase`:** All trading and advance document kinds map through `tradingSideOf()`, `productDualBooksPrices()`, and `planRepricedLines()` (`packages/ui/src/lib/invoices/exchange-rate.ts`). Never maintain a separate pricing engine for pre-sales/pre-purchases.
+- **Store dual-side books prices (`sellBooksPrice` + `buyBooksPrice`) in `useInvoiceDraftStore.autoPriced`:** Keeping only a single-side price in local component `useState` froze line prices when switching document types or returning from `/invoices/new/preview`. Preserve manual price edits (`currentPrice !== filled`), clear empty target sides (never leak sell price into purchase), and verify with `packages/ui/src/__tests__/invoice-type-switch-reprice.test.tsx`.

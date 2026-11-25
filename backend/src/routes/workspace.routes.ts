@@ -11,8 +11,15 @@ import {
   acceptInviteSchema,
   createMemberDirectBodySchema,
   setMemberSuspensionSchema,
+  isBrandAssetType,
+  sanitizeSvgBrandAsset,
 } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
+import {
+  BrandAssetError,
+  BrandAssetService,
+  verifyBrandAssetSignature,
+} from '../services/brand-asset.service'
 import { BackupService } from '../services/workspace/backup.service'
 import { backupToMarkdown, backupToXlsx } from '../services/workspace/backup-formats'
 import { BillingService } from '../services/billing.service'
@@ -27,6 +34,7 @@ import { toJsonSchema } from '../utils/json-schema'
 
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const svc = new WorkspaceService()
+  const brandAssetSvc = new BrandAssetService(svc)
   const backupSvc = new BackupService()
   const billingForBackup = new BillingService()
 
@@ -210,10 +218,30 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
     async (req, reply) => {
       try {
+        const parsedBody = updateWorkspaceBodySchema.parse(req.body)
+        // Sanitize any inline SVG data URI sent through legacy PATCH /api/workspaces/:id
+        const legacyFields = ['logoUrl', 'stampUrl', 'signatureUrl'] as const
+        for (const f of legacyFields) {
+          const val = parsedBody[f]
+          if (typeof val === 'string' && val.startsWith('data:image/svg+xml')) {
+            const commaIdx = val.indexOf(',')
+            if (commaIdx !== -1) {
+              const meta = val.slice(0, commaIdx)
+              const rawPayload = val.slice(commaIdx + 1)
+              const svgText = meta.includes(';base64')
+                ? Buffer.from(rawPayload, 'base64').toString('utf8')
+                : decodeURIComponent(rawPayload)
+              const check = sanitizeSvgBrandAsset(svgText)
+              if (!check.ok) {
+                return reply.code(400).send({ error: check.reason, code: check.code })
+              }
+            }
+          }
+        }
         const result = await svc.updateWorkspace(
           req.userId,
           (req.params as { id: string }).id,
-          updateWorkspaceBodySchema.parse(req.body),
+          parsedBody,
         )
         await clearCache(`workspace:${(req.params as { id: string }).id}`)
         await clearCache('workspaces:*')
@@ -492,4 +520,164 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  const uploadBrandAssetBodySchema = z.object({
+    mimeType: z.string().min(1).max(100),
+    dataBase64: z.string().min(1).max(3_000_000),
+    originalBytes: z.number().int().positive().optional(),
+    processingDurationMs: z.number().nonnegative().optional(),
+  })
+
+  const deleteBrandAssetBodySchema = z.object({
+    confirm: z.literal(true),
+  })
+
+  fastify.post(
+    '/api/workspaces/:id/brand-assets/:assetType',
+    {
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
+      schema: { body: toJsonSchema(uploadBrandAssetBodySchema) },
+    },
+    async (req, reply) => {
+      try {
+        const { id, assetType } = req.params as { id: string; assetType: string }
+        if (!isBrandAssetType(assetType)) {
+          return reply.code(400).send({
+            error: 'Invalid brand asset type',
+            code: 'INVALID_FILE_FORMAT',
+          })
+        }
+        const body = uploadBrandAssetBodySchema.parse(req.body)
+        const fileBuffer = Buffer.from(body.dataBase64, 'base64')
+        const result = await brandAssetSvc.replaceBrandAsset({
+          userId: req.userId,
+          workspaceId: id,
+          assetType,
+          fileBuffer,
+          declaredMimeType: body.mimeType,
+          originalBytes: body.originalBytes,
+          processingDurationMs: body.processingDurationMs,
+        })
+        return reply.send(result)
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          return reply
+            .code(400)
+            .send({ error: 'Validation', code: 'INVALID_FILE_FORMAT', details: e.errors })
+        }
+        if (e instanceof BrandAssetError) {
+          return reply.code(e.statusCode).send({
+            error: e.message,
+            code: e.code,
+            retryable: e.retryable,
+            previousAssetIntact: e.previousAssetIntact,
+          })
+        }
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message, code: 'PERMISSION_DENIED' })
+        }
+        fastify.log.error(e)
+        return reply
+          .code(500)
+          .send({ error: 'Failed to upload brand asset', code: 'INTERNAL_SERVER_ERROR' })
+      }
+    },
+  )
+
+  fastify.delete(
+    '/api/workspaces/:id/brand-assets/:assetType',
+    {
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
+      schema: { body: toJsonSchema(deleteBrandAssetBodySchema) },
+    },
+    async (req, reply) => {
+      try {
+        const { id, assetType } = req.params as { id: string; assetType: string }
+        if (!isBrandAssetType(assetType)) {
+          return reply.code(400).send({
+            error: 'Invalid brand asset type',
+            code: 'INVALID_FILE_FORMAT',
+          })
+        }
+        deleteBrandAssetBodySchema.parse(req.body)
+        const result = await brandAssetSvc.deleteBrandAsset({
+          userId: req.userId,
+          workspaceId: id,
+          assetType,
+        })
+        return reply.send(result)
+      } catch (e) {
+        if (e instanceof z.ZodError) {
+          return reply
+            .code(400)
+            .send({ error: 'Confirmation is required', code: 'PERMISSION_DENIED' })
+        }
+        if (e instanceof BrandAssetError) {
+          return reply.code(e.statusCode).send({
+            error: e.message,
+            code: e.code,
+            retryable: e.retryable,
+            previousAssetIntact: e.previousAssetIntact,
+          })
+        }
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message, code: 'PERMISSION_DENIED' })
+        }
+        fastify.log.error(e)
+        return reply
+          .code(500)
+          .send({ error: 'Failed to delete brand asset', code: 'INTERNAL_SERVER_ERROR' })
+      }
+    },
+  )
+
+  fastify.get('/api/workspaces/:id/brand-assets/:assetType/content', async (req, reply) => {
+    try {
+      const { id, assetType } = req.params as { id: string; assetType: string }
+      if (!isBrandAssetType(assetType)) {
+        return reply
+          .code(400)
+          .send({ error: 'Invalid brand asset type', code: 'INVALID_FILE_FORMAT' })
+      }
+      const query = req.query as { path?: string; exp?: string; sig?: string }
+      const objectPath = query.path ?? ''
+      const expSec = Number(query.exp ?? '0')
+      const sig = query.sig ?? ''
+
+      if (sig) {
+        if (!verifyBrandAssetSignature(id, objectPath, expSec, sig)) {
+          return reply
+            .code(403)
+            .send({ error: 'Invalid or expired asset signature', code: 'PERMISSION_DENIED' })
+        }
+      } else {
+        await authenticate(req, reply)
+        if (reply.sent) return
+        await svc.requireMember(req.userId, id)
+      }
+
+      const { buffer, mimeType } = await brandAssetSvc.readBrandAssetContent({
+        workspaceId: id,
+        objectPath,
+      })
+      reply.header('Content-Type', mimeType)
+      reply.header('X-Content-Type-Options', 'nosniff')
+      reply.header('Cache-Control', 'private, max-age=300')
+      if (mimeType === 'image/svg+xml') {
+        reply.header(
+          'Content-Security-Policy',
+          "sandbox; default-src 'none'; style-src 'unsafe-inline'",
+        )
+      }
+      return reply.send(buffer)
+    } catch (e) {
+      if (e instanceof BrandAssetError) {
+        return reply.code(e.statusCode).send({ error: e.message, code: e.code })
+      }
+      if (e instanceof BaseError && e.isOperational) {
+        return reply.code(e.statusCode).send({ error: e.message, code: 'PERMISSION_DENIED' })
+      }
+      return reply.code(404).send({ error: 'Brand asset not found', code: 'WORKSPACE_NOT_FOUND' })
+    }
+  })
 }

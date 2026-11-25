@@ -1,0 +1,54 @@
+---
+name: hisabche-knowledge-index
+description: Central Engineering Knowledge Index and Pre-Task Learning protocol for Hisabche. Use before debugging, implementing, or auditing to look up documented incidents, root causes, and mandatory prevention rules across existing skills.
+---
+
+# Hisabche Continuous Engineering Knowledge Index
+
+## Skill Directory Parity (Critical)
+
+Hisabche maintains **two separate skill directories** (not symlinks):
+
+- `.claude/skills/<skill-name>/SKILL.md` — auto-discovered by **Claude Code**
+- `.agents/skills/<skill-name>/SKILL.md` — auto-discovered by **Antigravity / Codex**
+
+**Every `hisabche-*` skill update or addition (including this index) MUST be mirrored identically into both `.claude/skills/` and `.agents/skills/`.**
+
+## Pre-Task Learning Protocol
+
+Before starting any implementation, debugging, refactoring, testing, or deployment task:
+
+1. Run `pnpm code-intel prepare` (`AGENTS.md` §0.6). For errors or stack traces, follow `AGENTS.md` §0.5 (`ERROR-FIRST`: inspect the failing `file:line` first).
+2. Identify the technical domain(s) involved and check the **Incident & Skill Routing Table** below.
+3. Read the matching skill(s) in `.claude/skills/<skill-name>/SKILL.md` (and `.agents/skills/<skill-name>/SKILL.md`).
+4. Apply every documented prevention rule before writing or modifying code.
+
+---
+
+## Incident & Skill Routing Table
+
+| Error / Symptom / Domain                                                                                  | Documented Incident / Root Cause                                                                                                                                                                                                                                                                                                                                                                                     | Canonical Skill           | Status / Confidence    |
+| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------- |
+| `WRITER_FENCING_SECRET (>= 16 chars) is required in production` at boot                                   | `globalFencingEngine` instantiates at module import time (`backend/src/db/fencing.ts`); `JWT_SECRET` fallback coupled keys; untrimmed secret returned; `DEV_FENCING_SECRET` not rejected in prod                                                                                                                                                                                                                     | `hisabche-postgres-ha-dr` | `ROOT-CAUSE CONFIRMED` |
+| `GET /api/health/db` exposes `fenceSignature`                                                             | `getDatabaseRoutingOverview()` (`backend/src/db/routing.ts`) returned raw `fenceSignature` on an unauthenticated `publicPaths` route                                                                                                                                                                                                                                                                                 | `hisabche-postgres-ha-dr` | `ROOT-CAUSE CONFIRMED` |
+| `FencingToken` replay / unwired distributed lease store                                                   | `assertValidWriter()` lacked `issuedAt` TTL/clock-skew checks; `bindDefaultDistributedLeaseStore()` was not called in `backend/src/index.ts` `start()`                                                                                                                                                                                                                                                               | `hisabche-postgres-ha-dr` | `ROOT-CAUSE CONFIRMED` |
+| `NEXT_PUBLIC_ENCRYPTION_KEY (>= 16 chars) is required in production for auth storage encryption` on login | Next.js inlines `process.env.NEXT_PUBLIC_ENCRYPTION_KEY` at **build time**; missing/short build env stays `undefined` in browser JS and `resolveAuthEncryptionKey()` (`packages/store/src/slices/auth.slice.ts:16-48`) / `resolveEncryptionKey()` (`packages/store/src/lib/encryption.ts:8-21`) fails lazily on login `setItem`                                                                                      | `hisabche-auth`           | `ROOT-CAUSE CONFIRMED` |
+| `ERROR: 23505: AUDIT_LOG_IMMUTABLE: audit_logs rows can never be updated` on migration re-run             | `docs/live-reconciliation-migration.sql:236-259` executes unguarded `UPDATE audit_logs` after `audit_logs_immutable_trigger` (`docs/admin-02-security-migration.sql`) is already active on live DB                                                                                                                                                                                                                   | `hisabche-migrations`     | `ROOT-CAUSE CONFIRMED` |
+| `ERROR: 23514: check constraint "accounts_role_check" ... violated` when bundling/re-running SQL          | `docs/accounting-core-migration.sql:28-35` drops and recreates a narrower `accounts_role_check` over rows created after later widening migrations (e.g. `docs/accounts-role-deferred-and-loss-01-migration.sql:26-41`)                                                                                                                                                                                               | `hisabche-migrations`     | `ROOT-CAUSE CONFIRMED` |
+| `42703: column suppliers.notes does not exist` or `PGRST202` `INVOICE_PAYMENT_ATOMIC_MIGRATION_REQUIRED`  | Deployed service queries/RPCs outpaced live SQL migrations (`backend/src/services/supplier/supplier.service.ts:29` vs `docs/base-schema-migration.sql:696-706`; `backend/src/services/invoice.service.ts:3105-3127` fail-closed RPC guard)                                                                                                                                                                           | `hisabche-migrations`     | `ROOT-CAUSE CONFIRMED` |
+| `.claude/skills/` & `.agents/skills/` drift after `prettier --write`                                      | `.prettierignore:4` excludes `.claude/`, so `prettier --write` reformats Markdown tables only in `.agents/skills/` and silently skips `.claude/skills/`; format `.agents/skills/` first and mirror exact bytes to `.claude/skills/`                                                                                                                                                                                  | `hisabche-scripted-edits` | `ROOT-CAUSE CONFIRMED` |
+| Invoice line prices freeze when switching `sale`/`purchase`/`pre_sale`/`pre_purchase`                     | Single-side local `autoPriced` state (`packages/ui/src/components/ui/invoice-builder/containers/invoice-builder-container.tsx`) ignored type switches and lost state across preview remounts; now unified in `tradingSideOf`/`productDualBooksPrices`/`planRepricedLines` (`packages/ui/src/lib/invoices/exchange-rate.ts`) + `useInvoiceDraftStore.autoPriced` (`packages/store/src/slices/invoice-draft.slice.ts`) | `hisabche-ui`             | `ROOT-CAUSE CONFIRMED` |
+| Tenancy fallback / `PGRST204` / schema vs docs drift                                                      | `DATABASE_SCHEMA.md` drifted from live Postgres; resolvers failed open                                                                                                                                                                                                                                                                                                                                               | `hisabche-lessons`        | `ROOT-CAUSE CONFIRMED` |
+| Windows PowerShell `git` pipeline error / `EBUSY` on plugin skill dirs                                    | `git` resolved to `C:\Windows\system32\git` in PowerShell (use `git.exe` or `cmd /c`); `rmSync` on watched `.gemini/config/plugins/` dirs hit `EBUSY` (update `SKILL.md` in-place)                                                                                                                                                                                                                                   | `hisabche-scripted-edits` | `ROOT-CAUSE CONFIRMED` |
+| Unsanitized SVG Data URL / Base64 bloat in `workspaces` text columns                                      | `settings-page.tsx` sent raw Base64 (`FileReader.readAsDataURL`) up to 10MB and accepted unsanitized `image/svg+xml`; fixed with `sanitizeSvgBrandAsset` + `BrandAssetService` (`business-assets/{workspaceId}/...`) + signed retrieval                                                                                                                                                                              | `hisabche-backend`        | `ROOT-CAUSE CONFIRMED` |
+| `exactOptionalPropertyTypes` rejects `{ signal: AbortSignal \| undefined }` on Axios configs              | Always spread optional properties conditionally `...(signal ? { signal } : {})` when calling `apiClient`                                                                                                                                                                                                                                                                                                             | `hisabche-ui`             | `ROOT-CAUSE CONFIRMED` |
+
+---
+
+## Mandatory Knowledge Capture Rules
+
+1. **Extend before creating:** Never create duplicate skills; extend existing `hisabche-*` skills when an incident fits an existing domain, and record app-specific bug instances in `.claude/BUG-REGISTRY.md` / `.claude/lessons-learned.md`.
+2. **Mirror both skill trees:** Keep every `hisabche-*` skill and this index identical across `.claude/skills/` and `.agents/skills/`.
+3. **Never leak secrets or guess facts:** Never record passwords, tokens, `.env*` contents, or unverified hypotheses as confirmed facts. Tag unverified items explicitly (`LIKELY CAUSE`, `UNVERIFIED HYPOTHESIS`, or `BLOCKED / NOT REPRODUCED`).
+4. **Actionable structure:** Every captured incident must state: symptom, `file:line` root cause, diagnostic check, verified fix + anti-patterns, prevention rule, and regression test requirement.
+5. **Post-edit protocol:** Run `pnpm code-intel update` (verify `FRESH`) and check parity after skill/code edits.

@@ -1538,3 +1538,4 @@ export {
 
 export * from './schemas/crm-appointment.schema'
 export * from './schemas/infrastructure-settings.schema'
+export * from './brand-assets'

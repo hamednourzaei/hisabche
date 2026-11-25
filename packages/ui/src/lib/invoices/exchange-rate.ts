@@ -10,7 +10,14 @@
 // ============================================
 
 import { FRACTION_DIGITS, isMetal, metalFactor, metalFractionDigits } from '@hisabche/formatting'
-import { parseCellNumber } from '@hisabche/validation'
+import {
+  COLUMN,
+  parseCellNumber,
+  type GoldLineSnapshot,
+  type InvoiceGridRow,
+} from '@hisabche/validation'
+
+import { productCost, productPrice, type ProductPriceSource } from './products'
 
 /**
  * `from` units of the invoice's currency are worth `to` units of the books currency.
@@ -97,22 +104,87 @@ export function inBooksAtRate(
   return Math.round(shown * factor) / factor
 }
 
+export type TradingSide = 'sale' | 'purchase'
+
+/**
+ * Maps all four document kinds (`sale`, `purchase`, `pre_sale`, `pre_purchase`)
+ * onto ONE canonical pricing direction (`sale` vs `purchase`). Advances share
+ * the exact same pricing rules as trading invoices rather than keeping a second engine.
+ */
+export function tradingSideOf(kind: string | null | undefined): TradingSide | null {
+  if (kind === 'purchase' || kind === 'pre_purchase') return 'purchase'
+  if (kind === 'sale' || kind === 'pre_sale') return 'sale'
+  return null
+}
+
 /** A line whose price the app filled from a product (not typed by a person). */
 export interface AutoPricedLine {
   /** The product's price in the BOOKS currency. */
   booksPrice: string
+  /** Books-currency selling price (`sale` and `pre_sale`). */
+  sellBooksPrice?: string | undefined
+  /** Books-currency buying price (`purchase` and `pre_purchase`). */
+  buyBooksPrice?: string | undefined
   /** What was written into the line — compared to tell a later hand edit apart. */
   filled: string
+  /** Locked metal-rate snapshot attached only on the sale side. */
+  saleGoldSnapshot?: GoldLineSnapshot | undefined
 }
 
 /**
- * When the invoice's currency or rate changes, every line the APP priced is
- * priced again from the product's books price (owner, 18 Oct 2026: a 30M
- * afghani gearbox picked first, then «دالر» and «1 = 65» chosen — the line
- * stayed 30,000,000 and was simply called dollars: a 60M DOLLAR invoice).
+ * Extracts both sides' books-currency unit prices for a warehouse product so
+ * switching between sale, purchase, pre_sale, and pre_purchase reprices from ONE source.
+ */
+export function productDualBooksPrices(
+  product: ProductPriceSource,
+  saleQuote?: { price: number; goldSnapshot?: GoldLineSnapshot | undefined } | undefined,
+): {
+  sellBooksPrice: string
+  buyBooksPrice: string
+  saleGoldSnapshot?: GoldLineSnapshot | undefined
+} {
+  const rawSell = saleQuote ? saleQuote.price : productPrice(product)
+  const rawBuy = productCost(product)
+  return {
+    sellBooksPrice: rawSell > 0 ? String(rawSell) : '',
+    buyBooksPrice: rawBuy > 0 ? String(rawBuy) : '',
+    ...(saleQuote?.goldSnapshot ? { saleGoldSnapshot: saleQuote.goldSnapshot } : {}),
+  }
+}
+
+/** Resolves the books-currency unit price to use for `transactionType` (`sale`/`pre_sale` vs `purchase`/`pre_purchase`). */
+export function booksPriceForSide(
+  line: Pick<AutoPricedLine, 'booksPrice' | 'sellBooksPrice' | 'buyBooksPrice'>,
+  transactionType?: string | null | undefined,
+): string {
+  const side = tradingSideOf(transactionType)
+  if (side === 'purchase') {
+    return line.buyBooksPrice !== undefined ? line.buyBooksPrice : line.booksPrice
+  }
+  if (side === 'sale') {
+    return line.sellBooksPrice !== undefined ? line.sellBooksPrice : line.booksPrice
+  }
+  return line.booksPrice
+}
+
+export interface RepricedLinePlan {
+  rowId: string
+  unitPrice: string
+  booksPrice: string
+  filled: string
+  goldSnapshot?: GoldLineSnapshot | undefined
+}
+
+/**
+ * When the invoice's currency, rate, or document type (`sale` / `purchase` /
+ * `pre_sale` / `pre_purchase`) changes, every line the APP priced is priced
+ * again from the product's books price (owner, 18 Oct 2026: a 30M afghani
+ * gearbox picked first, then «دالر» and «1 = 65» chosen — the line stayed
+ * 30,000,000 and was simply called dollars: a 60M DOLLAR invoice).
  *
- * A line whose price a person changed is never touched. With no rate yet the
- * line is emptied rather than left holding a number in the wrong currency.
+ * A line whose price a person changed is never touched. With no rate yet (or
+ * no recorded price on the target side) the line is emptied rather than left
+ * holding a number from the wrong currency or wrong trading side.
  */
 export function repriceAutoFilled(
   current: ReadonlyMap<string, string>,
@@ -120,13 +192,50 @@ export function repriceAutoFilled(
   invoiceCurrency: string | undefined,
   bookCurrency: string | undefined,
   rate: number | null,
+  transactionType?: string | null | undefined,
 ): Map<string, string> {
   const out = new Map<string, string>()
   for (const [rowId, line] of auto) {
     const now = current.get(rowId)
     if (now === undefined || now.trim() !== line.filled.trim()) continue
-    const next = priceForInvoice(line.booksPrice, invoiceCurrency, bookCurrency, rate)
+    const targetBooksPrice = booksPriceForSide(line, transactionType)
+    const next = priceForInvoice(targetBooksPrice, invoiceCurrency, bookCurrency, rate)
     if (next !== line.filled) out.set(rowId, next)
   }
   return out
+}
+
+/** Plans atomic unitPrice + goldSnapshot updates for all app-priced invoice rows. */
+export function planRepricedLines(
+  rows: readonly InvoiceGridRow[],
+  autoPriced: Readonly<Record<string, AutoPricedLine>>,
+  invoiceCurrency: string | undefined,
+  bookCurrency: string | undefined,
+  rate: number | null,
+  transactionType?: string | null | undefined,
+): RepricedLinePlan[] {
+  const side = tradingSideOf(transactionType)
+  const plans: RepricedLinePlan[] = []
+  for (const row of rows) {
+    const line = autoPriced[row.id]
+    if (!line) continue
+    const currentPrice = row.values[COLUMN.unitPrice] ?? ''
+    if (currentPrice.trim() !== line.filled.trim()) continue
+    const targetBooksPrice = booksPriceForSide(line, transactionType)
+    const nextPrice = priceForInvoice(targetBooksPrice, invoiceCurrency, bookCurrency, rate)
+    const nextGold = side === 'purchase' ? undefined : line.saleGoldSnapshot
+    const priceChanged = nextPrice !== line.filled || currentPrice !== nextPrice
+    const goldChanged = row.goldSnapshot !== nextGold
+    const booksChanged = line.booksPrice !== targetBooksPrice
+    if (priceChanged || goldChanged || booksChanged) {
+      plans.push({
+        rowId: row.id,
+        unitPrice: nextPrice,
+        booksPrice: targetBooksPrice,
+        filled: nextPrice,
+        ...(nextGold ? { goldSnapshot: nextGold } : {}),
+      })
+    }
+  }
+  return plans
 }

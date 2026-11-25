@@ -76,6 +76,15 @@ for a long time.
 `initAuth` refreshes it from `/auth/me` on hydration — without that, a cached
 user never gains fields added later.
 
+### Build-time client encryption key (`ROOT-CAUSE CONFIRMED`)
+
+- **Symptom:** `Uncaught (in promise) Error: NEXT_PUBLIC_ENCRYPTION_KEY (>= 16 chars) is required in production for auth storage encryption.` thrown inside `encryptedStorage.setItem` on login.
+- **Root Cause:** Next.js substitutes `process.env.NEXT_PUBLIC_ENCRYPTION_KEY` into browser bundles at **build time** (`packages/store/src/slices/auth.slice.ts:16-48` and duplicate helper `packages/store/src/lib/encryption.ts:8-21`). If `NEXT_PUBLIC_ENCRYPTION_KEY` (<16 chars or missing) was absent during `next build`, setting it later at container runtime does nothing, and lazy evaluation inside `setItem`/`getItem` hides the defect until the user actually signs in.
+- **Resolution & Prevention:**
+  - Ensure `NEXT_PUBLIC_ENCRYPTION_KEY` (>= 16 non-whitespace chars) is configured as a **build-time** environment variable before building `apps/web` in Render/CI, then trigger a clean rebuild + deploy.
+  - Keep literal `process.env.NEXT_PUBLIC_ENCRYPTION_KEY` intact (no dynamic key lookup) and never store or log its actual value in code, tests, or skills.
+  - Anti-pattern: assuming runtime env updates affect already-built `NEXT_PUBLIC_*` client chunks, or replacing production missing-key failure with a hardcoded fallback key.
+
 ## apps/admin is Supabase-session based, end to end
 
 Two auth systems exist in this repo and they do not interoperate:

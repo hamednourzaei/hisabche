@@ -18,6 +18,7 @@ import { useInvoiceDraftStore } from '@hisabche/store'
 import type { GoldLineSnapshot } from '@hisabche/validation'
 
 import { productCost, readProducts, type PickerProduct } from '../../lib/invoices/products'
+import { productDualBooksPrices } from '../../lib/invoices/exchange-rate'
 import { pickerRows, type PickerRow } from '../../lib/invoices/picker-rows'
 import { usePromotionPricer, type PickedPrice } from './use-promotion-pricer'
 
@@ -27,6 +28,8 @@ export interface PickedProduct {
   id: string
   name: string
   price: string
+  sellPrice?: string | undefined
+  buyPrice?: string | undefined
   unit: string
   goldSnapshot?: GoldLineSnapshot | undefined
 }
@@ -94,12 +97,23 @@ export function usePickerRows(search: string, pickAs: PickAs = 'sale') {
     if (row.warehouseId && !warehouseId) setField('warehouseId', row.warehouseId)
     const quoted = priceOf(row.product)
     const price = quoted.price
+    const dual = productDualBooksPrices(
+      row.product,
+      selling
+        ? {
+            price: quoted.price,
+            ...(quoted.goldSnapshot ? { goldSnapshot: quoted.goldSnapshot } : {}),
+          }
+        : undefined,
+    )
     return {
       id: row.product.id,
       name: row.product.name,
       // ⚠️ A product with no price leaves the cell EMPTY, never «0» (QA-006):
       // the line then asks for its price instead of selling the goods free.
       price: price > 0 ? String(price) : '',
+      sellPrice: dual.sellBooksPrice,
+      buyPrice: dual.buyBooksPrice,
       unit: row.product.unit ?? 'piece',
       ...(quoted.goldSnapshot ? { goldSnapshot: quoted.goldSnapshot } : {}),
     }

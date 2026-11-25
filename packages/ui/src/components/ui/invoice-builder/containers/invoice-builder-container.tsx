@@ -4,16 +4,10 @@
 // ============================================
 'use client'
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { NewDocumentKind } from '../../invoices/new-invoice-chooser'
-import {
-  COLUMN,
-  currencyPrecision,
-  moveColumn,
-  type GoldLineSnapshot,
-  type InvoiceColumn,
-} from '@hisabche/validation'
+import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import {
   invoiceDraftSnapshot,
@@ -38,10 +32,13 @@ import {
   exchangeRateOf,
   inBooksAtRate,
   needsExchangeRate,
+  planRepricedLines,
   priceForInvoice,
-  repriceAutoFilled,
-  type AutoPricedLine,
+  productDualBooksPrices,
+  tradingSideOf,
 } from '../../../../lib/invoices/exchange-rate'
+import type { PickerProduct } from '../../../../lib/invoices/products'
+import type { PickedProduct } from '../../../../hooks/invoices/use-picker-rows'
 import { useBookCurrency } from '../../../../hooks/use-book-currency'
 import {
   loadScaleLabelConfig,
@@ -57,6 +54,7 @@ import {
   lookupProductByBarcode,
   rateOn,
   useExchangeRates,
+  useProductsByIds,
   useSaveInvoiceDraft,
   type RateQuote,
 } from '@hisabche/api'
@@ -109,28 +107,8 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     bookCurrency && booksAmount !== null
       ? `${formatNumber(booksAmount, locale, 9)} ${nameOfCurrency(t, bookCurrency, bookCurrency)}`
       : null
-  // Lines the APP priced from a product, so a later currency or rate change
-  // can price them again (repriceAutoFilled) instead of relabelling the number.
-  const [autoPriced, setAutoPriced] = useState<ReadonlyMap<string, AutoPricedLine>>(new Map())
-  const rememberAutoPrice = useCallback((rowId: string, booksPrice: string, filled: string) => {
-    setAutoPriced((prev) => new Map(prev).set(rowId, { booksPrice, filled }))
-  }, [])
-  useEffect(() => {
-    if (autoPriced.size === 0) return
-    const rows = useInvoiceDraftStore.getState().rows
-    const current = new Map(rows.map((row) => [row.id, row.values[COLUMN.unitPrice] ?? '']))
-    const changes = repriceAutoFilled(current, autoPriced, currency, bookCurrency, lineRate)
-    if (changes.size === 0) return
-    for (const [rowId, price] of changes) draft.setCell(rowId, COLUMN.unitPrice, price)
-    setAutoPriced((prev) => {
-      const next = new Map(prev)
-      for (const [rowId, price] of changes) {
-        const line = next.get(rowId)
-        if (line) next.set(rowId, { ...line, filled: price })
-      }
-      return next
-    })
-  }, [autoPriced, draft, currency, bookCurrency, lineRate])
+  const setRowAutoPrice = useInvoiceDraftStore((s) => s.setRowAutoPrice)
+  const applyRepricedLines = useInvoiceDraftStore((s) => s.applyRepricedLines)
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
   const [savingDraft, setSavingDraft] = useState(false)
 
@@ -144,24 +122,111 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   // that writes and depends on `draft` re-runs forever (React #185 on
   // /invoices/new?type=sale, 9 Nov 2026). It also writes only on a change.
   const typeParam = searchParams?.get('type')
-  const advanceKind = advanceKindOf(typeParam)
+  const urlDocumentKind: NewDocumentKind =
+    advanceKindOf(typeParam) ??
+    (typeParam === 'sale' || typeParam === 'purchase' ? typeParam : draft.transactionType)
+  const [optimisticKind, setOptimisticKind] = useState<NewDocumentKind | null>(null)
+  const pendingKindRef = useRef<NewDocumentKind | null>(null)
   const setDraftField = useInvoiceDraftStore((s) => s.setField)
   useEffect(() => {
-    const wanted =
-      typeParam === 'purchase' || typeParam === 'pre_purchase'
-        ? 'purchase'
-        : typeParam === 'sale' || typeParam === 'pre_sale'
-          ? 'sale'
-          : null
+    if (pendingKindRef.current) {
+      if (typeParam === pendingKindRef.current) {
+        pendingKindRef.current = null
+        setOptimisticKind(null)
+      }
+      return
+    }
+    setOptimisticKind(null)
+    const wanted = tradingSideOf(typeParam)
     if (wanted && useInvoiceDraftStore.getState().transactionType !== wanted) {
       setDraftField('transactionType', wanted)
     }
   }, [typeParam, setDraftField])
-  const documentKind: NewDocumentKind = advanceKind ?? draft.transactionType
+  const documentKind: NewDocumentKind = optimisticKind ?? urlDocumentKind
+  const activeAdvanceKind = advanceKindOf(documentKind)
+  const activeSide = tradingSideOf(documentKind) ?? draft.transactionType
   const handleDocumentKindChange = useCallback(
-    (kind: NewDocumentKind) => replace(`/invoices/new?type=${kind}`),
-    [replace],
+    (kind: NewDocumentKind) => {
+      pendingKindRef.current = typeParam === kind ? null : kind
+      setOptimisticKind(typeParam === kind ? null : kind)
+      const side = tradingSideOf(kind)
+      if (side && useInvoiceDraftStore.getState().transactionType !== side) {
+        setDraftField('transactionType', side)
+      }
+      replace(`/invoices/new?type=${kind}`)
+    },
+    [replace, setDraftField, typeParam],
   )
+
+  // Backfill dual-side prices for linked rows loaded from an older draft or server
+  // copy that pre-dates `autoPriced`, without touching hand-edited prices.
+  const checkedLegacyRef = useRef<Set<string>>(new Set())
+  const missingAutoIds = useMemo(() => {
+    const out: string[] = []
+    for (const row of draft.rows) {
+      if (!row.productId || draft.autoPriced[row.id]) continue
+      if (checkedLegacyRef.current.has(`${row.id}:${row.productId}`)) continue
+      out.push(row.productId)
+    }
+    return [...new Set(out)]
+  }, [draft.rows, draft.autoPriced])
+  const legacyProducts = useProductsByIds(missingAutoIds)
+  useEffect(() => {
+    if (missingAutoIds.length === 0) return
+    const loadedById = new Map<string, PickerProduct>()
+    legacyProducts.forEach((result, index) => {
+      const id = missingAutoIds[index]
+      if (id && result.data) loadedById.set(id, result.data as PickerProduct)
+    })
+    if (loadedById.size === 0) return
+    for (const row of useInvoiceDraftStore.getState().rows) {
+      if (!row.productId || draft.autoPriced[row.id]) continue
+      const loaded = loadedById.get(row.productId)
+      if (!loaded) continue
+      checkedLegacyRef.current.add(`${row.id}:${row.productId}`)
+      const dual = productDualBooksPrices(loaded)
+      const sellShown = priceForInvoice(dual.sellBooksPrice, currency, bookCurrency, lineRate)
+      const buyShown = priceForInvoice(dual.buyBooksPrice, currency, bookCurrency, lineRate)
+      const currentPrice = (row.values[COLUMN.unitPrice] ?? '').trim()
+      if (
+        currentPrice === '' ||
+        currentPrice === sellShown.trim() ||
+        currentPrice === buyShown.trim()
+      ) {
+        setRowAutoPrice(row.id, {
+          booksPrice: currentPrice === buyShown.trim() ? dual.buyBooksPrice : dual.sellBooksPrice,
+          sellBooksPrice: dual.sellBooksPrice,
+          buyBooksPrice: dual.buyBooksPrice,
+          filled: currentPrice,
+        })
+      }
+    }
+  }, [
+    missingAutoIds,
+    legacyProducts,
+    draft.autoPriced,
+    currency,
+    bookCurrency,
+    lineRate,
+    setRowAutoPrice,
+  ])
+
+  // Single real-time pricing engine for sale, purchase, pre_sale, and pre_purchase:
+  // switching document kind, invoice currency, or exchange rate updates every
+  // app-priced line immediately while leaving hand-typed prices untouched.
+  useEffect(() => {
+    if (Object.keys(draft.autoPriced).length === 0) return
+    const rows = useInvoiceDraftStore.getState().rows
+    const updates = planRepricedLines(
+      rows,
+      draft.autoPriced,
+      currency,
+      bookCurrency,
+      lineRate,
+      documentKind,
+    )
+    if (updates.length > 0) applyRepricedLines(updates)
+  }, [draft.autoPriced, documentKind, currency, bookCurrency, lineRate, applyRepricedLines])
 
   // The layout is created once, for the user's currency, and then persists.
   // Re-running it on every currency change would throw away columns the user
@@ -174,31 +239,36 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   // backend move stock for this line. Free text leaves it unset and moves no
   // stock — both are legitimate invoice lines.
   const handlePickProduct = useCallback(
-    (
-      rowId: string,
-      product: {
-        id: string
-        name: string
-        price: string
-        unit: string
-        goldSnapshot?: GoldLineSnapshot | undefined
-      },
-    ) => {
-      const before = useInvoiceDraftStore.getState().rows.find((row) => row.id === rowId)
+    (rowId: string, product: PickedProduct) => {
+      const state = useInvoiceDraftStore.getState()
+      const before = state.rows.find((row) => row.id === rowId)
       const price = priceForInvoice(product.price, currency, bookCurrency, lineRate)
       // ⚠️ Picking ANOTHER product on a line whose price the app had filled
       // replaces that price (QA-006). It used to stay: product B was sold at
       // product A's price. A price the person typed is still never touched.
       const typedPrice = before?.values[COLUMN.unitPrice]?.trim() ?? ''
-      const ours = typedPrice !== '' && autoPriced.get(rowId)?.filled === typedPrice
+      const prevAuto = state.autoPriced[rowId]
+      const ours = typedPrice !== '' && prevAuto?.filled.trim() === typedPrice
       if (ours && before?.productId !== product.id) draft.setCell(rowId, COLUMN.unitPrice, '')
       draft.setRowProduct(rowId, product.id, product.name, price, product.unit || 'piece')
       draft.setRowGoldSnapshot(rowId, product.goldSnapshot)
       // setRowProduct seeds the unit and price only where they are empty — only
       // then are they ours.
-      if (!typedPrice || ours) rememberAutoPrice(rowId, product.price, price)
+      if (!typedPrice || ours) {
+        const sellBooksPrice = product.sellPrice ?? (activeSide === 'sale' ? product.price : '')
+        const buyBooksPrice = product.buyPrice ?? (activeSide === 'purchase' ? product.price : '')
+        setRowAutoPrice(rowId, {
+          booksPrice: product.price,
+          sellBooksPrice,
+          buyBooksPrice,
+          filled: price,
+          ...(product.goldSnapshot ? { saleGoldSnapshot: product.goldSnapshot } : {}),
+        })
+      } else if (before?.productId !== product.id && prevAuto) {
+        setRowAutoPrice(rowId, null)
+      }
     },
-    [draft, currency, bookCurrency, lineRate, rememberAutoPrice, autoPriced],
+    [draft, currency, bookCurrency, lineRate, activeSide, setRowAutoPrice],
   )
 
   // ─── Barcode scanner → invoice line ──────────────────────────────────────
@@ -213,9 +283,8 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
       // No id → nothing to link stock to; never a line that moves nothing.
       if (!product.id) return
       const unit = product.unit || 'piece'
-      const booksPrice = String(
-        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? '',
-      )
+      const dual = productDualBooksPrices(product)
+      const booksPrice = activeSide === 'purchase' ? dual.buyBooksPrice : dual.sellBooksPrice
       const price = priceForInvoice(booksPrice, currency, bookCurrency, lineRate)
       // Read the store at the moment of the scan: two scans a few ms apart
       // must see each other's line, not the same render's snapshot.
@@ -237,10 +306,17 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
         .rows.find((row) => row.id === target)
         ?.values[COLUMN.unitPrice]?.trim()
       draft.setRowProduct(rowId, product.id, product.name, price, unit)
-      if (!typed) rememberAutoPrice(rowId, booksPrice, price)
+      if (!typed) {
+        setRowAutoPrice(rowId, {
+          booksPrice,
+          sellBooksPrice: dual.sellBooksPrice,
+          buyBooksPrice: dual.buyBooksPrice,
+          filled: price,
+        })
+      }
       if (add !== 1) draft.setCell(rowId, COLUMN.quantity, String(add))
     },
-    [draft, currency, bookCurrency, lineRate, rememberAutoPrice],
+    [draft, activeSide, currency, bookCurrency, lineRate, setRowAutoPrice],
   )
 
   // A scale label's weight (or price ÷ unit price) is the quantity; an
@@ -248,14 +324,15 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
   const placeWithLabel = useCallback(
     (product: Product, label: ScaleLabel | undefined, barcode: string) => {
       if (!label) return placeScanned(product)
+      const dual = productDualBooksPrices(product)
       const unitPrice = Number(
-        (draft.transactionType === 'purchase' ? product.buyPrice : product.sellPrice) ?? 0,
+        (activeSide === 'purchase' ? dual.buyBooksPrice : dual.sellBooksPrice) || 0,
       )
       const quantity = quantityOfLabel(label, unitPrice)
       if (quantity === null) return setScanProblem({ kind: 'noUnitPrice', barcode })
       placeScanned(product, quantity)
     },
-    [draft.transactionType, placeScanned],
+    [activeSide, placeScanned],
   )
 
   const handleScan = useCallback(
@@ -460,8 +537,12 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
     if (creditBreachInfo?.isBlocked) {
       return
     }
-    push(advanceKind ? `/invoices/new/preview?type=${advanceKind}` : '/invoices/new/preview')
-  }, [creditBreachInfo?.isBlocked, push, advanceKind])
+    push(
+      activeAdvanceKind
+        ? `/invoices/new/preview?type=${activeAdvanceKind}`
+        : '/invoices/new/preview',
+    )
+  }, [creditBreachInfo?.isBlocked, push, activeAdvanceKind])
   const handleBackToList = useCallback(() => push('/invoices'), [push])
 
   return (
@@ -518,10 +599,10 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
           <>
             <InvoiceBranchSelect t={t} value={draft.branchId} onChange={setBranchId} />
             {/* An advance moves no stock: no warehouse to pick. */}
-            {advanceKind ? null : (
+            {activeAdvanceKind ? null : (
               <InvoiceWarehouseSelect
                 t={t}
-                transactionType={draft.transactionType}
+                transactionType={activeSide}
                 branchId={draft.branchId}
                 value={draft.warehouseId}
                 onChange={setWarehouseId}

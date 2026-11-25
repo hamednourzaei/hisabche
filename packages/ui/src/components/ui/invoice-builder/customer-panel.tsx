@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { cn } from '../../../lib/utils'
 import { useAfterHydration } from '../../../hooks/use-after-hydration'
 import { dayToDocumentDate, documentDateToDay, todayDocumentDate } from '../../../lib/invoice-day'
+import { tradingSideOf } from '../../../lib/invoices/exchange-rate'
 import { nameOfCurrency } from '../../../lib/currency-name'
 
 export interface CustomerPanelProps {
@@ -93,7 +94,7 @@ export const CustomerPanel = memo(function CustomerPanel({
   // failed (React #418), the tree was rebuilt and the first click was lost (browser
   // journeys, 14 Nov 2026). The field shows the date only after hydration.
   const hydrated = useAfterHydration()
-  const isPurchase = transactionType === 'purchase' || transactionType === 'pre_purchase'
+  const isPurchase = tradingSideOf(transactionType) === 'purchase'
 
   // A persisted draft written by an older build has no `customers` key at all,
   // and a rehydrating store can hand this component that shape for one render.

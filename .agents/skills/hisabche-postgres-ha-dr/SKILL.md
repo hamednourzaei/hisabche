@@ -100,3 +100,13 @@ Report separately:
 - Measured RPO/RTO vs targets.
 - Exact blockers requiring human credentials/approval.
 - Status: `VERIFIED_COMPLETE`, `IMPLEMENTED_NOT_LIVE_VERIFIED`, `VERIFIED_WITH_LIMITATIONS`, `BLOCKED`, or `NOT_IMPLEMENTED`.
+
+---
+
+## Verified Writer Fencing & Startup Lessons (Mission 001)
+
+- **Key Separation & Trimming (`backend/src/db/fencing.ts`):** Never fall back from `WRITER_FENCING_SECRET` to `JWT_SECRET`. Always trim the candidate secret before length validation AND return the trimmed value. Explicitly reject `DEV_FENCING_SECRET` when `NODE_ENV === 'production'`.
+- **No Raw HMAC Signatures on Public Health Routes (`backend/src/db/routing.ts`):** `getDatabaseRoutingOverview()` feeds `GET /api/health/db` (which is in `publicPaths`). Always strip `fenceSignature` and expose only `hasFenceSignature: boolean`.
+- **Token Age & Clock-Skew Bounds (`backend/src/db/fencing.ts`):** `assertValidWriter()` must validate `token.issuedAt` against `maxTokenAgeMs` and `maxClockSkewMs` so stolen/old tokens cannot be replayed indefinitely within an active lease.
+- **Startup Lease Store Wiring (`backend/src/index.ts`):** Call `bindDefaultDistributedLeaseStore()` inside `start()` when `NODE_ENV === 'production' && FENCING_ALLOW_LOCAL_ONLY !== '1'` (not at module import time, so `buildServer()` unit tests stay isolated).
+- **Regression Verification:** Always run `backend/src/__tests__/writer-fencing-mission001.test.ts`, `database-ha-routing.test.ts`, and `database-ha-health-routes.test.ts` after touching fencing or routing.

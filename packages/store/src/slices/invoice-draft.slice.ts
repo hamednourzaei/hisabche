@@ -24,6 +24,7 @@ import {
   defaultColumns,
   emptyRow,
   seedQuantityForUnit,
+  type GoldLineSnapshot,
   type InvoiceColumn,
   type InvoiceDefaultSelection,
   type InvoiceGridRow,
@@ -39,6 +40,23 @@ export interface InvoiceDraftCustomer {
   address?: string | null
 }
 
+/** Books-currency dual-side price record for an app-filled invoice line. */
+export interface DraftAutoPricedLine {
+  booksPrice: string
+  sellBooksPrice?: string | undefined
+  buyBooksPrice?: string | undefined
+  filled: string
+  saleGoldSnapshot?: GoldLineSnapshot | undefined
+}
+
+export interface RepricedLineUpdate {
+  rowId: string
+  unitPrice: string
+  booksPrice?: string | undefined
+  filled?: string | undefined
+  goldSnapshot?: GoldLineSnapshot | undefined
+}
+
 export interface InvoiceDraftState {
   /** Layout. Outlives any single draft — see the file header. */
   columns: InvoiceColumn[]
@@ -46,6 +64,8 @@ export interface InvoiceDraftState {
   columnsInitialised: boolean
 
   rows: InvoiceGridRow[]
+  /** App-filled line prices keyed by row id so type/currency/rate changes reprice safely. */
+  autoPriced: Record<string, DraftAutoPricedLine>
   /**
    * Everyone on this invoice. The FIRST is the invoice's own customer — the
    * one `customers.id` points at and the one the receivable belongs to. The
@@ -119,6 +139,10 @@ export interface InvoiceDraftState {
   setRowVariant: (rowId: string, variantId: string | undefined) => void
   /** V59.1 gold-01: attach or clear a locked metal-rate snapshot on a line. */
   setRowGoldSnapshot: (rowId: string, snapshot: InvoiceGridRow['goldSnapshot']) => void
+  /** Records or removes the dual-side app price record for a row. */
+  setRowAutoPrice: (rowId: string, line: DraftAutoPricedLine | null) => void
+  /** Applies batched real-time repricing updates atomically in one state transition. */
+  applyRepricedLines: (updates: readonly RepricedLineUpdate[]) => void
 
   // ---- columns ----
   initColumns: (currency: CurrencyCode, defaults?: InvoiceDefaultSelection) => void
@@ -148,6 +172,7 @@ export type InvoiceDraftSnapshot = Pick<
   | 'columns'
   | 'columnsInitialised'
   | 'rows'
+  | 'autoPriced'
   | 'customers'
   | 'transactionType'
   | 'date'
@@ -174,6 +199,7 @@ export function invoiceDraftSnapshot(state: InvoiceDraftState): InvoiceDraftSnap
     columns: state.columns,
     columnsInitialised: state.columnsInitialised,
     rows: state.rows,
+    autoPriced: state.autoPriced,
     customers: state.customers,
     transactionType: state.transactionType,
     date: state.date,
@@ -236,6 +262,7 @@ function todayAsDocumentDate(): string {
 function blankDraft(columns: InvoiceColumn[]) {
   return {
     rows: [emptyRow(nextRowId(), columns)],
+    autoPriced: {} as Record<string, DraftAutoPricedLine>,
     customers: [],
     transactionType: 'sale' as const,
     date: todayAsDocumentDate(),
@@ -291,14 +318,23 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           }
           const rows = [...state.rows]
           rows.splice(index + 1, 0, copy)
-          return { rows }
+          const srcAuto = state.autoPriced[id]
+          const autoPriced = srcAuto
+            ? { ...state.autoPriced, [copy.id]: { ...srcAuto } }
+            : state.autoPriced
+          return { rows, autoPriced }
         }),
 
       removeRow: (id) =>
         set((state) => {
           const rows = state.rows.filter((r) => r.id !== id)
+          const nextAuto = { ...state.autoPriced }
+          delete nextAuto[id]
           // Never leave the grid with nothing to type into.
-          return { rows: rows.length ? rows : [emptyRow(nextRowId(), state.columns)] }
+          return {
+            rows: rows.length ? rows : [emptyRow(nextRowId(), state.columns)],
+            autoPriced: nextAuto,
+          }
         }),
 
       // The summary's item-count arrows call this. It drops the last row, and
@@ -306,7 +342,10 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
       removeLastRow: () =>
         set((state) => {
           if (state.rows.length <= 1) return state
-          return { rows: state.rows.slice(0, -1) }
+          const dropped = state.rows[state.rows.length - 1]
+          const nextAuto = { ...state.autoPriced }
+          if (dropped) delete nextAuto[dropped.id]
+          return { rows: state.rows.slice(0, -1), autoPriced: nextAuto }
         }),
 
       setCell: (rowId, columnId, value) =>
@@ -367,6 +406,48 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
             return next
           })
           return { rows: withTrailingBlank(rows, state.columns) }
+        }),
+
+      setRowAutoPrice: (rowId, line) =>
+        set((state) => {
+          const autoPriced = { ...state.autoPriced }
+          if (line) autoPriced[rowId] = line
+          else delete autoPriced[rowId]
+          return { autoPriced }
+        }),
+
+      applyRepricedLines: (updates) =>
+        set((state) => {
+          if (updates.length === 0) return state
+          const byId = new Map(updates.map((u) => [u.rowId, u]))
+          let changed = false
+          const rows = state.rows.map((row) => {
+            const u = byId.get(row.id)
+            if (!u) return row
+            const curPrice = row.values[COLUMN.unitPrice] ?? ''
+            const goldDiffers = row.goldSnapshot !== u.goldSnapshot
+            if (curPrice === u.unitPrice && !goldDiffers) return row
+            changed = true
+            const next: InvoiceGridRow = {
+              ...row,
+              values: { ...row.values, [COLUMN.unitPrice]: u.unitPrice },
+            }
+            if (u.goldSnapshot) next.goldSnapshot = u.goldSnapshot
+            else delete next.goldSnapshot
+            return next
+          })
+          const autoPriced = { ...state.autoPriced }
+          for (const u of updates) {
+            const prev = autoPriced[u.rowId]
+            if (!prev) continue
+            const nextFilled = u.filled ?? u.unitPrice
+            const nextBooks = u.booksPrice ?? prev.booksPrice
+            if (prev.filled !== nextFilled || prev.booksPrice !== nextBooks) {
+              autoPriced[u.rowId] = { ...prev, filled: nextFilled, booksPrice: nextBooks }
+              changed = true
+            }
+          }
+          return changed ? { rows, autoPriced } : state
         }),
 
       // ---- columns ----
@@ -476,6 +557,8 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
             Array.isArray(saved.rows) && saved.rows.length ? saved.rows : [],
             columns,
           ),
+          autoPriced:
+            saved.autoPriced && typeof saved.autoPriced === 'object' ? saved.autoPriced : {},
           customers: Array.isArray(saved.customers) ? saved.customers : [],
           transactionType: saved.transactionType === 'purchase' ? 'purchase' : 'sale',
           date: text(saved.date, new Date().toISOString()),
@@ -555,6 +638,10 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           columns:
             Array.isArray(saved.columns) && saved.columns.length ? saved.columns : current.columns,
           rows: Array.isArray(saved.rows) && saved.rows.length ? saved.rows : current.rows,
+          autoPriced:
+            saved.autoPriced && typeof saved.autoPriced === 'object'
+              ? saved.autoPriced
+              : current.autoPriced,
           customers: Array.isArray(saved.customers)
             ? saved.customers
             : saved.customer
