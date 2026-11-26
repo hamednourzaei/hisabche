@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "totalMigrations": 321,
+  "totalMigrations": 324,
   "withVerifyScript": 195,
-  "withoutVerifyScript": 126,
+  "withoutVerifyScript": 129,
   "withPgTest": 210,
-  "withoutPgTest": 111,
+  "withoutPgTest": 114,
   "migrations": [
     {
       "id": "accounting-core",
@@ -126,7 +126,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "admin-02-security",
@@ -154,7 +154,7 @@
     {
       "id": "admin-03-customers",
       "filename": "docs/admin-03-customers-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "admin-02-security-migration.sql"],
       "tablesChanged": [
         "admin_data_requests",
         "admin_notes",
@@ -184,7 +184,7 @@
     {
       "id": "admin-04-billing",
       "filename": "docs/admin-04-billing-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "admin-03-customers-migration.sql"],
       "tablesChanged": [
         "admin_action_requests",
         "billing_ledger_entries",
@@ -214,7 +214,7 @@
     {
       "id": "admin-06-ops",
       "filename": "docs/admin-06-ops-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "admin-04-billing-migration.sql"],
       "tablesChanged": ["admin_announcements", "background_jobs", "feature_flags"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -458,7 +458,7 @@
     {
       "id": "advances-04-party-identity",
       "filename": "docs/advances-04-party-identity-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "advances-03-migration.sql"],
       "tablesChanged": ["order_deposits"],
       "columnsAdded": ["IF", "supplier_id"],
       "functionsChanged": ["order_deposits_assert_party_identity"],
@@ -479,7 +479,7 @@
     {
       "id": "advances-05-supplier-advance-party",
       "filename": "docs/advances-05-supplier-advance-party-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "advances-04-party-identity-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["only", "supplier_advance_apply", "supplier_advance_refund"],
@@ -538,7 +538,7 @@
     {
       "id": "ai-pipeline-02-one-approval-queue",
       "filename": "docs/ai-pipeline-02-one-approval-queue-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "ai-pipeline-01-migration.sql"],
       "tablesChanged": ["ai_action_requests"],
       "columnsAdded": ["run_id"],
       "functionsChanged": ["ai_action_requests_move_forward_only"],
@@ -868,7 +868,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "automation-01",
@@ -1137,7 +1137,7 @@
     {
       "id": "budget-currency-02-any-unit",
       "filename": "docs/budget-currency-02-any-unit-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "budget-currency-migration.sql"],
       "tablesChanged": ["budgets"],
       "columnsAdded": ["amount_currency_minor", "currency", "fx_rate"],
       "functionsChanged": [],
@@ -1274,7 +1274,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "campaigns-01",
@@ -1318,7 +1318,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "cheques-01",
@@ -1584,7 +1584,7 @@
     {
       "id": "credit-concurrency-03-credit-units",
       "filename": "docs/credit-concurrency-03-credit-units-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "credit-concurrency-02-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["assert_customer_credit"],
@@ -2028,7 +2028,7 @@
     {
       "id": "developer-platform-02",
       "filename": "docs/developer-platform-02-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-migration.sql"],
       "tablesChanged": ["api_request_logs", "webhook_deliveries"],
       "columnsAdded": ["replayed_at"],
       "functionsChanged": [
@@ -2051,7 +2051,7 @@
     {
       "id": "developer-platform-03-commerce",
       "filename": "docs/developer-platform-03-commerce-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-02-migration.sql"],
       "tablesChanged": ["api_keys", "sales_order_items", "sales_orders", "storefront_settings"],
       "columnsAdded": ["allowed_origins", "kind", "public_token"],
       "functionsChanged": [
@@ -2089,7 +2089,7 @@
     {
       "id": "developer-platform-04-portal",
       "filename": "docs/developer-platform-04-portal-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-03-commerce-migration.sql"],
       "tablesChanged": ["customer_portal_links"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -2107,7 +2107,7 @@
     {
       "id": "developer-platform-05-oauth",
       "filename": "docs/developer-platform-05-oauth-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-04-portal-migration.sql"],
       "tablesChanged": ["api_keys", "oauth_apps", "oauth_authorization_codes"],
       "columnsAdded": ["app_id"],
       "functionsChanged": ["redeem_oauth_code"],
@@ -2129,7 +2129,7 @@
     {
       "id": "developer-platform-06-sandbox",
       "filename": "docs/developer-platform-06-sandbox-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-05-oauth-migration.sql"],
       "tablesChanged": ["workspaces"],
       "columnsAdded": ["is_sandbox", "sandbox_of"],
       "functionsChanged": ["create_sandbox_workspace", "workspaces_sandbox_is_permanent"],
@@ -2151,7 +2151,7 @@
     {
       "id": "developer-platform-06b-sandbox-access",
       "filename": "docs/developer-platform-06b-sandbox-access-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "developer-platform-06-sandbox-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["create_sandbox_workspace"],
@@ -2169,7 +2169,10 @@
     {
       "id": "developer-platform-07-marketplace",
       "filename": "docs/developer-platform-07-marketplace-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "developer-platform-06b-sandbox-access-migration.sql"
+      ],
       "tablesChanged": [
         "app_installations",
         "app_publishers",
@@ -2244,7 +2247,10 @@
     {
       "id": "developer-platform-08",
       "filename": "docs/developer-platform-08-migration.sql",
-      "dependencies": ["base-schema-migration.sql", "developer-platform-02-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "developer-platform-07-marketplace-migration.sql"
+      ],
       "tablesChanged": ["oauth_refresh_tokens"],
       "columnsAdded": [],
       "functionsChanged": [
@@ -2778,7 +2784,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "goods-marketplace-01",
@@ -3219,7 +3225,7 @@
     {
       "id": "invoice-return-02-purchase-return-accounting",
       "filename": "docs/invoice-return-02-purchase-return-accounting-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "invoice-return-01-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["invoice_return_create"],
@@ -3237,7 +3243,10 @@
     {
       "id": "invoice-return-03-repair",
       "filename": "docs/invoice-return-03-repair-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "invoice-return-02-purchase-return-accounting-migration.sql"
+      ],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["invoice_return_create"],
@@ -3255,7 +3264,7 @@
     {
       "id": "invoice-return-04-one-per-invoice",
       "filename": "docs/invoice-return-04-one-per-invoice-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "invoice-return-03-repair-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["invoice_returns_one_per_invoice"],
@@ -3273,7 +3282,10 @@
     {
       "id": "invoice-return-05-core",
       "filename": "docs/invoice-return-05-core-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "invoice-return-04-one-per-invoice-migration.sql"
+      ],
       "tablesChanged": [
         "invoice_return_deductions",
         "invoice_return_lines",
@@ -3312,12 +3324,12 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "invoice-return-06-scrap-loss",
       "filename": "docs/invoice-return-06-scrap-loss-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "invoice-return-05-core-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["invoice_return_scrap_loss"],
@@ -3366,7 +3378,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DATA_MUTATION_DELETE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "invoice-write-payment-01",
@@ -3384,7 +3396,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DATA_MUTATION_DELETE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "invoices-seller-01",
@@ -3525,7 +3537,7 @@
     {
       "id": "linter-2026-10-11",
       "filename": "docs/linter-2026-10-11-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "linter-2026-09-14-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -3543,7 +3555,7 @@
     {
       "id": "linter-2026-11-24",
       "filename": "docs/linter-2026-11-24-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "linter-2026-10-11-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -3692,7 +3704,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DATA_MUTATION_DELETE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "manufacturing-01",
@@ -3852,7 +3864,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "module-auth-session-epoch",
@@ -3954,7 +3966,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "offline-idempotency",
@@ -4140,7 +4152,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "order-deposit-balances-01",
@@ -4228,7 +4240,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "package-deferred-revenue-01",
@@ -4297,7 +4309,7 @@
     {
       "id": "patch-02-custom-units",
       "filename": "docs/patch-02-custom-units-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "patch-01-currencies-migration.sql"],
       "tablesChanged": ["custom_units", "product_units", "products", "statements"],
       "columnsAdded": ["custom_unit_id", "unit_label"],
       "functionsChanged": [],
@@ -4319,7 +4331,7 @@
     {
       "id": "patch-03-leaves-gaps",
       "filename": "docs/patch-03-leaves-gaps-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "patch-02-custom-units-migration.sql"],
       "tablesChanged": ["leaves"],
       "columnsAdded": ["branch_id", "duration_units", "requested_by"],
       "functionsChanged": [],
@@ -4350,12 +4362,12 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "payment-gateway-events-02-rpc",
       "filename": "docs/payment-gateway-events-02-rpc-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "payment-gateway-events-01-migration.sql"],
       "tablesChanged": ["payment_gateway_events", "payment_gateway_states"],
       "columnsAdded": [
         "actor_id",
@@ -4393,7 +4405,29 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
+    },
+    {
+      "id": "payment-gateway-events-03-atomic-internal",
+      "filename": "docs/payment-gateway-events-03-atomic-internal-migration.sql",
+      "dependencies": ["base-schema-migration.sql", "payment-gateway-events-02-rpc-migration.sql"],
+      "tablesChanged": ["payment_gateway_events"],
+      "columnsAdded": ["idempotency_key", "provenance"],
+      "functionsChanged": ["transition_payment_processor_state"],
+      "triggersChanged": [],
+      "rlsChanges": [],
+      "constraintsAndIndexes": [
+        "idx_payment_gateway_events_ws_idempotency",
+        "payment_gateway_events_processing_status_check",
+        "payment_gateway_events_provenance_check"
+      ],
+      "backfillBehavior": "CONTAINS_DML_BACKFILL",
+      "verificationScript": null,
+      "pgTest": null,
+      "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
+      "minBackendVersion": "0.0.1",
+      "minClientVersion": "0.0.1",
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "payment-processor-states-01",
@@ -4411,7 +4445,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "payments-ar-ap",
@@ -4544,7 +4578,7 @@
     {
       "id": "phase-a-02-ledger-entries-workspace",
       "filename": "docs/phase-a-02-ledger-entries-workspace-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-a-01-journal-lines-fk-migration.sql"],
       "tablesChanged": ["ledger_entries"],
       "columnsAdded": ["branch_id", "journal_entry_id", "workspace_id"],
       "functionsChanged": [],
@@ -4572,7 +4606,10 @@
     {
       "id": "phase-a-03-fk-indexes",
       "filename": "docs/phase-a-03-fk-indexes-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "phase-a-02-ledger-entries-workspace-migration.sql"
+      ],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -4608,7 +4645,7 @@
     {
       "id": "phase-a-04-missing-primary-keys",
       "filename": "docs/phase-a-04-missing-primary-keys-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-a-03-fk-indexes-migration.sql"],
       "tablesChanged": [
         "checkout_sessions",
         "event_types",
@@ -4806,7 +4843,7 @@
     {
       "id": "phase-g-02-permission-profiles",
       "filename": "docs/phase-g-02-permission-profiles-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-g-01-branch-manager-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -4824,7 +4861,7 @@
     {
       "id": "phase-g-03-audit-branch",
       "filename": "docs/phase-g-03-audit-branch-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-g-02-permission-profiles-migration.sql"],
       "tablesChanged": ["activities", "audit_logs"],
       "columnsAdded": ["branch_id"],
       "functionsChanged": [],
@@ -4874,7 +4911,7 @@
     {
       "id": "phase-j-02-reconciliation-hardening",
       "filename": "docs/phase-j-02-reconciliation-hardening-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-j-01-branch-period-lock-migration.sql"],
       "tablesChanged": ["bank_statement_lines"],
       "columnsAdded": ["matched_kind"],
       "functionsChanged": ["bank_statement_lines_immutable"],
@@ -4897,7 +4934,10 @@
     {
       "id": "phase-j-03-document-status",
       "filename": "docs/phase-j-03-document-status-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "phase-j-02-reconciliation-hardening-migration.sql"
+      ],
       "tablesChanged": ["invoices"],
       "columnsAdded": ["document_status"],
       "functionsChanged": [],
@@ -4915,7 +4955,7 @@
     {
       "id": "phase-j-04-payroll-ledger",
       "filename": "docs/phase-j-04-payroll-ledger-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-j-03-document-status-migration.sql"],
       "tablesChanged": ["accounts"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -4979,7 +5019,7 @@
     {
       "id": "phase-l-02-product-units",
       "filename": "docs/phase-l-02-product-units-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-l-01-units-migration.sql"],
       "tablesChanged": ["product_units"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -5002,7 +5042,7 @@
     {
       "id": "phase-l-03-cycle-counts",
       "filename": "docs/phase-l-03-cycle-counts-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-l-02-product-units-migration.sql"],
       "tablesChanged": ["cycle_count_lines", "cycle_counts"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -5089,7 +5129,7 @@
     {
       "id": "phase-o-02-catalog-and-query-log",
       "filename": "docs/phase-o-02-catalog-and-query-log-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "phase-o-01-reporting-layer-migration.sql"],
       "tablesChanged": ["ai_query_log", "metadata"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -5275,7 +5315,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "price-lists-01",
@@ -5409,12 +5449,12 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "project-change-orders-02-rpc",
       "filename": "docs/project-change-orders-02-rpc-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "project-change-orders-01-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["decide_project_change_order"],
@@ -5432,7 +5472,7 @@
     {
       "id": "project-change-orders-03-atomic",
       "filename": "docs/project-change-orders-03-atomic-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "project-change-orders-02-rpc-migration.sql"],
       "tablesChanged": ["project_change_orders", "projects"],
       "columnsAdded": ["budget_version", "decision_reason", "project_version_at_decision"],
       "functionsChanged": ["create_project_change_order", "decide_project_change_order_v2"],
@@ -5445,7 +5485,28 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
+    },
+    {
+      "id": "project-change-orders-04-idempotent-lock",
+      "filename": "docs/project-change-orders-04-idempotent-lock-migration.sql",
+      "dependencies": [
+        "base-schema-migration.sql",
+        "project-change-orders-03-atomic-migration.sql"
+      ],
+      "tablesChanged": [],
+      "columnsAdded": [],
+      "functionsChanged": ["create_project_change_order_v2"],
+      "triggersChanged": [],
+      "rlsChanges": [],
+      "constraintsAndIndexes": [],
+      "backfillBehavior": "CONTAINS_DML_BACKFILL",
+      "verificationScript": null,
+      "pgTest": null,
+      "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
+      "minBackendVersion": "0.0.1",
+      "minClientVersion": "0.0.1",
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "promotions-01",
@@ -5637,7 +5698,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "repair-quality-01",
@@ -6005,7 +6066,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "saved-reports-01",
@@ -6152,7 +6213,7 @@
     {
       "id": "service-delivery-02-atomic",
       "filename": "docs/service-delivery-02-atomic-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "service-delivery-01-migration.sql"],
       "tablesChanged": ["service_delivery_sessions"],
       "columnsAdded": ["settlement_reason"],
       "functionsChanged": ["service_delivery_cancel", "service_delivery_deliver"],
@@ -6176,7 +6237,7 @@
     {
       "id": "service-delivery-03-cancellation-reason",
       "filename": "docs/service-delivery-03-cancellation-reason-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "service-delivery-02-atomic-migration.sql"],
       "tablesChanged": ["service_delivery_sessions"],
       "columnsAdded": ["cancellation_reason"],
       "functionsChanged": ["service_delivery_cancel"],
@@ -6194,7 +6255,10 @@
     {
       "id": "service-delivery-04-settlement-undecided",
       "filename": "docs/service-delivery-04-settlement-undecided-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "service-delivery-03-cancellation-reason-migration.sql"
+      ],
       "tablesChanged": ["service_delivery_sessions"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -6212,7 +6276,10 @@
     {
       "id": "service-delivery-05-session-subject-participants",
       "filename": "docs/service-delivery-05-session-subject-participants-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "service-delivery-04-settlement-undecided-migration.sql"
+      ],
       "tablesChanged": ["service_delivery_session_participants", "service_delivery_sessions"],
       "columnsAdded": ["employee_id", "session_type", "subject_type"],
       "functionsChanged": [
@@ -6249,7 +6316,10 @@
     {
       "id": "service-delivery-06-optional-service-offering",
       "filename": "docs/service-delivery-06-optional-service-offering-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": [
+        "base-schema-migration.sql",
+        "service-delivery-05-session-subject-participants-migration.sql"
+      ],
       "tablesChanged": ["service_delivery_sessions"],
       "columnsAdded": [],
       "functionsChanged": [],
@@ -6370,7 +6440,7 @@
     {
       "id": "stock-reservations-02-grants-and-scope",
       "filename": "docs/stock-reservations-02-grants-and-scope-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "stock-reservations-01-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["stock_available"],
@@ -6566,12 +6636,12 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "support-tickets-02-lifecycle",
       "filename": "docs/support-tickets-02-lifecycle-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "support-tickets-01-migration.sql"],
       "tablesChanged": ["support_ticket_comments", "support_ticket_events", "support_tickets"],
       "columnsAdded": ["assigned_to", "closed_at", "reopened_at"],
       "functionsChanged": [],
@@ -6590,12 +6660,12 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "support-tickets-03-atomic-sla",
       "filename": "docs/support-tickets-03-atomic-sla-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "support-tickets-02-lifecycle-migration.sql"],
       "tablesChanged": ["support_ticket_events"],
       "columnsAdded": ["correlation_id", "notification_status"],
       "functionsChanged": [
@@ -6612,7 +6682,25 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
+    },
+    {
+      "id": "support-tickets-04-atomic-create-assign",
+      "filename": "docs/support-tickets-04-atomic-create-assign-migration.sql",
+      "dependencies": ["base-schema-migration.sql", "support-tickets-03-atomic-sla-migration.sql"],
+      "tablesChanged": [],
+      "columnsAdded": [],
+      "functionsChanged": ["assign_support_ticket_atomic", "create_support_ticket_atomic"],
+      "triggersChanged": [],
+      "rlsChanges": [],
+      "constraintsAndIndexes": [],
+      "backfillBehavior": "CONTAINS_DML_BACKFILL",
+      "verificationScript": null,
+      "pgTest": null,
+      "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
+      "minBackendVersion": "0.0.1",
+      "minClientVersion": "0.0.1",
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "sync-account-tenancy-coverage",
@@ -6655,7 +6743,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_COLUMN"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "sync-conflicts-forward-01",
@@ -7182,7 +7270,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "user-guide-progress-01",
@@ -7225,7 +7313,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "variant-binding-01",
@@ -7423,7 +7511,7 @@
       "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
-      "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "work-shifts-01",
@@ -7496,7 +7584,7 @@
     {
       "id": "workspace-access-rpc-02-custom-role",
       "filename": "docs/workspace-access-rpc-02-custom-role-migration.sql",
-      "dependencies": ["base-schema-migration.sql"],
+      "dependencies": ["base-schema-migration.sql", "workspace-access-rpc-migration.sql"],
       "tablesChanged": [],
       "columnsAdded": [],
       "functionsChanged": ["resolve_workspace_access"],

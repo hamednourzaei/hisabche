@@ -10,6 +10,8 @@
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
+import { majorToMinor, safeCurrencyDigits } from '../../utils/money-units'
+import { baseCurrencyOf } from '../base-currency'
 
 export interface CrossCoreReconcileException {
   code: string
@@ -68,6 +70,7 @@ export interface CrossCoreReconcileResult {
 }
 
 export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCoreReconcileResult> {
+  const workspaceBaseCurrency = await baseCurrencyOf(wsId).catch(() => 'AFN')
   const allInvoices = await fetchAllPages<{
     id: string
     currency: string
@@ -160,21 +163,33 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
   const exceptions: CrossCoreReconcileException[] = []
   const invoiceById = new Map(invoices.map((i) => [i.id, i]))
   const paymentById = new Map(payments.map((p) => [p.id, p]))
-  const allocByInvoice = new Map<string, number>()
-  const allocByPayment = new Map<string, number>()
+  const allInvoiceById = new Map(allInvoices.map((i) => [i.id, i]))
+  const allPaymentById = new Map(allPayments.map((p) => [p.id, p]))
+  const allocByInvoiceMinor = new Map<string, number>()
+  const allocByPaymentMinor = new Map<string, number>()
   let currencyMismatchCount = 0
   let inactiveDocAllocCount = 0
 
   for (const a of allocations) {
-    const amt = Number(a.amount)
-    if (!Number.isFinite(amt)) {
-      throw new DatabaseError('CORRUPT_ALLOCATION_AMOUNT', new Error(a.invoice_id))
-    }
-    allocByInvoice.set(a.invoice_id, (allocByInvoice.get(a.invoice_id) ?? 0) + amt)
-    allocByPayment.set(a.payment_id, (allocByPayment.get(a.payment_id) ?? 0) + amt)
-
     const inv = invoiceById.get(a.invoice_id)
     const pay = paymentById.get(a.payment_id)
+    const anyInv = allInvoiceById.get(a.invoice_id)
+    const anyPay = allPaymentById.get(a.payment_id)
+    const allocCur = (
+      pay?.currency ??
+      inv?.currency ??
+      anyPay?.currency ??
+      anyInv?.currency ??
+      workspaceBaseCurrency
+    ).toUpperCase()
+    const amtRaw = Number(a.amount)
+    if (!Number.isFinite(amtRaw)) {
+      throw new DatabaseError('CORRUPT_ALLOCATION_AMOUNT', new Error(a.invoice_id))
+    }
+    const amtMinor = majorToMinor(amtRaw, allocCur)
+    allocByInvoiceMinor.set(a.invoice_id, (allocByInvoiceMinor.get(a.invoice_id) ?? 0) + amtMinor)
+    allocByPaymentMinor.set(a.payment_id, (allocByPaymentMinor.get(a.payment_id) ?? 0) + amtMinor)
+
     if (!inv) {
       exceptions.push({
         code: 'ORPHAN_INVOICE_ALLOCATION',
@@ -182,7 +197,7 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
         currency: pay?.currency ?? null,
         entityType: 'payment_allocation',
         entityId: `${a.payment_id}:${a.invoice_id}`,
-        amountMinor: amt,
+        amountMinor: amtMinor,
         message: `Allocation references missing invoice ${a.invoice_id}`,
       })
     }
@@ -193,7 +208,7 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
         currency: inv?.currency ?? null,
         entityType: 'payment_allocation',
         entityId: `${a.payment_id}:${a.invoice_id}`,
-        amountMinor: amt,
+        amountMinor: amtMinor,
         message: `Allocation references missing payment ${a.payment_id}`,
       })
     }
@@ -206,7 +221,7 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
           currency: `${pay.currency.toUpperCase()}->${inv.currency.toUpperCase()}`,
           entityType: 'payment_allocation',
           entityId: `${a.payment_id}:${a.invoice_id}`,
-          amountMinor: amt,
+          amountMinor: amtMinor,
           message: `Payment currency (${pay.currency}) differs from invoice currency (${inv.currency})`,
         })
       }
@@ -218,7 +233,7 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
           currency: inv.currency.toUpperCase(),
           entityType: 'payment_allocation',
           entityId: `${a.payment_id}:${a.invoice_id}`,
-          amountMinor: amt,
+          amountMinor: amtMinor,
           message: `Active allocation touches inactive document (${inv.status}/${pay.status})`,
         })
       }
@@ -251,8 +266,9 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
   for (const inv of invoices) {
     const cur = inv.currency.toUpperCase()
     const bucket = currencyBuckets.get(cur) ?? initBucket()
-    const paidMinor = Number(inv.paid_amount)
-    if (Number.isFinite(Number(inv.total)) && paidMinor > Number(inv.total)) {
+    const paidMinor = majorToMinor(inv.paid_amount ?? 0, cur)
+    const totalMinor = majorToMinor(inv.total ?? 0, cur)
+    if (paidMinor > totalMinor) {
       invoicePaidExceedsTotalCount += 1
       exceptions.push({
         code: 'INVOICE_PAID_EXCEEDS_TOTAL',
@@ -260,23 +276,23 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
         currency: cur,
         entityType: 'invoice',
         entityId: inv.id,
-        amountMinor: paidMinor - Number(inv.total),
-        message: `Invoice ${inv.id} paid_amount (${paidMinor}) exceeds total (${inv.total})`,
+        amountMinor: paidMinor - totalMinor,
+        message: `Invoice ${inv.id} paid_amount (${paidMinor}) exceeds total (${totalMinor})`,
       })
     }
     bucket.invoicePaidMinor += paidMinor
-    bucket.allocatedToInvoicesMinor += allocByInvoice.get(inv.id) ?? 0
+    bucket.allocatedToInvoicesMinor += allocByInvoiceMinor.get(inv.id) ?? 0
     currencyBuckets.set(cur, bucket)
   }
 
   for (const pay of payments) {
     const cur = pay.currency.toUpperCase()
     const bucket = currencyBuckets.get(cur) ?? initBucket()
-    const allocated = allocByPayment.get(pay.id) ?? 0
-    const payAmt = Number(pay.amount)
-    bucket.paymentsTotalMinor += payAmt
-    bucket.paymentsAllocatedMinor += allocated
-    if (allocated > payAmt) {
+    const allocatedMinor = allocByPaymentMinor.get(pay.id) ?? 0
+    const payAmtMinor = majorToMinor(pay.amount ?? 0, cur)
+    bucket.paymentsTotalMinor += payAmtMinor
+    bucket.paymentsAllocatedMinor += allocatedMinor
+    if (allocatedMinor > payAmtMinor) {
       bucket.overAllocatedPaymentsCount += 1
       exceptions.push({
         code: 'OVER_ALLOCATED_PAYMENT',
@@ -284,20 +300,20 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
         currency: cur,
         entityType: 'payment',
         entityId: pay.id,
-        amountMinor: allocated - payAmt,
-        message: `Payment ${pay.id} allocated (${allocated}) exceeds payment amount (${payAmt})`,
+        amountMinor: allocatedMinor - payAmtMinor,
+        message: `Payment ${pay.id} allocated (${allocatedMinor}) exceeds payment amount (${payAmtMinor})`,
       })
-    } else if (allocated < payAmt) {
+    } else if (allocatedMinor < payAmtMinor) {
       bucket.underAllocatedPaymentsCount += 1
-      bucket.unallocatedAdvancesMinor += payAmt - allocated
+      bucket.unallocatedAdvancesMinor += payAmtMinor - allocatedMinor
       exceptions.push({
         code: 'UNDER_ALLOCATED_PAYMENT',
         severity: 'warning',
         currency: cur,
         entityType: 'payment',
         entityId: pay.id,
-        amountMinor: payAmt - allocated,
-        message: `Payment ${pay.id} has unallocated advance (${payAmt - allocated})`,
+        amountMinor: payAmtMinor - allocatedMinor,
+        message: `Payment ${pay.id} has unallocated advance (${payAmtMinor - allocatedMinor})`,
       })
     }
     currencyBuckets.set(cur, bucket)
@@ -315,30 +331,38 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
   )
 
   const unpostedInvoices = invoices.filter(
-    (i) => i.status === 'completed' && !postedInvoiceIds.has(i.id),
+    (i) =>
+      i.status !== 'draft' &&
+      i.status !== 'cancelled' &&
+      i.status !== 'voided' &&
+      i.status !== 'awaiting_approval' &&
+      majorToMinor(i.total ?? 0, i.currency.toUpperCase()) > 0 &&
+      !postedInvoiceIds.has(i.id),
   )
   for (const inv of unpostedInvoices) {
+    const cur = inv.currency.toUpperCase()
     exceptions.push({
       code: 'UNPOSTED_INVOICE',
       severity: 'error',
-      currency: inv.currency.toUpperCase(),
+      currency: cur,
       entityType: 'invoice',
       entityId: inv.id,
-      amountMinor: Number(inv.total ?? inv.paid_amount ?? 0),
-      message: `Completed invoice ${inv.id} has no posted journal entry`,
+      amountMinor: majorToMinor(inv.total ?? inv.paid_amount ?? 0, cur),
+      message: `Eligible invoice ${inv.id} (${inv.status}) has no posted journal entry`,
     })
   }
   const unpostedPayments = payments.filter(
     (p) => p.status === 'posted' && !postedPaymentIds.has(p.id),
   )
   for (const pay of unpostedPayments) {
+    const cur = pay.currency.toUpperCase()
     exceptions.push({
       code: 'UNPOSTED_PAYMENT',
       severity: 'error',
-      currency: pay.currency.toUpperCase(),
+      currency: cur,
       entityType: 'payment',
       entityId: pay.id,
-      amountMinor: Number(pay.amount),
+      amountMinor: majorToMinor(pay.amount ?? 0, cur),
       message: `Posted payment ${pay.id} has no posted journal entry`,
     })
   }
@@ -409,49 +433,11 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
     }
   }
 
-  let postedDebitMinor = 0
-  let postedCreditMinor = 0
-  let unpostedJournalLinesCount = 0
-  let roundingDifference = 0
-  for (const l of journalLines) {
-    const dRaw = Number(l.debit)
-    const cRaw = Number(l.credit)
-    if (Math.abs(dRaw - Math.round(dRaw)) > 1e-6 || Math.abs(cRaw - Math.round(cRaw)) > 1e-6) {
-      roundingDifference += Math.abs(dRaw - Math.round(dRaw)) + Math.abs(cRaw - Math.round(cRaw))
-    }
-    if (!postedEntryIds.has(l.journal_id)) {
-      unpostedJournalLinesCount += 1
-      exceptions.push({
-        code: 'UNPOSTED_JOURNAL_LINE',
-        severity: 'warning',
-        currency: null,
-        entityType: 'journal_line',
-        entityId: l.journal_id,
-        amountMinor: Math.round(dRaw) - Math.round(cRaw),
-        message: `Non-posted journal entry ${l.journal_id} excluded from posted balance`,
-      })
-      continue
-    }
-    postedDebitMinor += dRaw
-    postedCreditMinor += cRaw
-  }
-  const debitCreditVarianceMinor = Math.round(postedDebitMinor - postedCreditMinor)
-  if (debitCreditVarianceMinor !== 0) {
-    exceptions.push({
-      code: 'DEBIT_CREDIT_IMBALANCE',
-      severity: 'error',
-      currency: null,
-      entityType: 'ledger',
-      entityId: wsId,
-      amountMinor: debitCreditVarianceMinor,
-      message: `Posted debits (${postedDebitMinor}) do not equal posted credits (${postedCreditMinor})`,
-    })
-  }
-
   const orderDeposits = await fetchAllPages<{
     id: string
     amount_minor: number
     applied_invoice_id: string | null
+    currency?: string | null
   }>(
     (from, to) =>
       supabase
@@ -462,30 +448,181 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
         .range(from, to),
     'Failed to read order deposits for reconciliation',
   )
-  const unappliedDepositsMinor = orderDeposits
-    .filter((d) => !d.applied_invoice_id)
-    .reduce((s, d) => s + Number(d.amount_minor ?? 0), 0)
+
+  const entryById = new Map(allJournalEntries.map((j) => [j.id, j]))
+  const currencyOfEntry = (journalId: string): string => {
+    const je = entryById.get(journalId)
+    if (!je?.source_id) return workspaceBaseCurrency
+    if (je.source_type === 'invoice') {
+      return (allInvoiceById.get(je.source_id)?.currency ?? workspaceBaseCurrency).toUpperCase()
+    }
+    if (je.source_type === 'payment') {
+      return (allPaymentById.get(je.source_id)?.currency ?? workspaceBaseCurrency).toUpperCase()
+    }
+    if (je.source_type === 'order_deposit') {
+      const dep = orderDeposits.find((d) => d.id === je.source_id)
+      return (dep?.currency ?? workspaceBaseCurrency).toUpperCase()
+    }
+    return workspaceBaseCurrency
+  }
+
+  let postedDebitMinor = 0
+  let postedCreditMinor = 0
+  let unpostedJournalLinesCount = 0
+  let roundingDifference = 0
+  const ledgerByCurrency = new Map<string, { debitMinor: number; creditMinor: number }>()
+  const entryTotalsByJournalId = new Map<
+    string,
+    { debitMinor: number; creditMinor: number; hasLines: boolean }
+  >()
+
+  for (const l of journalLines) {
+    const cur = currencyOfEntry(l.journal_id)
+    const digits = safeCurrencyDigits(cur)
+    const scale = digits === 0 ? 1 : digits === 2 ? 100 : 1000
+    const dRaw = Number(l.debit)
+    const cRaw = Number(l.credit)
+    const dScaled = dRaw * scale
+    const cScaled = cRaw * scale
+    if (
+      Math.abs(dScaled - Math.round(dScaled)) > 1e-4 ||
+      Math.abs(cScaled - Math.round(cScaled)) > 1e-4
+    ) {
+      roundingDifference +=
+        Math.abs(dScaled - Math.round(dScaled)) + Math.abs(cScaled - Math.round(cScaled))
+    }
+    const dMinor = majorToMinor(dRaw, cur)
+    const cMinor = majorToMinor(cRaw, cur)
+
+    if (!postedEntryIds.has(l.journal_id)) {
+      unpostedJournalLinesCount += 1
+      exceptions.push({
+        code: 'UNPOSTED_JOURNAL_LINE',
+        severity: 'warning',
+        currency: cur,
+        entityType: 'journal_line',
+        entityId: l.journal_id,
+        amountMinor: dMinor - cMinor,
+        message: `Non-posted journal entry ${l.journal_id} excluded from posted balance`,
+      })
+      continue
+    }
+
+    const et = entryTotalsByJournalId.get(l.journal_id) ?? {
+      debitMinor: 0,
+      creditMinor: 0,
+      hasLines: false,
+    }
+    et.debitMinor += dMinor
+    et.creditMinor += cMinor
+    et.hasLines = true
+    entryTotalsByJournalId.set(l.journal_id, et)
+
+    const lc = ledgerByCurrency.get(cur) ?? { debitMinor: 0, creditMinor: 0 }
+    lc.debitMinor += dMinor
+    lc.creditMinor += cMinor
+    ledgerByCurrency.set(cur, lc)
+
+    postedDebitMinor += dMinor
+    postedCreditMinor += cMinor
+  }
+
+  let debitCreditVarianceMinor = 0
+  for (const [cur, lc] of ledgerByCurrency.entries()) {
+    const variance = lc.debitMinor - lc.creditMinor
+    if (variance !== 0) {
+      debitCreditVarianceMinor += Math.abs(variance)
+      exceptions.push({
+        code: 'DEBIT_CREDIT_IMBALANCE',
+        severity: 'error',
+        currency: cur,
+        entityType: 'ledger',
+        entityId: wsId,
+        amountMinor: variance,
+        message: `Posted debits (${lc.debitMinor}) do not equal posted credits (${lc.creditMinor}) in ${cur}`,
+      })
+    }
+  }
+
+  // Verify actual posted journal amounts for invoices and payments when journal lines exist
+  for (const inv of invoices) {
+    const cur = inv.currency.toUpperCase()
+    const expectedMinor = majorToMinor(inv.total ?? 0, cur)
+    const je = journalEntries.find((j) => j.source_type === 'invoice' && j.source_id === inv.id)
+    if (je) {
+      const totals = entryTotalsByJournalId.get(je.id)
+      if (totals?.hasLines && totals.debitMinor !== expectedMinor) {
+        exceptions.push({
+          code: 'JOURNAL_AMOUNT_MISMATCH',
+          severity: 'error',
+          currency: cur,
+          entityType: 'invoice',
+          entityId: inv.id,
+          amountMinor: Math.abs(expectedMinor - totals.debitMinor),
+          message: `Invoice ${inv.id} posted journal debit (${totals.debitMinor}) differs from invoice total (${expectedMinor})`,
+        })
+      }
+    }
+  }
+  for (const pay of payments) {
+    const cur = pay.currency.toUpperCase()
+    const expectedMinor = majorToMinor(pay.amount ?? 0, cur)
+    const je = journalEntries.find((j) => j.source_type === 'payment' && j.source_id === pay.id)
+    if (je) {
+      const totals = entryTotalsByJournalId.get(je.id)
+      if (totals?.hasLines && totals.debitMinor !== expectedMinor) {
+        exceptions.push({
+          code: 'JOURNAL_AMOUNT_MISMATCH',
+          severity: 'error',
+          currency: cur,
+          entityType: 'payment',
+          entityId: pay.id,
+          amountMinor: Math.abs(expectedMinor - totals.debitMinor),
+          message: `Payment ${pay.id} posted journal debit (${totals.debitMinor}) differs from payment amount (${expectedMinor})`,
+        })
+      }
+    }
+  }
+
   const totalUnallocated = [...currencyBuckets.values()].reduce(
     (s, c) => s + c.unallocatedAdvancesMinor,
     0,
   )
-  const depositUnpostedCount = orderDeposits.filter(
-    (d) =>
-      !d.applied_invoice_id &&
-      !journalEntries.some((j) => j.source_type === 'order_deposit' && j.source_id === d.id),
-  ).length
-  const advanceLiabilityMismatch =
-    depositUnpostedCount > 0 ? Math.max(unappliedDepositsMinor, totalUnallocated) : 0
-  if (advanceLiabilityMismatch > 0) {
-    exceptions.push({
-      code: 'ADVANCE_LIABILITY_MISMATCH',
-      severity: 'warning',
-      currency: null,
-      entityType: 'order_deposit',
-      entityId: wsId,
-      amountMinor: advanceLiabilityMismatch,
-      message: `${depositUnpostedCount} unapplied customer deposit(s) lack clearing journal entries`,
-    })
+  let advanceLiabilityMismatch = 0
+  for (const dep of orderDeposits) {
+    if (dep.applied_invoice_id) continue
+    const depMinor = Number(dep.amount_minor ?? 0)
+    const depCur = (dep.currency ?? workspaceBaseCurrency).toUpperCase()
+    const je = journalEntries.find(
+      (j) => j.source_type === 'order_deposit' && j.source_id === dep.id,
+    )
+    if (!je) {
+      advanceLiabilityMismatch += depMinor
+      exceptions.push({
+        code: 'ADVANCE_LIABILITY_MISMATCH',
+        severity: 'warning',
+        currency: depCur,
+        entityType: 'order_deposit',
+        entityId: dep.id,
+        amountMinor: depMinor,
+        message: `Unapplied customer deposit ${dep.id} lacks clearing journal entry (${depMinor})`,
+      })
+    } else {
+      const totals = entryTotalsByJournalId.get(je.id)
+      if (totals?.hasLines && totals.debitMinor !== depMinor) {
+        const diff = Math.abs(depMinor - totals.debitMinor)
+        advanceLiabilityMismatch += diff
+        exceptions.push({
+          code: 'ADVANCE_LIABILITY_MISMATCH',
+          severity: 'warning',
+          currency: depCur,
+          entityType: 'order_deposit',
+          entityId: dep.id,
+          amountMinor: diff,
+          message: `Unapplied customer deposit ${dep.id} journal amount (${totals.debitMinor}) differs from deposit (${depMinor})`,
+        })
+      }
+    }
   }
 
   const perCurrency: CrossCorePerCurrencySummary[] = [...currencyBuckets.entries()].map(
@@ -523,7 +660,10 @@ export async function reconcileWorkspaceCrossCore(wsId: string): Promise<CrossCo
   const totalUnderallocated = perCurrency.reduce((s, c) => s + c.underAllocatedPaymentsCount, 0)
   const totalOverallocated = perCurrency.reduce((s, c) => s + c.overAllocatedPaymentsCount, 0)
   const orphanedTotal = orphanAllocationsCount + orphanPaymentAllocationsCount
-  const mismatchedTotal = currencyMismatchCount + inactiveDocAllocCount
+  const journalAmountMismatchCount = exceptions.filter(
+    (e) => e.code === 'JOURNAL_AMOUNT_MISMATCH',
+  ).length
+  const mismatchedTotal = currencyMismatchCount + inactiveDocAllocCount + journalAmountMismatchCount
   const balanced =
     debitCreditVarianceMinor === 0 &&
     missingPostings === 0 &&

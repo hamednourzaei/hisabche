@@ -44,7 +44,7 @@ export function InvoiceDraftsButton({ t }: { t: (key: string, fallback?: string)
   const { dateTime } = useDateFormat()
 
   const drafts = query.data?.drafts ?? []
-  if (query.isError) {
+  if (query.isError && drafts.length === 0) {
     return (
       <Button
         variant="outline"

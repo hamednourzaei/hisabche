@@ -340,4 +340,147 @@ describe('V100 P0 (4.1) — Raw-Body Provider Gateway Webhook & Internal Reconci
     })
     expect(dbErrRes.statusCode).toBe(500)
   })
+
+  it('blocks forged final processor-state without adminOverride/capability, enforces pending_capture != reconciled, and logs rejected_signature telemetry', async () => {
+    const secret = 'test-gw-secret-phase1a-32chars!!'
+    process.env.PAYMENT_WEBHOOK_SECRET_TESTGW = secret
+
+    // Seed a member who holds payment.record but NOT payment.cancel/workspace.manage
+    const STAFF = { id: '33333333-3333-4333-8333-333333333333', token: 'token-gw-staff' }
+    users.set(STAFF.token, { id: STAFF.id })
+    db.tables.get('workspace_members')!.push({
+      id: fakeId('mstaff'),
+      workspace_id: SHOP_A,
+      user_id: STAFF.id,
+      role: 'member',
+      has_access: true,
+      suspended_at: null,
+    })
+
+    // 1. Staff with payment.record CAN move queued_offline -> pending_capture
+    const pendingRes = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/processor-state`,
+      headers: {
+        authorization: `Bearer ${STAFF.token}`,
+        'x-workspace-id': SHOP_A,
+      },
+      payload: {
+        processorState: 'pending_capture',
+        gatewayName: 'testgw',
+        idempotencyKey: 'idem-pending-1',
+      },
+    })
+    expect(pendingRes.statusCode, pendingRes.body).toBe(200)
+    expect(pendingRes.json().data.processorState).toBe('pending_capture')
+    expect(pendingRes.json().data.replay).toBe(false)
+
+    // Idempotent replay returns replay: true without creating duplicate events
+    const pendingReplay = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/processor-state`,
+      headers: {
+        authorization: `Bearer ${STAFF.token}`,
+        'x-workspace-id': SHOP_A,
+      },
+      payload: {
+        processorState: 'pending_capture',
+        gatewayName: 'testgw',
+        idempotencyKey: 'idem-pending-1',
+      },
+    })
+    expect(pendingReplay.statusCode).toBe(200)
+    expect(pendingReplay.json().data.replay).toBe(true)
+
+    // 2. pending_capture must NOT report reconciled: true
+    const recPending = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/reconcile-settlement`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+      payload: {},
+    })
+    expect(recPending.statusCode).toBe(200)
+    expect(recPending.json().data.settlementStatus).toBe('pending')
+    expect(recPending.json().data.reconciled).toBe(false)
+
+    // 3. Staff cannot forge captured even with adminOverride=true
+    const forgedStaff = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/processor-state`,
+      headers: { authorization: `Bearer ${STAFF.token}`, 'x-workspace-id': SHOP_A },
+      payload: {
+        processorState: 'captured',
+        adminOverride: true,
+        reason: 'Trying to mark captured manually',
+      },
+    })
+    expect(forgedStaff.statusCode).toBe(403)
+    expect(forgedStaff.json().code).toBe('PROCESSOR_FINAL_STATE_REQUIRES_WEBHOOK_OR_OVERRIDE')
+
+    // 4. Owner without adminOverride=true is also rejected (must be explicit override)
+    const missingFlag = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/processor-state`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+      payload: { processorState: 'captured', reason: 'Manual capture' },
+    })
+    expect(missingFlag.statusCode).toBe(403)
+
+    // 5. Invalid webhook signature records rejected_signature telemetry without changing state
+    const badWebhookRaw = JSON.stringify({
+      eventId: 'evt-bad-sig-1',
+      paymentId: PAY_USD,
+      processorState: 'captured',
+      externalRef: 'EXT-FORGED',
+      amountMinor: 12550,
+      currency: 'USD',
+    })
+    const badSigRes = await app.inject({
+      method: 'POST',
+      url: '/api/payments/gateway/webhook/testgw',
+      headers: {
+        'content-type': 'application/json',
+        'x-hisabche-signature':
+          't=1700000000,v1=0000000000000000000000000000000000000000000000000000000000000000',
+      },
+      payload: badWebhookRaw,
+    })
+    expect(badSigRes.statusCode).toBe(401)
+    const rejEvents = (db.tables.get('payment_gateway_events') ?? []).filter(
+      (e) => e.processing_status === 'rejected_signature',
+    )
+    expect(rejEvents).toHaveLength(1)
+    expect(rejEvents[0]!.signature_verified).toBe(false)
+    expect(rejEvents[0]!.provenance).toBe('webhook_rejected_signature')
+    // Payment state must remain pending_capture
+    expect(db.tables.get('payment_gateway_states')![0]!.processor_state).toBe('pending_capture')
+
+    // 6. Owner with explicit adminOverride + reason succeeds and writes audit log
+    const overrideRes = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_USD}/processor-state`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+      payload: {
+        processorState: 'captured',
+        adminOverride: true,
+        reason: 'Verified bank settlement slip #9941',
+        idempotencyKey: 'idem-override-1',
+      },
+    })
+    expect(overrideRes.statusCode, overrideRes.body).toBe(200)
+    expect(overrideRes.json().data.processorState).toBe('captured')
+    expect(overrideRes.json().data.provenance).toBe('admin_override')
+
+    // 7. Gateway reconciliation aggregates in exact minor units (125.50 USD -> 12550, not 125.5)
+    const listRec = await app.inject({
+      method: 'GET',
+      url: '/api/payments/gateway-reconciliation',
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+    })
+    expect(listRec.statusCode).toBe(200)
+    const usdBucket = listRec
+      .json()
+      .data.perCurrency.find((b: { currency: string }) => b.currency === 'USD')
+    expect(usdBucket.capturedMinor).toBe(12550)
+  })
 })

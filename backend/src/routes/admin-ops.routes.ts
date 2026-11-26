@@ -373,7 +373,7 @@ export default async function adminOpsRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/admin/ops/change-orders/:id/decide',
-    { preHandler: adminRoute('operations.jobs.run', { stepUp: true }) },
+    { preHandler: adminRoute('projects.change_orders.decide', { stepUp: true }) },
     async (req: FastifyRequest, reply: FastifyReply) => {
       const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
       const body = z

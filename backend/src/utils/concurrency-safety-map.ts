@@ -2366,8 +2366,11 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   {
     routeFile: 'payments.routes.ts',
     route: 'POST /:id/processor-state',
-    mechanisms: ['state-idempotent'],
-    evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/processor-state'" }],
+    mechanisms: ['db-function', 'idempotency-key'],
+    evidence: [
+      { file: `${RT}/payments.routes.ts`, text: "'/:id/processor-state'" },
+      { file: `${RT}/payments.routes.ts`, text: "'transition_payment_processor_state'" },
+    ],
   },
   {
     routeFile: 'payments.routes.ts',

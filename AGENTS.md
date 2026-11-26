@@ -546,3 +546,53 @@ Structured AI engineering, security, verification, and release-governance system
 - **Teams:** Architecture (`Team A`) · Security & Financial Integrity (`Team B`) · Platform, Offline & Mobile (`Team C`) · Product, Experience & i18n (`Team D`) · Quality & Release (`Team E`) + `Agents Orchestrator`
 - **Task Profiles:** Select `LIGHTWEIGHT`, `STANDARD`, or `CRITICAL` per [ORCHESTRATION.md](./hisabche-agency/ORCHESTRATION.md); assign exactly one write owner per overlapping file and invoke `Reality Checker` for independent release gates.
 - **Installed Harnesses:** Antigravity user plugin `~/.gemini/config/plugins/hisabche-agency/` (`27` skills + `rules/AGENTS.md`), Claude Code user agents `~/.claude/agents/hisabche-*.md` (preserving existing `seo-*.md` and workspace `.claude/agents/*.md`), and pre-converted Codex TOMLs in `hisabche-agency/integrations/codex/agents/`.
+
+---
+
+## 12. Permanent Engineering Algorithm & Project Lessons (V100 Remediation Standard)
+
+### 12.1 Mandatory Pre-Implementation Algorithm (10 Steps)
+
+Before changing any business logic, an agent must:
+
+1. Inspect the relevant existing implementation (do not code from a bug summary alone).
+2. Identify the single authoritative source of truth.
+3. Trace all callers, hooks, and UI/API/worker consumers.
+4. Read the relevant database schema, RPCs, and migrations.
+5. Read the backend RBAC/capability checks and `workspace_id` tenant boundaries.
+6. Identify online and offline (`local-engine` / outbox) behavior.
+7. Identify money units (`major` vs `minor`), currency codes, and `FRACTION_DIGITS` scale (`0 | 2 | 3`).
+8. Identify existing unit, integration, and `*.pg.test.ts` tests.
+9. Define the exact invariant(s) being preserved or enforced.
+10. Define a regression test that fails against the defective behavior before applying the fix.
+
+### 12.2 Mandatory Post-Implementation Algorithm (10 Steps)
+
+After every meaningful change, an agent must:
+
+1. Run targeted Vitest/Jest suites (including new regression tests).
+2. Run `tsc --noEmit` in every modified package.
+3. Run `npx eslint <modified-files>` (0 errors).
+4. Inspect `git diff --stat` and `git diff --check`.
+5. Search for duplicate logic, parallel engines, and trust-boundary bypasses.
+6. Verify API, database, and UI semantic consistency.
+7. Verify `workspace_id` tenant isolation and capability enforcement.
+8. Verify idempotency, row locking (`FOR UPDATE`), and atomic state+event writes.
+9. Verify currency units and scale (`majorToMinor` in `backend/src/utils/money-units.ts`).
+10. Update `PROGRESS.md` and run `pnpm code-intel update`.
+
+### 12.3 Permanent Domain Rules & Stop Conditions
+
+- **Financial Precision & Units:** Never mix major decimal units and integer minor units; never mix currencies without conversion or per-currency grouping; never assume 2 decimals (XAU/XAG/XPT/XPD/IQD = 3, AFN/IRT/IRR = 0); never check only journal existence instead of actual posted debit/credit amounts; never let one customer's overpayment create negative debt offsetting another customer.
+- **Security & Trust Boundaries:** UI checks are not authorization; final payment states (`captured`, `declined`, `voided`) require an HMAC-verified provider webhook or an explicit capability-checked (`payment.cancel` / `workspace.manage`), reason-bearing `adminOverride`; project budget decisions require `projects.change_orders.decide` + Step-Up (never `operations.jobs.run`); invalid webhook signatures must be logged as `rejected_signature` without mutating payment state.
+- **Database & Migrations:** Multi-step state+event+audit mutations belong in atomic `SECURITY DEFINER` RPCs with `FOR UPDATE` locking before idempotency checks; system SLA sweeps must record `actor_id = NULL` (system) and real `notification_status` (`sent` / `failed`), never `COALESCE(p_actor_id, created_by)`; migration dependency graphs must be cycle-free and never hardcode `'USD'` defaults over existing schemas.
+- **UI Semantics & Query Reliability:** Failed background refetches must not hide valid cached data (`invoice-drafts-button.tsx`); failed queries must not render as `0`; admin metrics must match their true semantic source (`pendingReviews !== activeDevices`); clear stale reports when switching target workspace IDs; scale `amount_minor` by `FRACTION_DIGITS` and localize all statuses in `fa`/`af`/`en`.
+- **Mandatory Stop Conditions:** Never claim completion if a required test failed/skipped, a financial unit mismatch remains, a security boundary is unverified, a migration dependency is broken, or a duplicate engine was created. Mark unverified environments `BLOCKED` or `NEEDS_OWNER_DECISION`.
+
+### 12.4 Hard-Won Project Lessons (Live Production & Audit Incidents)
+
+1. **Storage Bucket Auto-Ensure & Signed `<img>` URLs:** `business-assets` lacked a SQL bucket migration and caused `503 STORAGE_UNAVAILABLE` (`Bucket not found`) until `SupabaseStorageProvider.upload()` auto-ensured missing buckets (`createBucket`). Additionally, `GET /api/workspaces/:id/brand-assets/:type/content?sig=...` is requested by browser `<img>` tags without an `Authorization` header — the global `preHandler` in `backend/src/index.ts` must exempt `GET .../brand-assets/.../content` **only when non-empty `sig=` is present** so `verifyBrandAssetSignature` runs instead of returning `401`.
+2. **ES256 JWKS Deployments & Signing Secret Derivation:** Supabase projects using asymmetric ES256 JWTs may omit symmetric `JWT_SECRET`. `BrandAssetService.getSigningSecret()` derives a domain-separated HMAC subkey from `SUPABASE_SERVICE_KEY` when explicit secrets are absent, validated _before_ uploading to prevent orphaned objects.
+3. **Next.js `NEXT_PUBLIC_*` Inlining & Realtime StrictMode Hygiene:** Destructuring `const env = process.env; env.NEXT_PUBLIC_SUPABASE_URL` defeats Next.js/Turbopack static env inlining. Always reference `process.env.NEXT_PUBLIC_*` directly (with `typeof process !== 'undefined'` guard for Electron Vite). Gate `useRealtime` and `usePresence` on `!isOfflineTokenMode() && hasToken()` plus a `50ms` settle delay so React StrictMode and tokenless states do not abort WebSockets mid-handshake (`WebSocket is closed before the connection is established`).
+4. **Restore Preview Row Classification:** Classify every row into exactly one mutually exclusive bucket (`CREATE`, `SKIP`, `REJECT`) so `wouldCreate + wouldSkip + wouldReject === totalInputRows`, validate UUIDs before `.in('id', ...)`, and never emit `BROKEN_FOREIGN_KEY` when the parent lookup query itself failed.
+5. **Migration Generator Suffix Matching:** `scripts/migrations/generate-registry.mjs` previously matched only `-NN` at the end of filenames and scanned `-- Rollback:` comments for `DROP`, dropping dependencies for `*-02-any-unit` / `*-03-atomic` migrations. Always match `^(.*?)-(\d{2}[a-z]?)(?:-.+)?$` and strip `-- Rollback:` before destructive classification.

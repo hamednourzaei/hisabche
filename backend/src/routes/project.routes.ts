@@ -614,7 +614,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const scale = budgetScaleForCurrency(projectCurrency)
         const idemKey = readClientRequestId(request)
 
-        const rpcRes = await supabase.rpc('create_project_change_order', {
+        const rpcRes = await supabase.rpc('create_project_change_order_v2', {
           p_workspace_id: request.tenancy.workspaceId,
           p_project_id: id,
           p_actor_id: request.tenancy.userId,
@@ -646,11 +646,9 @@ export async function projectRoutes(fastify: FastifyInstance) {
           throw rpcRes.error ?? new Error('ATOMIC_CHANGE_ORDER_CREATE_FAILED')
         }
 
-        const created = rpcRes.data as Record<string, unknown>
-        const wasReplay =
-          Boolean(idemKey) &&
-          String(created.created_at ?? '') !== '' &&
-          Date.now() - new Date(String(created.created_at)).getTime() > 500
+        const envelope = rpcRes.data as { order?: Record<string, unknown>; replay?: boolean }
+        const created = (envelope.order ?? rpcRes.data) as Record<string, unknown>
+        const wasReplay = Boolean(envelope.replay)
         return reply.code(wasReplay ? 200 : 201).send({
           data: {
             ...created,

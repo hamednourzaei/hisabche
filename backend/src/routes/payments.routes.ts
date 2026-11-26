@@ -33,6 +33,8 @@ import { failRoute } from '../utils/route-failure'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
+import { holds } from '../services/authorization/authorization.domain'
+import { majorToMinor } from '../utils/money-units'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 import { toJsonSchema } from '../utils/json-schema'
 
@@ -378,6 +380,8 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
   )
 
   // ─── X10: OFFLINE/GATEWAY PAYMENT PROCESSOR STATE ──────────────────────
+  const FINAL_PROCESSOR_STATES = new Set(['captured', 'declined', 'voided'])
+
   const processorTransitionSchema = z
     .object({
       processorState: z.enum([
@@ -391,16 +395,10 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
       externalRef: z.string().trim().max(120).optional(),
       feeMinor: z.number().int().min(0).default(0),
       reason: z.string().trim().max(300).optional(),
+      adminOverride: z.boolean().default(false),
+      idempotencyKey: z.string().trim().min(1).max(120).optional(),
     })
     .strict()
-
-  const ALLOWED_PROCESSOR_FSM: Readonly<Record<string, readonly string[]>> = {
-    queued_offline: ['pending_capture', 'voided'],
-    pending_capture: ['captured', 'declined', 'voided'],
-    declined: ['pending_capture', 'voided'],
-    captured: ['voided'],
-    voided: [],
-  }
 
   fastify.get(
     '/:id/processor-state',
@@ -470,81 +468,72 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const body = processorTransitionSchema.parse(request.body)
-        const { data: payment, error: pErr } = await supabase
-          .from('payments')
-          .select('id, method, currency')
-          .eq('id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .maybeSingle()
-        if (pErr) throw new DatabaseError('Failed to verify payment', pErr)
-        if (!payment) throw new NotFoundError('Payment')
 
-        const { data: existing, error: eErr } = await supabase
-          .from('payment_gateway_states')
-          .select('*')
-          .eq('payment_id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .maybeSingle()
-        if (eErr) throw new DatabaseError('Failed to read processor state', eErr)
-
-        const current =
-          existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
-        if (
-          current !== body.processorState &&
-          !(ALLOWED_PROCESSOR_FSM[current] ?? []).includes(body.processorState)
-        ) {
-          throw new ConflictError('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')
+        // Trust boundary: final processor states (captured/declined/voided) must come
+        // from the HMAC-verified provider webhook or an explicit audited admin override.
+        if (FINAL_PROCESSOR_STATES.has(body.processorState)) {
+          const canOverride =
+            holds(request.tenancy, 'payment.cancel') || holds(request.tenancy, 'workspace.manage')
+          if (!body.adminOverride || !canOverride) {
+            return reply.code(403).send({
+              error:
+                'Final processor states require a verified gateway webhook or authorized admin override',
+              code: 'PROCESSOR_FINAL_STATE_REQUIRES_WEBHOOK_OR_OVERRIDE',
+            })
+          }
+          if (!body.reason || body.reason.trim().length < 5) {
+            return reply.code(400).send({
+              error:
+                'Administrative processor-state override requires a reason of at least 5 characters',
+              code: 'OVERRIDE_REASON_REQUIRED',
+            })
+          }
         }
 
-        const now = new Date().toISOString()
-        const payload = {
-          workspace_id: request.tenancy.workspaceId,
-          payment_id: id,
-          processor_state: body.processorState,
-          gateway_name: body.gatewayName ?? existing?.gateway_name ?? null,
-          external_ref: body.externalRef ?? existing?.external_ref ?? null,
-          fee_minor: body.feeMinor,
-          currency: payment.currency,
-          reason: body.reason ?? null,
-          updated_by: request.tenancy.userId,
-          updated_at: now,
+        const { data: rpcData, error: rpcErr } = await supabase.rpc(
+          'transition_payment_processor_state',
+          {
+            p_workspace_id: request.tenancy.workspaceId,
+            p_payment_id: id,
+            p_to_state: body.processorState,
+            p_gateway_name: body.gatewayName ?? null,
+            p_external_ref: body.externalRef ?? null,
+            p_fee_minor: body.feeMinor,
+            p_reason: body.reason ?? null,
+            p_actor_id: request.tenancy.userId,
+            p_admin_override: body.adminOverride,
+            p_idempotency_key: body.idempotencyKey ?? null,
+          },
+        )
+        if (rpcErr) {
+          const msg = String(rpcErr.message ?? '')
+          if (msg.includes('PAYMENT_NOT_FOUND')) throw new NotFoundError('Payment')
+          if (
+            msg.includes('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED') ||
+            msg.includes('IDEMPOTENCY_KEY_STATE_CONFLICT')
+          ) {
+            throw new ConflictError(
+              msg.includes('IDEMPOTENCY_KEY_STATE_CONFLICT')
+                ? 'IDEMPOTENCY_KEY_STATE_CONFLICT'
+                : 'PROCESSOR_STATE_TRANSITION_NOT_ALLOWED',
+            )
+          }
+          throw new DatabaseError('Failed to update payment processor state', rpcErr)
         }
 
-        const { data: saved, error: wErr } = existing
-          ? await supabase
-              .from('payment_gateway_states')
-              .update(payload)
-              .eq('id', existing.id)
-              .eq('workspace_id', request.tenancy.workspaceId)
-              .select('*')
-              .single()
-          : await supabase.from('payment_gateway_states').insert(payload).select('*').single()
-        if (wErr) throw new DatabaseError('Failed to save processor state', wErr)
-
-        const { error: evErr } = await supabase.from('payment_gateway_events').insert({
-          workspace_id: request.tenancy.workspaceId,
-          payment_id: id,
-          from_state: current,
-          to_state: body.processorState,
-          gateway_name: saved.gateway_name,
-          external_ref: saved.external_ref,
-          fee_minor: body.feeMinor,
-          signature_verified: false,
-          reason: body.reason ?? null,
-          actor_id: request.tenancy.userId,
-        })
-        if (evErr) throw new DatabaseError('Failed to append gateway event log', evErr)
-
+        const saved = (rpcData ?? {}) as Record<string, unknown>
         return reply.send({
           data: {
-            paymentId: saved.payment_id,
-            processorState: saved.processor_state,
-            gatewayName: saved.gateway_name,
-            externalRef: saved.external_ref,
-            feeMinor: saved.fee_minor,
-            currency: saved.currency,
-            reason: saved.reason,
-            updatedAt: saved.updated_at,
+            paymentId: saved.paymentId ?? id,
+            processorState: saved.processorState ?? body.processorState,
+            gatewayName: saved.gatewayName ?? null,
+            externalRef: saved.externalRef ?? null,
+            feeMinor: saved.feeMinor ?? body.feeMinor,
+            currency: saved.currency ?? null,
+            reason: saved.reason ?? null,
+            updatedAt: saved.updatedAt ?? new Date().toISOString(),
+            provenance: saved.provenance ?? null,
+            replay: Boolean(saved.replay),
           },
         })
       } catch (err) {
@@ -633,15 +622,42 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
           .maybeSingle()
         if (jErr) throw new DatabaseError('Failed to verify payment ledger entry', jErr)
 
+        const { data: latestEvents, error: evErr } = await supabase
+          .from('payment_gateway_events')
+          .select('to_state, signature_verified, provenance, processing_status')
+          .eq('workspace_id', wsId)
+          .eq('payment_id', id)
+          .order('created_at', { ascending: false })
+          .limit(20)
+        if (evErr) throw new DatabaseError('Failed to load gateway events', evErr)
+
         const processorState =
           gwState?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
         const ledgerPosted = Boolean(journalEntry)
+        const captureProvenanceTrusted =
+          payment.method === 'cash' ||
+          (latestEvents ?? []).some(
+            (ev: {
+              to_state?: string
+              signature_verified?: boolean
+              provenance?: string
+              processing_status?: string
+            }) =>
+              ev.to_state === 'captured' &&
+              ev.processing_status !== 'rejected_signature' &&
+              ev.processing_status !== 'failed' &&
+              (ev.signature_verified === true || ev.provenance === 'admin_override'),
+          )
+
         const settlementException =
           (processorState === 'captured' && payment.status === 'posted' && !ledgerPosted) ||
-          ((processorState === 'declined' || processorState === 'voided') && ledgerPosted)
+          ((processorState === 'declined' || processorState === 'voided') && ledgerPosted) ||
+          (processorState === 'captured' && !captureProvenanceTrusted)
 
         const settlementStatus = settlementException
-          ? 'reconciliation_exception'
+          ? processorState === 'captured' && !captureProvenanceTrusted
+            ? 'unverified_capture'
+            : 'reconciliation_exception'
           : processorState === 'captured'
             ? ledgerPosted
               ? 'captured'
@@ -654,6 +670,12 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
                   ? 'cancelled'
                   : 'settlement_pending'
 
+        const reconciled =
+          !settlementException &&
+          processorState === 'captured' &&
+          ledgerPosted &&
+          captureProvenanceTrusted
+
         const { error: auditErr } = await supabase.from('audit_logs').insert({
           workspace_id: wsId,
           user_id: request.tenancy.userId,
@@ -663,8 +685,9 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
           details: {
             processorState,
             ledgerPosted,
+            captureProvenanceTrusted,
             settlementStatus,
-            reconciled: !settlementException && processorState !== 'queued_offline',
+            reconciled,
           },
         })
         if (auditErr)
@@ -676,8 +699,9 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
             currency: payment.currency,
             processorState,
             ledgerPosted,
+            captureProvenanceTrusted,
             settlementStatus,
-            reconciled: !settlementException && processorState !== 'queued_offline',
+            reconciled,
             checkedAt: new Date().toISOString(),
           },
         })
@@ -788,11 +812,11 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
           const st = stateMap.get(p.id)
           const effState =
             st?.processor_state ?? (p.method === 'cash' ? 'captured' : 'queued_offline')
-          const amt = Number(p.amount)
-          if (effState === 'captured') b.capturedMinor += amt
-          else if (effState === 'declined') b.declinedMinor += amt
-          else if (effState === 'voided') b.voidedMinor += amt
-          else b.queuedOfflineMinor += amt
+          const amtMinor = majorToMinor(p.amount, cur)
+          if (effState === 'captured') b.capturedMinor += amtMinor
+          else if (effState === 'declined') b.declinedMinor += amtMinor
+          else if (effState === 'voided') b.voidedMinor += amtMinor
+          else b.queuedOfflineMinor += amtMinor
           b.totalFeesMinor += Number(st?.fee_minor ?? 0)
 
           const isPostedInLedger = postedPaymentIds.has(p.id)

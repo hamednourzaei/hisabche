@@ -20,7 +20,7 @@
 import { createHash } from 'node:crypto'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { FRACTION_DIGITS } from '@hisabche/formatting'
+import { currencyScale } from '../utils/money-units'
 import { supabase } from '../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
 import WebhookService from '../services/webhook.service'
@@ -67,9 +67,69 @@ async function resolveProviderWebhookSecret(provider: string): Promise<string | 
   return envDefault && envDefault.trim() !== '' ? envDefault.trim() : null
 }
 
-function currencyScale(currency: string): number {
-  const digits = (FRACTION_DIGITS as Record<string, number>)[currency.toUpperCase()] ?? 2
-  return 10 ** digits
+async function recordWebhookTelemetryFailure(params: {
+  provider: string
+  rawBody: string
+  status: 'rejected_signature' | 'failed'
+  provenance: 'webhook_rejected_signature' | 'failed_processing'
+  errorCode: string
+  signatureVerified: boolean
+}): Promise<void> {
+  try {
+    let parsed: Record<string, unknown> | null = null
+    try {
+      parsed = JSON.parse(params.rawBody) as Record<string, unknown>
+    } catch {
+      parsed = null
+    }
+    const paymentId = typeof parsed?.paymentId === 'string' ? parsed.paymentId : null
+    if (!paymentId || !/^[0-9a-f-]{36}$/i.test(paymentId)) return
+
+    const { data: payRow } = await supabase
+      .from('payments')
+      .select('id, workspace_id, currency')
+      .eq('id', paymentId)
+      .maybeSingle()
+    if (!payRow) return
+
+    const wsId = String((payRow as { workspace_id: string }).workspace_id)
+    const payCur = String((payRow as { currency?: string }).currency ?? '')
+    const candidateState =
+      typeof parsed?.processorState === 'string' &&
+      ['queued_offline', 'pending_capture', 'captured', 'declined', 'voided'].includes(
+        parsed.processorState,
+      )
+        ? parsed.processorState
+        : 'pending_capture'
+
+    await supabase.from('payment_gateway_events').insert({
+      workspace_id: wsId,
+      payment_id: paymentId,
+      from_state: null,
+      to_state: candidateState,
+      gateway_name: params.provider,
+      external_ref:
+        typeof parsed?.externalRef === 'string' ? parsed.externalRef.slice(0, 120) : null,
+      fee_minor: 0,
+      signature_verified: params.signatureVerified,
+      reason: params.errorCode,
+      actor_id: null,
+      event_id: null,
+      event_type:
+        typeof parsed?.eventType === 'string' ? parsed.eventType.slice(0, 80) : 'webhook.rejected',
+      amount_minor:
+        typeof parsed?.amountMinor === 'number' && Number.isInteger(parsed.amountMinor)
+          ? parsed.amountMinor
+          : null,
+      currency: payCur || null,
+      payload_sha256: createHash('sha256').update(params.rawBody, 'utf8').digest('hex'),
+      processing_status: params.status,
+      provenance: params.provenance,
+      last_error: params.errorCode.slice(0, 240),
+    })
+  } catch {
+    // Non-blocking telemetry must never mask the 401/409 security response.
+  }
 }
 
 export async function paymentWebhookRoutes(fastify: FastifyInstance) {
@@ -168,6 +228,14 @@ export async function paymentWebhookRoutes(fastify: FastifyInstance) {
             : outcome.reason === 'timestamp_out_of_tolerance'
               ? 'GATEWAY_TIMESTAMP_EXPIRED'
               : 'GATEWAY_SIGNATURE_INVALID'
+        await recordWebhookTelemetryFailure({
+          provider: normalizedProvider,
+          rawBody,
+          status: 'rejected_signature',
+          provenance: 'webhook_rejected_signature',
+          errorCode: code,
+          signatureVerified: false,
+        })
         return reply.code(401).send({ error: code, code, reason: outcome.reason })
       }
 
@@ -232,12 +300,23 @@ export async function paymentWebhookRoutes(fastify: FastifyInstance) {
 
       if (rpcRes.error) {
         const msg = String(rpcRes.error.message ?? '')
+        await recordWebhookTelemetryFailure({
+          provider: normalizedProvider,
+          rawBody,
+          status: 'failed',
+          provenance: 'failed_processing',
+          errorCode: msg || 'GATEWAY_WEBHOOK_RPC_ERROR',
+          signatureVerified: true,
+        })
         if (msg.includes('PAYMENT_NOT_FOUND')) throw new NotFoundError('Payment')
         if (msg.includes('GATEWAY_CURRENCY_MISMATCH')) {
           throw new ConflictError('GATEWAY_CURRENCY_MISMATCH')
         }
         if (msg.includes('GATEWAY_AMOUNT_MISMATCH')) {
           throw new ConflictError('GATEWAY_AMOUNT_MISMATCH')
+        }
+        if (msg.includes('GATEWAY_EVENT_PAYLOAD_CONFLICT')) {
+          throw new ConflictError('GATEWAY_EVENT_PAYLOAD_CONFLICT')
         }
         if (msg.includes('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')) {
           throw new ConflictError('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')

@@ -11,7 +11,7 @@
 //   - Appointment waitlist, no-show fee, TCO estimator, SLA tickets, Integration health & Export bundle
 // ============================================
 
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient, { localRequest } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
@@ -503,6 +503,7 @@ export function useEvaluateNoShowFee() {
 }
 
 export function useCreateChangeOrder() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       projectId,
@@ -514,6 +515,8 @@ export function useCreateChangeOrder() {
       deltaMinor: number
       estimatedCostDeltaMinor: number
       approved: boolean
+      expectedVersion?: number | undefined
+      reason?: string | undefined
     }) => {
       const { data } = await apiClient.post<{
         data: {
@@ -521,9 +524,17 @@ export function useCreateChangeOrder() {
           revisedBudgetMinor: number
           netMarginDeltaMinor: number
           status: string
+          version?: number
         }
       }>(`/projects/${projectId}/change-orders`, body)
       return data.data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['projects', variables.projectId, 'change-orders'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['projects', variables.projectId] })
+      void queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }
@@ -661,21 +672,37 @@ export function useProjectChangeOrders(projectId: string | null) {
 }
 
 export function useDecideChangeOrder() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({
       projectId,
       orderId,
       decision,
+      expectedVersion,
+      reason,
     }: {
       projectId: string
       orderId: string
       decision: 'approved' | 'rejected'
+      expectedVersion?: number | undefined
+      reason?: string | undefined
     }) => {
       const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
         `/projects/${projectId}/change-orders/${orderId}/decide`,
-        { decision },
+        {
+          decision,
+          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
+          ...(reason ? { reason } : {}),
+        },
       )
       return data.data
+    },
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['projects', variables.projectId, 'change-orders'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['projects', variables.projectId] })
+      void queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }

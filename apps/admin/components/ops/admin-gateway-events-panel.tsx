@@ -18,7 +18,27 @@ import {
 import { useAdminGatewayEvents, type AdminGatewayEventItem } from '@/hooks/use-admin-ops'
 import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
 import { useAdminLocale } from '@/hooks/use-admin-locale'
+import type { AdminLocale } from '@/components/admin-shell/admin-nav'
 import { adminDateTime, adminNumber, UNKNOWN_VALUE } from '@/lib/admin-format'
+import { FRACTION_DIGITS } from '@hisabche/formatting'
+
+const GATEWAY_STATUS_LABELS: Record<string, Record<string, string>> = {
+  processed: { fa: 'پردازش‌شده', af: 'پروسس‌شدگی', en: 'Processed' },
+  replayed: { fa: 'تکراری (Replay)', af: 'تکراری (Replay)', en: 'Replayed' },
+  failed: { fa: 'ناموفق', af: 'ناموفق', en: 'Failed' },
+  rejected_signature: { fa: 'امضای نامعتبر', af: 'امضای نامعتبر', en: 'Rejected Signature' },
+}
+
+function formatGatewayAmount(
+  amountMinor: number,
+  currency: string | null,
+  locale: AdminLocale,
+): string {
+  const cur = (currency ?? '').trim().toUpperCase()
+  const digits = (FRACTION_DIGITS as Record<string, number | undefined>)[cur] ?? 2
+  const scaled = digits === 0 ? amountMinor : Number((amountMinor / 10 ** digits).toFixed(digits))
+  return `${adminNumber(scaled, locale)} ${cur}`.trim()
+}
 
 export function AdminGatewayEventsPanel() {
   const t = useTranslations()
@@ -64,11 +84,15 @@ export function AdminGatewayEventsPanel() {
       id: 'status',
       labelKey: 'admin.controlPlane.common.status',
       labelFallback: 'وضعیت',
-      render: (ev) => (
-        <Badge variant="outline" className="text-xs">
-          {ev.processing_status}
-        </Badge>
-      ),
+      render: (ev) => {
+        const langKey = locale.startsWith('en') ? 'en' : locale.startsWith('af') ? 'af' : 'fa'
+        const label = GATEWAY_STATUS_LABELS[ev.processing_status]?.[langKey] ?? ev.processing_status
+        return (
+          <Badge variant="outline" className="text-xs">
+            {label}
+          </Badge>
+        )
+      },
       sortValue: (ev) => ev.processing_status,
     },
     {
@@ -79,7 +103,7 @@ export function AdminGatewayEventsPanel() {
       render: (ev) => (
         <span dir="ltr" className="font-mono text-xs tabular-nums">
           {ev.amount_minor !== null
-            ? `${adminNumber(ev.amount_minor, locale)} ${ev.currency ?? ''}`
+            ? formatGatewayAmount(ev.amount_minor, ev.currency, locale)
             : UNKNOWN_VALUE}
         </span>
       ),

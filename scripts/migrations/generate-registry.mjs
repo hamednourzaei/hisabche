@@ -34,7 +34,8 @@ function uniqueMatches(text, regex) {
 }
 
 function classifyDestructive(sql) {
-  const upper = sql.toUpperCase()
+  const forwardSql = sql.replace(/--\s*Rollback:[\s\S]*$/i, '')
+  const upper = forwardSql.toUpperCase()
   if (/\bDROP\s+TABLE\b/.test(upper)) return 'DESTRUCTIVE_DROP_TABLE'
   if (/\bDROP\s+COLUMN\b/.test(upper)) return 'DESTRUCTIVE_DROP_COLUMN'
   if (/\bTRUNCATE\b/.test(upper)) return 'DESTRUCTIVE_TRUNCATE'
@@ -43,14 +44,23 @@ function classifyDestructive(sql) {
 }
 
 const familyGroups = new Map()
+const baseSet = new Set(migrations.map((m) => m.slice(0, -'-migration.sql'.length)))
 for (const file of migrations) {
   const base = file.slice(0, -'-migration.sql'.length)
-  const seqMatch = /^(.*)-(\d{2}[a-z]?)$/.exec(base)
+  const seqMatch = /^(.*?)-(\d{2}[a-z]?)(?:-.+)?$/.exec(base)
   if (seqMatch) {
     const family = seqMatch[1]
     const list = familyGroups.get(family) ?? []
     list.push({ file, seq: seqMatch[2] })
     familyGroups.set(family, list)
+  }
+}
+for (const [family, list] of familyGroups.entries()) {
+  if (baseSet.has(family)) {
+    const rootFile = `${family}-migration.sql`
+    if (!list.some((item) => item.file === rootFile)) {
+      list.push({ file: rootFile, seq: '00' })
+    }
   }
 }
 
@@ -66,7 +76,7 @@ const entries = migrations.map((file) => {
   if (file !== 'base-schema-migration.sql') {
     dependencies.push('base-schema-migration.sql')
   }
-  const seqMatch = /^(.*)-(\d{2}[a-z]?)$/.exec(base)
+  const seqMatch = /^(.*?)-(\d{2}[a-z]?)(?:-.+)?$/.exec(base)
   if (seqMatch) {
     const family = seqMatch[1]
     const list = (familyGroups.get(family) ?? []).sort((a, b) => a.seq.localeCompare(b.seq))
@@ -118,6 +128,30 @@ const entries = migrations.map((file) => {
     destructiveClassification: classifyDestructive(sql),
   }
 })
+
+// Validate dependency integrity & cycle-freeness
+const byFilename = new Map(entries.map((e) => [e.filename.replace(/^docs\//, ''), e]))
+const visiting = new Set()
+const visited = new Set()
+function checkDag(name) {
+  if (visited.has(name)) return
+  if (visiting.has(name)) {
+    console.error(`MIGRATION_CYCLE_DETECTED: ${name}`)
+    process.exit(1)
+  }
+  visiting.add(name)
+  const entry = byFilename.get(name)
+  for (const dep of entry?.dependencies ?? []) {
+    if (!byFilename.has(dep)) {
+      console.error(`MISSING_MIGRATION_DEPENDENCY: ${name} -> ${dep}`)
+      process.exit(1)
+    }
+    checkDag(dep)
+  }
+  visiting.delete(name)
+  visited.add(name)
+}
+for (const name of byFilename.keys()) checkDag(name)
 
 const registry = {
   schemaVersion: 1,

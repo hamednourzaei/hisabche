@@ -31,6 +31,7 @@ import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { PlanLimitError } from '../services/plan-limits.service'
 import { toJsonSchema } from '../utils/json-schema'
+import { isKnownCurrencyCode, safeCurrencyDigits } from '../utils/money-units'
 
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const svc = new WorkspaceService()
@@ -752,7 +753,6 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         .parse(req.body)
 
       const { createHash } = await import('node:crypto')
-      const { FRACTION_DIGITS } = await import('@hisabche/formatting')
       const { supabase } = await import('../db')
 
       const SUPPORTED_SCHEMA_VERSIONS = new Set(['1', '1.0'])
@@ -800,52 +800,93 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         'debit',
         'credit',
       ]
+      const MINOR_MONEY_FIELDS = ['amount_minor', 'original_budget_minor', 'delta_minor']
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+      let totalInputRows = 0
+      const rejectedRowKeys = new Set<string>()
+      const rowKeysByTableId = new Map<string, Map<string, string[]>>()
+      const invalidIds: Array<{ table: string; id: string }> = []
 
       for (const [tableName, rows] of Object.entries(body.data)) {
         tableCounts[tableName] = rows.length
+        totalInputRows += rows.length
         if (!BACKUP_TABLE_NAMES.has(tableName)) {
           unknownTables.push(tableName)
+          for (let idx = 0; idx < rows.length; idx++) {
+            rejectedRowKeys.add(`${tableName}:${idx}`)
+          }
           continue
         }
         const seenIds = new Set<string>()
         idsByTable.set(tableName, seenIds)
-        for (const row of rows) {
-          const rawId = row?.id
-          if (typeof rawId !== 'string' || !rawId.trim()) {
+        const tableRowMap = new Map<string, string[]>()
+        rowKeysByTableId.set(tableName, tableRowMap)
+
+        for (let idx = 0; idx < rows.length; idx++) {
+          const row = rows[idx]
+          const rowKey = `${tableName}:${idx}`
+          if (!row) {
             if (!missingIdTables.includes(tableName)) missingIdTables.push(tableName)
+            rejectedRowKeys.add(rowKey)
             continue
           }
-          if (seenIds.has(rawId)) {
-            duplicateIds.push({ table: tableName, id: rawId })
-          } else {
-            seenIds.add(rawId)
+          const rawId = row.id
+          if (typeof rawId !== 'string' || !rawId.trim()) {
+            if (!missingIdTables.includes(tableName)) missingIdTables.push(tableName)
+            rejectedRowKeys.add(rowKey)
+            continue
           }
+          const cleanId = rawId.trim()
+          if (!UUID_RE.test(cleanId)) {
+            invalidIds.push({ table: tableName, id: cleanId })
+            rejectedRowKeys.add(rowKey)
+            continue
+          }
+
+          if (seenIds.has(cleanId)) {
+            duplicateIds.push({ table: tableName, id: cleanId })
+            rejectedRowKeys.add(rowKey)
+          } else {
+            seenIds.add(cleanId)
+          }
+          const existingKeys = tableRowMap.get(cleanId) ?? []
+          existingKeys.push(rowKey)
+          tableRowMap.set(cleanId, existingKeys)
+
           if (
-            typeof row.workspace_id === 'string' &&
-            row.workspace_id.trim() !== '' &&
+            typeof row.workspace_id !== 'string' ||
+            row.workspace_id.trim() === '' ||
             row.workspace_id !== id
           ) {
-            crossTenantRows.push({ table: tableName, id: rawId, workspaceId: row.workspace_id })
+            crossTenantRows.push({
+              table: tableName,
+              id: cleanId,
+              workspaceId: typeof row.workspace_id === 'string' ? row.workspace_id : 'MISSING',
+            })
+            rejectedRowKeys.add(rowKey)
           }
           for (const tsField of TIMESTAMP_FIELDS) {
             const val = row[tsField]
             if (val !== null && val !== undefined && val !== '') {
               if (typeof val !== 'string' || !Number.isFinite(Date.parse(val))) {
-                malformedTimestamps.push({ table: tableName, id: rawId, field: tsField })
+                malformedTimestamps.push({ table: tableName, id: cleanId, field: tsField })
+                rejectedRowKeys.add(rowKey)
               }
             }
           }
           let rowDigits = 2
           if (row.currency !== null && row.currency !== undefined && row.currency !== '') {
             const cur = String(row.currency).trim().toUpperCase()
-            if (!/^[A-Z]{3}$/.test(cur)) {
+            if (!isKnownCurrencyCode(cur)) {
               invalidCurrencies.push({
                 table: tableName,
-                id: rawId,
+                id: cleanId,
                 currency: String(row.currency),
               })
+              rejectedRowKeys.add(rowKey)
             } else {
-              rowDigits = FRACTION_DIGITS[cur as keyof typeof FRACTION_DIGITS] ?? 2
+              rowDigits = safeCurrencyDigits(cur)
             }
           }
           const scaleFactor = Math.pow(10, rowDigits)
@@ -857,7 +898,17 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
                 !Number.isFinite(numVal) ||
                 Math.abs(numVal * scaleFactor - Math.round(numVal * scaleFactor)) > 1e-4
               ) {
-                invalidMoneyRows.push({ table: tableName, id: rawId, field: mField })
+                invalidMoneyRows.push({ table: tableName, id: cleanId, field: mField })
+                rejectedRowKeys.add(rowKey)
+              }
+            }
+          }
+          for (const minorField of MINOR_MONEY_FIELDS) {
+            const val = row[minorField]
+            if (val !== null && val !== undefined && val !== '') {
+              if (typeof val !== 'number' || !Number.isInteger(val) || !Number.isSafeInteger(val)) {
+                invalidMoneyRows.push({ table: tableName, id: cleanId, field: minorField })
+                rejectedRowKeys.add(rowKey)
               }
             }
           }
@@ -876,6 +927,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         { table: 'journal_lines', field: 'journal_id', targetTable: 'journal_entries' },
       ]
       let validationQueryFailed = false
+      const failedTargetTables = new Set<string>()
       const missingRefIdsByTarget = new Map<string, Set<string>>()
       const unresolvedFkCandidates: Array<{
         table: string
@@ -883,29 +935,45 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         field: string
         targetTable: string
         targetId: string
+        rowKey: string
       }> = []
 
       for (const fk of fkChecks) {
         const rows = body.data[fk.table]
         if (!Array.isArray(rows)) continue
         const targetIds = idsByTable.get(fk.targetTable)
-        for (const row of rows) {
+        for (let idx = 0; idx < rows.length; idx++) {
+          const row = rows[idx]
           const refVal = row?.[fk.field]
           if (typeof refVal !== 'string' || !refVal.trim()) continue
-          if (targetIds?.has(refVal)) continue
+          const cleanRef = refVal.trim()
+          if (targetIds?.has(cleanRef)) continue
+          const rowKey = `${fk.table}:${idx}`
+          if (!UUID_RE.test(cleanRef)) {
+            brokenForeignKeys.push({
+              table: fk.table,
+              id: String(row?.id ?? 'unknown'),
+              field: fk.field,
+              targetTable: fk.targetTable,
+              targetId: cleanRef,
+            })
+            rejectedRowKeys.add(rowKey)
+            continue
+          }
           unresolvedFkCandidates.push({
             table: fk.table,
             id: String(row?.id ?? 'unknown'),
             field: fk.field,
             targetTable: fk.targetTable,
-            targetId: refVal,
+            targetId: cleanRef,
+            rowKey,
           })
           let set = missingRefIdsByTarget.get(fk.targetTable)
           if (!set) {
             set = new Set<string>()
             missingRefIdsByTarget.set(fk.targetTable, set)
           }
-          set.add(refVal)
+          set.add(cleanRef)
         }
       }
 
@@ -923,6 +991,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
             .in('id', chunk)
           if (parentErr) {
             validationQueryFailed = true
+            failedTargetTables.add(targetTable)
             break
           }
           if (Array.isArray(parentRows)) {
@@ -933,17 +1002,24 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         }
       }
       for (const cand of unresolvedFkCandidates) {
+        if (failedTargetTables.has(cand.targetTable)) continue
         if (!existingTargetIdsByTable.get(cand.targetTable)?.has(cand.targetId)) {
-          brokenForeignKeys.push(cand)
+          brokenForeignKeys.push({
+            table: cand.table,
+            id: cand.id,
+            field: cand.field,
+            targetTable: cand.targetTable,
+            targetId: cand.targetId,
+          })
+          rejectedRowKeys.add(cand.rowKey)
         }
       }
 
       // Check ALL existing DB ID conflicts across bounded 200-ID chunks; propagate DB errors cleanly
-      let totalIncoming = 0
-      let wouldSkip = 0
+      const skippedRowKeys = new Set<string>()
       for (const [tableName, idSet] of idsByTable.entries()) {
-        totalIncoming += idSet.size
         if (idSet.size === 0) continue
+        const tableRowMap = rowKeysByTableId.get(tableName)
         const allIds = [...idSet]
         for (let i = 0; i < allIds.length; i += 200) {
           const idList = allIds.slice(i, i + 200)
@@ -960,7 +1036,11 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
             for (const ex of existingRows as Array<{ id?: unknown }>) {
               if (typeof ex.id === 'string' && idSet.has(ex.id)) {
                 existingConflicts.push({ table: tableName, id: ex.id })
-                wouldSkip += 1
+                for (const rk of tableRowMap?.get(ex.id) ?? []) {
+                  if (!rejectedRowKeys.has(rk)) {
+                    skippedRowKeys.add(rk)
+                  }
+                }
               }
             }
           }
@@ -971,21 +1051,16 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       if (unknownTables.length > 0) errors.push('UNKNOWN_BACKUP_TABLES')
       if (duplicateIds.length > 0) errors.push('DUPLICATE_ROW_IDS')
       if (missingIdTables.length > 0) errors.push('MISSING_ROW_ID')
+      if (invalidIds.length > 0) errors.push('INVALID_ROW_UUID')
       if (crossTenantRows.length > 0) errors.push('CROSS_TENANT_ROW_DETECTED')
       if (malformedTimestamps.length > 0) errors.push('MALFORMED_TIMESTAMP')
       if (invalidCurrencies.length > 0) errors.push('INVALID_CURRENCY_CODE')
       if (invalidMoneyRows.length > 0) errors.push('INVALID_MONETARY_VALUE')
       if (brokenForeignKeys.length > 0) errors.push('BROKEN_FOREIGN_KEY')
 
-      const rejectedRows =
-        missingIdTables.length +
-        duplicateIds.length +
-        crossTenantRows.length +
-        malformedTimestamps.length +
-        invalidCurrencies.length +
-        invalidMoneyRows.length +
-        brokenForeignKeys.length
-      const wouldCreate = Math.max(0, totalIncoming - wouldSkip - rejectedRows)
+      const rejectedRows = rejectedRowKeys.size
+      const wouldSkip = skippedRowKeys.size
+      const wouldCreate = Math.max(0, totalInputRows - wouldSkip - rejectedRows)
       const wouldUpdate = 0 // restore execution is disabled; conflicts would skip rather than overwrite
 
       return reply.send({
@@ -1000,6 +1075,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
           unknownTables,
           duplicateIds,
           missingIdTables,
+          invalidIds,
           crossTenantRows,
           malformedTimestamps,
           invalidCurrencies,
@@ -1007,6 +1083,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
           brokenForeignKeys,
           missingDependencyCount: brokenForeignKeys.length,
           existingConflicts,
+          totalInputRows,
           wouldCreate,
           wouldUpdate,
           wouldSkip,

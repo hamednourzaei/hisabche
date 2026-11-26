@@ -239,4 +239,111 @@ describe('V100 P0 (4.2 + 4.3) — Atomic Change Orders & Full Ledger Reconciliat
     expect(codes).toContain('REVERSAL_MISMATCH')
     expect(codes).toContain('ADVANCE_LIABILITY_MISMATCH')
   })
+
+  it('handles USD (2 dec), XAU (3 dec), AFN (0 dec), balanced decimal journals, pending eligible invoices, and wrong-amount postings', async () => {
+    const INV_USD = fakeId('inv-usd')
+    const INV_XAU = fakeId('inv-xau')
+    const INV_PENDING = fakeId('inv-pend')
+    const PAY_USD = fakeId('pay-usd')
+    const PAY_XAU = fakeId('pay-xau')
+
+    db.seed('invoices', [
+      {
+        id: INV_USD,
+        workspace_id: SHOP_A,
+        currency: 'USD',
+        total: 125.5,
+        paid_amount: 125.5,
+        status: 'completed',
+      },
+      {
+        id: INV_XAU,
+        workspace_id: SHOP_A,
+        currency: 'XAU',
+        total: 2.355,
+        paid_amount: 2.355,
+        status: 'completed',
+      },
+      {
+        id: INV_PENDING,
+        workspace_id: SHOP_A,
+        currency: 'AFN',
+        total: 5000,
+        paid_amount: 0,
+        status: 'pending',
+      },
+    ])
+    db.seed('payments', [
+      { id: PAY_USD, workspace_id: SHOP_A, currency: 'USD', amount: 125.5, status: 'posted' },
+      { id: PAY_XAU, workspace_id: SHOP_A, currency: 'XAU', amount: 2.355, status: 'posted' },
+    ])
+    db.seed('payment_allocations', [
+      { payment_id: PAY_USD, invoice_id: INV_USD, amount: 125.5, workspace_id: SHOP_A },
+      { payment_id: PAY_XAU, invoice_id: INV_XAU, amount: 2.355, workspace_id: SHOP_A },
+    ])
+    db.seed('order_deposits', [])
+    db.seed('journal_entries', [
+      {
+        id: 'je-usd-inv',
+        workspace_id: SHOP_A,
+        source_type: 'invoice',
+        source_id: INV_USD,
+        status: 'posted',
+      },
+      // Wrong posted amount on XAU invoice (2.300 instead of 2.355)
+      {
+        id: 'je-xau-inv',
+        workspace_id: SHOP_A,
+        source_type: 'invoice',
+        source_id: INV_XAU,
+        status: 'posted',
+      },
+      {
+        id: 'je-usd-pay',
+        workspace_id: SHOP_A,
+        source_type: 'payment',
+        source_id: PAY_USD,
+        status: 'posted',
+      },
+      {
+        id: 'je-xau-pay',
+        workspace_id: SHOP_A,
+        source_type: 'payment',
+        source_id: PAY_XAU,
+        status: 'posted',
+      },
+    ])
+    db.seed('journal_lines', [
+      { id: 'jl-u1', workspace_id: SHOP_A, journal_id: 'je-usd-inv', debit: 125.5, credit: 0 },
+      { id: 'jl-u2', workspace_id: SHOP_A, journal_id: 'je-usd-inv', debit: 0, credit: 125.5 },
+      { id: 'jl-x1', workspace_id: SHOP_A, journal_id: 'je-xau-inv', debit: 2.3, credit: 0 },
+      { id: 'jl-x2', workspace_id: SHOP_A, journal_id: 'je-xau-inv', debit: 0, credit: 2.3 },
+      { id: 'jl-pu1', workspace_id: SHOP_A, journal_id: 'je-usd-pay', debit: 125.5, credit: 0 },
+      { id: 'jl-pu2', workspace_id: SHOP_A, journal_id: 'je-usd-pay', debit: 0, credit: 125.5 },
+      { id: 'jl-px1', workspace_id: SHOP_A, journal_id: 'je-xau-pay', debit: 2.355, credit: 0 },
+      { id: 'jl-px2', workspace_id: SHOP_A, journal_id: 'je-xau-pay', debit: 0, credit: 2.355 },
+    ])
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/accounting/reconcile-cross-core',
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+      payload: {},
+    })
+    expect(res.statusCode).toBe(200)
+    const d = res.json().data
+    // Balanced decimal journals must NOT trigger roundingDifference
+    expect(d.roundingDifference).toBe(0)
+    expect(d.ledger.debitCreditVarianceMinor).toBe(0)
+    // Pending invoice without posting & wrong-amount XAU invoice MUST be caught
+    expect(d.missingPostings).toBe(1)
+    expect(d.mismatched).toBe(1)
+    const codes = (d.exceptions as Array<{ code: string }>).map((e) => e.code)
+    expect(codes).toContain('UNPOSTED_INVOICE')
+    expect(codes).toContain('JOURNAL_AMOUNT_MISMATCH')
+    const usdSummary = d.perCurrency.find((c: { currency: string }) => c.currency === 'USD')
+    const xauSummary = d.perCurrency.find((c: { currency: string }) => c.currency === 'XAU')
+    expect(usdSummary.invoicePaidMinor).toBe(12550)
+    expect(xauSummary.invoicePaidMinor).toBe(2355)
+  })
 })

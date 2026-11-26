@@ -191,6 +191,9 @@ export class FakeDatabase {
       const existing = states.find((s) => s.workspace_id === wsId && s.payment_id === paymentId)
 
       if (replay && existing) {
+        if (replay.payload_sha256 && payloadSha256 && replay.payload_sha256 !== payloadSha256) {
+          throw new Error('GATEWAY_EVENT_PAYLOAD_CONFLICT')
+        }
         replay.delivery_attempts = Number(replay.delivery_attempts ?? 1) + 1
         return {
           workspaceId: wsId,
@@ -265,6 +268,7 @@ export class FakeDatabase {
         currency: payCurrency,
         payload_sha256: payloadSha256,
         processing_status: 'processed',
+        provenance: 'webhook_verified',
         delivery_attempts: 1,
         created_at: now,
       })
@@ -277,6 +281,153 @@ export class FakeDatabase {
         eventId,
         currency: payCurrency,
         signatureVerified: true,
+        replay: false,
+      }
+    })
+
+    this.rpc('transition_payment_processor_state', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const paymentId = String(args.p_payment_id)
+      const toState = String(args.p_to_state)
+      const gatewayName = args.p_gateway_name ? String(args.p_gateway_name) : null
+      const externalRef = args.p_external_ref ? String(args.p_external_ref) : null
+      const feeMinor = Number(args.p_fee_minor ?? 0)
+      const reason = args.p_reason ? String(args.p_reason) : null
+      const actorId = args.p_actor_id ? String(args.p_actor_id) : null
+      const adminOverride = Boolean(args.p_admin_override)
+      const idempotencyKey = args.p_idempotency_key ? String(args.p_idempotency_key).trim() : null
+
+      if (
+        !['queued_offline', 'pending_capture', 'captured', 'declined', 'voided'].includes(toState)
+      ) {
+        throw new Error('INVALID_PROCESSOR_STATE')
+      }
+      if (['captured', 'declined', 'voided'].includes(toState)) {
+        if (!adminOverride || !reason || reason.trim().length < 5) {
+          throw new Error('PROCESSOR_FINAL_STATE_REQUIRES_WEBHOOK_OR_OVERRIDE')
+        }
+      }
+
+      const payment = this.ensure('payments').find(
+        (p) => p.id === paymentId && p.workspace_id === wsId,
+      )
+      if (!payment) throw new Error('PAYMENT_NOT_FOUND')
+
+      const events = this.ensure('payment_gateway_events')
+      const states = this.ensure('payment_gateway_states')
+      const existing = states.find((s) => s.workspace_id === wsId && s.payment_id === paymentId)
+      const replay = idempotencyKey
+        ? events.find(
+            (ev) =>
+              ev.workspace_id === wsId &&
+              ev.payment_id === paymentId &&
+              ev.idempotency_key === idempotencyKey,
+          )
+        : undefined
+
+      if (replay && existing) {
+        if (replay.to_state !== toState) throw new Error('IDEMPOTENCY_KEY_STATE_CONFLICT')
+        return {
+          paymentId: existing.payment_id,
+          processorState: existing.processor_state,
+          gatewayName: existing.gateway_name,
+          externalRef: existing.external_ref,
+          feeMinor: existing.fee_minor,
+          currency: existing.currency,
+          reason: existing.reason,
+          updatedAt: existing.updated_at,
+          provenance: replay.provenance,
+          replay: true,
+        }
+      }
+
+      const fsm: Record<string, string[]> = {
+        queued_offline: ['pending_capture', 'voided'],
+        pending_capture: ['captured', 'declined', 'voided'],
+        declined: ['pending_capture', 'voided'],
+        captured: ['voided'],
+        voided: [],
+      }
+      const current = String(
+        existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline'),
+      )
+      if (current !== toState && !(fsm[current] ?? []).includes(toState)) {
+        throw new Error('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')
+      }
+
+      const now = new Date().toISOString()
+      const payCurrency = String(payment.currency ?? '').toUpperCase()
+      const saved: Row = existing
+        ? Object.assign(existing, {
+            processor_state: toState,
+            gateway_name: gatewayName ?? existing.gateway_name ?? null,
+            external_ref: externalRef ?? existing.external_ref ?? null,
+            fee_minor: feeMinor,
+            currency: payCurrency,
+            reason,
+            updated_by: actorId,
+            updated_at: now,
+          })
+        : {
+            id: `pgs-${states.length + 1}`,
+            workspace_id: wsId,
+            payment_id: paymentId,
+            processor_state: toState,
+            gateway_name: gatewayName,
+            external_ref: externalRef,
+            fee_minor: feeMinor,
+            currency: payCurrency,
+            reason,
+            updated_by: actorId,
+            created_at: now,
+            updated_at: now,
+          }
+      if (!existing) states.push(saved)
+
+      const provenance = adminOverride ? 'admin_override' : 'internal_non_final'
+      events.push({
+        id: `pge-${events.length + 1}`,
+        workspace_id: wsId,
+        payment_id: paymentId,
+        from_state: current,
+        to_state: toState,
+        gateway_name: saved.gateway_name,
+        external_ref: saved.external_ref,
+        fee_minor: feeMinor,
+        signature_verified: false,
+        reason,
+        actor_id: actorId,
+        currency: payCurrency,
+        processing_status: 'processed',
+        provenance,
+        idempotency_key: idempotencyKey || null,
+        delivery_attempts: 1,
+        created_at: now,
+      })
+
+      if (adminOverride) {
+        this.ensure('audit_logs').push({
+          id: `aud-${Date.now()}`,
+          workspace_id: wsId,
+          user_id: actorId,
+          action: 'payment.processor_state_override',
+          entity_type: 'payment',
+          entity_id: paymentId,
+          details: { fromState: current, toState, reason },
+          created_at: now,
+        })
+      }
+
+      return {
+        paymentId: saved.payment_id,
+        processorState: saved.processor_state,
+        gatewayName: saved.gateway_name,
+        externalRef: saved.external_ref,
+        feeMinor: saved.fee_minor,
+        currency: saved.currency,
+        reason: saved.reason,
+        updatedAt: saved.updated_at,
+        provenance,
         replay: false,
       }
     })
@@ -369,6 +520,192 @@ export class FakeDatabase {
       })
 
       return created
+    })
+
+    this.rpc('create_project_change_order_v2', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const projId = String(args.p_project_id)
+      const actorId = String(args.p_actor_id)
+      const title = String(args.p_title)
+      const deltaMinor = Number(args.p_delta_minor)
+      const estCostMinor = Number(args.p_estimated_cost_delta_minor ?? 0)
+      const approved = args.p_approved === true
+      const scale = Number(args.p_scale ?? 1)
+      const idemKey = args.p_idempotency_key ? String(args.p_idempotency_key).trim() : null
+      const expectedVersion =
+        args.p_expected_version !== undefined && args.p_expected_version !== null
+          ? Number(args.p_expected_version)
+          : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+
+      if (![1, 10, 100, 1000].includes(scale)) throw new Error('INVALID_CURRENCY_SCALE')
+      const proj = this.ensure('projects').find((p) => p.id === projId && p.workspace_id === wsId)
+      if (!proj) throw new Error('PROJECT_NOT_FOUND')
+
+      const orders = this.ensure('project_change_orders')
+      if (idemKey) {
+        const existing = orders.find(
+          (o) => o.workspace_id === wsId && o.idempotency_key === idemKey,
+        )
+        if (existing) return { order: existing, replay: true }
+      }
+
+      const curVer = Number(proj.budget_version ?? 1)
+      if (expectedVersion !== null && curVer !== expectedVersion) {
+        throw new Error('STALE_PROJECT_VERSION_CONFLICT')
+      }
+
+      const origMinor = Math.round(Number(proj.budget ?? 0) * scale)
+      const revMinor = origMinor + deltaMinor
+      if (revMinor < 0) throw new Error('REVISED_BUDGET_CANNOT_BE_NEGATIVE')
+
+      const projWriteFail = this.writeFailures.get('projects')
+      const orderWriteFail = this.writeFailures.get('project_change_orders')
+      const auditWriteFail = this.writeFailures.get('audit_logs')
+      if (projWriteFail && approved) throw new Error(projWriteFail.message)
+      if (orderWriteFail) throw new Error(orderWriteFail.message)
+      if (auditWriteFail) throw new Error(auditWriteFail.message)
+
+      const now = new Date().toISOString()
+      const newVer = approved ? curVer + 1 : curVer
+      if (approved) {
+        proj.budget = revMinor / scale
+        proj.budget_version = newVer
+        proj.updated_at = now
+      }
+
+      const created: Row = {
+        id: fakeId('pco'),
+        workspace_id: wsId,
+        project_id: projId,
+        title,
+        original_budget_minor: origMinor,
+        delta_minor: deltaMinor,
+        revised_budget_minor: revMinor,
+        estimated_cost_delta_minor: estCostMinor,
+        net_margin_delta_minor: deltaMinor - estCostMinor,
+        status: approved ? 'approved' : 'pending_approval',
+        idempotency_key: idemKey || null,
+        created_by: actorId,
+        decided_by: approved ? actorId : null,
+        decided_at: approved ? now : null,
+        decision_reason: approved ? reason : null,
+        project_version_at_decision: newVer,
+        created_at: now,
+        updated_at: now,
+      }
+      orders.push(created)
+
+      this.ensure('audit_logs').push({
+        id: fakeId('audit'),
+        workspace_id: wsId,
+        user_id: actorId,
+        action: approved ? 'project.change_order.create_approved' : 'project.change_order.created',
+        entity_type: 'project_change_order',
+        entity_id: created.id,
+        old_data: { budgetMinor: origMinor, version: curVer },
+        new_data: { budgetMinor: revMinor, version: newVer, status: created.status },
+        reason: reason ?? title,
+        created_at: now,
+      })
+
+      return { order: created, replay: false }
+    })
+
+    this.rpc('create_support_ticket_atomic', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const actorId = String(args.p_actor_id)
+      const ticketCode = String(args.p_ticket_code)
+      const subject = String(args.p_subject)
+      const priority = String(args.p_priority)
+      const category = String(args.p_category)
+      const description = String(args.p_description)
+      const slaHours = Number(args.p_sla_hours)
+      const responseDueAt = String(args.p_response_due_at)
+      const idemKey = args.p_idempotency_key ? String(args.p_idempotency_key).trim() : null
+
+      const tickets = this.ensure('support_tickets')
+      if (idemKey) {
+        const existing = tickets.find(
+          (t) => t.workspace_id === wsId && t.idempotency_key === idemKey,
+        )
+        if (existing) return { ticket: existing, replay: true }
+      }
+
+      const tFail = this.writeFailures.get('support_tickets')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (tFail) throw new Error(tFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      const created: Row = {
+        id: fakeId('tkt'),
+        workspace_id: wsId,
+        ticket_code: ticketCode,
+        subject,
+        priority,
+        category,
+        description,
+        sla_hours: slaHours,
+        response_due_at: responseDueAt,
+        status: 'open',
+        escalation_level: 0,
+        idempotency_key: idemKey || null,
+        created_by: actorId,
+        created_at: now,
+        updated_at: now,
+      }
+      tickets.push(created)
+
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: created.id,
+        actor_id: actorId,
+        action: 'created',
+        from_status: null,
+        to_status: 'open',
+        note: priority,
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return { ticket: created, replay: false }
+    })
+
+    this.rpc('assign_support_ticket_atomic', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const ticketId = String(args.p_ticket_id)
+      const actorId = String(args.p_actor_id)
+      const assigneeId = args.p_assignee_id ? String(args.p_assignee_id) : null
+
+      const ticket = this.ensure('support_tickets').find(
+        (t) => t.id === ticketId && t.workspace_id === wsId,
+      )
+      if (!ticket) throw new Error('TICKET_NOT_FOUND')
+
+      const tFail = this.writeFailures.get('support_tickets')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (tFail) throw new Error(tFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      Object.assign(ticket, { assigned_to: assigneeId, updated_at: now })
+
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: ticketId,
+        actor_id: actorId,
+        action: 'assigned',
+        from_status: ticket.status,
+        to_status: ticket.status,
+        note: assigneeId ?? 'unassigned',
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return ticket
     })
 
     this.rpc('decide_project_change_order_v2', (args: Row) => {
@@ -488,7 +825,10 @@ export class FakeDatabase {
         resolved: ['closed', 'acknowledged'],
         closed: ['acknowledged'],
       }
-      if (cur !== nextStatus && !(transitions[cur] ?? []).includes(nextStatus)) {
+      if (cur === nextStatus) {
+        return ticket
+      }
+      if (!(transitions[cur] ?? []).includes(nextStatus)) {
         throw new Error('INVALID_TICKET_TRANSITION')
       }
 
@@ -575,6 +915,192 @@ export class FakeDatabase {
       return created
     })
 
+    this.rpc('create_project_change_order_v2', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const projId = String(args.p_project_id)
+      const actorId = String(args.p_actor_id)
+      const title = String(args.p_title)
+      const deltaMinor = Number(args.p_delta_minor)
+      const estCostMinor = Number(args.p_estimated_cost_delta_minor ?? 0)
+      const approved = args.p_approved === true
+      const scale = Number(args.p_scale ?? 1)
+      const idemKey = args.p_idempotency_key ? String(args.p_idempotency_key).trim() : null
+      const expectedVersion =
+        args.p_expected_version !== undefined && args.p_expected_version !== null
+          ? Number(args.p_expected_version)
+          : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+
+      if (![1, 10, 100, 1000].includes(scale)) throw new Error('INVALID_CURRENCY_SCALE')
+      const proj = this.ensure('projects').find((p) => p.id === projId && p.workspace_id === wsId)
+      if (!proj) throw new Error('PROJECT_NOT_FOUND')
+
+      const orders = this.ensure('project_change_orders')
+      if (idemKey) {
+        const existing = orders.find(
+          (o) => o.workspace_id === wsId && o.idempotency_key === idemKey,
+        )
+        if (existing) return { order: existing, replay: true }
+      }
+
+      const curVer = Number(proj.budget_version ?? 1)
+      if (expectedVersion !== null && curVer !== expectedVersion) {
+        throw new Error('STALE_PROJECT_VERSION_CONFLICT')
+      }
+
+      const origMinor = Math.round(Number(proj.budget ?? 0) * scale)
+      const revMinor = origMinor + deltaMinor
+      if (revMinor < 0) throw new Error('REVISED_BUDGET_CANNOT_BE_NEGATIVE')
+
+      const projWriteFail = this.writeFailures.get('projects')
+      const orderWriteFail = this.writeFailures.get('project_change_orders')
+      const auditWriteFail = this.writeFailures.get('audit_logs')
+      if (projWriteFail && approved) throw new Error(projWriteFail.message)
+      if (orderWriteFail) throw new Error(orderWriteFail.message)
+      if (auditWriteFail) throw new Error(auditWriteFail.message)
+
+      const now = new Date().toISOString()
+      const newVer = approved ? curVer + 1 : curVer
+      if (approved) {
+        proj.budget = revMinor / scale
+        proj.budget_version = newVer
+        proj.updated_at = now
+      }
+
+      const created: Row = {
+        id: fakeId('pco'),
+        workspace_id: wsId,
+        project_id: projId,
+        title,
+        original_budget_minor: origMinor,
+        delta_minor: deltaMinor,
+        revised_budget_minor: revMinor,
+        estimated_cost_delta_minor: estCostMinor,
+        net_margin_delta_minor: deltaMinor - estCostMinor,
+        status: approved ? 'approved' : 'pending_approval',
+        idempotency_key: idemKey || null,
+        created_by: actorId,
+        decided_by: approved ? actorId : null,
+        decided_at: approved ? now : null,
+        decision_reason: approved ? reason : null,
+        project_version_at_decision: newVer,
+        created_at: now,
+        updated_at: now,
+      }
+      orders.push(created)
+
+      this.ensure('audit_logs').push({
+        id: fakeId('audit'),
+        workspace_id: wsId,
+        user_id: actorId,
+        action: approved ? 'project.change_order.create_approved' : 'project.change_order.created',
+        entity_type: 'project_change_order',
+        entity_id: created.id,
+        old_data: { budgetMinor: origMinor, version: curVer },
+        new_data: { budgetMinor: revMinor, version: newVer, status: created.status },
+        reason: reason ?? title,
+        created_at: now,
+      })
+
+      return { order: created, replay: false }
+    })
+
+    this.rpc('create_support_ticket_atomic', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const actorId = String(args.p_actor_id)
+      const ticketCode = String(args.p_ticket_code)
+      const subject = String(args.p_subject)
+      const priority = String(args.p_priority)
+      const category = String(args.p_category)
+      const description = String(args.p_description)
+      const slaHours = Number(args.p_sla_hours)
+      const responseDueAt = String(args.p_response_due_at)
+      const idemKey = args.p_idempotency_key ? String(args.p_idempotency_key).trim() : null
+
+      const tickets = this.ensure('support_tickets')
+      if (idemKey) {
+        const existing = tickets.find(
+          (t) => t.workspace_id === wsId && t.idempotency_key === idemKey,
+        )
+        if (existing) return { ticket: existing, replay: true }
+      }
+
+      const tFail = this.writeFailures.get('support_tickets')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (tFail) throw new Error(tFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      const created: Row = {
+        id: fakeId('tkt'),
+        workspace_id: wsId,
+        ticket_code: ticketCode,
+        subject,
+        priority,
+        category,
+        description,
+        sla_hours: slaHours,
+        response_due_at: responseDueAt,
+        status: 'open',
+        escalation_level: 0,
+        idempotency_key: idemKey || null,
+        created_by: actorId,
+        created_at: now,
+        updated_at: now,
+      }
+      tickets.push(created)
+
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: created.id,
+        actor_id: actorId,
+        action: 'created',
+        from_status: null,
+        to_status: 'open',
+        note: priority,
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return { ticket: created, replay: false }
+    })
+
+    this.rpc('assign_support_ticket_atomic', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const ticketId = String(args.p_ticket_id)
+      const actorId = String(args.p_actor_id)
+      const assigneeId = args.p_assignee_id ? String(args.p_assignee_id) : null
+
+      const ticket = this.ensure('support_tickets').find(
+        (t) => t.id === ticketId && t.workspace_id === wsId,
+      )
+      if (!ticket) throw new Error('TICKET_NOT_FOUND')
+
+      const tFail = this.writeFailures.get('support_tickets')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (tFail) throw new Error(tFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      Object.assign(ticket, { assigned_to: assigneeId, updated_at: now })
+
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: ticketId,
+        actor_id: actorId,
+        action: 'assigned',
+        from_status: ticket.status,
+        to_status: ticket.status,
+        note: assigneeId ?? 'unassigned',
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return ticket
+    })
+
     this.rpc('sweep_support_ticket_slas', (args: Row) => {
       const wsFilter = args.p_workspace_id ? String(args.p_workspace_id) : null
       const actorId = args.p_actor_id ? String(args.p_actor_id) : null
@@ -614,7 +1140,7 @@ export class FakeDatabase {
           this.ensure('activities').push({
             id: fakeId('act'),
             workspace_id: t.workspace_id,
-            user_id: actorId ?? t.created_by,
+            user_id: actorId ?? null,
             entity_type: 'support_ticket',
             entity_id: t.id,
             action: 'sla_breached',
@@ -627,13 +1153,15 @@ export class FakeDatabase {
           id: fakeId('ste'),
           workspace_id: t.workspace_id,
           ticket_id: t.id,
-          actor_id: actorId ?? t.created_by,
+          actor_id: actorId,
           action: 'sla_breached',
           from_status: prevStatus,
           to_status: 'escalated',
-          note: `SLA due passed before ${nowIso}`,
+          note: actFail
+            ? `SLA due passed before ${nowIso} | notif_error: ${actFail.message}`
+            : `SLA due passed before ${nowIso}`,
           correlation_id: correlationId,
-          notification_status: actFail ? 'failed' : 'pending',
+          notification_status: actFail ? 'failed' : 'sent',
           created_at: nowIso,
         })
       }

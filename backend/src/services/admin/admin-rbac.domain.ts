@@ -104,6 +104,8 @@ export const ADMIN_PERMISSIONS = [
   // Admin General
   'admin.announcements.read',
   'admin.announcements.write',
+  // Governance / Project Budgets (SUPER only)
+  'projects.change_orders.decide',
 ] as const
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]

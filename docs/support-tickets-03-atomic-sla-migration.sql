@@ -70,16 +70,18 @@ BEGIN
     RAISE EXCEPTION 'REOPEN_REASON_REQUIRED';
   END IF;
 
-  IF v_ticket.status <> p_next_status THEN
-    IF NOT (
-      (v_ticket.status = 'open' AND p_next_status IN ('acknowledged', 'escalated', 'resolved')) OR
-      (v_ticket.status = 'acknowledged' AND p_next_status IN ('escalated', 'resolved')) OR
-      (v_ticket.status = 'escalated' AND p_next_status IN ('acknowledged', 'resolved')) OR
-      (v_ticket.status = 'resolved' AND p_next_status IN ('closed', 'acknowledged')) OR
-      (v_ticket.status = 'closed' AND p_next_status = 'acknowledged')
-    ) THEN
-      RAISE EXCEPTION 'INVALID_TICKET_TRANSITION';
-    END IF;
+  IF v_ticket.status = p_next_status THEN
+    RETURN v_ticket;
+  END IF;
+
+  IF NOT (
+    (v_ticket.status = 'open' AND p_next_status IN ('acknowledged', 'escalated', 'resolved')) OR
+    (v_ticket.status = 'acknowledged' AND p_next_status IN ('escalated', 'resolved')) OR
+    (v_ticket.status = 'escalated' AND p_next_status IN ('acknowledged', 'resolved')) OR
+    (v_ticket.status = 'resolved' AND p_next_status IN ('closed', 'acknowledged')) OR
+    (v_ticket.status = 'closed' AND p_next_status = 'acknowledged')
+  ) THEN
+    RAISE EXCEPTION 'INVALID_TICKET_TRANSITION';
   END IF;
 
   UPDATE public.support_tickets
@@ -174,6 +176,7 @@ DECLARE
   v_escalated_ids uuid[] := ARRAY[]::uuid[];
   v_evaluated integer := 0;
   v_notif_failures integer := 0;
+  v_event_id uuid;
 BEGIN
   SELECT count(*) INTO v_evaluated
   FROM public.support_tickets
@@ -201,10 +204,11 @@ BEGIN
       INSERT INTO public.support_ticket_events (
         workspace_id, ticket_id, actor_id, action, from_status, to_status, note, correlation_id, notification_status
       ) VALUES (
-        v_rec.workspace_id, v_rec.id, COALESCE(p_actor_id, v_rec.created_by), 'sla_breached',
+        v_rec.workspace_id, v_rec.id, p_actor_id, 'sla_breached',
         v_rec.status, 'escalated',
         'SLA due passed before ' || v_now::text, p_correlation_id, 'pending'
-      );
+      )
+      RETURNING id INTO v_event_id;
 
       BEGIN
         INSERT INTO public.activities (
@@ -213,8 +217,15 @@ BEGIN
           v_rec.workspace_id, 'support_ticket', v_rec.id, 'sla_breached',
           COALESCE('SLA breach: ' || v_rec.subject, 'Support ticket SLA breached')
         );
+        UPDATE public.support_ticket_events
+        SET notification_status = 'sent'
+        WHERE id = v_event_id;
       EXCEPTION WHEN OTHERS THEN
         v_notif_failures := v_notif_failures + 1;
+        UPDATE public.support_ticket_events
+        SET notification_status = 'failed',
+            note = COALESCE(note, '') || ' | notif_error: ' || left(SQLERRM, 160)
+        WHERE id = v_event_id;
       END;
     END IF;
   END LOOP;

@@ -183,4 +183,140 @@ describe('V100 P0 (4.4 + 4.5) — Atomic Support SLA & Complete Restore Preview'
     expect(dbFailRes.json().data.valid).toBe(false)
     expect(dbFailRes.json().data.errors).toContain('DATABASE_VALIDATION_QUERY_FAILED')
   })
+
+  it('prevents duplicate escalation on repeated escalated transition, supports atomic ticket create/assign, and records system actor & sent/failed notification status on SLA sweep', async () => {
+    const hdr = { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A }
+
+    // 1. Atomic ticket creation with idempotency key
+    const c1 = await app.inject({
+      method: 'POST',
+      url: '/api/v1/support-tickets',
+      headers: { ...hdr, 'idempotency-key': 'tkt-idem-1' },
+      payload: {
+        subject: 'Drawer stuck',
+        priority: 'high',
+        category: 'pos',
+        description: 'Cash drawer does not pop',
+      },
+    })
+    expect(c1.statusCode, c1.body).toBe(201)
+    const ticketId = c1.json().data.id
+
+    const c2 = await app.inject({
+      method: 'POST',
+      url: '/api/v1/support-tickets',
+      headers: { ...hdr, 'idempotency-key': 'tkt-idem-1' },
+      payload: {
+        subject: 'Drawer stuck',
+        priority: 'high',
+        category: 'pos',
+        description: 'Cash drawer does not pop',
+      },
+    })
+    expect(c2.statusCode).toBe(200)
+    expect(c2.json().replay).toBe(true)
+
+    // 2. Repeated escalated transition does NOT increment escalation_level twice or emit duplicate events
+    const esc1 = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: hdr,
+      payload: { status: 'escalated', reason: 'Urgent' },
+    })
+    expect(esc1.statusCode).toBe(200)
+    expect(esc1.json().data.escalation_level).toBe(1)
+
+    const esc2 = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: hdr,
+      payload: { status: 'escalated', reason: 'Repeated click' },
+    })
+    expect(esc2.statusCode).toBe(200)
+    expect(esc2.json().data.escalation_level).toBe(1)
+    const statusEvents = (db.tables.get('support_ticket_events') ?? []).filter(
+      (e) => e.ticket_id === ticketId && e.action === 'status_changed',
+    )
+    expect(statusEvents).toHaveLength(1)
+
+    // 3. System SLA sweep records actor_id = null (system) and notification_status = sent
+    await sweepSupportSlasPeriodic()
+    const breachEv = (db.tables.get('support_ticket_events') ?? []).find(
+      (e) => e.ticket_id === TICKET_DUE && e.action === 'sla_breached',
+    )
+    expect(breachEv?.actor_id).toBeNull()
+    expect(breachEv?.notification_status).toBe('sent')
+  })
+
+  it('classifies restore preview rows into mutually exclusive CREATE/SKIP/REJECT totals and never reports BROKEN_FOREIGN_KEY on parent query error', async () => {
+    const hdr = { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A }
+    const existingProdId = '12345678-0000-4000-8000-000000000010'
+    db.seed('products', [{ id: existingProdId, workspace_id: SHOP_A, name: 'Existing' }])
+
+    // Row 1: existing product -> SKIP
+    // Row 2: valid new product -> CREATE
+    // Row 3: multiple defects (bad currency + bad timestamp + cross-tenant) -> REJECT counted ONCE
+    // Row 4: missing id -> REJECT
+    // Row 5: invalid non-UUID id -> REJECT
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/workspaces/${SHOP_A}/export-restore-preview`,
+      headers: hdr,
+      payload: {
+        meta: { workspaceId: SHOP_A, schemaVersion: '1.0' },
+        data: {
+          products: [
+            { id: existingProdId, workspace_id: SHOP_A, currency: 'AFN', sell_price: 100 },
+            {
+              id: '12345678-0000-4000-8000-000000000011',
+              workspace_id: SHOP_A,
+              currency: 'USD',
+              sell_price: 12.5,
+            },
+            {
+              id: '12345678-0000-4000-8000-000000000012',
+              workspace_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+              currency: 'ZZZ',
+              created_at: 'not-a-date',
+            },
+            { workspace_id: SHOP_A },
+            { id: 'not-a-uuid', workspace_id: SHOP_A },
+          ],
+        },
+      },
+    })
+    expect(res.statusCode).toBe(200)
+    const d = res.json().data
+    expect(d.totalInputRows).toBe(5)
+    expect(d.wouldSkip).toBe(1)
+    expect(d.wouldCreate).toBe(1)
+    expect(d.rejectedRows).toBe(3)
+    expect(d.wouldCreate + d.wouldSkip + d.rejectedRows).toBe(d.totalInputRows)
+    expect(d.errors).toContain('INVALID_CURRENCY_CODE')
+    expect(d.errors).toContain('INVALID_ROW_UUID')
+    expect(d.errors).toContain('MISSING_ROW_ID')
+
+    // Parent FK query error must NOT invent BROKEN_FOREIGN_KEY
+    db.fail('invoices', { message: 'parent lookup failed' })
+    const fkErrRes = await app.inject({
+      method: 'POST',
+      url: `/api/workspaces/${SHOP_A}/export-restore-preview`,
+      headers: hdr,
+      payload: {
+        meta: { workspaceId: SHOP_A, schemaVersion: '1.0' },
+        data: {
+          invoice_items: [
+            {
+              id: '77777777-0000-4000-8000-000000000099',
+              workspace_id: SHOP_A,
+              invoice_id: '88888888-0000-4000-8000-000000000099',
+            },
+          ],
+        },
+      },
+    })
+    expect(fkErrRes.statusCode).toBe(200)
+    expect(fkErrRes.json().data.errors).toContain('DATABASE_VALIDATION_QUERY_FAILED')
+    expect(fkErrRes.json().data.errors).not.toContain('BROKEN_FOREIGN_KEY')
+  })
 })

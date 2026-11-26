@@ -364,3 +364,14 @@ Specialized multi-team AI engineering agency (`hisabche-agency/`) built from `ms
 - **Workflows (`hisabche-agency/workflows/`):** `architecture-audit`, `security-audit`, `database-audit`, `offline-sync-audit`, `mobile-audit`, `ux-audit`, `production-readiness`, `regression-testing`, `release-validation`.
 - **Execution Discipline:** Always choose `LIGHTWEIGHT` | `STANDARD` | `CRITICAL` sizing (`ORCHESTRATION.md`), keep reviewers strictly read-only alongside existing `.claude/agents/{domain,parity,security}-reviewer.md`, never bypass `AGENTS.md §0` (no git ops, no live DDL, no `.env*`, no RN/Expo upgrades, no Redis/LWW on financial sync), and verify every installation update with `node hisabche-agency/scripts/verify-agency.mjs`.
 - **Harness Locations:** User Antigravity plugin (`~/.gemini/config/plugins/hisabche-agency/`), user Claude Code agents (`~/.claude/agents/hisabche-*.md`), and pre-converted Codex TOMLs (`hisabche-agency/integrations/codex/agents/`).
+
+---
+
+## 13. Permanent Engineering Algorithm & Project Lessons (Mirrors `AGENTS.md §12`)
+
+- **Pre-Implementation (10 Steps):** Inspect existing code -> identify single source of truth -> trace callers/consumers -> read schema/RPCs/migrations -> check RBAC/`workspace_id` -> check online/offline parity -> verify money units & `FRACTION_DIGITS` -> check existing tests -> define invariants -> write failing regression test first.
+- **Post-Implementation (10 Steps):** Run targeted tests -> `tsc --noEmit` -> `eslint` (0 errors) -> `git diff --check` -> check for duplicates/bypasses -> verify API/DB/UI parity -> verify tenancy/RBAC -> verify `FOR UPDATE` + idempotency -> verify currency scale -> update `PROGRESS.md` & `pnpm code-intel update`.
+- **Key Lessons Recorded:**
+  - `SupabaseStorageProvider` auto-ensures missing private buckets; `backend/src/index.ts` exempts `GET .../brand-assets/.../content` from global JWT auth **only when non-empty `sig=` is present**; `BrandAssetService` derives a domain-separated HMAC subkey when symmetric `JWT_SECRET` is absent in ES256 deployments.
+  - `packages/auth/src/supabase.ts` must access `process.env.NEXT_PUBLIC_*` directly for Next.js static inlining; `useRealtime`/`usePresence` gate on `hasToken() && !isOfflineTokenMode()` with a `50ms` StrictMode settle timer.
+  - Payment final states (`captured`, `declined`, `voided`) require HMAC webhook or capability-gated `adminOverride` via `transition_payment_processor_state`; `cross-core-reconcile.ts` converts all major decimal amounts with `majorToMinor` and checks actual posted journal amounts; `create_project_change_order_v2` locks `projects FOR UPDATE` before idempotency checks and returns explicit `{ order, replay }`; `sweep_support_ticket_slas` uses `actor_id = NULL` (system) and tracks real `sent`/`failed` `notification_status`.

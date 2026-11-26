@@ -10,6 +10,7 @@
 //            approve is not something a seller sets for their own documents.
 // ============================================
 
+import { randomUUID } from 'node:crypto'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
@@ -150,45 +151,32 @@ export async function escalationRoutes(fastify: FastifyInstance) {
         const slaHoursByPriority = { critical: 2, high: 4, normal: 24, low: 48 } as const
         const slaHours = slaHoursByPriority[body.priority]
         const responseDueAt = new Date(Date.now() + slaHours * 3600_000).toISOString()
-        const ticketCode = `HSB-${Date.now().toString(36).toUpperCase()}`
-        const { data: created, error } = await supabase
-          .from('support_tickets')
-          .insert({
-            workspace_id: request.tenancy.workspaceId,
-            ticket_code: ticketCode,
-            subject: body.subject,
-            priority: body.priority,
-            category: body.category,
-            description: body.description,
-            sla_hours: slaHours,
-            response_due_at: responseDueAt,
-            status: 'open',
-            escalation_level: 0,
-            idempotency_key: idemKey ?? null,
-            created_by: request.tenancy.userId,
-          })
-          .select()
-          .single()
-        if (error) throw error
-
-        const createdId = String((created as { id?: unknown })?.id ?? '')
-        if (createdId) {
-          const { error: evErr } = await supabase.from('support_ticket_events').insert({
-            workspace_id: request.tenancy.workspaceId,
-            ticket_id: createdId,
-            actor_id: request.tenancy.userId,
-            action: 'created',
-            from_status: null,
-            to_status: 'open',
-            note: body.priority,
-          })
-          if (evErr) throw evErr
+        const ticketCode = `HSB-${Date.now().toString(36).toUpperCase()}-${randomUUID().slice(0, 6).toUpperCase()}`
+        const rpcRes = await supabase.rpc('create_support_ticket_atomic', {
+          p_workspace_id: request.tenancy.workspaceId,
+          p_actor_id: request.tenancy.userId,
+          p_ticket_code: ticketCode,
+          p_subject: body.subject,
+          p_priority: body.priority,
+          p_category: body.category,
+          p_description: body.description,
+          p_sla_hours: slaHours,
+          p_response_due_at: responseDueAt,
+          p_idempotency_key: idemKey ?? null,
+        })
+        if (rpcRes.error || !rpcRes.data) {
+          throw rpcRes.error ?? new Error('ATOMIC_TICKET_CREATE_FAILED')
+        }
+        const envelope = rpcRes.data as { ticket?: Record<string, unknown>; replay?: boolean }
+        const created = (envelope.ticket ?? rpcRes.data) as Record<string, unknown>
+        if (envelope.replay) {
+          return reply.code(200).send({ data: created, replay: true })
         }
 
         return reply.code(201).send({
           data: {
             ...created,
-            ticketCode,
+            ticketCode: String(created.ticket_code ?? ticketCode),
             workspaceId: request.tenancy.workspaceId,
             priority: body.priority,
             category: body.category,
@@ -283,30 +271,21 @@ export async function escalationRoutes(fastify: FastifyInstance) {
           }
         }
 
-        const now = new Date().toISOString()
-        const { data: updated, error } = await supabase
-          .from('support_tickets')
-          .update({ assigned_to: assigneeId, updated_at: now })
-          .eq('id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .select()
-          .maybeSingle()
-        if (error) throw error
-        if (!updated)
-          return reply.code(404).send({ error: 'TICKET_NOT_FOUND', code: 'TICKET_NOT_FOUND' })
-
-        const { error: evErr } = await supabase.from('support_ticket_events').insert({
-          workspace_id: request.tenancy.workspaceId,
-          ticket_id: id,
-          actor_id: request.tenancy.userId,
-          action: 'assigned',
-          from_status: String((updated as { status?: unknown }).status ?? 'open'),
-          to_status: String((updated as { status?: unknown }).status ?? 'open'),
-          note: assigneeId,
+        const rpcRes = await supabase.rpc('assign_support_ticket_atomic', {
+          p_workspace_id: request.tenancy.workspaceId,
+          p_ticket_id: id,
+          p_actor_id: request.tenancy.userId,
+          p_assignee_id: assigneeId,
         })
-        if (evErr) throw evErr
+        if (rpcRes.error || !rpcRes.data) {
+          const msg = String(rpcRes.error?.message ?? '')
+          if (msg.includes('TICKET_NOT_FOUND')) {
+            return reply.code(404).send({ error: 'TICKET_NOT_FOUND', code: 'TICKET_NOT_FOUND' })
+          }
+          throw rpcRes.error ?? new Error('ATOMIC_TICKET_ASSIGN_FAILED')
+        }
 
-        return reply.send({ data: updated })
+        return reply.send({ data: rpcRes.data })
       } catch (err) {
         return fail(fastify, reply, err, 'Failed to assign support ticket')
       }

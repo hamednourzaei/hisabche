@@ -123,11 +123,26 @@ export class AIService {
         .eq('status', 'paid'),
     ])
 
+    if (todayResult.error) throw todayResult.error
+    if (monthResult.error) throw monthResult.error
+    if (lastMonthResult.error) throw lastMonthResult.error
+
     const sameBooks = (i: { currency?: string | null }) =>
-      !i.currency || i.currency === booksCurrency
-    const todayInvoices = (todayResult.data || []).filter(sameBooks)
-    const monthInvoices = (monthResult.data || []).filter(sameBooks)
-    const lastMonthInvoices = (lastMonthResult.data || []).filter(sameBooks)
+      !i.currency || i.currency.toUpperCase() === booksCurrency.toUpperCase()
+    const todayRows = todayResult.data || []
+    const monthRows = monthResult.data || []
+    const lastMonthRows = lastMonthResult.data || []
+    const todayInvoices = todayRows.filter(sameBooks)
+    const monthInvoices = monthRows.filter(sameBooks)
+    const lastMonthInvoices = lastMonthRows.filter(sameBooks)
+
+    const foreignCurrencies = [
+      ...new Set(
+        [...todayRows, ...monthRows, ...lastMonthRows]
+          .filter((i) => i.currency && i.currency.toUpperCase() !== booksCurrency.toUpperCase())
+          .map((i) => String(i.currency).toUpperCase()),
+      ),
+    ]
 
     const todayTotal = todayInvoices.reduce((s: number, i) => s + Number(i.total), 0)
     const todayPaid = todayInvoices
@@ -147,15 +162,26 @@ export class AIService {
 
     const unit = unitLabel(booksCurrency)
     let answer = `فروش امروز: ${todayTotal.toLocaleString()} ${unit} (${todayPaid.toLocaleString()} پرداخت شده). `
-    answer += `فروش این ماه: ${monthTotal.toLocaleString()} ${unit}. `
+    answer += `فروش پرداخت‌شده این ماه: ${monthTotal.toLocaleString()} ${unit}. `
     answer += `نسبت به ماه قبل: ${growthText}.`
+    if (foreignCurrencies.length > 0) {
+      answer += ` (فاکتورهای ارز دیگر [${foreignCurrencies.join('، ')}] در این جمع ترکیب نشده‌اند.)`
+    }
 
     return {
       answer,
       confidence: 0.95,
       sources: [{ type: 'invoices', description: 'فاکتورهای امروز و ماه جاری' }],
       suggestions: ['مشاهده گزارش فروش کامل', 'مقایسه با ماه گذشته', 'بهترین محصولات فروش'],
-      data: { currency: booksCurrency, todayTotal, todayPaid, monthTotal, lastMonthTotal, growth },
+      data: {
+        currency: booksCurrency,
+        todayTotal,
+        todayPaid,
+        monthTotal,
+        lastMonthTotal,
+        growth,
+        foreignCurrenciesExcluded: foreignCurrencies,
+      },
     }
   }
 
@@ -233,20 +259,33 @@ export class AIService {
         .neq('status', 'paid'),
     ])
 
+    if (customersResult.error) throw customersResult.error
+    if (unpaidResult.error) throw unpaidResult.error
+
     const customers = customersResult.data || []
-    const unpaidInvoices = (unpaidResult.data || []).filter(
-      (inv) => !inv.currency || inv.currency === booksCurrency,
+    const allOpenInvoices = unpaidResult.data || []
+    const unpaidInvoices = allOpenInvoices.filter(
+      (inv) => !inv.currency || inv.currency.toUpperCase() === booksCurrency.toUpperCase(),
     )
+    const foreignDebtCurrencies = [
+      ...new Set(
+        allOpenInvoices
+          .filter(
+            (inv) => inv.currency && inv.currency.toUpperCase() !== booksCurrency.toUpperCase(),
+          )
+          .map((inv) => String(inv.currency).toUpperCase()),
+      ),
+    ]
 
     const totalCustomers = customers.length
 
-    // ✅ محاسبه دقیق بدهی هر مشتری
+    // ✅ محاسبه دقیق بدهی هر مشتری (جلوگیری از منفی‌شدن بدهی در اضافه‌پرداخت)
     const debtMap: Record<string, number> = {}
     for (const inv of unpaidInvoices) {
       const customerId = inv.customer_id
       if (customerId) {
-        debtMap[customerId] =
-          (debtMap[customerId] || 0) + Number(inv.total) - Number(inv.paid_amount)
+        const remaining = Math.max(0, Number(inv.total) - Number(inv.paid_amount))
+        debtMap[customerId] = (debtMap[customerId] || 0) + remaining
       }
     }
 
@@ -256,7 +295,7 @@ export class AIService {
       .map((c) => ({
         ...c,
         totalDebt: debtMap[c.id] || 0,
-        openingBalance: Number(c.opening_balance) || 0,
+        openingBalance: Math.max(0, Number(c.opening_balance) || 0),
       }))
       .filter((c) => c.totalDebt > 0 || c.openingBalance > 0)
       .sort((a, b) => b.totalDebt + b.openingBalance - (a.totalDebt + a.openingBalance))
@@ -266,6 +305,9 @@ export class AIService {
     let answer = `تعداد مشتریان فعال: ${totalCustomers}. `
     if (totalUnpaid > 0) {
       answer += `مجموع مطالبات پرداخت‌نشده: ${totalUnpaid.toLocaleString()} ${unit}. `
+    }
+    if (foreignDebtCurrencies.length > 0) {
+      answer += `(مطالبات با ارزهای دیگر [${foreignDebtCurrencies.join('، ')}] جداگانه نگهداری می‌شوند.) `
     }
     if (topDebtors.length > 0) {
       const names = topDebtors
@@ -286,6 +328,7 @@ export class AIService {
         totalCustomers,
         totalUnpaid,
         topDebtorsCount: topDebtors.length,
+        foreignDebtCurrencies,
       },
     }
   }

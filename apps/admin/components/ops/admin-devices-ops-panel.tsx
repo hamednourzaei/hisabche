@@ -20,6 +20,7 @@ import {
 import {
   useAdminOfflineDevices,
   useAdminOfflineFleetHealth,
+  useAdminOfflineReviews,
   type OfflineDeviceRecord,
 } from '@/hooks/use-admin-offline'
 import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
@@ -36,6 +37,7 @@ export function AdminDevicesOpsPanel() {
 
   const { data, isLoading, isError, refetch } = useAdminOfflineDevices(trimmedWs || undefined)
   const { data: fleet } = useAdminOfflineFleetHealth()
+  const { data: reviewsData } = useAdminOfflineReviews(trimmedWs || undefined)
 
   const devices = data?.devices ?? []
   const columns: TableColumn<OfflineDeviceRecord>[] = [
@@ -153,7 +155,10 @@ export function AdminDevicesOpsPanel() {
                   {t('admin.controlPlane.devices.pendingReviews')}
                 </p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
-                  {adminNumber(Number(fleet.health.activeDevices ?? 0), locale)}
+                  {adminNumber(
+                    (reviewsData?.reviews ?? []).filter((r) => r.status === 'pending').length,
+                    locale,
+                  )}
                 </p>
               </div>
             </div>

@@ -11,7 +11,7 @@
 BEGIN;
 
 ALTER TABLE IF EXISTS public.budgets
-  ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'USD',
+  ADD COLUMN IF NOT EXISTS currency text,
   ADD COLUMN IF NOT EXISTS amount_currency_minor bigint,
   ADD COLUMN IF NOT EXISTS fx_rate numeric(20, 8);
 
@@ -20,7 +20,10 @@ ALTER TABLE IF EXISTS public.budgets
 
 ALTER TABLE IF EXISTS public.budgets
   ADD CONSTRAINT budgets_currency_check
-  CHECK (char_length(trim(currency)) BETWEEN 3 AND 8 AND currency = upper(trim(currency)));
+  CHECK (
+    currency IS NULL
+    OR (char_length(trim(currency)) BETWEEN 3 AND 8 AND currency = upper(trim(currency)))
+  );
 
 ALTER TABLE IF EXISTS public.budgets
   DROP CONSTRAINT IF EXISTS budgets_fx_check;
@@ -28,8 +31,8 @@ ALTER TABLE IF EXISTS public.budgets
 ALTER TABLE IF EXISTS public.budgets
   ADD CONSTRAINT budgets_fx_check
   CHECK (
-    fx_rate IS NULL
-    OR (fx_rate > 0 AND (amount_currency_minor IS NULL OR amount_currency_minor >= 0))
+    (amount_currency_minor IS NULL OR amount_currency_minor >= 0)
+    AND (fx_rate IS NULL OR fx_rate > 0)
   );
 
 COMMIT;

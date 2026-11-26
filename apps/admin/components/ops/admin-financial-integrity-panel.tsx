@@ -39,6 +39,12 @@ export function AdminFinancialIntegrityPanel() {
   const trimmedId = workspaceId.trim()
   const isValidUuid = UUID_RE.test(trimmedId)
 
+  const handleWorkspaceChange = (nextId: string) => {
+    setWorkspaceId(nextId)
+    setReport(null)
+    setErrorMessage(null)
+  }
+
   const handleConfirm = async ({ stepUpTimestamp }: { stepUpTimestamp: string }) => {
     setErrorMessage(null)
     try {
@@ -107,7 +113,7 @@ export function AdminFinancialIntegrityPanel() {
           <Input
             dir="ltr"
             value={workspaceId}
-            onChange={(e) => setWorkspaceId(e.target.value)}
+            onChange={(e) => handleWorkspaceChange(e.target.value)}
             placeholder="00000000-0000-4000-8000-000000000000"
             aria-label={t('admin.controlPlane.common.workspace')}
             className="max-w-md"
