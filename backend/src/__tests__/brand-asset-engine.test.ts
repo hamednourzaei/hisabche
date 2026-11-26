@@ -368,4 +368,50 @@ describe('SupabaseStorageProvider & production signing secret resilience', () =>
       else delete process.env.SUPABASE_SERVICE_KEY
     }
   })
+
+  it('allows signed GET /brand-assets/:type/content without Authorization header while rejecting unsigned or forged requests', async () => {
+    const { buildServer } = await import('../index')
+    const { getStorageProvider, setStorageProvider } = await import('../storage/storage-adapter')
+    const prevStorage = getStorageProvider()
+    const mem = new MemoryStorageProvider()
+    setStorageProvider(mem)
+    const app = await buildServer()
+
+    const WS = '85488f9e-cb75-488e-a14e-068821d486a3'
+    const objectPath = `${BRAND_ASSET_BUCKET}/${WS}/logo/5a293704-250f-4fbf-b3b2-552294e4ec04/v1.png`
+    const png = makePngBuffer(64, 64)
+    await mem.upload(BRAND_ASSET_BUCKET, objectPath, png, {
+      contentType: 'image/png',
+      upsert: false,
+      expectedTenantPrefix: `${BRAND_ASSET_BUCKET}/${WS}`,
+    })
+
+    const { buildSignedBrandAssetContentUrl } = await import('../services/brand-asset.service')
+    const signedUrl = buildSignedBrandAssetContentUrl(WS, 'logo', objectPath)
+
+    try {
+      // Valid signed URL works from <img> / CSS url() with no bearer header
+      const okRes = await app.inject({ method: 'GET', url: signedUrl })
+      expect(okRes.statusCode).toBe(200)
+      expect(okRes.headers['content-type']).toBe('image/png')
+      expect(okRes.rawPayload.equals(png)).toBe(true)
+
+      // Forged signature is rejected with 403 (not bypassed)
+      const badSigRes = await app.inject({
+        method: 'GET',
+        url: signedUrl.replace(/sig=[0-9a-f]+/, 'sig=deadbeef'),
+      })
+      expect(badSigRes.statusCode).toBe(403)
+
+      // Unsigned content request without bearer JWT is rejected with 401 by global auth hook
+      const unsignedRes = await app.inject({
+        method: 'GET',
+        url: `/api/workspaces/${WS}/brand-assets/logo/content?path=${encodeURIComponent(objectPath)}`,
+      })
+      expect(unsignedRes.statusCode).toBe(401)
+    } finally {
+      setStorageProvider(prevStorage)
+      await app.close()
+    }
+  }, 20_000)
 })

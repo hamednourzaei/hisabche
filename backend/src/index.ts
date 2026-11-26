@@ -603,13 +603,26 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/oauth/revoke',
     '/mcp',
   ]
-  const path = url.split('?')[0]
+  const [path, rawQuery = ''] = url.split('?')
 
   if (publicPaths.some((p) => url.startsWith(p))) return
   if (path !== undefined && exactPublicPaths.includes(path)) return
   // The public blog: reading it, and the view beacon. Signed-in blog routes
   // (comment, like, stars, «me») authenticate in their own preHandler.
   if (path !== undefined && isPublicBlogRequest(request.method, path)) return
+  // Brand-asset content URLs rendered inside <img> / CSS url() carry an HMAC
+  // signature (?path=...&exp=...&sig=...) verified inside workspace.routes.ts;
+  // unsigned requests still require a bearer JWT.
+  if (
+    request.method === 'GET' &&
+    path !== undefined &&
+    /^\/api\/workspaces\/[0-9a-f-]{36}\/brand-assets\/(logo|stamp|signature)\/content$/i.test(
+      path,
+    ) &&
+    Boolean(new URLSearchParams(rawQuery).get('sig')?.trim())
+  ) {
+    return
+  }
   if (request.method === 'OPTIONS') return
 
   await authenticate(request, reply)
