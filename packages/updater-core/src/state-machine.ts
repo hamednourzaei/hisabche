@@ -1,0 +1,157 @@
+/**
+ * Table-driven 17-state update lifecycle state machine (Section 8.1).
+ * Every (state x event) pair has an explicit documented outcome.
+ */
+
+export const UPDATE_STATES = [
+  'UP_TO_DATE',
+  'CHECKING',
+  'UPDATE_AVAILABLE',
+  'DOWNLOADING',
+  'PAUSED',
+  'VERIFYING',
+  'COMPATIBILITY_CHECK',
+  'READY_TO_INSTALL',
+  'INSTALLING',
+  'ACTIVATING',
+  'RESTART_REQUIRED',
+  'ACTIVE',
+  'ROLLBACK_REQUIRED',
+  'ROLLING_BACK',
+  'FAILED',
+  'UNSUPPORTED',
+  'INCOMPATIBLE',
+] as const
+
+export type UpdateState = (typeof UPDATE_STATES)[number]
+
+export const UPDATE_EVENTS = [
+  'START_CHECK',
+  'NO_UPDATE',
+  'FOUND_UPDATE',
+  'UNSUPPORTED_ENV',
+  'INCOMPATIBLE_TARGET',
+  'START_DOWNLOAD',
+  'PAUSE_DOWNLOAD',
+  'RESUME_DOWNLOAD',
+  'DOWNLOAD_COMPLETE',
+  'VERIFY_PASS',
+  'VERIFY_FAIL',
+  'COMPAT_PASS',
+  'COMPAT_FAIL',
+  'BEGIN_INSTALL',
+  'INSTALL_DONE',
+  'BEGIN_ACTIVATE',
+  'REQUIRE_RESTART',
+  'HEALTH_OK',
+  'HEALTH_FAIL',
+  'HALT_ROLLBACK',
+  'ROLLBACK_DONE',
+  'FAIL',
+  'RESET',
+] as const
+
+export type UpdateEvent = (typeof UPDATE_EVENTS)[number]
+
+export type TransitionResult =
+  | { ok: true; nextState: UpdateState }
+  | { ok: false; code: 'INVALID_STATE_TRANSITION'; state: UpdateState; event: UpdateEvent }
+
+const TRANSITION_TABLE: Readonly<Record<UpdateState, Partial<Record<UpdateEvent, UpdateState>>>> = {
+  UP_TO_DATE: {
+    START_CHECK: 'CHECKING',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+  },
+  CHECKING: {
+    NO_UPDATE: 'UP_TO_DATE',
+    FOUND_UPDATE: 'UPDATE_AVAILABLE',
+    UNSUPPORTED_ENV: 'UNSUPPORTED',
+    INCOMPATIBLE_TARGET: 'INCOMPATIBLE',
+    FAIL: 'FAILED',
+  },
+  UPDATE_AVAILABLE: {
+    START_DOWNLOAD: 'DOWNLOADING',
+    INCOMPATIBLE_TARGET: 'INCOMPATIBLE',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+    FAIL: 'FAILED',
+    RESET: 'UP_TO_DATE',
+  },
+  DOWNLOADING: {
+    PAUSE_DOWNLOAD: 'PAUSED',
+    DOWNLOAD_COMPLETE: 'VERIFYING',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+    FAIL: 'FAILED',
+  },
+  PAUSED: {
+    RESUME_DOWNLOAD: 'DOWNLOADING',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+    FAIL: 'FAILED',
+    RESET: 'UP_TO_DATE',
+  },
+  VERIFYING: {
+    VERIFY_PASS: 'COMPATIBILITY_CHECK',
+    VERIFY_FAIL: 'FAILED',
+    FAIL: 'FAILED',
+  },
+  COMPATIBILITY_CHECK: {
+    COMPAT_PASS: 'READY_TO_INSTALL',
+    COMPAT_FAIL: 'INCOMPATIBLE',
+    FAIL: 'FAILED',
+  },
+  READY_TO_INSTALL: {
+    BEGIN_INSTALL: 'INSTALLING',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+    FAIL: 'FAILED',
+    RESET: 'UP_TO_DATE',
+  },
+  INSTALLING: {
+    INSTALL_DONE: 'ACTIVATING',
+    FAIL: 'FAILED',
+  },
+  ACTIVATING: {
+    REQUIRE_RESTART: 'RESTART_REQUIRED',
+    HEALTH_OK: 'ACTIVE',
+    HEALTH_FAIL: 'ROLLBACK_REQUIRED',
+    FAIL: 'ROLLBACK_REQUIRED',
+  },
+  RESTART_REQUIRED: {
+    HEALTH_OK: 'ACTIVE',
+    HEALTH_FAIL: 'ROLLBACK_REQUIRED',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+  },
+  ACTIVE: {
+    START_CHECK: 'CHECKING',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+    RESET: 'UP_TO_DATE',
+  },
+  ROLLBACK_REQUIRED: {
+    HALT_ROLLBACK: 'ROLLING_BACK',
+    BEGIN_ACTIVATE: 'ROLLING_BACK',
+    FAIL: 'FAILED',
+  },
+  ROLLING_BACK: {
+    ROLLBACK_DONE: 'ACTIVE',
+    FAIL: 'FAILED',
+  },
+  FAILED: {
+    START_CHECK: 'CHECKING',
+    RESET: 'UP_TO_DATE',
+    HALT_ROLLBACK: 'ROLLBACK_REQUIRED',
+  },
+  UNSUPPORTED: {
+    START_CHECK: 'CHECKING',
+    RESET: 'UP_TO_DATE',
+  },
+  INCOMPATIBLE: {
+    START_CHECK: 'CHECKING',
+    RESET: 'UP_TO_DATE',
+  },
+}
+
+export function transitionUpdateState(state: UpdateState, event: UpdateEvent): TransitionResult {
+  const next = TRANSITION_TABLE[state]?.[event]
+  if (!next) {
+    return { ok: false, code: 'INVALID_STATE_TRANSITION', state, event }
+  }
+  return { ok: true, nextState: next }
+}

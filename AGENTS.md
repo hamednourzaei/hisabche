@@ -596,3 +596,17 @@ After every meaningful change, an agent must:
 3. **Next.js `NEXT_PUBLIC_*` Inlining & Realtime StrictMode Hygiene:** Destructuring `const env = process.env; env.NEXT_PUBLIC_SUPABASE_URL` defeats Next.js/Turbopack static env inlining. Always reference `process.env.NEXT_PUBLIC_*` directly (with `typeof process !== 'undefined'` guard for Electron Vite). Gate `useRealtime` and `usePresence` on `!isOfflineTokenMode() && hasToken()` plus a `50ms` settle delay so React StrictMode and tokenless states do not abort WebSockets mid-handshake (`WebSocket is closed before the connection is established`).
 4. **Restore Preview Row Classification:** Classify every row into exactly one mutually exclusive bucket (`CREATE`, `SKIP`, `REJECT`) so `wouldCreate + wouldSkip + wouldReject === totalInputRows`, validate UUIDs before `.in('id', ...)`, and never emit `BROKEN_FOREIGN_KEY` when the parent lookup query itself failed.
 5. **Migration Generator Suffix Matching:** `scripts/migrations/generate-registry.mjs` previously matched only `-NN` at the end of filenames and scanned `-- Rollback:` comments for `DROP`, dropping dependencies for `*-02-any-unit` / `*-03-atomic` migrations. Always match `^(.*?)-(\d{2}[a-z]?)(?:-.+)?$` and strip `-- Rollback:` before destructive classification.
+
+---
+
+## 13. Self-Updating Core, Independent Modules & Staged Rollout Algorithm
+
+Every future change to application functionality MUST follow:
+
+`DISCOVER (inspect real code, contracts, versions) → CLASSIFY (Native Bootstrap / Core Runtime / Optional Module / Industry Pack / Asset-Data Pack / Backend / Database) → COMPATIBILITY (Bootstrap, runtime, API, DB, modules, offline devices) → CONTRACT (typed interfaces, version requirements, permissions, migrations) → IMPLEMENT in the smallest correct boundary → PACKAGE only artifacts of the changed layer → VERIFY (signatures, hashes, compatibility, offline behavior, rollback) → ROLLOUT through channels and rings → OBSERVE → RECOVER → PREVENT (regression test and gate for every new failure class).`
+
+**Permanent Self-Updating Rules:**
+
+- A compatible Core or optional module change must not force a full application installation where the platform supports independent layer delivery (`packages/updater-core`).
+- If a native change needs a new binary (e.g. Electron native/main shell or Android native module/permission/Expo SDK change), document the technical reason, update the compatibility model and native fingerprint (`apps/mobile/src/host/updater-adapter.ts`), and use the platform's supported binary update path.
+- Never silently add a native dependency or runtime requirement without updating the compatibility matrix (`docs/architecture/UPDATE-COMPATIBILITY-MATRIX.md`) and native fingerprint.

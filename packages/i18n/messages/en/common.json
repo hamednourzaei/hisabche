@@ -15609,5 +15609,37 @@
       "rcaPlaceholder": "Root-cause analysis summary (RCA)",
       "loadTicketsBtn": "Refresh SLA Tickets"
     }
+  },
+  "runtimeUpdate": {
+    "title": "System Update Center",
+    "modulesTitle": "Optional Modules",
+    "status": {
+      "upToDate": "Your system is up to date",
+      "updateAvailable": "A new update is ready",
+      "restartRequired": "Restart required to activate update",
+      "inProgress": "Downloading or installing update...",
+      "attentionNeeded": "Update requires attention or rolled back"
+    },
+    "actions": {
+      "checkNow": "Check for updates",
+      "pause": "Pause",
+      "resume": "Resume",
+      "retry": "Retry",
+      "showDiagnostics": "Diagnostics",
+      "hideDiagnostics": "Hide diagnostics",
+      "updateModule": "Update",
+      "updateAllCompatible": "Update compatible modules"
+    },
+    "fields": {
+      "coreVersion": "Core version",
+      "bootstrapVersion": "Bootstrap version",
+      "channel": "Release channel",
+      "verification": "Verification",
+      "compatibility": "Compatibility",
+      "rollback": "Rollback status"
+    },
+    "notices": {
+      "deferredDuringFinancialOps": "Activation deferred until active financial operations finish."
+    }
   }
 }

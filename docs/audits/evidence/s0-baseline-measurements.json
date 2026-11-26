@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-11-26T11:05:28.528Z",
+  "webNextStatic": {
+    "bytes": 13216455,
+    "files": 236
+  },
+  "desktopOutRenderer": {
+    "bytes": 16061612,
+    "files": 48
+  },
+  "desktopOutMain": {
+    "bytes": 0,
+    "files": 0
+  },
+  "desktopDist": [
+    {
+      "name": "builder-debug.yml",
+      "bytes": 8256
+    },
+    {
+      "name": "builder-effective-config.yaml",
+      "bytes": 1637
+    },
+    {
+      "name": "Hisabche-0.0.1-setup.exe",
+      "bytes": 79266524
+    },
+    {
+      "name": "Hisabche-0.0.1-win-x64",
+      "bytes": null
+    },
+    {
+      "name": "Hisabche-0.0.1-win-x64.zip",
+      "bytes": 125285009
+    },
+    {
+      "name": "latest.yml",
+      "bytes": 325
+    },
+    {
+      "name": "win-unpacked",
+      "bytes": null
+    }
+  ],
+  "mobileShellAssets": {
+    "bytes": 10356591,
+    "files": 61
+  }
+}

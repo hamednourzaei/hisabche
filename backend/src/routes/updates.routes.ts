@@ -43,8 +43,18 @@
 // ============================================
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { z } from 'zod'
 
 import { supabase } from '../db'
+import { authenticate } from '../middleware/auth.middleware'
+import { requireAdminPermission } from '../middleware/admin-rbac.middleware'
+import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import {
+  checkCompatibleUpdates,
+  promoteReleaseRing,
+  recordDeviceRolloutTelemetry,
+} from '../services/updates/control-plane.service'
 
 /** Platforms a release can target. Matches what electron-builder produces. */
 const PLATFORMS = new Set(['win', 'mac', 'linux'])
@@ -182,6 +192,228 @@ export async function updatesRoutes(fastify: FastifyInstance) {
         fastify.log.error(err, 'Failed to resolve the release download')
         return reply.code(500).send()
       }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // V13 UNIFIED UPDATE CONTROL PLANE (/api/updates/v2/*)
+  // Extends the single update authority without a second registry.
+  // ═══════════════════════════════════════════════════════════
+  const checkQuerySchema = z.object({
+    platform: z.enum(['web', 'windows', 'android']),
+    channel: z.enum(['development', 'internal', 'beta', 'stable']).default('stable'),
+    deviceId: z.string().trim().min(1).max(128),
+    clientVersion: z.string().trim().min(1).max(40).default('1.0.0'),
+    requiredApiRange: z.string().trim().min(1).max(64).default('>=1.0.0 <2.0.0'),
+  })
+
+  fastify.get(
+    '/api/updates/v2/check',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = checkQuerySchema.safeParse(request.query)
+      if (!parsed.success) {
+        return reply
+          .code(400)
+          .send({ error: 'INVALID_UPDATE_CHECK_QUERY', details: parsed.error.flatten() })
+      }
+      try {
+        const workspaceId = request.tenancy?.workspaceId
+        let workspaceCapabilities: string[] = []
+        if (workspaceId) {
+          const { data: ws } = await supabase
+            .from('workspaces')
+            .select('plan')
+            .eq('id', workspaceId)
+            .maybeSingle()
+          const plan = (ws as { plan?: string } | null)?.plan ?? 'free'
+          workspaceCapabilities =
+            plan === 'free'
+              ? ['core']
+              : [
+                  'core',
+                  'operations',
+                  'manufacturing',
+                  'workforce',
+                  'approvals',
+                  'intelligence',
+                  'marketplace',
+                  'crm_campaigns',
+                ]
+        }
+
+        const result = await checkCompatibleUpdates({
+          platform: parsed.data.platform,
+          channel: parsed.data.channel,
+          deviceId: parsed.data.deviceId,
+          clientVersion: parsed.data.clientVersion,
+          clientRequiredApiRange: parsed.data.requiredApiRange,
+          workspaceId,
+          workspaceCapabilities,
+        })
+
+        if (result.apiCompatibility === 'STRUCTURED_UPGRADE_REQUIRED') {
+          return reply.code(426).send({
+            code: 'UPGRADE_REQUIRED',
+            offlineSafe: true,
+            minSupportedClientVersion: result.minSupportedClientVersion,
+            serverApiVersion: result.serverApiVersion,
+            serverTimeMs: result.serverTimeMs,
+            coreUpdate: result.coreUpdate,
+          })
+        }
+
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err, 'Failed to check compatible updates')
+        return reply.code(500).send({ error: 'UPDATE_CHECK_FAILED' })
+      }
+    },
+  )
+
+  const telemetryBodySchema = z.object({
+    deviceId: z.string().trim().min(1).max(128),
+    releaseId: z.string().uuid(),
+    ring: z.enum(['development', 'internal', 'canary', 'expanded', 'everyone']),
+    eventKind: z.enum([
+      'activation_success',
+      'startup_failure',
+      'rollback_triggered',
+      'signature_failure',
+    ]),
+    reasonCode: z.string().trim().max(120).optional(),
+  })
+
+  fastify.post(
+    '/api/updates/v2/telemetry',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = telemetryBodySchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'INVALID_TELEMETRY_PAYLOAD' })
+      }
+      const workspaceId = request.tenancy?.workspaceId
+      if (!workspaceId) {
+        return reply.code(403).send({ error: 'WORKSPACE_REQUIRED' })
+      }
+      const res = await recordDeviceRolloutTelemetry({
+        workspaceId,
+        deviceId: parsed.data.deviceId,
+        releaseId: parsed.data.releaseId,
+        ring: parsed.data.ring,
+        eventKind: parsed.data.eventKind,
+        reasonCode: parsed.data.reasonCode,
+      })
+      return reply.send(res)
+    },
+  )
+
+  const publishReleaseSchema = z.object({
+    layer: z.enum(['core', 'module', 'data-pack', 'bootstrap']),
+    componentId: z.string().trim().min(1).max(80),
+    version: z.string().trim().min(1).max(40),
+    channel: z.enum(['development', 'internal', 'beta', 'stable']),
+    ring: z.enum(['development', 'internal', 'canary', 'expanded', 'everyone']).default('internal'),
+    rolloutPercent: z.number().int().min(0).max(100).default(5),
+    platforms: z.array(z.enum(['web', 'windows', 'android'])).min(1),
+    manifestJson: z.record(z.string(), z.unknown()),
+    signatureJson: z.record(z.string(), z.unknown()),
+    sequenceNo: z.number().int().min(1),
+    rollbackTargetVersion: z.string().trim().max(40).nullable().optional(),
+    minSupportedVersion: z.string().trim().max(40).default('1.0.0'),
+  })
+
+  fastify.post(
+    '/api/updates/v2/releases',
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = publishReleaseSchema.safeParse(request.body)
+      if (!parsed.success) {
+        return reply
+          .code(400)
+          .send({ error: 'INVALID_RELEASE_PAYLOAD', details: parsed.error.flatten() })
+      }
+      const { data, error } = await supabase
+        .from('runtime_release_artifacts')
+        .insert({
+          layer: parsed.data.layer,
+          component_id: parsed.data.componentId,
+          version: parsed.data.version,
+          channel: parsed.data.channel,
+          ring: parsed.data.ring,
+          rollout_percent: parsed.data.rolloutPercent,
+          platforms: parsed.data.platforms,
+          manifest_json: parsed.data.manifestJson,
+          signature_json: parsed.data.signatureJson,
+          sequence_no: parsed.data.sequenceNo,
+          status: 'active',
+          rollback_target_version: parsed.data.rollbackTargetVersion ?? null,
+          min_supported_version: parsed.data.minSupportedVersion,
+        })
+        .select('id, layer, component_id, version, channel, ring, rollout_percent, status')
+        .single()
+      if (error) return reply.code(500).send({ error: error.message })
+      return reply.code(201).send({ release: data })
+    },
+  )
+
+  const promoteSchema = z.object({
+    targetRing: z.enum(['development', 'internal', 'canary', 'expanded', 'everyone']),
+    rolloutPercent: z.number().int().min(0).max(100),
+  })
+
+  fastify.post(
+    '/api/updates/v2/releases/:releaseId/promote',
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { releaseId } = request.params as { releaseId: string }
+      const parsed = promoteSchema.safeParse(request.body)
+      if (!parsed.success) return reply.code(400).send({ error: 'INVALID_PROMOTE_PAYLOAD' })
+      const res = await promoteReleaseRing({
+        releaseId,
+        targetRing: parsed.data.targetRing,
+        rolloutPercent: parsed.data.rolloutPercent,
+      })
+      if (!res.ok) return reply.code(409).send(res)
+      return reply.send(res)
+    },
+  )
+
+  const haltSchema = z.object({
+    status: z.enum(['halted', 'revoked']).default('halted'),
+    reason: z.string().trim().min(3).max(200),
+    rollbackTarget: z.string().trim().max(40).nullable().optional(),
+    directiveJson: z.record(z.string(), z.unknown()),
+    signatureJson: z.record(z.string(), z.unknown()),
+    sequenceNo: z.number().int().min(1),
+  })
+
+  fastify.post(
+    '/api/updates/v2/releases/:releaseId/halt',
+    {
+      preHandler: [authenticate, platformAdminGuard, requireAdminPermission('operations.jobs.run')],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { releaseId } = request.params as { releaseId: string }
+      const parsed = haltSchema.safeParse(request.body)
+      if (!parsed.success) return reply.code(400).send({ error: 'INVALID_HALT_PAYLOAD' })
+      const { data, error } = await supabase.rpc('halt_runtime_release_atomic', {
+        p_release_id: releaseId,
+        p_status: parsed.data.status,
+        p_reason: parsed.data.reason,
+        p_rollback_target: parsed.data.rollbackTarget ?? null,
+        p_directive_json: parsed.data.directiveJson,
+        p_signature_json: parsed.data.signatureJson,
+        p_sequence_no: parsed.data.sequenceNo,
+      })
+      if (error) return reply.code(500).send({ error: error.message })
+      return reply.send(data)
     },
   )
 }

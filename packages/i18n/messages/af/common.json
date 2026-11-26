@@ -15609,5 +15609,37 @@
       "rcaPlaceholder": "خلاصه تحلیل ریشه‌ای مشکل (RCA)",
       "loadTicketsBtn": "تازه‌سازی تیکت‌های SLA"
     }
+  },
+  "runtimeUpdate": {
+    "title": "مرکز به‌روزرسانی سیستم",
+    "modulesTitle": "ماژول‌های اختیاری",
+    "status": {
+      "upToDate": "نسخه شما به‌روز است",
+      "updateAvailable": "به‌روزرسانی جدید آماده است",
+      "restartRequired": "برای فعال‌سازی نیاز به راه‌اندازی مجدد است",
+      "inProgress": "در حال دریافت یا نصب به‌روزرسانی...",
+      "attentionNeeded": "به‌روزرسانی با خطا یا بازگشت مواجه شد"
+    },
+    "actions": {
+      "checkNow": "بررسی به‌روزرسانی",
+      "pause": "توقف موقت",
+      "resume": "ادامه",
+      "retry": "تلاش مجدد",
+      "showDiagnostics": "جزئیات تخنیکی",
+      "hideDiagnostics": "بستن جزئیات",
+      "updateModule": "به‌روزرسانی",
+      "updateAllCompatible": "به‌روزرسانی ماژول‌های سازگار"
+    },
+    "fields": {
+      "coreVersion": "نسخه هسته",
+      "bootstrapVersion": "نسخه بوت‌استرپ",
+      "channel": "کانال انتشار",
+      "verification": "وضعیت امضا",
+      "compatibility": "سازگاری",
+      "rollback": "وضعیت بازگشت"
+    },
+    "notices": {
+      "deferredDuringFinancialOps": "به دلیل عملیات مالی فعال، فعال‌سازی تا پایان کار به تعویق افتاد."
+    }
   }
 }

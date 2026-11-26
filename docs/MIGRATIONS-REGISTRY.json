@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "totalMigrations": 324,
-  "withVerifyScript": 195,
+  "totalMigrations": 325,
+  "withVerifyScript": 196,
   "withoutVerifyScript": 129,
-  "withPgTest": 210,
+  "withPgTest": 211,
   "withoutPgTest": 114,
   "migrations": [
     {
@@ -7248,6 +7248,32 @@
       "minBackendVersion": "0.0.1",
       "minClientVersion": "0.0.1",
       "destructiveClassification": "DESTRUCTIVE_DROP_TABLE"
+    },
+    {
+      "id": "update-control-plane-01",
+      "filename": "docs/update-control-plane-01-migration.sql",
+      "dependencies": ["base-schema-migration.sql"],
+      "tablesChanged": [
+        "runtime_halt_directives",
+        "runtime_release_artifacts",
+        "runtime_rollout_telemetry"
+      ],
+      "columnsAdded": [],
+      "functionsChanged": ["halt_runtime_release_atomic"],
+      "triggersChanged": [],
+      "rlsChanges": ["runtime_rollout_telemetry_ws_isolation"],
+      "constraintsAndIndexes": [
+        "idx_runtime_release_active_lookup",
+        "idx_runtime_rollout_telemetry_release",
+        "idx_runtime_rollout_telemetry_ws"
+      ],
+      "backfillBehavior": "CONTAINS_DML_BACKFILL",
+      "verificationScript": "docs/VERIFY-update-control-plane-01.sql",
+      "pgTest": "backend/src/__tests__/update-control-plane.pg.test.ts",
+      "rollbackPolicy": "EXPLICIT_ROLLBACK_BLOCK",
+      "minBackendVersion": "0.0.1",
+      "minClientVersion": "0.0.1",
+      "destructiveClassification": "ADDITIVE_OR_IDEMPOTENT"
     },
     {
       "id": "user-dashboard-kpis-01",
