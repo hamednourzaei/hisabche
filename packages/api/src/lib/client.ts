@@ -245,7 +245,9 @@ export function registerSyncCoordinator(coordinator: SyncCoordinator): () => voi
 }
 
 export async function runRegisteredSyncDetailed(): Promise<
-  SyncCoordinatorOutcome & { status: SyncCoordinatorLifecycleState | 'no_coordinator' }
+  Omit<SyncCoordinatorOutcome, 'status'> & {
+    status: SyncCoordinatorLifecycleState | 'no_coordinator'
+  }
 > {
   if (!registeredSyncCoordinator) {
     requestSyncSoon()
