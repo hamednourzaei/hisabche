@@ -103,6 +103,8 @@ const TABLES: TableSpec[] = [
   { name: 'purchaseOrders', table: 'purchase_orders', columns: '*', orderBy: 'created_at' },
 ]
 
+export const BACKUP_TABLE_NAMES: ReadonlySet<string> = new Set(TABLES.map((t) => t.name))
+
 export interface BackupTableResult {
   rows: unknown[]
   count: number

@@ -301,6 +301,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               ownerId: ws.ownerId,
             })
             useWorkspaceStore.getState().setWorkspace(ws.id, ws.name)
+            useWorkspaceStore.setState({ hasNoWorkspace: false })
             set({
               session: offlineSession,
               isAuthenticated: true,
@@ -309,6 +310,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               error: null,
             })
             return
+          } else {
+            useWorkspaceStore.setState({
+              workspaceId: null,
+              workspaceName: '',
+              members: [],
+              hasNoWorkspace: true,
+            })
           }
         } catch (error) {
           // ⚠️ THE WORKSPACE COULD NOT BE READ.

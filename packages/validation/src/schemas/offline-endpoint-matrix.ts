@@ -642,6 +642,9 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /payments': ['payment.record', 'available'],
   'GET /payments/:x/processor-state': ['payment.record', 'available'],
   'POST /payments/:x/processor-state': ['payment.record', 'available'],
+  'GET /payments/:x/gateway-events': ['payment.record', 'available'],
+  'GET /payments/gateway-reconciliation': ['payment.record', 'available'],
+  'POST /payments/:x/gateway-webhook': ['developer.keys', 'online_required'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],
   'POST /payrolls': ['hr.payroll', 'available'],
   // Re-posting a paid salary to the ledger. The device books at the moment it settles
@@ -688,10 +691,10 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /me/dashboard-kpis': ['ui.dashboard_kpis', 'online_required'],
   'PUT /me/dashboard-kpis': ['ui.dashboard_kpis', 'online_required'],
   // user-state-01: saved invoice drafts and the theme. Offline the builder
-  // keeps its draft on the device and the theme stays the device's.
-  'GET /me/invoice-drafts': ['ui.personal_state', 'online_required'],
-  'PUT /me/invoice-drafts': ['ui.personal_state', 'online_required'],
-  'DELETE /me/invoice-drafts/:x': ['ui.personal_state', 'online_required'],
+  // Personal invoice drafts are persisted on device (`local_invoice_drafts`) and server under invoice creation.
+  'GET /me/invoice-drafts': ['invoice.create', 'available'],
+  'PUT /me/invoice-drafts': ['invoice.create', 'available'],
+  'DELETE /me/invoice-drafts/:x': ['invoice.create', 'available'],
   'GET /me/preferences': ['ui.personal_state', 'online_required'],
   'PUT /me/preferences': ['ui.personal_state', 'online_required'],
   'POST /me/guide-progress': ['ui.guide_progress', 'online_required'],
@@ -833,6 +836,11 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'GET /v1/support-tickets': ['approvals.workflows', 'online_required'],
   'POST /v1/support-tickets': ['approvals.workflows', 'online_required'],
   'PATCH /v1/support-tickets/:x/status': ['approvals.workflows', 'online_required'],
+  'POST /v1/support-tickets/:x/assign': ['approvals.workflows', 'online_required'],
+  'GET /v1/support-tickets/:x/events': ['approvals.workflows', 'online_required'],
+  'GET /v1/support-tickets/:x/comments': ['approvals.workflows', 'online_required'],
+  'POST /v1/support-tickets/:x/comments': ['approvals.workflows', 'online_required'],
+  'POST /v1/support-tickets/evaluate-sla': ['approvals.workflows', 'online_required'],
   'GET /marketplace/integrations/health': ['marketplace.apps', 'online_required'],
   'GET /agriculture/livestock': ['trade.agriculture', 'online_required'],
   'POST /agriculture/livestock': ['trade.agriculture', 'online_required'],

@@ -985,6 +985,40 @@ describe('the remaining domain roads deliver successfully', () => {
       method: 'post',
       url: `/payments/${ID}/cancel`,
     },
+    {
+      name: 'an offline fixed asset',
+      entry: cmd('ast-1', 'local_assets', 'create', { id: ID, name: 'Compressor' }),
+      method: 'post',
+      url: '/finance/assets',
+    },
+    {
+      name: 'an offline crop cycle',
+      entry: cmd('crop-1', 'local_crop_cycles', 'create', { id: ID, cropName: 'Wheat' }),
+      method: 'post',
+      url: '/agriculture/crops',
+    },
+    {
+      name: 'an offline livestock herd',
+      entry: cmd('herd-1', 'local_livestock_groups', 'create', { id: ID, category: 'Sheep' }),
+      method: 'post',
+      url: '/agriculture/livestock',
+    },
+    {
+      name: 'an offline approval request',
+      entry: cmd('apr-1', 'local_approval_queue', 'create', { id: ID, documentId: 'doc-1' }),
+      method: 'post',
+      url: '/v1/workflows/instances',
+    },
+    {
+      name: 'an offline manufacturing BOM definition',
+      entry: cmd('mfg-1', 'local_manufacturing_defs', 'create', {
+        id: ID,
+        productId: ID,
+        definition: { stages: ['cut'] },
+      }),
+      method: 'put',
+      url: '/manufacturing/definitions',
+    },
   ]
 
   for (const road of roads) {

@@ -4,6 +4,7 @@
 // Offline BOM & production recipe draft store backed by local SQLite.
 // ============================================
 
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -57,6 +58,17 @@ export function registerManufacturingLocalRoutes(router: Router): void {
          VALUES (?, ?, ?, ?, ?, ?, 'local', 'local_only')`,
         [id, c.ctx.workspaceId, productId, json, now, now],
       )
+    }
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enq = buildEnqueue({
+        entity: 'local_manufacturing_defs',
+        operation: 'create',
+        clientId: id,
+        payload: { id, productId, definition: raw.definition },
+        userId: c.headers?.['x-hisabche-user-id'] ?? c.ctx.userId,
+        workspaceId: c.ctx.workspaceId,
+      })
+      c.db.run(enq.sql, enq.params)
     }
     return {
       __status: 201,

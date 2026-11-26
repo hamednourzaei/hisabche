@@ -220,7 +220,20 @@ export function onSyncRequested(listener: SyncRequestedListener): () => void {
   }
 }
 
-type SyncCoordinator = () => Promise<boolean>
+export type SyncCoordinatorLifecycleState =
+  'success' | 'partial' | 'failed' | 'running' | 'offline' | 'conflict'
+
+export interface SyncCoordinatorOutcome {
+  ok: boolean
+  status?: SyncCoordinatorLifecycleState | undefined
+  pushedCount?: number | undefined
+  pushFailureCount?: number | undefined
+  pulledCount?: number | undefined
+  conflictCount?: number | undefined
+  error?: string | undefined
+}
+
+type SyncCoordinator = () => Promise<boolean | SyncCoordinatorOutcome>
 let registeredSyncCoordinator: SyncCoordinator | null = null
 
 /** Register the host's push+pull sync coordinator so Sync Center executes real sync. */
@@ -231,18 +244,36 @@ export function registerSyncCoordinator(coordinator: SyncCoordinator): () => voi
   }
 }
 
-/** Runs the registered push+pull sync coordinator and reports honest outcome. */
-export async function runRegisteredSync(): Promise<'synced' | 'failed' | 'no_coordinator'> {
+export async function runRegisteredSyncDetailed(): Promise<
+  SyncCoordinatorOutcome & { status: SyncCoordinatorLifecycleState | 'no_coordinator' }
+> {
   if (!registeredSyncCoordinator) {
     requestSyncSoon()
-    return 'no_coordinator'
+    return { ok: false, status: 'no_coordinator' }
   }
   try {
-    const ok = await registeredSyncCoordinator()
-    return ok ? 'synced' : 'failed'
-  } catch {
-    return 'failed'
+    const raw = await registeredSyncCoordinator()
+    if (typeof raw === 'boolean') {
+      return { ok: raw, status: raw ? 'success' : 'failed' }
+    }
+    return {
+      ...raw,
+      status: raw.status ?? (raw.ok ? 'success' : 'failed'),
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      status: 'failed',
+      error: err instanceof Error ? err.message : String(err),
+    }
   }
+}
+
+/** Runs the registered push+pull sync coordinator and reports honest outcome. */
+export async function runRegisteredSync(): Promise<'synced' | 'failed' | 'no_coordinator'> {
+  const res = await runRegisteredSyncDetailed()
+  if (res.status === 'no_coordinator') return 'no_coordinator'
+  return res.status === 'success' || res.ok ? 'synced' : 'failed'
 }
 
 /**

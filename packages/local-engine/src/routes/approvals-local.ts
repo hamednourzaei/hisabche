@@ -4,6 +4,7 @@
 // Offline approval queue requests waiting for manager confirmation or sync.
 // ============================================
 
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -35,6 +36,17 @@ export function registerApprovalsLocalRoutes(router: Router): void {
        VALUES (?, ?, ?, ?, ?, 'pending_offline', ?, ?, ?, 'local', 'local_only')`,
       [id, c.ctx.workspaceId, documentType, documentId, c.ctx.userId, note, now, now],
     )
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enq = buildEnqueue({
+        entity: 'local_approval_queue',
+        operation: 'create',
+        clientId: id,
+        payload: { id, documentType, documentId, ...(note ? { note } : {}) },
+        userId: c.headers?.['x-hisabche-user-id'] ?? c.ctx.userId,
+        workspaceId: c.ctx.workspaceId,
+      })
+      c.db.run(enq.sql, enq.params)
+    }
     return {
       __status: 201,
       __data: { data: c.db.get('SELECT * FROM local_approval_queue WHERE id = ?', [id]) },

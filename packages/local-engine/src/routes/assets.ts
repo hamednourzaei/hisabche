@@ -5,6 +5,7 @@
 // Binding depreciation journal posting remains on the server once synced.
 // ============================================
 
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -74,6 +75,27 @@ export function registerAssetRoutes(router: Router): void {
         now,
       ],
     )
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enq = buildEnqueue({
+        entity: 'local_assets',
+        operation: 'create',
+        clientId: id,
+        payload: {
+          id,
+          name,
+          costMinor,
+          salvageMinor,
+          method,
+          periods,
+          periodMonths,
+          firstPeriodOn,
+          acquiredOn,
+        },
+        userId: c.headers?.['x-hisabche-user-id'] ?? c.ctx.userId,
+        workspaceId: c.ctx.workspaceId,
+      })
+      c.db.run(enq.sql, enq.params)
+    }
     return {
       __status: 201,
       __data: { data: c.db.get('SELECT * FROM local_assets WHERE id = ?', [id]) },

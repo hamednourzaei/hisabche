@@ -1052,3 +1052,39 @@ export const EXTENDED_LOCAL_OPS_STATEMENTS: readonly string[] = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_local_approval_queue_ws ON local_approval_queue(workspace_id, status)`,
 ]
+
+// ─── 9. Append-only Payment Gateway Event Trail (v41, X10) ───
+export const PAYMENT_GATEWAY_EVENTS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_payment_gateway_events (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    payment_id TEXT NOT NULL,
+    from_state TEXT,
+    to_state TEXT NOT NULL
+      CHECK (to_state IN ('queued_offline', 'pending_capture', 'captured', 'declined', 'voided')),
+    gateway_name TEXT,
+    external_ref TEXT,
+    fee_minor INTEGER NOT NULL DEFAULT 0 CHECK (fee_minor >= 0),
+    signature_verified INTEGER NOT NULL DEFAULT 0,
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_pg_events_ws_pay
+    ON local_payment_gateway_events(workspace_id, payment_id, created_at ASC)`,
+]
+
+// ─── 10. Local Personal Invoice Drafts (v42, CORE 01 parity) ──
+export const INVOICE_DRAFTS_STATEMENTS: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS local_invoice_drafts (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT '',
+    user_id TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL DEFAULT 'sale',
+    title TEXT NOT NULL DEFAULT '',
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_local_invoice_drafts_ws_user
+    ON local_invoice_drafts(workspace_id, user_id, updated_at DESC)`,
+]

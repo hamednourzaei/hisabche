@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "totalEndpoints": 1067,
+  "totalEndpoints": 1119,
   "counts": {
-    "NO_DIRECT_UI_CALLER": 533,
-    "CONNECTED_TO_UI": 308,
+    "NO_DIRECT_UI_CALLER": 557,
+    "CONNECTED_TO_UI": 336,
     "ADMIN_OR_INTERNAL": 164,
     "PUBLIC_OR_WEBHOOK": 50,
     "HEALTH_OR_INFRA": 3,
@@ -245,6 +245,20 @@
       "routeFile": "backend/src/routes/accounting.routes.ts",
       "method": "POST",
       "path": "/api/budget-check",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/accounting.routes.ts",
+      "method": "POST",
+      "path": "/api/consolidated-summary",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/accounting.routes.ts",
+      "method": "POST",
+      "path": "/api/reconcile-cross-core",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -1148,14 +1162,14 @@
       "routeFile": "backend/src/routes/agriculture.routes.ts",
       "method": "GET",
       "path": "/api/agriculture/livestock",
-      "classification": "NO_DIRECT_UI_CALLER",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
       "routeFile": "backend/src/routes/agriculture.routes.ts",
       "method": "POST",
       "path": "/api/agriculture/livestock",
-      "classification": "NO_DIRECT_UI_CALLER",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -1366,6 +1380,20 @@
       "method": "POST",
       "path": "/api/appointments",
       "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/appointment.routes.ts",
+      "method": "POST",
+      "path": "/api/appointments/waitlist/allocate",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/appointment.routes.ts",
+      "method": "POST",
+      "path": "/api/appointments/no-show-fee",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -2027,6 +2055,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/billing.routes.ts",
+      "method": "POST",
+      "path": "/api/billing/tco-estimate",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/blog.routes.ts",
       "method": "GET",
       "path": "/api/blog/posts",
@@ -2513,6 +2548,27 @@
       "routeFile": "backend/src/routes/contracts.routes.ts",
       "method": "POST",
       "path": "/api/contracts/:id/lease-return",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/contracts.routes.ts",
+      "method": "POST",
+      "path": "/api/contracts/subscriptions/next-cycle",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/contracts.routes.ts",
+      "method": "POST",
+      "path": "/api/contracts/guarantees/evaluate",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/contracts.routes.ts",
+      "method": "POST",
+      "path": "/api/contracts/:id/e-sign",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -3077,6 +3133,62 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "GET",
+      "path": "/api/v1/support-tickets",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "POST",
+      "path": "/api/v1/support-tickets",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "PATCH",
+      "path": "/api/v1/support-tickets/:id/status",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "POST",
+      "path": "/api/v1/support-tickets/:id/assign",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "GET",
+      "path": "/api/v1/support-tickets/:id/events",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "GET",
+      "path": "/api/v1/support-tickets/:id/comments",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "POST",
+      "path": "/api/v1/support-tickets/:id/comments",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/escalation.routes.ts",
+      "method": "POST",
+      "path": "/api/v1/support-tickets/evaluate-sla",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/event.routes.ts",
       "method": "POST",
       "path": "/api/events/emit",
@@ -3227,6 +3339,20 @@
       "routeFile": "backend/src/routes/exchange.routes.ts",
       "method": "POST",
       "path": "/api/fx/reconciliations",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/exchange.routes.ts",
+      "method": "POST",
+      "path": "/api/exchange/trade-in/quote",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/exchange.routes.ts",
+      "method": "POST",
+      "path": "/api/fx/kyc/evaluate",
       "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
@@ -3455,6 +3581,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/financing.routes.ts",
+      "method": "POST",
+      "path": "/api/financing/bank-match",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/fitment.routes.ts",
       "method": "GET",
       "path": "/api/products/:id/fitments",
@@ -3480,6 +3613,13 @@
       "method": "POST",
       "path": "/api/vehicles",
       "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/fitment.routes.ts",
+      "method": "POST",
+      "path": "/api/vehicles/vin/decode",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -4148,6 +4288,55 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "GET",
+      "path": "/api/gift-cards",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "POST",
+      "path": "/api/gift-cards",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "POST",
+      "path": "/api/gift-cards/redeem",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "GET",
+      "path": "/api/store-credit/:customerId",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "POST",
+      "path": "/api/store-credit",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "GET",
+      "path": "/api/loyalty/:customerId",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/loyalty-credit.routes.ts",
+      "method": "POST",
+      "path": "/api/loyalty/mutate",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/manufacturing.routes.ts",
       "method": "GET",
       "path": "/api/boms",
@@ -4214,6 +4403,13 @@
       "routeFile": "backend/src/routes/manufacturing.routes.ts",
       "method": "PATCH",
       "path": "/api/work-orders/:id",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/manufacturing.routes.ts",
+      "method": "POST",
+      "path": "/api/manufacturing/mrp/plan",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -4460,6 +4656,13 @@
       "method": "POST",
       "path": "/api/admin/app-reviews/:id/visibility",
       "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/marketplace.routes.ts",
+      "method": "GET",
+      "path": "/api/marketplace/integrations/health",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -5205,6 +5408,20 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/orders.routes.ts",
+      "method": "POST",
+      "path": "/api/orders/table-service/bill-summary",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/orders.routes.ts",
+      "method": "POST",
+      "path": "/api/orders/layaway",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/package-credits.routes.ts",
       "method": "GET",
       "path": "/api/package-credits/balance",
@@ -5369,6 +5586,41 @@
       "routeFile": "backend/src/routes/payments.routes.ts",
       "method": "POST",
       "path": "/api/cheques/:id/transition",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/payments.routes.ts",
+      "method": "GET",
+      "path": "/api/:id/processor-state",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/payments.routes.ts",
+      "method": "POST",
+      "path": "/api/:id/processor-state",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/payments.routes.ts",
+      "method": "GET",
+      "path": "/api/:id/gateway-events",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/payments.routes.ts",
+      "method": "POST",
+      "path": "/api/:id/gateway-webhook",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/payments.routes.ts",
+      "method": "GET",
+      "path": "/api/gateway-reconciliation",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -5579,6 +5831,13 @@
       "routeFile": "backend/src/routes/pos.routes.ts",
       "method": "GET",
       "path": "/api/cash-flow",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/pos.routes.ts",
+      "method": "GET",
+      "path": "/api/sessions/:id/z-report",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -5884,6 +6143,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/product.routes.ts",
+      "method": "POST",
+      "path": "/api/products/:id/barcode-label",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/project.routes.ts",
       "method": "GET",
       "path": "/api/projects",
@@ -5999,6 +6265,27 @@
       "routeFile": "backend/src/routes/project.routes.ts",
       "method": "POST",
       "path": "/api/projects/:id/bill",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/project.routes.ts",
+      "method": "GET",
+      "path": "/api/projects/:id/change-orders",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/project.routes.ts",
+      "method": "POST",
+      "path": "/api/projects/:id/change-orders",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/project.routes.ts",
+      "method": "POST",
+      "path": "/api/projects/:id/change-orders/:orderId/decide",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },
@@ -6129,6 +6416,20 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/purchasing.routes.ts",
+      "method": "POST",
+      "path": "/api/purchase-orders/supplier-score",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/purchasing.routes.ts",
+      "method": "POST",
+      "path": "/api/purchase-orders/landed-cost-allocate",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/quality.routes.ts",
       "method": "GET",
       "path": "/api/quality-events",
@@ -6154,6 +6455,13 @@
       "method": "POST",
       "path": "/api/warranty-claims",
       "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/quality.routes.ts",
+      "method": "POST",
+      "path": "/api/quality-events/inspect",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -6231,6 +6539,13 @@
       "method": "POST",
       "path": "/api/repair-tickets/:id/bill",
       "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/repair.routes.ts",
+      "method": "POST",
+      "path": "/api/repair-tickets/imei/check",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -6570,6 +6885,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/storefront.routes.ts",
+      "method": "GET",
+      "path": "/api/${STOREFRONT_PREFIX}/catalog/qr-whatsapp",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/supplier.routes.ts",
       "method": "GET",
       "path": "/api/",
@@ -6717,6 +7039,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/tax.routes.ts",
+      "method": "POST",
+      "path": "/api/return/currency-summary",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/transaction.routes.ts",
       "method": "GET",
       "path": "/api/transactions/ledger",
@@ -6854,6 +7183,20 @@
       "method": "POST",
       "path": "/api/deliveries/notes/:id/pod",
       "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/transport.routes.ts",
+      "method": "POST",
+      "path": "/api/deliveries/cod/reconcile-batch",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/transport.routes.ts",
+      "method": "POST",
+      "path": "/api/transport/fleet/compliance",
+      "classification": "CONNECTED_TO_UI",
       "tenantScoped": true
     },
     {
@@ -7249,6 +7592,13 @@
       "tenantScoped": true
     },
     {
+      "routeFile": "backend/src/routes/warranty.routes.ts",
+      "method": "POST",
+      "path": "/api/warranties/rma/disposition",
+      "classification": "CONNECTED_TO_UI",
+      "tenantScoped": true
+    },
+    {
       "routeFile": "backend/src/routes/workflow.routes.ts",
       "method": "POST",
       "path": "/api/v1/workflows",
@@ -7476,6 +7826,20 @@
       "routeFile": "backend/src/routes/workspace.routes.ts",
       "method": "GET",
       "path": "/api/workspaces/:id/brand-assets/:assetType/content",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/workspace.routes.ts",
+      "method": "GET",
+      "path": "/api/workspaces/:id/export-bundle",
+      "classification": "NO_DIRECT_UI_CALLER",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/workspace.routes.ts",
+      "method": "POST",
+      "path": "/api/workspaces/:id/export-restore-preview",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     }

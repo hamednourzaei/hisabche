@@ -250,7 +250,7 @@ export function FinanceCompliancePanel() {
                     <span className="truncate font-medium">
                       {String(co.title ?? orderId)} ({status})
                     </span>
-                    {status === 'pending' && projectId.trim() ? (
+                    {(status === 'pending_approval' || status === 'pending') && projectId.trim() ? (
                       <div className="flex gap-1">
                         <Button
                           type="button"

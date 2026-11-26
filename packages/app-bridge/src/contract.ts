@@ -168,6 +168,11 @@ export const localTableSchema = z.enum([
   // completion): the FEFO queue the pull writes and an offline sale consumes.
   'stock_batches',
   'lot_allocations',
+  'local_assets',
+  'local_crop_cycles',
+  'local_livestock_groups',
+  'local_manufacturing_defs',
+  'local_approval_queue',
 ])
 
 export type LocalTable = z.infer<typeof localTableSchema>

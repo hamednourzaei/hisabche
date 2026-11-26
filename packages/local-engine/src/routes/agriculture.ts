@@ -4,6 +4,7 @@
 // Offline crop cycles and livestock groups register backed by local SQLite.
 // ============================================
 
+import { buildEnqueue } from '@hisabche/app-bridge'
 import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
 import type { Router } from '../router'
@@ -40,6 +41,23 @@ export function registerAgricultureRoutes(router: Router): void {
        VALUES (?, ?, ?, ?, ?, ?, 'planted', ?, ?, 'local', 'local_only')`,
       [id, c.ctx.workspaceId, landUnitId, cropName, plantingDate, expectedHarvestDate, now, now],
     )
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enq = buildEnqueue({
+        entity: 'local_crop_cycles',
+        operation: 'create',
+        clientId: id,
+        payload: {
+          id,
+          landUnitId,
+          cropName,
+          plantingDate,
+          ...(expectedHarvestDate ? { expectedHarvestDate } : {}),
+        },
+        userId: c.headers?.['x-hisabche-user-id'] ?? c.ctx.userId,
+        workspaceId: c.ctx.workspaceId,
+      })
+      c.db.run(enq.sql, enq.params)
+    }
     return {
       __status: 201,
       __data: { data: c.db.get('SELECT * FROM local_crop_cycles WHERE id = ?', [id]) },
@@ -81,6 +99,23 @@ export function registerAgricultureRoutes(router: Router): void {
        VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, 'local', 'local_only')`,
       [id, c.ctx.workspaceId, category, headCount, acquisitionDate, locationBarn, now, now],
     )
+    if (c.headers?.['x-hisabche-queue'] === '1') {
+      const enq = buildEnqueue({
+        entity: 'local_livestock_groups',
+        operation: 'create',
+        clientId: id,
+        payload: {
+          id,
+          category,
+          headCount,
+          birthOrAcquisitionDate: acquisitionDate,
+          ...(locationBarn ? { locationBarn } : {}),
+        },
+        userId: c.headers?.['x-hisabche-user-id'] ?? c.ctx.userId,
+        workspaceId: c.ctx.workspaceId,
+      })
+      c.db.run(enq.sql, enq.params)
+    }
     return {
       __status: 201,
       __data: { data: c.db.get('SELECT * FROM local_livestock_groups WHERE id = ?', [id]) },

@@ -93,9 +93,17 @@ export function useBackgroundSync(workspaceId: string | null): void {
     trigger()
     const unsubSyncRequested = onSyncRequested(trigger)
     const unsubCoordinator = registerSyncCoordinator(async () => {
-      await runSync(queryClient)
+      const outcome = await runSync(queryClient)
       await queryClient.invalidateQueries({ queryKey: QUEUE_KEY })
-      return true
+      return {
+        ok: outcome.ok,
+        status: outcome.status,
+        pushedCount: outcome.pushedCount,
+        pushFailureCount: outcome.pushFailureCount,
+        pulledCount: outcome.pulledCount,
+        conflictCount: outcome.conflictCount,
+        ...(outcome.error ? { error: outcome.error } : {}),
+      }
     })
     window.addEventListener('online', onReconnect)
     const timer = window.setInterval(trigger, BACKGROUND_INTERVAL_MS)

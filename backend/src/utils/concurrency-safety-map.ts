@@ -2335,6 +2335,12 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/processor-state'" }],
   },
   {
+    routeFile: 'payments.routes.ts',
+    route: 'POST /:id/gateway-webhook',
+    mechanisms: ['state-idempotent'],
+    evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/gateway-webhook'" }],
+  },
+  {
     routeFile: 'accounting.routes.ts',
     route: 'POST /reconcile-cross-core',
     mechanisms: ['state-idempotent'],

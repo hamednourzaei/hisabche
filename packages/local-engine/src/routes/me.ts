@@ -5,10 +5,12 @@
 // In offline mode, the user always has role 'owner' with all capabilities.
 // ============================================
 
-import { updateProfileSchema } from '@hisabche/validation'
+import { invoiceDraftSaveSchema, updateProfileSchema } from '@hisabche/validation'
 import type { Router } from '../router'
 import type { RouteHandlerContext } from '../types'
+import { requireCapability } from '../auth'
 import { ValidationError } from '../errors'
+import { newId, nowIso } from './people-common'
 import { splitBusinessTypes } from './workspace'
 
 export const ALL_CAPABILITIES = [
@@ -201,4 +203,91 @@ export function registerMeRoutes(router: Router): void {
   router.get('/auth/me', authMeHandler)
   router.get('/me', authMeHandler)
   router.patch('/auth/profile', patchProfileHandler)
+
+  // Personal invoice drafts on device (CORE 01 offline+online parity)
+  router.get('/me/invoice-drafts', (c: RouteHandlerContext) => {
+    const rows = c.db.all<{
+      id: string
+      kind: string
+      title: string
+      payload_json: string
+      created_at: string
+      updated_at: string
+    }>(
+      `SELECT id, kind, title, payload_json, created_at, updated_at
+       FROM local_invoice_drafts
+       WHERE workspace_id = ? AND user_id = ?
+       ORDER BY updated_at DESC`,
+      [c.ctx.workspaceId, c.ctx.userId],
+    )
+    const drafts = rows.map((r) => {
+      let payload: Record<string, unknown> = {}
+      try {
+        payload = JSON.parse(r.payload_json) as Record<string, unknown>
+      } catch {
+        payload = {}
+      }
+      return {
+        id: r.id,
+        kind: r.kind,
+        title: r.title,
+        payload,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }
+    })
+    return { configured: true, drafts }
+  })
+
+  router.put('/me/invoice-drafts', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+    const parsed = invoiceDraftSaveSchema.safeParse(c.body)
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.errors.map((e) => e.message).join(', '))
+    }
+    const input = parsed.data
+    const now = nowIso()
+    const payloadJson = JSON.stringify(input.payload ?? {})
+    const existing = input.id
+      ? c.db.get<{ id: string; created_at: string }>(
+          'SELECT id, created_at FROM local_invoice_drafts WHERE id = ? AND workspace_id = ? AND user_id = ?',
+          [input.id, c.ctx.workspaceId, c.ctx.userId],
+        )
+      : undefined
+    const id = existing?.id ?? input.id ?? newId()
+    const createdAt = existing?.created_at ?? now
+    if (existing) {
+      c.db.run(
+        `UPDATE local_invoice_drafts
+         SET kind = ?, title = ?, payload_json = ?, updated_at = ?
+         WHERE id = ? AND workspace_id = ? AND user_id = ?`,
+        [input.kind, input.title, payloadJson, now, id, c.ctx.workspaceId, c.ctx.userId],
+      )
+    } else {
+      c.db.run(
+        `INSERT INTO local_invoice_drafts
+         (id, workspace_id, user_id, kind, title, payload_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, c.ctx.workspaceId, c.ctx.userId, input.kind, input.title, payloadJson, createdAt, now],
+      )
+    }
+    return {
+      id,
+      kind: input.kind,
+      title: input.title,
+      payload: input.payload,
+      createdAt,
+      updatedAt: now,
+    }
+  })
+
+  router.delete('/me/invoice-drafts/:id', (c: RouteHandlerContext) => {
+    requireCapability(c.ctx, 'invoice.create')
+    c.db.run('DELETE FROM local_invoice_drafts WHERE id = ? AND workspace_id = ? AND user_id = ?', [
+      c.params.id,
+      c.ctx.workspaceId,
+      c.ctx.userId,
+    ])
+    return { deleted: true }
+  })
 }

@@ -25,6 +25,8 @@ import { invalidateMoneyCaches } from '../utils/money-cache'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { sendFailure } from '../errors/http-failure'
 import { requireRole } from '../services/tenancy.service'
+import { baseCurrencyOf } from '../services/base-currency'
+import { FRACTION_DIGITS, type KnownCurrency } from '@hisabche/formatting'
 import { toJsonSchema } from '../utils/json-schema'
 
 export async function projectRoutes(fastify: FastifyInstance) {
@@ -571,6 +573,11 @@ export async function projectRoutes(fastify: FastifyInstance) {
     },
   )
 
+  const budgetScaleForCurrency = (currency: string): number => {
+    const digits = FRACTION_DIGITS[currency.toUpperCase() as KnownCurrency] ?? 2
+    return 10 ** digits
+  }
+
   fastify.post(
     '/api/projects/:id/change-orders',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.create')] },
@@ -580,7 +587,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const body = z
           .object({
             title: z.string().trim().min(1).max(160),
-            originalBudgetMinor: z.number().int().min(0),
+            originalBudgetMinor: z.number().int().min(0).optional(),
             deltaMinor: z.number().int(),
             estimatedCostDeltaMinor: z.number().int().default(0),
             approved: z.boolean().default(false),
@@ -591,13 +598,24 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { supabase } = await import('../db')
         const { data: proj, error: projErr } = await supabase
           .from('projects')
-          .select('id')
+          .select('id, budget, currency')
           .eq('id', id)
           .eq('workspace_id', request.tenancy.workspaceId)
           .maybeSingle()
         if (projErr) throw projErr
         if (!proj)
           return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+
+        const projRecord = proj as { id: string; budget?: number | null; currency?: string | null }
+        const projectCurrency =
+          projRecord.currency || (await baseCurrencyOf(request.tenancy.workspaceId))
+        const scale = budgetScaleForCurrency(projectCurrency)
+        const originalBudgetMinor =
+          projRecord.budget !== null &&
+          projRecord.budget !== undefined &&
+          Number.isFinite(Number(projRecord.budget))
+            ? Math.round(Number(projRecord.budget) * scale)
+            : (body.originalBudgetMinor ?? 0)
 
         const idemKey = readClientRequestId(request)
         if (idemKey) {
@@ -610,7 +628,12 @@ export async function projectRoutes(fastify: FastifyInstance) {
           if (existing) return reply.code(200).send({ data: existing, replay: true })
         }
 
-        const revisedBudgetMinor = Math.max(0, body.originalBudgetMinor + body.deltaMinor)
+        if (originalBudgetMinor + body.deltaMinor < 0) {
+          return reply
+            .code(400)
+            .send({ error: 'REVISED_BUDGET_CANNOT_BE_NEGATIVE', code: 'BUDGET_NEGATIVE' })
+        }
+        const revisedBudgetMinor = originalBudgetMinor + body.deltaMinor
         const netMarginDeltaMinor = body.deltaMinor - body.estimatedCostDeltaMinor
         const status = body.approved ? 'approved' : 'pending_approval'
         const now = new Date().toISOString()
@@ -620,7 +643,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
             workspace_id: request.tenancy.workspaceId,
             project_id: id,
             title: body.title,
-            original_budget_minor: body.originalBudgetMinor,
+            original_budget_minor: originalBudgetMinor,
             delta_minor: body.deltaMinor,
             revised_budget_minor: revisedBudgetMinor,
             estimated_cost_delta_minor: body.estimatedCostDeltaMinor,
@@ -635,17 +658,26 @@ export async function projectRoutes(fastify: FastifyInstance) {
           .single()
         if (error) throw error
         if (body.approved) {
-          await supabase
+          const { error: budgetErr } = await supabase
             .from('projects')
-            .update({ budget: revisedBudgetMinor / 100, updated_at: now })
+            .update({ budget: revisedBudgetMinor / scale, updated_at: now })
             .eq('id', id)
             .eq('workspace_id', request.tenancy.workspaceId)
+          if (budgetErr) {
+            await supabase
+              .from('project_change_orders')
+              .update({ status: 'pending_approval', decided_by: null, decided_at: null })
+              .eq('id', (created as { id: string }).id)
+              .eq('workspace_id', request.tenancy.workspaceId)
+            throw budgetErr
+          }
         }
         return reply.code(201).send({
           data: {
             ...created,
             projectId: id,
-            originalBudgetMinor: body.originalBudgetMinor,
+            currency: projectCurrency,
+            originalBudgetMinor,
             deltaMinor: body.deltaMinor,
             revisedBudgetMinor,
             netMarginDeltaMinor,
@@ -667,11 +699,67 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { id, orderId } = z
           .object({ id: z.string().uuid(), orderId: z.string().uuid() })
           .parse(request.params)
-        const { decision } = z
-          .object({ decision: z.enum(['approved', 'rejected']) })
+        const { decision, reason, expectedOriginalBudgetMinor } = z
+          .object({
+            decision: z.enum(['approved', 'rejected']),
+            reason: z.string().trim().max(500).optional(),
+            expectedOriginalBudgetMinor: z.number().int().min(0).optional(),
+          })
           .strict()
           .parse(request.body)
         const { supabase } = await import('../db')
+        const { data: proj, error: projErr } = await supabase
+          .from('projects')
+          .select('id, budget, currency')
+          .eq('id', id)
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .maybeSingle()
+        if (projErr) throw projErr
+        if (!proj)
+          return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+        const projRecord = proj as { id: string; budget?: number | null; currency?: string | null }
+        const projectCurrency =
+          projRecord.currency || (await baseCurrencyOf(request.tenancy.workspaceId))
+        const scale = budgetScaleForCurrency(projectCurrency)
+
+        if (
+          expectedOriginalBudgetMinor !== undefined &&
+          projRecord.budget !== null &&
+          projRecord.budget !== undefined
+        ) {
+          const liveBudgetMinor = Math.round(Number(projRecord.budget) * scale)
+          if (liveBudgetMinor !== expectedOriginalBudgetMinor) {
+            return reply.code(409).send({
+              error: 'STALE_PROJECT_BUDGET_CONFLICT',
+              code: 'STALE_PROJECT_BUDGET_CONFLICT',
+            })
+          }
+        }
+
+        // Prefer atomic SQL RPC transaction when deployed in Postgres
+        const rpcRes = await supabase.rpc('decide_project_change_order', {
+          p_workspace_id: request.tenancy.workspaceId,
+          p_project_id: id,
+          p_order_id: orderId,
+          p_decision: decision,
+          p_actor_id: request.tenancy.userId,
+          p_scale: scale,
+        })
+        if (!rpcRes.error && rpcRes.data) {
+          return reply.send({
+            data: { ...(rpcRes.data as Record<string, unknown>), ...(reason ? { reason } : {}) },
+          })
+        }
+        const rpcMsg = String(rpcRes.error?.message ?? '')
+        if (rpcMsg.includes('CHANGE_ORDER_NOT_PENDING')) {
+          return reply
+            .code(409)
+            .send({ error: 'CHANGE_ORDER_NOT_PENDING', code: 'CHANGE_ORDER_NOT_PENDING' })
+        }
+        if (rpcMsg.includes('PROJECT_NOT_FOUND')) {
+          return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+        }
+
         const now = new Date().toISOString()
         const { data: updated, error } = await supabase
           .from('project_change_orders')
@@ -697,13 +785,23 @@ export async function projectRoutes(fastify: FastifyInstance) {
           const revised = Number(
             (updated as { revised_budget_minor?: number }).revised_budget_minor ?? 0,
           )
-          await supabase
+          const { error: budgetErr } = await supabase
             .from('projects')
-            .update({ budget: revised / 100, updated_at: now })
+            .update({ budget: revised / scale, updated_at: now })
             .eq('id', id)
             .eq('workspace_id', request.tenancy.workspaceId)
+          if (budgetErr) {
+            await supabase
+              .from('project_change_orders')
+              .update({ status: 'pending_approval', decided_by: null, decided_at: null })
+              .eq('id', orderId)
+              .eq('workspace_id', request.tenancy.workspaceId)
+            throw budgetErr
+          }
         }
-        return reply.send({ data: updated })
+        return reply.send({
+          data: { ...(updated as Record<string, unknown>), ...(reason ? { reason } : {}) },
+        })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to decide change order')
       }

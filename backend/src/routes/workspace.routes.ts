@@ -20,7 +20,7 @@ import {
   BrandAssetService,
   verifyBrandAssetSignature,
 } from '../services/brand-asset.service'
-import { BackupService } from '../services/workspace/backup.service'
+import { BackupService, BACKUP_TABLE_NAMES } from '../services/workspace/backup.service'
 import { backupToMarkdown, backupToXlsx } from '../services/workspace/backup-formats'
 import { BillingService } from '../services/billing.service'
 import { BaseError } from '../errors/base.error'
@@ -695,20 +695,21 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       const data = await backupSvc.export(req.tenancy)
       const markdown = backupToMarkdown(data)
       const checksumSha256 = createHash('sha256').update(JSON.stringify(data.data)).digest('hex')
-      await supabase
-        .from('audit_logs')
-        .insert({
-          workspace_id: id,
-          user_id: req.tenancy.userId,
-          action: 'workspace.export',
-          entity_type: 'workspace',
-          entity_id: id,
-          details: { totalRows: data.meta.totalRows, truncatedTables: data.meta.truncatedTables },
+      const { error: auditErr } = await supabase.from('audit_logs').insert({
+        workspace_id: id,
+        user_id: req.tenancy.userId,
+        action: 'workspace.export',
+        entity_type: 'workspace',
+        entity_id: id,
+        details: { totalRows: data.meta.totalRows, truncatedTables: data.meta.truncatedTables },
+      })
+      if (auditErr) {
+        return reply.code(500).send({
+          error: 'AUDIT_LOG_WRITE_FAILED',
+          code: 'AUDIT_LOG_WRITE_FAILED',
+          message: auditErr.message,
         })
-        .then(
-          () => undefined,
-          () => undefined,
-        )
+      }
       return reply.send({
         data: {
           workspaceId: id,
@@ -726,7 +727,8 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     },
   )
 
-  // X06: Transaction-safe dry-run restore preview (validates workspace ownership, schema & ID conflicts; zero writes)
+  // X06: Transaction-safe dry-run restore preview (validates checksum, workspace ownership, schema,
+  // allowed tables, timestamps, currencies, monetary precision, intra-archive FKs & DB ID conflicts; zero writes)
   fastify.post(
     '/api/workspaces/:id/export-restore-preview',
     { preHandler: [authenticate, requireWorkspaceContext, requireCapability('workspace.manage')] },
@@ -743,20 +745,216 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
             workspaceId: z.string().uuid(),
             schemaVersion: z.string().min(1),
             truncatedTables: z.array(z.string()).default([]),
+            checksumSha256: z.string().trim().min(16).max(128).optional(),
           }),
           data: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),
         })
         .parse(req.body)
-      const tableCounts = Object.fromEntries(
-        Object.entries(body.data).map(([k, rows]) => [k, rows.length]),
-      )
+
+      const { createHash } = await import('node:crypto')
+      const { FRACTION_DIGITS } = await import('@hisabche/formatting')
+      const { supabase } = await import('../db')
+
+      const SUPPORTED_SCHEMA_VERSIONS = new Set(['1', '1.0'])
+      const errors: string[] = []
+      const workspaceMatch = body.meta.workspaceId === id
+      if (!workspaceMatch) errors.push('WORKSPACE_ID_MISMATCH')
+      if (!SUPPORTED_SCHEMA_VERSIONS.has(body.meta.schemaVersion)) {
+        errors.push('UNSUPPORTED_SCHEMA_VERSION')
+      }
+      if (body.meta.checksumSha256) {
+        const computedChecksum = createHash('sha256')
+          .update(JSON.stringify(body.data))
+          .digest('hex')
+        if (computedChecksum !== body.meta.checksumSha256) {
+          errors.push('CHECKSUM_MISMATCH')
+        }
+      }
+
+      const unknownTables: string[] = []
+      const duplicateIds: Array<{ table: string; id: string }> = []
+      const missingIdTables: string[] = []
+      const crossTenantRows: Array<{ table: string; id: string; workspaceId: string }> = []
+      const malformedTimestamps: Array<{ table: string; id: string; field: string }> = []
+      const invalidCurrencies: Array<{ table: string; id: string; currency: string }> = []
+      const invalidMoneyRows: Array<{ table: string; id: string; field: string }> = []
+      const brokenForeignKeys: Array<{
+        table: string
+        id: string
+        field: string
+        targetTable: string
+        targetId: string
+      }> = []
+      const existingConflicts: Array<{ table: string; id: string }> = []
+      const tableCounts: Record<string, number> = {}
+      const idsByTable = new Map<string, Set<string>>()
+
+      const TIMESTAMP_FIELDS = ['created_at', 'updated_at', 'date', 'due_date', 'entry_date']
+      const MONEY_FIELDS = [
+        'total',
+        'amount',
+        'paid_amount',
+        'buy_price',
+        'sell_price',
+        'balance',
+        'debit',
+        'credit',
+      ]
+
+      for (const [tableName, rows] of Object.entries(body.data)) {
+        tableCounts[tableName] = rows.length
+        if (!BACKUP_TABLE_NAMES.has(tableName)) {
+          unknownTables.push(tableName)
+          continue
+        }
+        const seenIds = new Set<string>()
+        idsByTable.set(tableName, seenIds)
+        for (const row of rows) {
+          const rawId = row?.id
+          if (typeof rawId !== 'string' || !rawId.trim()) {
+            if (!missingIdTables.includes(tableName)) missingIdTables.push(tableName)
+            continue
+          }
+          if (seenIds.has(rawId)) {
+            duplicateIds.push({ table: tableName, id: rawId })
+          } else {
+            seenIds.add(rawId)
+          }
+          if (
+            typeof row.workspace_id === 'string' &&
+            row.workspace_id.trim() !== '' &&
+            row.workspace_id !== id
+          ) {
+            crossTenantRows.push({ table: tableName, id: rawId, workspaceId: row.workspace_id })
+          }
+          for (const tsField of TIMESTAMP_FIELDS) {
+            const val = row[tsField]
+            if (val !== null && val !== undefined && val !== '') {
+              if (typeof val !== 'string' || !Number.isFinite(Date.parse(val))) {
+                malformedTimestamps.push({ table: tableName, id: rawId, field: tsField })
+              }
+            }
+          }
+          let rowDigits = 2
+          if (row.currency !== null && row.currency !== undefined && row.currency !== '') {
+            const cur = String(row.currency).trim().toUpperCase()
+            if (!/^[A-Z]{3}$/.test(cur)) {
+              invalidCurrencies.push({
+                table: tableName,
+                id: rawId,
+                currency: String(row.currency),
+              })
+            } else {
+              rowDigits = FRACTION_DIGITS[cur as keyof typeof FRACTION_DIGITS] ?? 2
+            }
+          }
+          const scaleFactor = Math.pow(10, rowDigits)
+          for (const mField of MONEY_FIELDS) {
+            const val = row[mField]
+            if (val !== null && val !== undefined && val !== '') {
+              const numVal = Number(val)
+              if (
+                !Number.isFinite(numVal) ||
+                Math.abs(numVal * scaleFactor - Math.round(numVal * scaleFactor)) > 1e-4
+              ) {
+                invalidMoneyRows.push({ table: tableName, id: rawId, field: mField })
+              }
+            }
+          }
+        }
+      }
+
+      // Check intra-archive FK consistency where parent table exists inside archive
+      const fkChecks: ReadonlyArray<{
+        table: string
+        field: string
+        targetTable: string
+      }> = [
+        { table: 'invoice_items', field: 'invoice_id', targetTable: 'invoices' },
+        { table: 'payment_allocations', field: 'invoice_id', targetTable: 'invoices' },
+        { table: 'payment_allocations', field: 'payment_id', targetTable: 'payments' },
+        { table: 'journal_lines', field: 'journal_id', targetTable: 'journal_entries' },
+      ]
+      for (const fk of fkChecks) {
+        const rows = body.data[fk.table]
+        const targetIds = idsByTable.get(fk.targetTable)
+        if (!Array.isArray(rows) || !targetIds) continue
+        for (const row of rows) {
+          const refVal = row?.[fk.field]
+          if (typeof refVal === 'string' && refVal.trim() && !targetIds.has(refVal)) {
+            brokenForeignKeys.push({
+              table: fk.table,
+              id: String(row?.id ?? 'unknown'),
+              field: fk.field,
+              targetTable: fk.targetTable,
+              targetId: refVal,
+            })
+          }
+        }
+      }
+
+      // Check existing DB conflicts safely per valid table (limit ID query count to safe batch size)
+      let totalIncoming = 0
+      let wouldSkip = 0
+      for (const [tableName, idSet] of idsByTable.entries()) {
+        totalIncoming += idSet.size
+        if (idSet.size === 0) continue
+        const idList = [...idSet].slice(0, 500)
+        const { data: existingRows, error: exErr } = await supabase
+          .from(tableName)
+          .select('id')
+          .eq('workspace_id', id)
+          .in('id', idList)
+        if (!exErr && Array.isArray(existingRows)) {
+          for (const ex of existingRows as Array<{ id?: unknown }>) {
+            if (typeof ex.id === 'string' && idSet.has(ex.id)) {
+              existingConflicts.push({ table: tableName, id: ex.id })
+              wouldSkip += 1
+            }
+          }
+        }
+      }
+
+      if (unknownTables.length > 0) errors.push('UNKNOWN_BACKUP_TABLES')
+      if (duplicateIds.length > 0) errors.push('DUPLICATE_ROW_IDS')
+      if (missingIdTables.length > 0) errors.push('MISSING_ROW_ID')
+      if (crossTenantRows.length > 0) errors.push('CROSS_TENANT_ROW_DETECTED')
+      if (malformedTimestamps.length > 0) errors.push('MALFORMED_TIMESTAMP')
+      if (invalidCurrencies.length > 0) errors.push('INVALID_CURRENCY_CODE')
+      if (invalidMoneyRows.length > 0) errors.push('INVALID_MONETARY_VALUE')
+      if (brokenForeignKeys.length > 0) errors.push('BROKEN_FOREIGN_KEY')
+
+      const rejectedRows =
+        duplicateIds.length +
+        crossTenantRows.length +
+        malformedTimestamps.length +
+        invalidCurrencies.length +
+        invalidMoneyRows.length +
+        brokenForeignKeys.length
+      const wouldCreate = Math.max(0, totalIncoming - wouldSkip - rejectedRows)
+
       return reply.send({
         data: {
           dryRunOnly: true,
-          valid: true,
-          workspaceMatch: body.meta.workspaceId === id,
+          restoreExecutionSupported: false,
+          recoveryScope: 'export_and_dry_run_preview_only',
+          valid: errors.length === 0,
+          workspaceMatch,
           schemaVersion: body.meta.schemaVersion,
           truncatedInSource: body.meta.truncatedTables,
+          unknownTables,
+          duplicateIds,
+          missingIdTables,
+          crossTenantRows,
+          malformedTimestamps,
+          invalidCurrencies,
+          invalidMoneyRows,
+          brokenForeignKeys,
+          existingConflicts,
+          wouldCreate,
+          wouldSkip,
+          rejectedRows,
+          errors,
           tableCounts,
         },
       })

@@ -37,6 +37,8 @@ import {
   BATCHES_STATEMENTS,
   REPAIR_TICKETS_STATEMENTS,
   EXTENDED_LOCAL_OPS_STATEMENTS,
+  PAYMENT_GATEWAY_EVENTS_STATEMENTS,
+  INVOICE_DRAFTS_STATEMENTS,
   SERVICE_CANCELLATION_REASON_ALTERS,
   SERVICE_DELIVERY_AUDIT_ALTERS,
   SERVICE_DELIVERY_STATEMENTS,
@@ -992,6 +994,22 @@ const V40_EXTENDED_LOCAL_OPS: LocalMigration = {
   statements: [...EXTENDED_LOCAL_OPS_STATEMENTS],
 }
 
+/**
+ * v41 — append-only payment gateway & processor event trail.
+ */
+const V41_PAYMENT_GATEWAY_EVENTS: LocalMigration = {
+  to: 41,
+  statements: [...PAYMENT_GATEWAY_EVENTS_STATEMENTS],
+}
+
+/**
+ * v42 — personal invoice drafts persisted on device for CORE 01 parity.
+ */
+const V42_INVOICE_DRAFTS: LocalMigration = {
+  to: 42,
+  statements: [...INVOICE_DRAFTS_STATEMENTS],
+}
+
 export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   ADD_VERSION,
   V3_OFFLINE_SCHEMA,
@@ -1032,6 +1050,8 @@ export const LOCAL_MIGRATIONS: readonly LocalMigration[] = [
   V38_ORDER_DEPOSIT_PARTY_IDENTITY,
   V39_ORDER_DEPOSIT_SOURCE_TYPE,
   V40_EXTENDED_LOCAL_OPS,
+  V41_PAYMENT_GATEWAY_EVENTS,
+  V42_INVOICE_DRAFTS,
 ]
 
 /**

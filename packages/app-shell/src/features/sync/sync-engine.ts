@@ -1080,6 +1080,10 @@ export const ENDPOINT_BY_ENTITY: Partial<Record<LocalTable, string>> = {
   service_delivery_sessions: '/service-delivery/sessions',
   courier_deliveries: '/deliveries/courier',
   delivery_vehicles: '/deliveries/fleet',
+  local_assets: '/finance/assets',
+  local_crop_cycles: '/agriculture/crops',
+  local_livestock_groups: '/agriculture/livestock',
+  local_approval_queue: '/v1/workflows/instances',
 }
 
 function isPermanent(status: number): boolean {
@@ -1425,6 +1429,11 @@ async function pushEntry(entry: QueueEntry): Promise<unknown> {
     }
   }
 
+  if (entry.entity === 'local_manufacturing_defs') {
+    await apiClient.put('/manufacturing/definitions', entry.payload, { headers })
+    return
+  }
+
   const endpoint = ENDPOINT_BY_ENTITY[entry.entity]
   if (!endpoint) {
     const err = new Error(`NO_ENDPOINT:${entry.entity}`)
@@ -1544,21 +1553,103 @@ export function stagesSnapshot() {
   return stageSnapshot
 }
 
+export type SyncLifecycleStatus =
+  'success' | 'partial' | 'failed' | 'running' | 'offline' | 'conflict'
+
+export interface SyncFailureRecord {
+  clientId: string
+  entity: string
+  operation: string
+  message: string
+  permanent: boolean
+  conflict: boolean
+}
+
+export interface SyncRunOutcome {
+  ok: boolean
+  status: SyncLifecycleStatus
+  pushOk: boolean
+  pullOk: boolean
+  pushedCount: number
+  pushFailureCount: number
+  pulledCount: number
+  conflictCount: number
+  failures: SyncFailureRecord[]
+  error?: string
+}
+
 /**
  * Drain the queue then refresh server state. Safe to call concurrently: a
  * call that arrives while a sync runs is not dropped — it schedules exactly
  * one more run afterwards, so a stream wake during a long pull still lands.
  */
-export async function runSync(queryClient: QueryClient): Promise<void> {
-  if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return
+export async function runSync(queryClient: QueryClient): Promise<SyncRunOutcome> {
+  if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') {
+    return {
+      ok: false,
+      status: 'offline',
+      pushOk: false,
+      pullOk: false,
+      pushedCount: 0,
+      pushFailureCount: 0,
+      pulledCount: 0,
+      conflictCount: 0,
+      failures: [],
+      error: 'OFFLINE_EDITION',
+    }
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      ok: false,
+      status: 'offline',
+      pushOk: false,
+      pullOk: false,
+      pushedCount: 0,
+      pushFailureCount: 0,
+      pulledCount: 0,
+      conflictCount: 0,
+      failures: [],
+      error: 'NAVIGATOR_OFFLINE',
+    }
+  }
   const desktop = bridge()
-  if (!desktop) return
+  if (!desktop) {
+    return {
+      ok: false,
+      status: 'failed',
+      pushOk: false,
+      pullOk: false,
+      pushedCount: 0,
+      pushFailureCount: 0,
+      pulledCount: 0,
+      conflictCount: 0,
+      failures: [],
+      error: 'BRIDGE_UNAVAILABLE',
+    }
+  }
   if (running) {
     again = true
-    return
+    return {
+      ok: false,
+      status: 'running',
+      pushOk: true,
+      pullOk: true,
+      pushedCount: 0,
+      pushFailureCount: 0,
+      pulledCount: 0,
+      conflictCount: 0,
+      failures: [],
+    }
   }
 
   running = true
+  let pushedCount = 0
+  let pushFailureCount = 0
+  let conflictCount = 0
+  let pulledCount = 0
+  let pullOk = true
+  let firstError: string | undefined
+  const failures: SyncFailureRecord[] = []
   try {
     const queue = await desktop.db.queue()
 
@@ -1599,6 +1690,18 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       if (blockedByRef) {
         const permBlocked = gate.permanentlyBlockedBy?.(entry)
         if (permBlocked) {
+          pushFailureCount += 1
+          conflictCount += 1
+          const depMsg = `BLOCKED_BY_DEPENDENCY:${permBlocked}`
+          firstError ??= depMsg
+          failures.push({
+            clientId: entry.clientId,
+            entity: entry.entity,
+            operation: entry.operation,
+            message: depMsg,
+            permanent: true,
+            conflict: true,
+          })
           // A dependency failed permanently (rejected or exceeded max retries).
           // Mark this entry so it is visible in the sync centre rather than waiting indefinitely.
           await desktop.db.resolveQueue(
@@ -1620,6 +1723,7 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       try {
         const pushResult = (await pushEntry(entry)) as Record<string, unknown> | undefined
         await desktop.db.resolveQueue(entry.clientId, 'done')
+        pushedCount += 1
         // D3: the server owns this invoice now.
         if (entry.entity === 'invoice' && entry.operation === 'create') {
           const serverId = typeof pushResult?.id === 'string' ? pushResult.id : null
@@ -1663,6 +1767,8 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
       } catch (error) {
         const apiError = error as Partial<ApiError>
         const message = apiError.message ?? 'SYNC_FAILED'
+        pushFailureCount += 1
+        firstError ??= message
         // ⚠️ A REFUSAL IS WRITTEN AS ONE (27 Sep 2026). It used to be stored
         // exactly like a network drop, so the page could not tell «goes again
         // by itself» from «someone must look». The marker is what makes
@@ -1678,6 +1784,16 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
           (error as { permanent?: boolean })?.permanent ||
           message.startsWith('NO_ENDPOINT'),
         )
+        const isConflict = apiError.status === 409 || permanent
+        if (isConflict) conflictCount += 1
+        failures.push({
+          clientId: entry.clientId,
+          entity: entry.entity,
+          operation: entry.operation,
+          message,
+          permanent,
+          conflict: isConflict,
+        })
         // V53 OD-3: a CREDIT refusal is not a dead sale. The whole invoice stays in the outbox and the local
         // row says so, so nobody reads it as a final sale or as «revenue» before the server approves it.
         // A refusal AFTER an approver's attempt (the payload carries `creditOverride`) is the server's final
@@ -1699,20 +1815,43 @@ export async function runSync(queryClient: QueryClient): Promise<void> {
     }
 
     try {
-      await pullAll()
-    } catch {
-      // The cursor stayed at the last committed page; the next run (interval,
-      // reconnect, stream wake) resumes from there. Nothing to undo here.
+      pulledCount = await pullAll()
+    } catch (err) {
+      pullOk = false
+      firstError ??= err instanceof Error ? err.message : String(err)
     }
-    // The sync centre says when this device last heard from the server.
-    useSyncStore.getState().setLastSynced(Date.now())
+    const pushOk = pushFailureCount === 0
+    const ok = pushOk && pullOk
+    const status: SyncLifecycleStatus = ok
+      ? 'success'
+      : conflictCount > 0
+        ? 'conflict'
+        : pushedCount > 0 || (pushOk && !pullOk)
+          ? 'partial'
+          : 'failed'
+    if (status === 'success') {
+      // Only advance the visible synced watermark when both push and pull succeeded.
+      useSyncStore.getState().setLastSynced(Date.now())
+    }
     await invalidateAll(queryClient)
+    if (again) {
+      again = false
+      return await runSync(queryClient)
+    }
+    return {
+      ok,
+      status,
+      pushOk,
+      pullOk,
+      pushedCount,
+      pushFailureCount,
+      pulledCount,
+      conflictCount,
+      failures,
+      ...(firstError ? { error: firstError } : {}),
+    }
   } finally {
     running = false
-  }
-  if (again) {
-    again = false
-    await runSync(queryClient)
   }
 }
 

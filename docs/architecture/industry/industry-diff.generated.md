@@ -15,7 +15,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | General-purpose baseline | 15 |
 | Exact match with `JOURNEY_INDUSTRIES` | 14 |
 | Available capabilities | 4 |
-| Partial capabilities | 36 |
+| Partial capabilities | 37 |
 
 ## Industry registry
 
@@ -143,6 +143,7 @@ Sources read by the generator: `packages/validation/src/schemas/industry-profile
 | `lens_order` | planned | فعال نیست |
 | `laundry_item_tracking` | planned | فعال نیست |
 | `production_batch` | partial | فعال (جزئی) |
+| `payroll_runs` | partial | فعال (جزئی) |
 | `fuel_tank_reconciliation` | planned | فعال نیست |
 | `print_job` | planned | فعال نیست |
 | `travel_booking` | planned | فعال نیست |

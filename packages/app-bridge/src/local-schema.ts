@@ -12,7 +12,7 @@
 // 4. No hardcoded currency (AFN default removed).
 // ============================================
 
-export const SCHEMA_VERSION = 40
+export const SCHEMA_VERSION = 42
 
 import { BOOKS_STOCK_STATEMENTS } from './local-books-schema'
 import { SALES_SIDE_STATEMENTS } from './local-sales-schema'
@@ -22,6 +22,8 @@ import {
   BATCHES_STATEMENTS,
   REPAIR_TICKETS_STATEMENTS,
   EXTENDED_LOCAL_OPS_STATEMENTS,
+  PAYMENT_GATEWAY_EVENTS_STATEMENTS,
+  INVOICE_DRAFTS_STATEMENTS,
 } from './local-universal-core-schema'
 
 export const CREATE_STATEMENTS: readonly string[] = [
@@ -737,6 +739,8 @@ export const CREATE_STATEMENTS: readonly string[] = [
 
   ...REPAIR_TICKETS_STATEMENTS,
   ...EXTENDED_LOCAL_OPS_STATEMENTS,
+  ...PAYMENT_GATEWAY_EVENTS_STATEMENTS,
+  ...INVOICE_DRAFTS_STATEMENTS,
 ]
 
 /** Columns that may be written per table — anything else in a payload is dropped. */

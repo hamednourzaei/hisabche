@@ -4,11 +4,16 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   apiErrorMessage,
+  useAddSupportTicketComment,
+  useAssignSupportTicket,
   useCreateSupportTicket,
   useEstimateBillingTco,
+  useEvaluateSupportSla,
   useIntegrationHealth,
   useLocalOpsRegisters,
   useReadLocalOpsRegister,
+  useSupportTicketComments,
+  useSupportTicketEvents,
   useSupportTickets,
   useUpdateSupportTicketStatus,
   useWorkspaceExportBundle,
@@ -33,6 +38,15 @@ export function WorkspaceOpsPanel() {
   const submitTicket = useCreateSupportTicket()
   const ticketsQuery = useSupportTickets()
   const updateTicketStatus = useUpdateSupportTicketStatus()
+  const assignTicket = useAssignSupportTicket()
+  const addTicketComment = useAddSupportTicketComment()
+  const evaluateSla = useEvaluateSupportSla()
+  const firstTicketId =
+    Array.isArray(ticketsQuery.data) && ticketsQuery.data[0]?.id
+      ? String(ticketsQuery.data[0].id)
+      : null
+  const firstTicketEvents = useSupportTicketEvents(firstTicketId)
+  const firstTicketComments = useSupportTicketComments(firstTicketId)
   const integrationHealth = useIntegrationHealth()
   const localApprovals = useReadLocalOpsRegister('approvals')
   const writeLocalOp = useLocalOpsRegisters()
@@ -66,19 +80,30 @@ export function WorkspaceOpsPanel() {
               variant="outline"
               className="min-h-[44px] w-full"
               disabled={restorePreview.isPending}
-              onClick={() =>
+              onClick={() => {
+                const rawBackup = exportBundle.data.backup as
+                  | {
+                      meta?: {
+                        workspaceId?: string
+                        schemaVersion?: string
+                        truncatedTables?: string[]
+                      }
+                      data?: Record<string, Array<Record<string, unknown>>>
+                    }
+                  | undefined
                 restorePreview.mutate({
                   workspaceId,
                   backup: {
                     meta: {
-                      workspaceId,
-                      schemaVersion: '1',
-                      truncatedTables: exportBundle.data.truncatedTables,
+                      workspaceId: rawBackup?.meta?.workspaceId ?? workspaceId,
+                      schemaVersion: rawBackup?.meta?.schemaVersion ?? '1',
+                      truncatedTables:
+                        rawBackup?.meta?.truncatedTables ?? exportBundle.data.truncatedTables,
                     },
-                    data: {},
+                    data: rawBackup?.data ?? {},
                   },
                 })
-              }
+              }}
             >
               {t('ops.restorePreviewBtn')}
             </Button>
@@ -180,6 +205,15 @@ export function WorkspaceOpsPanel() {
           >
             {t('ops.submitTicket')}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-[44px] w-full"
+            disabled={evaluateSla.isPending}
+            onClick={() => evaluateSla.mutate()}
+          >
+            {t('ops.escalateBtn')}
+          </Button>
           <Input
             value={rcaSummary}
             onChange={(e) => setRcaSummary(e.target.value)}
@@ -190,13 +224,15 @@ export function WorkspaceOpsPanel() {
             <div className="space-y-1 pt-1">
               {ticketsQuery.data.slice(0, 3).map((tk) => {
                 const tkId = String(tk.id ?? '')
+                const tkStatus = String(tk.status ?? '')
+                const isClosedOrResolved = tkStatus === 'resolved' || tkStatus === 'closed'
                 return (
                   <div
                     key={tkId}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[hsl(var(--border-default))] px-2 py-1 text-xs"
                   >
                     <span className="truncate font-medium">
-                      {String(tk.ticket_code ?? tk.subject ?? tkId)} · {String(tk.status ?? '')}
+                      {String(tk.ticket_code ?? tk.subject ?? tkId)} · {tkStatus}
                     </span>
                     <div className="flex flex-wrap gap-1">
                       <Button
@@ -216,13 +252,43 @@ export function WorkspaceOpsPanel() {
                         onClick={() =>
                           updateTicketStatus.mutate({
                             ticketId: tkId,
-                            status: 'resolved',
-                            rcaSummary: rcaSummary.trim() || undefined,
+                            status: isClosedOrResolved ? 'acknowledged' : 'resolved',
+                            ...(isClosedOrResolved
+                              ? { reason: rcaSummary.trim() || 'Reopened by manager' }
+                              : rcaSummary.trim()
+                                ? { rcaSummary: rcaSummary.trim() }
+                                : {}),
                           })
                         }
                       >
-                        {t('ops.resolveBtn')}
+                        {isClosedOrResolved ? t('ops.acknowledgeBtn') : t('ops.resolveBtn')}
                       </Button>
+                      {rcaSummary.trim() ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-[36px] px-2 text-xs"
+                          onClick={() =>
+                            addTicketComment.mutate({
+                              ticketId: tkId,
+                              body: rcaSummary.trim(),
+                              isInternal: false,
+                            })
+                          }
+                        >
+                          {t('ops.acknowledgeBtn')}
+                        </Button>
+                      ) : null}
+                      {workspaceId ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="min-h-[36px] px-2 text-xs"
+                          onClick={() => assignTicket.mutate({ ticketId: tkId, assigneeId: null })}
+                        >
+                          {t('ops.loadTicketsBtn')}
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 )
@@ -231,7 +297,18 @@ export function WorkspaceOpsPanel() {
           ) : null}
           <ExpressResultBox
             label={t('common.result')}
-            data={updateTicketStatus.data ?? submitTicket.data ?? ticketsQuery.data ?? null}
+            data={
+              updateTicketStatus.data ??
+              submitTicket.data ??
+              (firstTicketEvents.data || firstTicketComments.data
+                ? {
+                    tickets: ticketsQuery.data,
+                    events: firstTicketEvents.data ?? [],
+                    comments: firstTicketComments.data ?? [],
+                  }
+                : ticketsQuery.data) ??
+              null
+            }
             error={
               updateTicketStatus.error
                 ? apiErrorMessage(updateTicketStatus.error, t('common.error'))

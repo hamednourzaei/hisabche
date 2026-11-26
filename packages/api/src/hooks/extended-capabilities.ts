@@ -599,17 +599,43 @@ export function useWorkspaceRestorePreview() {
     }: {
       workspaceId: string
       backup: {
-        meta: { workspaceId: string; schemaVersion: string; truncatedTables?: string[] }
+        meta: {
+          workspaceId: string
+          schemaVersion: string
+          truncatedTables?: string[]
+          checksumSha256?: string
+        }
         data: Record<string, Array<Record<string, unknown>>>
       }
     }) => {
       const { data } = await apiClient.post<{
         data: {
           dryRunOnly: true
+          restoreExecutionSupported: boolean
+          recoveryScope: string
           valid: boolean
           workspaceMatch: boolean
           schemaVersion: string
           truncatedInSource: string[]
+          unknownTables: string[]
+          duplicateIds: Array<{ table: string; id: string }>
+          missingIdTables: string[]
+          crossTenantRows: Array<{ table: string; id: string; workspaceId: string }>
+          malformedTimestamps: Array<{ table: string; id: string; field: string }>
+          invalidCurrencies: Array<{ table: string; id: string; currency: string }>
+          invalidMoneyRows: Array<{ table: string; id: string; field: string }>
+          brokenForeignKeys: Array<{
+            table: string
+            id: string
+            field: string
+            targetTable: string
+            targetId: string
+          }>
+          existingConflicts: Array<{ table: string; id: string }>
+          wouldCreate: number
+          wouldSkip: number
+          rejectedRows: number
+          errors: string[]
           tableCounts: Record<string, number>
         }
       }>(`/workspaces/${workspaceId}/export-restore-preview`, backup)
@@ -672,15 +698,103 @@ export function useUpdateSupportTicketStatus() {
       ticketId,
       status,
       rcaSummary,
+      reason,
     }: {
       ticketId: string
       status: 'acknowledged' | 'escalated' | 'resolved' | 'closed'
       rcaSummary?: string | undefined
+      reason?: string | undefined
     }) => {
       const { data } = await apiClient.patch<{ data: Record<string, unknown> }>(
         `/v1/support-tickets/${ticketId}/status`,
-        { status, ...(rcaSummary !== undefined ? { rcaSummary } : {}) },
+        {
+          status,
+          ...(rcaSummary !== undefined ? { rcaSummary } : {}),
+          ...(reason !== undefined ? { reason } : {}),
+        },
       )
+      return data.data
+    },
+  })
+}
+
+export function useAssignSupportTicket() {
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      assigneeId,
+    }: {
+      ticketId: string
+      assigneeId: string | null
+    }) => {
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        `/v1/support-tickets/${ticketId}/assign`,
+        { assigneeId },
+      )
+      return data.data
+    },
+  })
+}
+
+export function useSupportTicketEvents(ticketId: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['support', 'tickets', ticketId ?? '', 'events'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Array<Record<string, unknown>> }>(
+        `/v1/support-tickets/${ticketId}/events`,
+      )
+      return data.data
+    },
+    enabled: ready && !!ticketId,
+  })
+}
+
+export function useSupportTicketComments(ticketId: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['support', 'tickets', ticketId ?? '', 'comments'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Array<Record<string, unknown>> }>(
+        `/v1/support-tickets/${ticketId}/comments`,
+      )
+      return data.data
+    },
+    enabled: ready && !!ticketId,
+  })
+}
+
+export function useAddSupportTicketComment() {
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      body: commentBody,
+      isInternal = false,
+    }: {
+      ticketId: string
+      body: string
+      isInternal?: boolean | undefined
+    }) => {
+      const { data } = await apiClient.post<{ data: Record<string, unknown> }>(
+        `/v1/support-tickets/${ticketId}/comments`,
+        { body: commentBody, isInternal },
+      )
+      return data.data
+    },
+  })
+}
+
+export function useEvaluateSupportSla() {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<{
+        data: {
+          evaluatedCount: number
+          escalatedTicketIds: string[]
+          notificationFailures?: number
+          checkedAt: string
+        }
+      }>('/v1/support-tickets/evaluate-sla', {})
       return data.data
     },
   })
@@ -763,6 +877,61 @@ export function useTransitionPaymentProcessorState() {
           ...(feeMinor !== undefined ? { feeMinor } : {}),
           ...(reason !== undefined ? { reason } : {}),
         },
+      )
+      return data.data
+    },
+  })
+}
+
+export function usePaymentGatewayEvents(paymentId: string | null) {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['payments', paymentId ?? '', 'gateway-events'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Array<Record<string, unknown>> }>(
+        `/payments/${paymentId}/gateway-events`,
+      )
+      return data.data
+    },
+    enabled: ready && !!paymentId,
+  })
+}
+
+export function usePaymentGatewayReconciliation() {
+  const ready = useAuthReady()
+  return useQuery({
+    queryKey: ['payments', 'gateway-reconciliation'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Record<string, unknown> }>(
+        '/payments/gateway-reconciliation',
+      )
+      return data.data
+    },
+    enabled: ready,
+  })
+}
+
+export function useSubmitGatewayWebhook() {
+  return useMutation({
+    mutationFn: async (input: {
+      paymentId: string
+      processorState: 'captured' | 'declined' | 'voided'
+      gatewayName: string
+      externalRef: string
+      feeMinor?: number
+      signature: string
+    }) => {
+      const { data } = await apiClient.post<{
+        data: { paymentId: string; processorState: string; signatureVerified: boolean }
+      }>(
+        `/payments/${input.paymentId}/gateway-webhook`,
+        {
+          processorState: input.processorState,
+          gatewayName: input.gatewayName,
+          externalRef: input.externalRef,
+          feeMinor: input.feeMinor ?? 0,
+        },
+        { headers: { 'x-hisabche-signature': input.signature } },
       )
       return data.data
     },

@@ -11,10 +11,13 @@ import {
   useIssueStoreCredit,
   useLoyaltyBalance,
   useMutateLoyaltyPoints,
+  usePaymentGatewayEvents,
+  usePaymentGatewayReconciliation,
   usePaymentProcessorState,
   usePosZReport,
   useRedeemGiftCard,
   useStoreCredit,
+  useSubmitGatewayWebhook,
   useTransitionPaymentProcessorState,
 } from '@hisabche/api'
 import { useDeviceStore } from '@hisabche/store'
@@ -53,7 +56,10 @@ export function TillLoyaltyPanel() {
   const [externalRef, setExternalRef] = useState('')
 
   const processorState = usePaymentProcessorState(paymentIdInput.trim() || null)
+  const gatewayEvents = usePaymentGatewayEvents(paymentIdInput.trim() || null)
+  const gatewayReconciliation = usePaymentGatewayReconciliation()
   const transitionProcessor = useTransitionPaymentProcessorState()
+  const submitWebhook = useSubmitGatewayWebhook()
 
   const currency = bookCurrency || ''
 
@@ -171,9 +177,31 @@ export function TillLoyaltyPanel() {
               >
                 {t('till.processorTransitionBtn')}
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-[44px] w-full"
+                disabled={!paymentIdInput.trim() || submitWebhook.isPending}
+                onClick={() =>
+                  submitWebhook.mutate({
+                    paymentId: paymentIdInput.trim(),
+                    processorState: 'captured',
+                    gatewayName: gatewayName.trim() || 'POS',
+                    externalRef: externalRef.trim() || 'REF',
+                    signature: '',
+                  })
+                }
+              >
+                {t('till.processorFetchBtn')}
+              </Button>
               <ExpressResultBox
                 label={t('common.result')}
-                data={transitionProcessor.data ?? processorState.data ?? null}
+                data={{
+                  state: transitionProcessor.data ?? processorState.data ?? null,
+                  events: gatewayEvents.data ?? null,
+                  webhook: submitWebhook.data ?? null,
+                  reconciliation: gatewayReconciliation.data ?? null,
+                }}
                 error={
                   transitionProcessor.error
                     ? apiErrorMessage(transitionProcessor.error, t('common.error'))

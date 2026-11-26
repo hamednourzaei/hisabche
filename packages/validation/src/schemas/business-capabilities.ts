@@ -421,6 +421,7 @@ export const CAPABILITY_KEYS = [
   'lens_order',
   'laundry_item_tracking',
   'production_batch',
+  'payroll_runs',
   'fuel_tank_reconciliation',
   'print_job',
   // Domains the 17 Nov 2026 review found missing from the requirement model.
@@ -1356,6 +1357,27 @@ export const CAPABILITIES: Record<CapabilityKey, CapabilityDefinition> = {
     },
     ...STANDALONE,
     limitations: ['PRODUCTION_BATCH_ONLINE_ONLY'],
+  },
+  payroll_runs: {
+    key: 'payroll_runs',
+    status: 'partial',
+    engine: 'workforce_payroll',
+    labelKey: 'capabilities.payroll_runs.label',
+    evidence: {
+      sources: [
+        'backend/src/routes/human-resources.routes.ts',
+        'packages/local-engine/src/routes/payroll.ts',
+        'packages/api/src/hooks/payroll.ts',
+        'packages/ui/src/components/ui/human-resources/containers/employee-detail-container.tsx',
+      ],
+      tests: [
+        'backend/src/__tests__/payroll-idempotency-and-booking.test.ts',
+        'backend/src/__tests__/payroll-ledger.test.ts',
+        'packages/local-engine/src/__tests__/people.test.ts',
+      ],
+    },
+    ...STANDALONE,
+    limitations: ['ATTENDANCE_TERMINAL_ADAPTER_SEPARATE'],
   },
   fuel_tank_reconciliation: {
     key: 'fuel_tank_reconciliation',

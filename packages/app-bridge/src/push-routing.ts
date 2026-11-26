@@ -51,6 +51,11 @@ export const FINANCIAL_ENTITIES: readonly LocalTable[] = [
   'project_milestones',
   'local_rolls',
   'roll_movements',
+  'local_assets',
+  'local_crop_cycles',
+  'local_livestock_groups',
+  'local_manufacturing_defs',
+  'local_approval_queue',
 ]
 
 /**

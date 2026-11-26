@@ -330,6 +330,23 @@ export function registerPaymentRoutes(router: Router): void {
         ],
       )
     }
+    db.run(
+      `INSERT INTO local_payment_gateway_events
+       (id, workspace_id, payment_id, from_state, to_state, gateway_name, external_ref, fee_minor, signature_verified, reason, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [
+        generateUuid(),
+        ctx.workspaceId,
+        payment.id,
+        current,
+        nextState,
+        gatewayName,
+        externalRef,
+        feeMinor,
+        reason,
+        now,
+      ],
+    )
     return {
       __status: 200,
       __data: {
@@ -345,6 +362,105 @@ export function registerPaymentRoutes(router: Router): void {
         },
       },
     }
+  })
+
+  // Local Gateway-to-Ledger reconciliation (offline parity with backend)
+  router.get('/payments/gateway-reconciliation', (c: RouteHandlerContext) => {
+    const { db, ctx } = c
+    requireCapability(ctx, 'payment.read')
+    const payments = db.all<{
+      id: string
+      method: string
+      currency: string
+      amount: number
+      status: string
+    }>(
+      'SELECT id, method, currency, amount, status FROM payment WHERE workspace_id = ? AND deleted_at IS NULL',
+      [ctx.workspaceId],
+    )
+    const states = db.all<{
+      payment_id: string
+      processor_state: string
+      fee_minor: number
+      currency: string
+    }>(
+      'SELECT payment_id, processor_state, fee_minor, currency FROM local_payment_gateway_states WHERE workspace_id = ?',
+      [ctx.workspaceId],
+    )
+    const stateMap = new Map(states.map((s) => [s.payment_id, s]))
+    const byCurrency = new Map<
+      string,
+      {
+        capturedMinor: number
+        queuedOfflineMinor: number
+        declinedMinor: number
+        voidedMinor: number
+        totalFeesMinor: number
+      }
+    >()
+    const exceptions: Array<{
+      code: string
+      paymentId: string
+      currency: string
+      message: string
+    }> = []
+    for (const p of payments) {
+      const cur = p.currency.toUpperCase()
+      const bucket = byCurrency.get(cur) ?? {
+        capturedMinor: 0,
+        queuedOfflineMinor: 0,
+        declinedMinor: 0,
+        voidedMinor: 0,
+        totalFeesMinor: 0,
+      }
+      const st = stateMap.get(p.id)
+      const effState = st?.processor_state ?? (p.method === 'cash' ? 'captured' : 'queued_offline')
+      const amt = Number(p.amount)
+      if (effState === 'captured') bucket.capturedMinor += amt
+      else if (effState === 'declined') bucket.declinedMinor += amt
+      else if (effState === 'voided') bucket.voidedMinor += amt
+      else {
+        bucket.queuedOfflineMinor += amt
+        exceptions.push({
+          code: 'QUEUED_OFFLINE_UNSETTLED',
+          paymentId: p.id,
+          currency: cur,
+          message: `Non-cash payment ${p.id} is still queued_offline awaiting settlement`,
+        })
+      }
+      bucket.totalFeesMinor += Number(st?.fee_minor ?? 0)
+      byCurrency.set(cur, bucket)
+    }
+    return {
+      data: {
+        workspaceId: ctx.workspaceId,
+        checkedAt: new Date().toISOString(),
+        reconciled: true,
+        perCurrency: [...byCurrency.entries()].map(([currency, stats]) => ({ currency, ...stats })),
+        exceptions,
+      },
+    }
+  })
+
+  // Append-only gateway event history for a payment
+  router.get('/payments/:id/gateway-events', (c: RouteHandlerContext) => {
+    const { db, ctx, params } = c
+    requireCapability(ctx, 'payment.record')
+    const payment = db.get<PaymentRow>(
+      'SELECT id FROM payment WHERE id = ? AND workspace_id = ? AND deleted_at IS NULL',
+      [params.id, ctx.workspaceId],
+    )
+    if (!payment) throw new NotFoundError('Payment', params.id)
+    const rows = db.all(
+      `SELECT id, payment_id AS paymentId, from_state AS fromState, to_state AS toState,
+              gateway_name AS gatewayName, external_ref AS externalRef, fee_minor AS feeMinor,
+              signature_verified AS signatureVerified, reason, created_at AS createdAt
+       FROM local_payment_gateway_events
+       WHERE payment_id = ? AND workspace_id = ?
+       ORDER BY created_at ASC`,
+      [params.id, ctx.workspaceId],
+    )
+    return { data: rows }
   })
 
   // ─── POST /payments ─────────────────────────────────────────
@@ -685,6 +801,12 @@ export function registerPaymentRoutes(router: Router): void {
          (id, workspace_id, payment_id, processor_state, gateway_name, external_ref, fee_minor, currency, reason, created_at, updated_at, origin, sync_state)
          VALUES (?, ?, ?, ?, NULL, NULL, 0, ?, NULL, ?, ?, 'local', 'local_only')`,
         [generateUuid(), workspaceId, paymentId, initialProcessorState, currency, now, now],
+      )
+      db.run(
+        `INSERT INTO local_payment_gateway_events
+         (id, workspace_id, payment_id, from_state, to_state, gateway_name, external_ref, fee_minor, signature_verified, reason, created_at)
+         VALUES (?, ?, ?, NULL, ?, NULL, NULL, 0, 0, NULL, ?)`,
+        [generateUuid(), workspaceId, paymentId, initialProcessorState, now],
       )
 
       if (c.headers?.['x-hisabche-queue'] === '1') {

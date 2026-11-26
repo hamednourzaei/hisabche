@@ -42,8 +42,14 @@ beforeEach(() => {
     { id: OTHER_SHOP, name: 'Other Group', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
   ])
   db.seed('projects', [
-    { id: PROJ, workspace_id: SHOP, name: 'Tower Build', budget: 10000 },
-    { id: OTHER_PROJ, workspace_id: OTHER_SHOP, name: 'Other Build', budget: 5000 },
+    { id: PROJ, workspace_id: SHOP, name: 'Tower Build', budget: 1000000, currency: 'AFN' },
+    {
+      id: OTHER_PROJ,
+      workspace_id: OTHER_SHOP,
+      name: 'Other Build',
+      budget: 5000,
+      currency: 'AFN',
+    },
   ])
   db.seed('project_change_orders', [])
   db.seed('workspace_members', [
@@ -176,6 +182,66 @@ describe('STEP-C — Compliance, Banking, KYC, Fleet, Guarantees, Projects & Con
     expect(co.json().data.revisedBudgetMinor).toBe(1200000)
     expect(co.json().data.netMarginDeltaMinor).toBe(60000)
     expect(co.json().data.status).toBe('approved')
+    expect(db.rows('projects').find((p) => p.id === PROJ)?.budget).toBe(1200000)
+
+    // Pending change order ignores tampered client originalBudgetMinor and blocks concurrent double-decide
+    const pendingCo = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: {
+        title: 'Roofing upgrade',
+        originalBudgetMinor: 1,
+        deltaMinor: 50000,
+        approved: false,
+      },
+    })
+    expect(pendingCo.statusCode, pendingCo.body).toBe(201)
+    expect(pendingCo.json().data.originalBudgetMinor).toBe(1200000)
+    expect(pendingCo.json().data.revisedBudgetMinor).toBe(1250000)
+    expect(pendingCo.json().data.status).toBe('pending_approval')
+
+    const orderId = String(pendingCo.json().data.id)
+    const firstDecide = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders/${orderId}/decide`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { decision: 'approved' },
+    })
+    expect(firstDecide.statusCode).toBe(200)
+    expect(db.rows('projects').find((p) => p.id === PROJ)?.budget).toBe(1250000)
+
+    const replayDecide = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders/${orderId}/decide`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { decision: 'rejected' },
+    })
+    expect(replayDecide.statusCode).toBe(409)
+
+    // Negative revised budget refused (400), and stale expectedOriginalBudgetMinor refused (409)
+    const negBudgetCo = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { title: 'Excessive deduction', deltaMinor: -9999999, approved: false },
+    })
+    expect(negBudgetCo.statusCode).toBe(400)
+
+    const secondCo = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { title: 'Signage add-on', deltaMinor: 10000, approved: false },
+    })
+    expect(secondCo.statusCode).toBe(201)
+    const staleDecide = await app.inject({
+      method: 'POST',
+      url: `/api/projects/${PROJ}/change-orders/${secondCo.json().data.id}/decide`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { decision: 'approved', expectedOriginalBudgetMinor: 1 },
+    })
+    expect(staleDecide.statusCode).toBe(409)
 
     const listCo = await app.inject({
       method: 'GET',
@@ -183,7 +249,7 @@ describe('STEP-C — Compliance, Banking, KYC, Fleet, Guarantees, Projects & Con
       headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
     })
     expect(listCo.statusCode).toBe(200)
-    expect(listCo.json().data).toHaveLength(1)
+    expect(listCo.json().data).toHaveLength(3)
 
     const crossTenantCo = await app.inject({
       method: 'POST',

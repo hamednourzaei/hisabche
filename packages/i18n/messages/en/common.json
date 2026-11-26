@@ -14718,7 +14718,8 @@
       "FREIGHT_MANIFEST_SERVER_ONLY": "Courier parcels and fleet runs work offline; freight dispatch manifests require the server.",
       "DEPRECIATION_POSTING_ONLINE_ONLY": "Fixed assets can be registered offline; depreciation posting and disposal sync on the server.",
       "HARVEST_SETTLEMENT_ONLINE_ONLY": "Crop cycles and livestock counts record offline; harvest valuation syncs on the server.",
-      "MRP_SCHEDULING_SERVER_ONLY": "Production BOM recipes save locally; full MRP run execution syncs with the server."
+      "MRP_SCHEDULING_SERVER_ONLY": "Production BOM recipes save locally; full MRP run execution syncs with the server.",
+      "ATTENDANCE_TERMINAL_ADAPTER_SEPARATE": "Biometric attendance terminal sync runs via a separate hardware adapter"
     },
     "area_pricing": {
       "label": "Price by area"
@@ -14749,6 +14750,9 @@
     },
     "crop_cycle": {
       "label": "Crop cycle"
+    },
+    "payroll_runs": {
+      "label": "Payroll & Workforce"
     }
   },
   "paymentMethod": {

@@ -127,11 +127,20 @@ const specifierOf = (file) =>
     .replace(/^packages\/[^/]+\/src\//, '')
     .replace(/\.tsx?$/, '')
 
-/** Route files that import this module — the real «a route answers it» evidence. */
+/** Route files that import this module (directly or via its folder barrel index.ts). */
 function routesImporting(relativePath) {
   if (!relativePath) return []
   const specifier = specifierOf(relativePath)
-  const test = new RegExp(`from '[^']*${escape(specifier)}'`)
+  const dirBarrel = specifier.replace(/\/[^/]+$/, '')
+  const baseName = path.basename(specifier)
+  const barrelIndex = `backend/src/${dirBarrel}/index.ts`
+  const barrelReexportsModule =
+    dirBarrel !== specifier &&
+    exists(barrelIndex) &&
+    new RegExp(`['"]\\./${escape(baseName)}['"]`).test(read(barrelIndex))
+  const test = barrelReexportsModule
+    ? new RegExp(`from '[^']*(?:${escape(specifier)}|${escape(dirBarrel)})'`)
+    : new RegExp(`from '[^']*${escape(specifier)}'`)
   return routeFiles.filter((file) => test.test(routeSources.get(file)))
 }
 
@@ -146,7 +155,7 @@ function registeredPlugins(files) {
     }
   }
   return [...names]
-    .filter((name) => new RegExp(`register\\(\\s*${name}\\s*\\)`).test(backendIndex))
+    .filter((name) => new RegExp(`register\\(\\s*${name}(?:\\s*,|\\s*\\))`).test(backendIndex))
     .sort()
 }
 

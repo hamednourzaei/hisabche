@@ -59,6 +59,8 @@ const LEDGER: Record<string, Record<string, Way>> = {
   'payments.routes.ts': {
     '/': unproven('POST /:id/cancel'),
     '/:id/cancel': inert,
+    '/:id/processor-state': inert,
+    '/:id/gateway-webhook': inert,
     '/cheques': unproven('POST /cheques/:id/transition'),
     '/cheques/:id/transition': inert,
   },
@@ -76,6 +78,8 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/accrual-schedules/run': unproven('POST /journal/:id/reverse'),
     '/chart-templates/apply': inert,
     '/budget-check': inert,
+    '/consolidated-summary': inert,
+    '/reconcile-cross-core': inert,
     '/year-end/close': none('a closed year has no reopening route'),
     '/month-end': none('a closed month has no reopening route'),
   },
@@ -106,6 +110,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
   },
   'manufacturing.routes.ts': {
     '/api/manufacturing/produce': none('a production run has no reversing route'),
+    '/api/manufacturing/mrp/plan': inert,
     '/api/work-orders': unproven('PATCH /api/work-orders/:id'),
   },
   'orders.routes.ts': {
@@ -116,11 +121,15 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/api/orders/:id/deliver': none('a posted delivery is final; corrected by credit note/return'),
     '/api/orders/:id/fulfill': none('no route takes a fulfilment back'),
     '/api/orders/:id/invoice': unproven('DELETE /api/invoices/:id'),
+    '/api/orders/table-service/bill-summary': inert,
+    '/api/orders/layaway': inert,
   },
   'purchasing.routes.ts': {
     '/api/purchase-orders': unproven('PATCH /api/purchase-orders/:id'),
     '/api/purchase-orders/from-suggestions': unproven('PATCH /api/purchase-orders/:id'),
     '/api/purchase-orders/:id/receive': none('a goods receipt has no reversing route'),
+    '/api/purchase-orders/supplier-score': inert,
+    '/api/purchase-orders/landed-cost-allocate': inert,
     '/api/rfqs': inert,
     '/api/rfqs/:id/quotations': inert,
     '/api/quotations/:id/choose': inert,
@@ -152,6 +161,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
   },
   'repair.routes.ts': {
     '/api/repair-tickets': unproven('POST /api/repair-tickets/:id/status'),
+    '/api/repair-tickets/imei/check': inert,
     '/api/repair-tickets/:id/status': none(
       'the slip history is append-only; a wrong move is followed by the move back where REPAIR_MOVES allows it',
     ),
@@ -179,6 +189,8 @@ const LEDGER: Record<string, Record<string, Way>> = {
       'an agent settlement is posted to the general ledger and is never deleted',
     ),
     '/api/fx/reconciliations': inert,
+    '/api/exchange/trade-in/quote': inert,
+    '/api/fx/kyc/evaluate': inert,
   },
   'salon.routes.ts': {
     '/api/service-resources': unproven('PATCH /api/service-resources/:id'),
@@ -191,6 +203,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
   'product.routes.ts': {
     '/api/products': proven('DELETE /api/products/:id', 'reverse-guards.test.ts'),
     '/api/products/:id/barcodes': inert,
+    '/api/products/:id/barcode-label': inert,
     // A waste record is a stock movement; a mistaken one is corrected by
     // counting the shelf, which records the difference back.
     '/api/products/:id/waste': unproven('POST /api/cycle-counts'),
@@ -312,6 +325,7 @@ describe('every way forward has a decided way back', () => {
     // V60 (Slice 7 & Slice 10): +2 unproven (POST /api/resource-bookings, POST /api/purchase-orders/from-suggestions),
     // +1 inert (POST /api/resource-bookings/:id/release).
     // V71 (repair QC): +1 none (POST /api/repair-tickets/:id/quality-check — append-only verdicts).
-    expect(counts).toEqual({ proven: 9, unproven: 32, none: 27, inert: 36 })
+    // V72+ (computational diagnostics, state transitions & cross-core reconciliation): +13 inert.
+    expect(counts).toEqual({ proven: 9, unproven: 32, none: 27, inert: 49 })
   })
 })

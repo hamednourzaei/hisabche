@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQueryClient } from '@tanstack/react-query'
-import { runRegisteredSync } from '@hisabche/api'
+import { runRegisteredSyncDetailed } from '@hisabche/api'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { SyncCenterPage } from '../sync-center-page'
 import type { SyncCenterPageProps } from '../sync-center-page'
@@ -44,9 +44,11 @@ export function SyncCenterContainer() {
   const handleSync = useCallback(async () => {
     setSyncing(true)
     try {
-      const outcome = isOnline ? await runRegisteredSync() : 'failed'
+      const outcome = isOnline
+        ? await runRegisteredSyncDetailed()
+        : { ok: false, status: 'offline' as const }
       await queryClient.invalidateQueries()
-      if (outcome === 'synced') {
+      if (outcome.status === 'success' && outcome.ok) {
         setLastSynced(Date.now())
       }
     } finally {

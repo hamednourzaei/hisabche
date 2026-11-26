@@ -18,10 +18,14 @@ import { FakeDatabase, createFakeDb, fakeId } from './helpers/fake-supabase'
 
 const db = new FakeDatabase()
 const OWNER = { id: '11111111-1111-4111-8111-111111111111', token: 'token-owner' }
+const CLERK = { id: '22222222-2222-4222-8222-222222222222', token: 'token-clerk' }
 const SHOP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const CONTRACT_ID = 'cccccccc-0000-4000-8000-000000000001'
 
-const users = new Map<string, { id: string }>([[OWNER.token, { id: OWNER.id }]])
+const users = new Map<string, { id: string }>([
+  [OWNER.token, { id: OWNER.id }],
+  [CLERK.token, { id: CLERK.id }],
+])
 vi.mock('../db', () => createFakeDb(db, users))
 
 let app: FastifyInstance
@@ -40,12 +44,24 @@ beforeEach(() => {
     { id: SHOP, name: 'Hisabche Demo', base_currency: 'AFN', time_zone: 'Asia/Kabul' },
   ])
   db.seed('support_tickets', [])
+  db.seed('support_ticket_events', [])
+  db.seed('support_ticket_comments', [])
+  db.seed('activities', [])
+  db.seed('audit_logs', [])
   db.seed('workspace_members', [
     {
       id: fakeId('mem'),
       workspace_id: SHOP,
       user_id: OWNER.id,
       role: 'owner',
+      has_access: true,
+      suspended_at: null,
+    },
+    {
+      id: fakeId('mem-seller'),
+      workspace_id: SHOP,
+      user_id: CLERK.id,
+      role: 'seller',
       has_access: true,
       suspended_at: null,
     },
@@ -97,6 +113,15 @@ describe('STEP-D — Market Research X06-X21 capabilities', () => {
     expect(listTickets.json().data).toHaveLength(1)
 
     const ticketId = ticket.json().data.id
+    // Ordinary non-manager workspace member (clerk) must receive 403 on ticket status transition & SLA sweep
+    const forbiddenStatus = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: { authorization: `Bearer ${CLERK.token}`, 'x-workspace-id': SHOP },
+      payload: { status: 'resolved' },
+    })
+    expect(forbiddenStatus.statusCode).toBe(403)
+
     const resolveRes = await app.inject({
       method: 'PATCH',
       url: `/api/v1/support-tickets/${ticketId}/status`,
@@ -106,6 +131,117 @@ describe('STEP-D — Market Research X06-X21 capabilities', () => {
     expect(resolveRes.statusCode, resolveRes.body).toBe(200)
     expect(resolveRes.json().data.status).toBe('resolved')
     expect(resolveRes.json().data.rca_summary).toContain('4mm')
+
+    // Reopen without reason rejected (400), with reason allowed (200), then closed -> invalid direct jump check
+    const reopenNoReason = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { status: 'acknowledged' },
+    })
+    expect(reopenNoReason.statusCode).toBe(400)
+
+    const reopenOk = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { status: 'acknowledged', reason: 'Customer still sees cut footer' },
+    })
+    expect(reopenOk.statusCode).toBe(200)
+    expect(reopenOk.json().data.status).toBe('acknowledged')
+
+    // Invalid jump acknowledged -> closed without resolving must return 409
+    const invalidJump = await app.inject({
+      method: 'PATCH',
+      url: `/api/v1/support-tickets/${ticketId}/status`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { status: 'closed' },
+    })
+    expect(invalidJump.statusCode).toBe(409)
+
+    // Assign within workspace allowed; outsider blocked 404
+    const assignOk = await app.inject({
+      method: 'POST',
+      url: `/api/v1/support-tickets/${ticketId}/assign`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { assigneeId: CLERK.id },
+    })
+    expect(assignOk.statusCode).toBe(200)
+    expect(assignOk.json().data.assigned_to).toBe(CLERK.id)
+
+    const assignOutsider = await app.inject({
+      method: 'POST',
+      url: `/api/v1/support-tickets/${ticketId}/assign`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { assigneeId: '99999999-9999-4999-8999-999999999999' },
+    })
+    expect(assignOutsider.statusCode).toBe(404)
+
+    // Internal comment blocked for clerk (403); owner note masked when clerk fetches comments
+    const clerkInternalPost = await app.inject({
+      method: 'POST',
+      url: `/api/v1/support-tickets/${ticketId}/comments`,
+      headers: { authorization: `Bearer ${CLERK.token}`, 'x-workspace-id': SHOP },
+      payload: { body: 'secret debug note', isInternal: true },
+    })
+    expect(clerkInternalPost.statusCode).toBe(403)
+
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/support-tickets/${ticketId}/comments`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: { body: 'Internal triage: escalate hardware firmware', isInternal: true },
+    })
+    await app.inject({
+      method: 'POST',
+      url: `/api/v1/support-tickets/${ticketId}/comments`,
+      headers: { authorization: `Bearer ${CLERK.token}`, 'x-workspace-id': SHOP },
+      payload: { body: 'Checked USB cable on cashier station', isInternal: false },
+    })
+    const clerkComments = await app.inject({
+      method: 'GET',
+      url: `/api/v1/support-tickets/${ticketId}/comments`,
+      headers: { authorization: `Bearer ${CLERK.token}`, 'x-workspace-id': SHOP },
+    })
+    expect(clerkComments.statusCode).toBe(200)
+    expect(clerkComments.json().data).toHaveLength(1)
+
+    const eventsRes = await app.inject({
+      method: 'GET',
+      url: `/api/v1/support-tickets/${ticketId}/events`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+    })
+    expect(eventsRes.statusCode).toBe(200)
+    expect(eventsRes.json().data.length).toBeGreaterThanOrEqual(4)
+
+    // Overdue SLA sweep escalates open breached tickets automatically
+    db.seed('support_tickets', [
+      ...db.rows('support_tickets'),
+      {
+        id: 'dddddddd-0000-4000-8000-000000000099',
+        workspace_id: SHOP,
+        ticket_code: 'HSB-OVERDUE',
+        subject: 'Overdue sync incident',
+        priority: 'critical',
+        category: 'sync',
+        description: 'Overdue response window',
+        sla_hours: 2,
+        response_due_at: '2020-01-01T00:00:00.000Z',
+        status: 'open',
+        escalation_level: 0,
+        created_by: OWNER.id,
+      },
+    ])
+    const slaSweep = await app.inject({
+      method: 'POST',
+      url: '/api/v1/support-tickets/evaluate-sla',
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP },
+      payload: {},
+    })
+    expect(slaSweep.statusCode).toBe(200)
+    expect(slaSweep.json().data.escalatedTicketIds).toContain(
+      'dddddddd-0000-4000-8000-000000000099',
+    )
 
     const health = await app.inject({
       method: 'GET',

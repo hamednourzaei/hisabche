@@ -203,7 +203,7 @@ function usePrefetchRoutes(locale: string, deniedKey: string, hiddenPathsKey: st
  * valid mid-visit, which is exactly what was reported: every request failing
  * with 401 while the dashboard kept rendering.
  */
-function useRedirectGuard(currentLang: string) {
+function useRedirectGuard(currentLang: string, pathname: string | null) {
   const router = useRouter()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
@@ -258,9 +258,11 @@ function useRedirectGuard(currentLang: string) {
     }
 
     // Redirect to onboarding if onboarding is not completed OR if user has no workspace
+    const onOnboarding = isOnboardingRoute(pathname)
     if (
       isAuthenticated &&
       (!isOnboardingComplete || hasNoWorkspace === true) &&
+      !onOnboarding &&
       !redirected.current
     ) {
       redirected.current = true
@@ -268,7 +270,10 @@ function useRedirectGuard(currentLang: string) {
       return
     }
 
-    if (isAuthenticated && isOnboardingComplete && (workspaceId || hasNoWorkspace === false)) {
+    if (
+      onOnboarding ||
+      (isAuthenticated && isOnboardingComplete && (workspaceId || hasNoWorkspace === false))
+    ) {
       redirected.current = false
     }
   }, [
@@ -277,6 +282,7 @@ function useRedirectGuard(currentLang: string) {
     isOnboardingComplete,
     hasNoWorkspace,
     workspaceId,
+    pathname,
     router,
     currentLang,
   ])
@@ -347,7 +353,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const subscriptionLocked = useSubscriptionLocked()
   const routeLocked = subscriptionLocked && !isRouteAllowedWhenExpired(pathname ?? '')
 
-  useRedirectGuard(locale)
+  useRedirectGuard(locale, pathname)
 
   const activeNav = optimisticPath ?? pathname
 
@@ -640,7 +646,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           ) : routeDenied ? (
             // The page is NOT mounted: none of its queries run.
             <NoAccessNotice onHome={() => router.push(withLocale('/dashboard'))} />
-          ) : !workspaceId && hasNoWorkspace && !isOnboardingRoute(pathname) ? (
+          ) : !workspaceId && hasNoWorkspace !== false && !isOnboardingRoute(pathname) ? (
             // If user has no workspace, do not mount protected dashboard pages and queries.
             // Onboarding route is explicitly allowed so user can bootstrap their first workspace.
             // Translated and token-coloured: this text was hard-coded Persian in
