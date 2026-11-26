@@ -133,9 +133,29 @@ function encodeRfc3986Path(pathStr: string): string {
 export class SupabaseStorageProvider implements StorageProvider {
   public readonly name = 'supabase'
   private client: SupabaseClient
+  private readonly ensuredBuckets = new Set<string>()
 
   constructor(client?: SupabaseClient) {
     this.client = client ?? supabase
+  }
+
+  private static isMissingBucketError(message: string): boolean {
+    return /bucket.*not\s*found|the\s+resource\s+was\s+not\s+found|no\s+such\s+bucket|bucket\s+does\s+not\s+exist/i.test(
+      message,
+    )
+  }
+
+  private async ensureBucket(bucket: string, isPublic: boolean): Promise<void> {
+    if (this.ensuredBuckets.has(bucket)) return
+    const { error } = await this.client.storage.createBucket(bucket, {
+      public: isPublic,
+    })
+    if (error && !/already\s*exists|duplicate/i.test(error.message)) {
+      throw new Error(
+        `[SupabaseStorageProvider] Failed to ensure bucket ${bucket}: ${error.message}`,
+      )
+    }
+    this.ensuredBuckets.add(bucket)
   }
 
   async upload(
@@ -150,22 +170,32 @@ export class SupabaseStorageProvider implements StorageProvider {
       options?.expectedTenantPrefix,
     )
     validateUploadPayload(fileData, options)
-    const { data, error } = await this.client.storage
+    const uploadOptions = {
+      contentType: options?.contentType ?? 'application/octet-stream',
+      upsert: options?.upsert ?? true,
+    }
+    let { data, error } = await this.client.storage
       .from(cleanBucket)
-      .upload(cleanPath, fileData, {
-        contentType: options?.contentType ?? 'application/octet-stream',
-        upsert: options?.upsert ?? true,
-      })
+      .upload(cleanPath, fileData, uploadOptions)
 
-    if (error) {
+    if (error && SupabaseStorageProvider.isMissingBucketError(error.message)) {
+      await this.ensureBucket(cleanBucket, Boolean(options?.isPublic))
+      const retry = await this.client.storage
+        .from(cleanBucket)
+        .upload(cleanPath, fileData, uploadOptions)
+      data = retry.data
+      error = retry.error
+    }
+
+    if (error || !data) {
       throw new Error(
-        `[SupabaseStorageProvider] Upload failed for ${bucket}/${path}: ${error.message}`,
+        `[SupabaseStorageProvider] Upload failed for ${cleanBucket}/${cleanPath}: ${error?.message ?? 'missing upload response'}`,
       )
     }
 
     let publicUrl: string | undefined
     if (options?.isPublic) {
-      const pub = this.client.storage.from(bucket).getPublicUrl(path)
+      const pub = this.client.storage.from(cleanBucket).getPublicUrl(cleanPath)
       publicUrl = pub.data.publicUrl
     }
 
@@ -658,12 +688,15 @@ export function createStorageProviderFromEnv(): StorageProvider {
   return new SupabaseStorageProvider()
 }
 
-let activeStorageProvider: StorageProvider = new SupabaseStorageProvider()
+let activeStorageProvider: StorageProvider | null = null
 
 export function setStorageProvider(provider: StorageProvider): void {
   activeStorageProvider = provider
 }
 
 export function getStorageProvider(): StorageProvider {
+  if (!activeStorageProvider) {
+    activeStorageProvider = createStorageProviderFromEnv()
+  }
   return activeStorageProvider
 }

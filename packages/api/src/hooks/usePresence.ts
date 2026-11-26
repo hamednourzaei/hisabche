@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+import { hasToken, isOfflineTokenMode } from '../lib/tokenProvider'
 import {
   subscribeToPresence,
   type PresenceIdentity,
@@ -22,6 +23,8 @@ import {
 } from '../supabase/presence'
 import { useActiveWorkspaceId } from './useRealtime'
 import { useAuthReady } from './useAuthReady'
+
+const PRESENCE_SUBSCRIBE_SETTLE_MS = 50
 
 export type { PresenceMember } from '../supabase/presence'
 
@@ -42,15 +45,25 @@ export function usePresence(
   useEffect(() => {
     // Not subscribed: nothing is shown (derived below), no setState here.
     if (!authReady || !workspaceId || !userId) return
+    if (isOfflineTokenMode() || !hasToken()) return
 
-    const handle = subscribeToPresence(
-      workspaceId,
-      { userId, name, ...(email ? { email } : {}), ...(role ? { role } : {}) },
-      setMembers,
-    )
+    let cancelled = false
+    let handle: { unsubscribe: () => void } | null = null
+
+    const timer = setTimeout(() => {
+      if (cancelled || isOfflineTokenMode() || !hasToken()) return
+      handle = subscribeToPresence(
+        workspaceId,
+        { userId, name, ...(email ? { email } : {}), ...(role ? { role } : {}) },
+        setMembers,
+      )
+    }, PRESENCE_SUBSCRIBE_SETTLE_MS)
 
     return () => {
-      handle.unsubscribe()
+      cancelled = true
+      clearTimeout(timer)
+      handle?.unsubscribe()
+      handle = null
       // Leaving the workspace must not leave a stale roster on screen.
       setMembers([])
     }
@@ -59,7 +72,8 @@ export function usePresence(
     // resubscribe on each one.
   }, [authReady, workspaceId, userId, name, email, role])
 
-  const active = authReady && Boolean(workspaceId) && Boolean(userId)
+  const active =
+    authReady && Boolean(workspaceId) && Boolean(userId) && !isOfflineTokenMode() && hasToken()
   return useMemo(() => {
     const visible = canSee && active ? members : []
     return { members: visible, onlineIds: new Set(visible.map((m) => m.userId)) }

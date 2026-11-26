@@ -84,9 +84,21 @@ export interface BrandAssetDeleteResult {
 }
 
 function getSigningSecret(): string {
-  const secret =
-    process.env.BRAND_ASSET_SIGNING_SECRET?.trim() || process.env.JWT_SECRET?.trim() || ''
-  if (secret.length >= 16) return secret
+  const directSecret =
+    process.env.BRAND_ASSET_SIGNING_SECRET?.trim() ||
+    process.env.JWT_SECRET?.trim() ||
+    process.env.SUPABASE_JWT_SECRET?.trim() ||
+    ''
+  if (directSecret.length >= 16) return directSecret
+
+  // Supabase projects using asymmetric ES256 JWKS may omit symmetric JWT_SECRET;
+  // derive a domain-separated HMAC subkey from SUPABASE_SERVICE_KEY so signed URLs
+  // stay functional without exposing or reusing the raw service credential.
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY?.trim() || ''
+  if (serviceKey.length >= 16) {
+    return createHmac('sha256', serviceKey).update('hisabche:brand-asset-hmac-v1').digest('hex')
+  }
+
   if (process.env.NODE_ENV === 'production') {
     throw new BrandAssetError('STORAGE_NOT_CONFIGURED', 'Brand asset signing secret missing.')
   }
@@ -338,6 +350,9 @@ export class BrandAssetService {
 
     const parsed = validateAndInspectBrandAsset(params.fileBuffer, params.declaredMimeType)
 
+    // Ensure signing configuration is valid BEFORE uploading to avoid orphaned objects.
+    getSigningSecret()
+
     // Capture previous reference so we can retire it ONLY after DB replacement succeeds.
     const existingWorkspace = await this.workspaceSvc.getWorkspace(userId, workspaceId)
     const previousUrl = (existingWorkspace as Record<string, unknown>)[meta.column] as
@@ -359,6 +374,7 @@ export class BrandAssetService {
         expectedSha256: parsed.sha256,
       })
     } catch (err) {
+      const errorDetail = err instanceof Error ? err.message.slice(0, 240) : 'Storage upload failed'
       this.logEvent({
         traceId,
         workspaceId,
@@ -372,11 +388,9 @@ export class BrandAssetService {
         dbOutcome: 'skipped',
         cleanupOutcome: 'not_needed',
         errorCode: 'STORAGE_UNAVAILABLE',
+        errorDetail,
       })
-      throw new BrandAssetError(
-        'STORAGE_UNAVAILABLE',
-        err instanceof Error ? err.message : 'Storage provider upload failed.',
-      )
+      throw new BrandAssetError('STORAGE_UNAVAILABLE', errorDetail)
     }
 
     const uploadDurationMs = Date.now() - uploadStart

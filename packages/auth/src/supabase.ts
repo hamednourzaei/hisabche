@@ -1,12 +1,17 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // The Electron renderer is bundled by Vite, which does not define `process`,
-// so reading it directly makes this module throw on import there.
-const env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
+// so guarding `typeof process !== 'undefined'` avoids crashing there, while
+// referencing `process.env.NEXT_PUBLIC_*` directly lets Next.js/Turbopack inline
+// the build-time public variables.
+const publicSupabaseUrl =
+  typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined
+const publicSupabaseAnonKey =
+  typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined
+const nodeEnv = typeof process !== 'undefined' ? process.env.NODE_ENV : undefined
 
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || 'https://quxpxatopmquheoazzlj.supabase.co'
-const supabaseKey =
-  env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_mGppZjb0DVEKLFf7f1XjmQ_iHBQVu_U'
+const supabaseUrl = publicSupabaseUrl || 'https://quxpxatopmquheoazzlj.supabase.co'
+const supabaseKey = publicSupabaseAnonKey || 'sb_publishable_mGppZjb0DVEKLFf7f1XjmQ_iHBQVu_U'
 
 // ============================================
 // ✅ Singleton واقعی — فقط یک بار در کل اپلیکیشن ساخته می‌شود
@@ -58,6 +63,6 @@ function createSupabaseClient(): SupabaseClient {
 export const supabaseClient: SupabaseClient =
   globalThis.__hisabche_supabase_client__ ?? createSupabaseClient()
 
-if (env.NODE_ENV !== 'production') {
+if (nodeEnv !== 'production') {
   globalThis.__hisabche_supabase_client__ = supabaseClient
 }

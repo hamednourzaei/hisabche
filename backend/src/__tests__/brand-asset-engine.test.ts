@@ -6,7 +6,8 @@ import {
   validateAndInspectBrandAsset,
   verifyBrandAssetSignature,
 } from '../services/brand-asset.service'
-import { MemoryStorageProvider } from '../storage/storage-adapter'
+import { MemoryStorageProvider, SupabaseStorageProvider } from '../storage/storage-adapter'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { WorkspaceService } from '../services/workspace.service'
 
 function makePngBuffer(width: number, height: number): Buffer {
@@ -244,5 +245,127 @@ describe('BrandAssetService — validation, transactions, isolation & deletion',
     expect(await storage.list(BRAND_ASSET_BUCKET, `${BRAND_ASSET_BUCKET}/${WS_A}/stamp/`)).toEqual(
       [],
     )
+  })
+})
+
+describe('SupabaseStorageProvider & production signing secret resilience', () => {
+  it('auto-creates a missing private bucket on Bucket not found and caches ensured state', async () => {
+    let bucketExists = false
+    const uploadCalls: string[] = []
+    const createBucket = vi.fn(async (_name: string, _opts: { public: boolean }) => {
+      bucketExists = true
+      return { data: { name: _name }, error: null }
+    })
+    const fakeSupabase = {
+      storage: {
+        createBucket,
+        from: (bucket: string) => ({
+          upload: async (path: string) => {
+            uploadCalls.push(`${bucket}/${path}`)
+            if (!bucketExists) {
+              return { data: null, error: { message: 'Bucket not found' } }
+            }
+            return { data: { path }, error: null }
+          },
+        }),
+      },
+    } as unknown as SupabaseClient
+
+    const provider = new SupabaseStorageProvider(fakeSupabase)
+    const objectPath = `${BRAND_ASSET_BUCKET}/11111111-1111-4111-8111-111111111111/stamp/asset-1/v1.png`
+    const first = await provider.upload(BRAND_ASSET_BUCKET, objectPath, makePngBuffer(100, 100), {
+      contentType: 'image/png',
+      upsert: false,
+      isPublic: false,
+      expectedTenantPrefix: `${BRAND_ASSET_BUCKET}/11111111-1111-4111-8111-111111111111`,
+    })
+    expect(first.path).toBe(objectPath)
+    expect(createBucket).toHaveBeenCalledTimes(1)
+    expect(createBucket).toHaveBeenCalledWith(BRAND_ASSET_BUCKET, { public: false })
+    expect(uploadCalls).toHaveLength(2)
+
+    // Subsequent upload hits no extra createBucket call
+    const secondPath = `${BRAND_ASSET_BUCKET}/11111111-1111-4111-8111-111111111111/stamp/asset-2/v1.png`
+    await provider.upload(BRAND_ASSET_BUCKET, secondPath, makePngBuffer(100, 100), {
+      contentType: 'image/png',
+      isPublic: false,
+    })
+    expect(createBucket).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses SUPABASE_JWT_SECRET / SUPABASE_SERVICE_KEY in production and fails closed before upload if no secret exists', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    const prevBrandSecret = process.env.BRAND_ASSET_SIGNING_SECRET
+    const prevJwtSecret = process.env.JWT_SECRET
+    const prevSupaJwtSecret = process.env.SUPABASE_JWT_SECRET
+    const prevSupaServiceKey = process.env.SUPABASE_SERVICE_KEY
+
+    const WS = '11111111-1111-4111-8111-111111111111'
+    const ADMIN = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const mem = new MemoryStorageProvider()
+    const wsSvc = {
+      requireRole: vi.fn(async () => {}),
+      requireMember: vi.fn(async () => {}),
+      getWorkspace: vi.fn(async () => ({
+        id: WS,
+        logo_url: null,
+        stamp_url: null,
+        signature_url: null,
+      })),
+      updateWorkspace: vi.fn(async (_u: string, _w: string, patch: Record<string, unknown>) => ({
+        id: WS,
+        stamp_url: patch.stampUrl ?? null,
+      })),
+    } as unknown as WorkspaceService
+    const svc = new BrandAssetService(wsSvc, mem)
+
+    try {
+      process.env.NODE_ENV = 'production'
+      delete process.env.BRAND_ASSET_SIGNING_SECRET
+      delete process.env.JWT_SECRET
+      delete process.env.SUPABASE_JWT_SECRET
+      delete process.env.SUPABASE_SERVICE_KEY
+
+      // Fails closed before writing to storage when no secret exists at all
+      await expect(
+        svc.replaceBrandAsset({
+          userId: ADMIN,
+          workspaceId: WS,
+          assetType: 'stamp',
+          fileBuffer: makePngBuffer(120, 120),
+          declaredMimeType: 'image/png',
+        }),
+      ).rejects.toThrow(/signing secret missing/i)
+      expect(await mem.list(BRAND_ASSET_BUCKET)).toEqual([])
+
+      // Succeeds when SUPABASE_SERVICE_KEY (ES256 JWKS deployment) is set
+      process.env.SUPABASE_SERVICE_KEY = 'supabase-service-role-key-at-least-16-chars'
+      const uploaded = await svc.replaceBrandAsset({
+        userId: ADMIN,
+        workspaceId: WS,
+        assetType: 'stamp',
+        fileBuffer: makePngBuffer(120, 120),
+        declaredMimeType: 'image/png',
+      })
+      const parsed = new URL(uploaded.url, 'https://hisabche.local')
+      expect(
+        verifyBrandAssetSignature(
+          WS,
+          uploaded.objectPath,
+          Number(parsed.searchParams.get('exp')),
+          parsed.searchParams.get('sig')!,
+        ),
+      ).toBe(true)
+    } finally {
+      process.env.NODE_ENV = prevNodeEnv
+      if (prevBrandSecret !== undefined) process.env.BRAND_ASSET_SIGNING_SECRET = prevBrandSecret
+      else delete process.env.BRAND_ASSET_SIGNING_SECRET
+      if (prevJwtSecret !== undefined) process.env.JWT_SECRET = prevJwtSecret
+      else delete process.env.JWT_SECRET
+      if (prevSupaJwtSecret !== undefined) process.env.SUPABASE_JWT_SECRET = prevSupaJwtSecret
+      else delete process.env.SUPABASE_JWT_SECRET
+      if (prevSupaServiceKey !== undefined) process.env.SUPABASE_SERVICE_KEY = prevSupaServiceKey
+      else delete process.env.SUPABASE_SERVICE_KEY
+    }
   })
 })

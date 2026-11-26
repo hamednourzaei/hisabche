@@ -28,7 +28,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
-import { supabaseClient } from './client'
+import { onSignedOut, supabaseClient } from './client'
 
 /** What a client announces about itself. Nothing private. */
 export interface PresenceIdentity {
@@ -50,9 +50,25 @@ interface SharedPresence {
   channel: RealtimeChannel
   listeners: Set<Listener>
   last: PresenceMember[]
+  subscribed: boolean
 }
 
 const shared = new Map<string, SharedPresence>()
+let presenceSignOutHookInstalled = false
+
+function closeAllPresence(): void {
+  for (const [workspaceId, current] of [...shared.entries()]) {
+    shared.delete(workspaceId)
+    if (current.subscribed) void current.channel.untrack()
+    void supabaseClient.removeChannel(current.channel)
+  }
+}
+
+function installPresenceSignOutHook(): void {
+  if (presenceSignOutHookInstalled) return
+  presenceSignOutHookInstalled = true
+  onSignedOut(closeAllPresence)
+}
 
 /**
  * Collapse the raw roster into one entry per user.
@@ -105,6 +121,8 @@ export function subscribeToPresence(
   // subscription, never a subscription to everything.
   if (!workspaceId || !identity.userId) return { unsubscribe: () => {} }
 
+  installPresenceSignOutHook()
+
   let entry = shared.get(workspaceId)
 
   if (!entry) {
@@ -115,6 +133,7 @@ export function subscribeToPresence(
       }),
       listeners,
       last: [],
+      subscribed: false,
     }
 
     const publish = () => {
@@ -137,11 +156,17 @@ export function subscribeToPresence(
       .on('presence', { event: 'join' }, publish)
       .on('presence', { event: 'leave' }, publish)
       .subscribe((status) => {
-        if (status !== 'SUBSCRIBED') return
-        void holder.channel.track({
-          ...identity,
-          onlineSince: new Date().toISOString(),
-        })
+        if (status === 'SUBSCRIBED') {
+          holder.subscribed = true
+          void holder.channel.track({
+            ...identity,
+            onlineSince: new Date().toISOString(),
+          })
+          return
+        }
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          holder.subscribed = false
+        }
       })
 
     entry = holder
@@ -167,7 +192,7 @@ export function subscribeToPresence(
       if (current.listeners.size > 0) return
 
       shared.delete(workspaceId)
-      void current.channel.untrack()
+      if (current.subscribed) void current.channel.untrack()
       void supabaseClient.removeChannel(current.channel)
     },
   }

@@ -112,7 +112,11 @@ function openChannel(key: string, entry: SharedChannel): RealtimeChannel {
       },
       () => notify(key, listeners),
     )
-    .subscribe()
+    .subscribe((status) => {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[realtime] channel "${key}" status: ${status}`)
+      }
+    })
 }
 
 function notify(key: string, listeners: Set<Listener>): void {

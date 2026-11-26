@@ -3,7 +3,10 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { getActiveWorkspaceId, onActiveWorkspaceChange } from '../lib/active-workspace'
+import { hasToken, isOfflineTokenMode } from '../lib/tokenProvider'
 import { useAuthReady } from './useAuthReady'
+
+const REALTIME_SUBSCRIBE_SETTLE_MS = 50
 
 interface RealtimeOptions {
   table: string
@@ -57,38 +60,50 @@ export function useRealtime({ table, queryKey, enabled = true }: RealtimeOptions
     // No workspace yet (signing in, or still loading) — subscribe to nothing
     // rather than to everything. The effect re-runs when it arrives.
     if (!workspaceId) return
+    // Never open a Realtime WebSocket without a user JWT or in offline mode:
+    // connecting anonymously hits `signedOutListeners` -> immediate teardown mid-handshake.
+    if (isOfflineTokenMode() || !hasToken()) return
 
     // Cleanup previous channel
     channelRef.current?.unsubscribe()
+    channelRef.current = null
 
     let cancelled = false
 
-    // ✅ Dynamically import with error handling
-    import('../supabase/realtime')
-      .then(({ subscribeToChannel }) => {
-        subscribeToChannel(table, workspaceId, () => {
-          const parsed: unknown = JSON.parse(keyText)
-          queryClient.invalidateQueries({
-            queryKey: Array.isArray(parsed) ? parsed.map(String) : [],
+    // Wait one short settle tick before opening the socket so React StrictMode's
+    // mount->unmount->remount and fast navigation cancel cleanly without aborting
+    // an in-flight WebSocket handshake ("WebSocket is closed before the connection is established").
+    const timer = setTimeout(() => {
+      if (cancelled || isOfflineTokenMode() || !hasToken()) return
+
+      import('../supabase/realtime')
+        .then(({ subscribeToChannel }) => {
+          if (cancelled) return
+          subscribeToChannel(table, workspaceId, () => {
+            const parsed: unknown = JSON.parse(keyText)
+            queryClient.invalidateQueries({
+              queryKey: Array.isArray(parsed) ? parsed.map(String) : [],
+            })
           })
+            .then((ch: { unsubscribe: () => void }) => {
+              if (cancelled) {
+                ch.unsubscribe()
+                return
+              }
+              channelRef.current = ch
+            })
+            .catch((err: Error) => {
+              console.warn(`[useRealtime] Failed to subscribe to ${table}:`, err.message)
+            })
         })
-          .then((ch: { unsubscribe: () => void }) => {
-            if (cancelled) {
-              ch.unsubscribe()
-              return
-            }
-            channelRef.current = ch
-          })
-          .catch((err: Error) => {
-            console.warn(`[useRealtime] Failed to subscribe to ${table}:`, err.message)
-          })
-      })
-      .catch((err: Error) => {
-        console.warn(`[useRealtime] Failed to import realtime module:`, err.message)
-      })
+        .catch((err: Error) => {
+          console.warn(`[useRealtime] Failed to import realtime module:`, err.message)
+        })
+    }, REALTIME_SUBSCRIBE_SETTLE_MS)
 
     return () => {
       cancelled = true
+      clearTimeout(timer)
       channelRef.current?.unsubscribe()
       channelRef.current = null
     }
