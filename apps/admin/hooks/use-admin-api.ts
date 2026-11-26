@@ -45,6 +45,15 @@ export interface AdminMetrics {
      */
     workspaceAttributedPercent: number
   }
+  operations?: {
+    openSupportTickets: number
+    breachedSupportTickets: number
+    failedJobs: number
+    pendingChangeOrders: number
+    securityEventsLast24h: number
+    offlineDevicesTotal: number
+    offlineDevicesActive: number
+  }
   generatedAt: string
 }
 

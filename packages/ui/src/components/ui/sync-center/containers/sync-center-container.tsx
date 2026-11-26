@@ -13,8 +13,16 @@ import { BackupRestorePanel } from '../backup-restore-panel'
 export function SyncCenterContainer() {
   const t = useTranslations()
   const queryClient = useQueryClient()
-  const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced, setSyncing } =
-    useSyncStore()
+  const {
+    isOnline,
+    isSyncing,
+    pendingCount,
+    lastSyncedAt,
+    lastSyncOutcome,
+    setLastSynced,
+    setSyncOutcome,
+    setSyncing,
+  } = useSyncStore()
   const { backups, addBackup, createBackup } = useBackupStore()
 
   const safeT = useCallback(
@@ -47,6 +55,15 @@ export function SyncCenterContainer() {
       const outcome = isOnline
         ? await runRegisteredSyncDetailed()
         : { ok: false, status: 'offline' as const }
+      setSyncOutcome({
+        status: outcome.status,
+        ok: outcome.ok,
+        pushedCount: outcome.pushedCount,
+        pushFailureCount: outcome.pushFailureCount,
+        pulledCount: outcome.pulledCount,
+        conflictCount: outcome.conflictCount,
+        error: outcome.error,
+      })
       await queryClient.invalidateQueries()
       if (outcome.status === 'success' && outcome.ok) {
         setLastSynced(Date.now())
@@ -54,7 +71,7 @@ export function SyncCenterContainer() {
     } finally {
       setSyncing(false)
     }
-  }, [isOnline, queryClient, setLastSynced, setSyncing])
+  }, [isOnline, queryClient, setLastSynced, setSyncOutcome, setSyncing])
 
   // Read on every render: a backup just taken changes it, and the loop is cheap.
   const localStorageSize = (() => {
@@ -91,6 +108,7 @@ export function SyncCenterContainer() {
         isSyncing={isSyncing}
         pendingCount={pendingCount}
         lastSyncedAt={lastSyncedAt}
+        lastSyncOutcome={lastSyncOutcome}
         backups={backups as SyncCenterPageProps['backups']}
         localStorageSize={localStorageSize}
         onSync={handleSync}

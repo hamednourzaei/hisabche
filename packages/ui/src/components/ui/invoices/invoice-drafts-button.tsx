@@ -44,6 +44,19 @@ export function InvoiceDraftsButton({ t }: { t: (key: string, fallback?: string)
   const { dateTime } = useDateFormat()
 
   const drafts = query.data?.drafts ?? []
+  if (query.isError) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => void query.refetch()}
+        data-guide="invoices-drafts-retry"
+      >
+        <FilePen className="h-4 w-4" aria-hidden />
+        <span>{t('invoices.drafts.loadError', 'خطا در خواندن پیش‌نویس‌ها')}</span>
+      </Button>
+    )
+  }
   if (!query.data?.configured || drafts.length === 0) return null
 
   const resume = (draft: InvoiceDraftRecord) => {

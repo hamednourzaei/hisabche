@@ -22,6 +22,7 @@ import { InfrastructurePanel } from './infrastructure-panel'
 import { MonitorPanel } from './monitor/monitor-panel'
 import { CapacityPanel } from './capacity/capacity-panel'
 import { EmailDeliveryPanel } from './email-delivery-panel'
+import { AdminChangeOrdersPanel } from '@/components/ops/admin-change-orders-panel'
 import { MaintenancePanel } from './maintenance-panel'
 import { MigrationsPanel } from './migrations-panel'
 import { TabSections } from '@/components/admin-shell/tab-sections'
@@ -116,6 +117,11 @@ export function OperationsClient() {
               id: 'email',
               label: t('admin.insights.sections.email'),
               render: () => <EmailDeliveryPanel />,
+            },
+            {
+              id: 'change_orders',
+              label: t('admin.insights.sections.changeOrders'),
+              render: () => <AdminChangeOrdersPanel />,
             },
           ]}
         />

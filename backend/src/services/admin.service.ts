@@ -213,6 +213,8 @@ export class AdminService {
       }
     }
 
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+
     const [
       totalWorkspaces,
       activeWorkspaces,
@@ -225,6 +227,13 @@ export class AdminService {
       expiringInSevenDays,
       trialSubscriptions,
       subscriptionsWithWorkspace,
+      openSupportTickets,
+      breachedSupportTickets,
+      failedJobs,
+      pendingChangeOrders,
+      securityEventsLast24h,
+      offlineDevicesTotal,
+      offlineDevicesActive,
     ] = await Promise.all([
       // Businesses, not workspaces: a developer's sandbox is a test space and
       // would otherwise inflate every one of these four figures.
@@ -250,6 +259,18 @@ export class AdminService {
       ),
       countOf('subscriptions', (q) => q.eq('is_trial', true)),
       countOf('subscriptions', (q) => q.not('workspace_id', 'is', null)),
+      countOf('support_tickets', (q) => q.neq('status', 'resolved').neq('status', 'closed')),
+      countOf('support_tickets', (q) =>
+        q
+          .neq('status', 'resolved')
+          .neq('status', 'closed')
+          .lt('response_due_at', now.toISOString()),
+      ),
+      countOf('background_jobs', (q) => q.eq('status', 'FAILED')),
+      countOf('project_change_orders', (q) => q.eq('status', 'pending_approval')),
+      countOf('admin_security_events', (q) => q.gte('created_at', oneDayAgo)),
+      countOf('offline_devices'),
+      countOf('offline_devices', (q) => q.eq('is_active', true)),
     ])
 
     // Plan mix, read from the real `plan` column. Keys come from PLANS, so a
@@ -289,6 +310,15 @@ export class AdminService {
           subscriptionsTotal === 0
             ? 100
             : Math.round((subscriptionsWithWorkspace / subscriptionsTotal) * 100),
+      },
+      operations: {
+        openSupportTickets,
+        breachedSupportTickets,
+        failedJobs,
+        pendingChangeOrders,
+        securityEventsLast24h,
+        offlineDevicesTotal,
+        offlineDevicesActive,
       },
       generatedAt: now.toISOString(),
     }

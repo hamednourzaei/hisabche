@@ -1,7 +1,23 @@
 import { create } from 'zustand'
 
+export type SyncStoreOutcomeStatus =
+  'idle' | 'success' | 'partial' | 'failed' | 'running' | 'offline' | 'conflict' | 'no_coordinator'
+
+export interface SyncOutcomeSnapshot {
+  status: SyncStoreOutcomeStatus
+  ok: boolean
+  pushedCount?: number | undefined
+  pushFailureCount?: number | undefined
+  pulledCount?: number | undefined
+  conflictCount?: number | undefined
+  error?: string | undefined
+  updatedAt: number
+}
+
 interface SyncState {
   lastSyncedAt: number | null
+  lastSyncStatus: SyncStoreOutcomeStatus
+  lastSyncOutcome: SyncOutcomeSnapshot | null
   isOnline: boolean
   pendingCount: number
   isSyncing: boolean
@@ -10,6 +26,7 @@ interface SyncState {
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
 
   setLastSynced: (timestamp: number) => void
+  setSyncOutcome: (outcome: Omit<SyncOutcomeSnapshot, 'updatedAt'>) => void
   setOnline: (online: boolean) => void
   setPendingCount: (count: number) => void
   setSyncing: (syncing: boolean) => void
@@ -22,6 +39,8 @@ interface SyncState {
 
 export const useSyncStore = create<SyncState>((set) => ({
   lastSyncedAt: null,
+  lastSyncStatus: 'idle',
+  lastSyncOutcome: null,
   // ⚠️ A constant, not `navigator.onLine`. The server renders with this
   // initial state and hydration compares against it (zustand hands React
   // `getInitialState()` as the server snapshot). Node 22 HAS a global
@@ -37,6 +56,11 @@ export const useSyncStore = create<SyncState>((set) => ({
   saveStatus: 'idle',
 
   setLastSynced: (timestamp) => set({ lastSyncedAt: timestamp }),
+  setSyncOutcome: (outcome) =>
+    set({
+      lastSyncStatus: outcome.status,
+      lastSyncOutcome: { ...outcome, updatedAt: Date.now() },
+    }),
   setOnline: (online) => set({ isOnline: online }),
   setPendingCount: (count) => set({ pendingCount: count }),
   setSyncing: (syncing) => set({ isSyncing: syncing }),

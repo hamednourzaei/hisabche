@@ -1418,9 +1418,10 @@ export class MigrationService {
   }
 
   private toDefinition(plan: BomPlan, productId: string, booksCurrency: string) {
-    const validCurrency = (
-      (CURRENCY_CODES as readonly string[]).includes(booksCurrency) ? booksCurrency : 'AFN'
-    ) as (typeof CURRENCY_CODES)[number]
+    if (!(CURRENCY_CODES as readonly string[]).includes(booksCurrency)) {
+      throw new ValidationError(`Unsupported workspace currency: ${booksCurrency}`)
+    }
+    const validCurrency = booksCurrency as (typeof CURRENCY_CODES)[number]
     return saveProductionDefinitionSchema.parse({
       productId,
       currency: validCurrency,

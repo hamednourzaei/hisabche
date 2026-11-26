@@ -864,7 +864,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         }
       }
 
-      // Check intra-archive FK consistency where parent table exists inside archive
+      // Check intra-archive & DB FK consistency across all parent references (chunked, never silently skipped)
       const fkChecks: ReadonlyArray<{
         table: string
         field: string
@@ -875,46 +875,99 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         { table: 'payment_allocations', field: 'payment_id', targetTable: 'payments' },
         { table: 'journal_lines', field: 'journal_id', targetTable: 'journal_entries' },
       ]
+      let validationQueryFailed = false
+      const missingRefIdsByTarget = new Map<string, Set<string>>()
+      const unresolvedFkCandidates: Array<{
+        table: string
+        id: string
+        field: string
+        targetTable: string
+        targetId: string
+      }> = []
+
       for (const fk of fkChecks) {
         const rows = body.data[fk.table]
+        if (!Array.isArray(rows)) continue
         const targetIds = idsByTable.get(fk.targetTable)
-        if (!Array.isArray(rows) || !targetIds) continue
         for (const row of rows) {
           const refVal = row?.[fk.field]
-          if (typeof refVal === 'string' && refVal.trim() && !targetIds.has(refVal)) {
-            brokenForeignKeys.push({
-              table: fk.table,
-              id: String(row?.id ?? 'unknown'),
-              field: fk.field,
-              targetTable: fk.targetTable,
-              targetId: refVal,
-            })
+          if (typeof refVal !== 'string' || !refVal.trim()) continue
+          if (targetIds?.has(refVal)) continue
+          unresolvedFkCandidates.push({
+            table: fk.table,
+            id: String(row?.id ?? 'unknown'),
+            field: fk.field,
+            targetTable: fk.targetTable,
+            targetId: refVal,
+          })
+          let set = missingRefIdsByTarget.get(fk.targetTable)
+          if (!set) {
+            set = new Set<string>()
+            missingRefIdsByTarget.set(fk.targetTable, set)
           }
+          set.add(refVal)
         }
       }
 
-      // Check existing DB conflicts safely per valid table (limit ID query count to safe batch size)
+      const existingTargetIdsByTable = new Map<string, Set<string>>()
+      for (const [targetTable, refSet] of missingRefIdsByTarget.entries()) {
+        const found = new Set<string>()
+        existingTargetIdsByTable.set(targetTable, found)
+        const refs = [...refSet]
+        for (let i = 0; i < refs.length; i += 200) {
+          const chunk = refs.slice(i, i + 200)
+          const { data: parentRows, error: parentErr } = await supabase
+            .from(targetTable)
+            .select('id')
+            .eq('workspace_id', id)
+            .in('id', chunk)
+          if (parentErr) {
+            validationQueryFailed = true
+            break
+          }
+          if (Array.isArray(parentRows)) {
+            for (const p of parentRows as Array<{ id?: unknown }>) {
+              if (typeof p.id === 'string') found.add(p.id)
+            }
+          }
+        }
+      }
+      for (const cand of unresolvedFkCandidates) {
+        if (!existingTargetIdsByTable.get(cand.targetTable)?.has(cand.targetId)) {
+          brokenForeignKeys.push(cand)
+        }
+      }
+
+      // Check ALL existing DB ID conflicts across bounded 200-ID chunks; propagate DB errors cleanly
       let totalIncoming = 0
       let wouldSkip = 0
       for (const [tableName, idSet] of idsByTable.entries()) {
         totalIncoming += idSet.size
         if (idSet.size === 0) continue
-        const idList = [...idSet].slice(0, 500)
-        const { data: existingRows, error: exErr } = await supabase
-          .from(tableName)
-          .select('id')
-          .eq('workspace_id', id)
-          .in('id', idList)
-        if (!exErr && Array.isArray(existingRows)) {
-          for (const ex of existingRows as Array<{ id?: unknown }>) {
-            if (typeof ex.id === 'string' && idSet.has(ex.id)) {
-              existingConflicts.push({ table: tableName, id: ex.id })
-              wouldSkip += 1
+        const allIds = [...idSet]
+        for (let i = 0; i < allIds.length; i += 200) {
+          const idList = allIds.slice(i, i + 200)
+          const { data: existingRows, error: exErr } = await supabase
+            .from(tableName)
+            .select('id')
+            .eq('workspace_id', id)
+            .in('id', idList)
+          if (exErr) {
+            validationQueryFailed = true
+            break
+          }
+          if (Array.isArray(existingRows)) {
+            for (const ex of existingRows as Array<{ id?: unknown }>) {
+              if (typeof ex.id === 'string' && idSet.has(ex.id)) {
+                existingConflicts.push({ table: tableName, id: ex.id })
+                wouldSkip += 1
+              }
             }
           }
         }
       }
 
+      if (validationQueryFailed) errors.push('DATABASE_VALIDATION_QUERY_FAILED')
       if (unknownTables.length > 0) errors.push('UNKNOWN_BACKUP_TABLES')
       if (duplicateIds.length > 0) errors.push('DUPLICATE_ROW_IDS')
       if (missingIdTables.length > 0) errors.push('MISSING_ROW_ID')
@@ -925,6 +978,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       if (brokenForeignKeys.length > 0) errors.push('BROKEN_FOREIGN_KEY')
 
       const rejectedRows =
+        missingIdTables.length +
         duplicateIds.length +
         crossTenantRows.length +
         malformedTimestamps.length +
@@ -932,6 +986,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         invalidMoneyRows.length +
         brokenForeignKeys.length
       const wouldCreate = Math.max(0, totalIncoming - wouldSkip - rejectedRows)
+      const wouldUpdate = 0 // restore execution is disabled; conflicts would skip rather than overwrite
 
       return reply.send({
         data: {
@@ -950,8 +1005,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
           invalidCurrencies,
           invalidMoneyRows,
           brokenForeignKeys,
+          missingDependencyCount: brokenForeignKeys.length,
           existingConflicts,
           wouldCreate,
+          wouldUpdate,
           wouldSkip,
           rejectedRows,
           errors,

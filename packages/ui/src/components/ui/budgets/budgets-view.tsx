@@ -40,6 +40,7 @@ import type {
   SaveBudgetInput,
 } from '@hisabche/api'
 
+import { BUDGET_CURRENCIES, type CURRENCY_CODES } from '@hisabche/validation'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatSelectedMoney } from '../../../lib/money-display'
 import { formatMoney } from '@hisabche/formatting'
@@ -1239,8 +1240,8 @@ function CreateBudget({
   // refuses. The books currency is what the field starts on when it is one of
   // them; a gold business keeps nothing chosen until someone picks.
   const bookCurrency = useBookCurrency()
-  const enteringCodes = ['AFN', 'USD', 'PKR', 'IRR'] as const
-  type EnteringCode = (typeof enteringCodes)[number]
+  const enteringCodes = BUDGET_CURRENCIES
+  type EnteringCode = (typeof CURRENCY_CODES)[number]
   const isEnteringCode = (code: string | undefined): code is EnteringCode =>
     code !== undefined && (enteringCodes as readonly string[]).includes(code)
   const [chosenCurrency, setChosenCurrency] = useState<EnteringCode | null>(null)

@@ -576,6 +576,10 @@ server.addHook('preHandler', async (request, reply) => {
     // token, verified inside every route under `/api/wall/`, and those routes
     // reach aggregate counts only (admin-monitor.routes.ts).
     '/api/wall/',
+    // ⚠️ External payment provider webhooks authenticate via raw-body HMAC signatures
+    // (`verifyWebhookSignature`), never a user bearer JWT or client x-workspace-id.
+    '/api/webhooks/stripe',
+    '/api/payments/gateway/webhook/',
   ]
 
   // Exact-match public endpoints (no prefix matching: `/api/billing/plans` must

@@ -16,6 +16,7 @@ import { AiClient } from '../ai/ai-client'
 import { OAuthAppsClient } from '../oauth-apps/oauth-apps-client'
 import { MarketClient } from '../market/market-client'
 import { ApiUsagePanel } from './api-usage-panel'
+import { AdminCapabilitiesPanel } from '@/components/ops/admin-capabilities-panel'
 import { TabSections } from '@/components/admin-shell/tab-sections'
 import {
   useAdminFeatureFlags,
@@ -48,7 +49,23 @@ export function ProductClient() {
         onSelect={setTab}
       />
 
-      {tab === 'features' && <FeatureFlagsTabContent />}
+      {tab === 'features' && (
+        <TabSections
+          label={t('admin.hubs.product.features')}
+          sections={[
+            {
+              id: 'flags',
+              label: t('admin.insights.sections.featureFlags'),
+              render: () => <FeatureFlagsTabContent />,
+            },
+            {
+              id: 'capabilities',
+              label: t('admin.insights.sections.capabilities'),
+              render: () => <AdminCapabilitiesPanel />,
+            },
+          ]}
+        />
+      )}
       {tab === 'ai' && <AiClient />}
       {tab === 'oauth' && (
         <TabSections

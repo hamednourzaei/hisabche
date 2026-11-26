@@ -644,7 +644,7 @@ export const OFFLINE_ENDPOINT_MATRIX: Readonly<Record<string, EndpointRow>> = {
   'POST /payments/:x/processor-state': ['payment.record', 'available'],
   'GET /payments/:x/gateway-events': ['payment.record', 'available'],
   'GET /payments/gateway-reconciliation': ['payment.record', 'available'],
-  'POST /payments/:x/gateway-webhook': ['developer.keys', 'online_required'],
+  'POST /payments/:x/reconcile-settlement': ['payments.gateway_settlement', 'online_required'],
   'POST /payments/:x/cancel': ['payment.cancel', 'available'],
   'POST /payrolls': ['hr.payroll', 'available'],
   // Re-posting a paid salary to the ledger. The device books at the moment it settles

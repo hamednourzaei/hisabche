@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { tillMinorToMajor } from '@hisabche/validation'
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
@@ -61,17 +62,18 @@ export class CustomerGatewayService {
       return { replayed: true, event: existing }
     }
 
+    const majorAmount = tillMinorToMajor(params.amountMinor, params.currency)
     const payment = await this.paymentsService.recordPayment(tenancy, {
       direction: 'in',
       partyType: 'customer',
       partyId: params.customerId,
-      amount: params.amountMinor / 100,
+      amount: majorAmount,
       currency: params.currency,
       method: 'card',
       reference: `gw-${adapter.provider}-${params.externalEventId}`,
       entryDate: new Date().toISOString().slice(0, 10),
       allocations: params.invoiceId
-        ? [{ invoiceId: params.invoiceId, amount: params.amountMinor / 100 }]
+        ? [{ invoiceId: params.invoiceId, amount: majorAmount }]
         : undefined,
     })
 
@@ -79,13 +81,16 @@ export class CustomerGatewayService {
       .from('payment_gateway_events')
       .insert({
         workspace_id: tenancy.workspaceId,
-        provider: adapter.provider,
-        external_event_id: params.externalEventId,
-        invoice_id: params.invoiceId ?? null,
+        payment_id: payment.id,
+        to_state: 'captured',
+        gateway_name: adapter.provider,
+        external_ref: params.externalEventId,
+        event_id: params.externalEventId,
+        event_type: 'payment.captured',
         amount_minor: params.amountMinor,
         currency: params.currency,
-        payment_id: payment.id,
-        status: 'processed',
+        signature_verified: true,
+        processing_status: 'processed',
       })
       .select('*')
       .single()

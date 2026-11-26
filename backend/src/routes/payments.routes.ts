@@ -585,160 +585,104 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     },
   )
 
-  const webhookSchema = z
-    .object({
-      processorState: z.enum(['captured', 'declined', 'voided']),
-      gatewayName: z.string().trim().min(1).max(80),
-      externalRef: z.string().trim().min(1).max(120),
-      feeMinor: z.number().int().min(0).default(0),
-      amountMinor: z.number().int().min(0).optional(),
-      currency: z.string().trim().min(3).max(3).optional(),
-      reason: z.string().trim().max(300).optional(),
-    })
-    .strict()
-
-  // X10 Cryptographically verified payment gateway callback (HMAC-SHA256 + timingSafeEqual + replay dedup)
+  // X10 Authenticated internal settlement reconciliation for one payment (never uses webhook shortcut)
   fastify.post(
-    '/:id/gateway-webhook',
+    '/:id/reconcile-settlement',
     {
       preHandler: [authenticate, requireWorkspaceContext, requireCapability('payment.record')],
       schema: {
-        body: toJsonSchema(webhookSchema),
+        body: toJsonSchema(
+          z
+            .object({
+              reason: z.string().trim().max(300).optional(),
+            })
+            .strict()
+            .optional(),
+        ),
         response: { 200: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const secret = process.env.PAYMENT_WEBHOOK_SECRET
-        const sigHeader = String(request.headers['x-hisabche-signature'] ?? '').trim()
-        if (!secret || !sigHeader) {
-          return reply
-            .code(401)
-            .send({ error: 'GATEWAY_SIGNATURE_REQUIRED', code: 'GATEWAY_SIGNATURE_REQUIRED' })
-        }
         const { id } = request.params as { id: string }
-        const body = webhookSchema.parse(request.body)
-        const { createHmac, timingSafeEqual } = await import('node:crypto')
-        const canonical = `${id}:${body.processorState}:${body.externalRef}:${body.feeMinor}`
-        const expectedHex = createHmac('sha256', secret).update(canonical).digest('hex')
-        const gotBuf = Buffer.from(sigHeader, 'utf8')
-        const expBuf = Buffer.from(expectedHex, 'utf8')
-        if (gotBuf.length !== expBuf.length || !timingSafeEqual(gotBuf, expBuf)) {
-          return reply
-            .code(401)
-            .send({ error: 'GATEWAY_SIGNATURE_INVALID', code: 'GATEWAY_SIGNATURE_INVALID' })
-        }
-
+        const wsId = request.tenancy.workspaceId
         const { data: payment, error: pErr } = await supabase
           .from('payments')
-          .select('id, method, currency, amount')
+          .select('id, method, currency, amount, status')
           .eq('id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
+          .eq('workspace_id', wsId)
           .maybeSingle()
         if (pErr) throw new DatabaseError('Failed to verify payment', pErr)
         if (!payment) throw new NotFoundError('Payment')
 
-        if (
-          body.currency &&
-          body.currency.trim().toUpperCase() !== String(payment.currency).toUpperCase()
-        ) {
-          throw new ConflictError('GATEWAY_CURRENCY_MISMATCH')
-        }
-        if (body.amountMinor !== undefined && Number.isFinite(Number(payment.amount))) {
-          if (body.amountMinor !== Number(payment.amount)) {
-            throw new ConflictError('GATEWAY_AMOUNT_MISMATCH')
-          }
-        }
-
-        // Deduplicate exact gateway webhook replay (same payment, externalRef, target state)
-        const { data: replayedEvent, error: repErr } = await supabase
-          .from('payment_gateway_events')
-          .select('id')
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .eq('payment_id', id)
-          .eq('external_ref', body.externalRef)
-          .eq('to_state', body.processorState)
-          .maybeSingle()
-        if (repErr) throw new DatabaseError('Failed to check webhook replay', repErr)
-
-        const { data: existing, error: eErr } = await supabase
+        const { data: gwState, error: gErr } = await supabase
           .from('payment_gateway_states')
           .select('*')
           .eq('payment_id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
+          .eq('workspace_id', wsId)
           .maybeSingle()
-        if (eErr) throw new DatabaseError('Failed to read processor state', eErr)
+        if (gErr) throw new DatabaseError('Failed to load gateway state', gErr)
 
-        if (replayedEvent && existing) {
-          return reply.send({
-            data: {
-              paymentId: existing.payment_id,
-              processorState: existing.processor_state,
-              signatureVerified: true,
-              externalRef: existing.external_ref,
-              replay: true,
-            },
-          })
-        }
+        const { data: journalEntry, error: jErr } = await supabase
+          .from('journal_entries')
+          .select('id, status')
+          .eq('workspace_id', wsId)
+          .eq('source_type', 'payment')
+          .eq('source_id', id)
+          .eq('status', 'posted')
+          .maybeSingle()
+        if (jErr) throw new DatabaseError('Failed to verify payment ledger entry', jErr)
 
-        const current =
-          existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
-        if (
-          current !== body.processorState &&
-          !(ALLOWED_PROCESSOR_FSM[current] ?? []).includes(body.processorState)
-        ) {
-          throw new ConflictError('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')
-        }
+        const processorState =
+          gwState?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline')
+        const ledgerPosted = Boolean(journalEntry)
+        const settlementException =
+          (processorState === 'captured' && payment.status === 'posted' && !ledgerPosted) ||
+          ((processorState === 'declined' || processorState === 'voided') && ledgerPosted)
 
-        const now = new Date().toISOString()
-        const payload = {
-          workspace_id: request.tenancy.workspaceId,
-          payment_id: id,
-          processor_state: body.processorState,
-          gateway_name: body.gatewayName,
-          external_ref: body.externalRef,
-          fee_minor: body.feeMinor,
-          currency: payment.currency,
-          reason: body.reason ?? null,
-          updated_by: request.tenancy.userId,
-          updated_at: now,
-        }
-        const { data: saved, error: wErr } = existing
-          ? await supabase
-              .from('payment_gateway_states')
-              .update(payload)
-              .eq('id', existing.id)
-              .eq('workspace_id', request.tenancy.workspaceId)
-              .select('*')
-              .single()
-          : await supabase.from('payment_gateway_states').insert(payload).select('*').single()
-        if (wErr) throw new DatabaseError('Failed to save webhook processor state', wErr)
+        const settlementStatus = settlementException
+          ? 'reconciliation_exception'
+          : processorState === 'captured'
+            ? ledgerPosted
+              ? 'captured'
+              : 'settlement_pending'
+            : processorState === 'pending_capture'
+              ? 'pending'
+              : processorState === 'declined'
+                ? 'failed'
+                : processorState === 'voided'
+                  ? 'cancelled'
+                  : 'settlement_pending'
 
-        const { error: evErr } = await supabase.from('payment_gateway_events').insert({
-          workspace_id: request.tenancy.workspaceId,
-          payment_id: id,
-          from_state: current,
-          to_state: body.processorState,
-          gateway_name: body.gatewayName,
-          external_ref: body.externalRef,
-          fee_minor: body.feeMinor,
-          signature_verified: true,
-          reason: body.reason ?? 'HMAC-SHA256 verified webhook',
-          actor_id: request.tenancy.userId,
+        const { error: auditErr } = await supabase.from('audit_logs').insert({
+          workspace_id: wsId,
+          user_id: request.tenancy.userId,
+          action: 'payment.reconcile_settlement',
+          entity_type: 'payment',
+          entity_id: id,
+          details: {
+            processorState,
+            ledgerPosted,
+            settlementStatus,
+            reconciled: !settlementException && processorState !== 'queued_offline',
+          },
         })
-        if (evErr) throw new DatabaseError('Failed to append verified gateway event', evErr)
+        if (auditErr)
+          throw new DatabaseError('Failed to write settlement reconciliation audit', auditErr)
 
         return reply.send({
           data: {
-            paymentId: saved.payment_id,
-            processorState: saved.processor_state,
-            signatureVerified: true,
-            externalRef: saved.external_ref,
-            replay: false,
+            paymentId: id,
+            currency: payment.currency,
+            processorState,
+            ledgerPosted,
+            settlementStatus,
+            reconciled: !settlementException && processorState !== 'queued_offline',
+            checkedAt: new Date().toISOString(),
           },
         })
       } catch (err) {
-        return fail(reply, err, 'Failed to process gateway webhook')
+        return fail(reply, err, 'Failed to reconcile payment settlement')
       }
     },
   )

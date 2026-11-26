@@ -11,7 +11,12 @@ import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import type { TenancyContext } from './tenancy.service'
 import { baseCurrencyOf } from './base-currency'
+import { currencySign, type KnownCurrency } from '@hisabche/formatting'
 import type { DbRow } from '../utils/db-row'
+
+function unitLabel(currency: string): string {
+  return currencySign(currency as KnownCurrency, 'fa') || currency
+}
 
 // ✅ Type for response
 interface AIResponse {
@@ -90,30 +95,39 @@ export class AIService {
     ).toISOString()
 
     // ✅ سه کوئری موازی
-    const [todayResult, monthResult, lastMonthResult] = await Promise.all([
+    const [booksCurrency, todayResult, monthResult, lastMonthResult] = await Promise.all([
+      baseCurrencyOf(workspaceId),
       supabase
         .from('invoices')
-        .select('total, status')
+        .select('total, status, currency')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
         .gte('date', today),
       supabase
         .from('invoices')
-        .select('total')
+        .select('total, currency')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
         .gte('date', firstOfMonth)
         .eq('status', 'paid'),
       supabase
         .from('invoices')
-        .select('total')
+        .select('total, currency')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
         .gte('date', firstOfLastMonth)
         .lt('date', firstOfMonth)
         .eq('status', 'paid'),
     ])
 
-    const todayInvoices = todayResult.data || []
-    const monthInvoices = monthResult.data || []
-    const lastMonthInvoices = lastMonthResult.data || []
+    const sameBooks = (i: { currency?: string | null }) =>
+      !i.currency || i.currency === booksCurrency
+    const todayInvoices = (todayResult.data || []).filter(sameBooks)
+    const monthInvoices = (monthResult.data || []).filter(sameBooks)
+    const lastMonthInvoices = (lastMonthResult.data || []).filter(sameBooks)
 
     const todayTotal = todayInvoices.reduce((s: number, i) => s + Number(i.total), 0)
     const todayPaid = todayInvoices
@@ -131,8 +145,9 @@ export class AIService {
           ? `⬇️ ${Math.abs(growth).toFixed(1)}% کاهش`
           : 'بدون تغییر'
 
-    let answer = `فروش امروز: ${todayTotal.toLocaleString()} افغانی (${todayPaid.toLocaleString()} پرداخت شده). `
-    answer += `فروش این ماه: ${monthTotal.toLocaleString()} افغانی. `
+    const unit = unitLabel(booksCurrency)
+    let answer = `فروش امروز: ${todayTotal.toLocaleString()} ${unit} (${todayPaid.toLocaleString()} پرداخت شده). `
+    answer += `فروش این ماه: ${monthTotal.toLocaleString()} ${unit}. `
     answer += `نسبت به ماه قبل: ${growthText}.`
 
     return {
@@ -140,7 +155,7 @@ export class AIService {
       confidence: 0.95,
       sources: [{ type: 'invoices', description: 'فاکتورهای امروز و ماه جاری' }],
       suggestions: ['مشاهده گزارش فروش کامل', 'مقایسه با ماه گذشته', 'بهترین محصولات فروش'],
-      data: { todayTotal, todayPaid, monthTotal, lastMonthTotal, growth },
+      data: { currency: booksCurrency, todayTotal, todayPaid, monthTotal, lastMonthTotal, growth },
     }
   }
 
@@ -202,7 +217,8 @@ export class AIService {
   // ─── Customer Query ──────────────────────────────────────
   private async handleCustomerQuery(workspaceId: string): Promise<AIResponse> {
     // ✅ دو کوئری همزمان
-    const [customersResult, unpaidResult] = await Promise.all([
+    const [booksCurrency, customersResult, unpaidResult] = await Promise.all([
+      baseCurrencyOf(workspaceId),
       supabase
         .from('customers')
         .select('id, full_name, opening_balance, phone')
@@ -210,13 +226,17 @@ export class AIService {
         .eq('is_active', true),
       supabase
         .from('invoices')
-        .select('customer_id, total, paid_amount')
+        .select('customer_id, total, paid_amount, currency')
         .eq('workspace_id', workspaceId)
+        .eq('type', 'sale')
+        .neq('status', 'cancelled')
         .neq('status', 'paid'),
     ])
 
     const customers = customersResult.data || []
-    const unpaidInvoices = unpaidResult.data || []
+    const unpaidInvoices = (unpaidResult.data || []).filter(
+      (inv) => !inv.currency || inv.currency === booksCurrency,
+    )
 
     const totalCustomers = customers.length
 
@@ -242,9 +262,10 @@ export class AIService {
       .sort((a, b) => b.totalDebt + b.openingBalance - (a.totalDebt + a.openingBalance))
       .slice(0, 5)
 
+    const unit = unitLabel(booksCurrency)
     let answer = `تعداد مشتریان فعال: ${totalCustomers}. `
     if (totalUnpaid > 0) {
-      answer += `مجموع مطالبات پرداخت‌نشده: ${totalUnpaid.toLocaleString()} افغانی. `
+      answer += `مجموع مطالبات پرداخت‌نشده: ${totalUnpaid.toLocaleString()} ${unit}. `
     }
     if (topDebtors.length > 0) {
       const names = topDebtors
@@ -260,7 +281,12 @@ export class AIService {
       confidence: 0.9,
       sources: [{ type: 'customers', description: 'مشتریان و فاکتورهای باز' }],
       suggestions: ['مشاهده لیست بدهکاران', 'ارسال یادآوری پرداخت', 'گزارش مشتریان'],
-      data: { totalCustomers, totalUnpaid, topDebtorsCount: topDebtors.length },
+      data: {
+        currency: booksCurrency,
+        totalCustomers,
+        totalUnpaid,
+        topDebtorsCount: topDebtors.length,
+      },
     }
   }
 
@@ -292,7 +318,8 @@ export class AIService {
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
     const today = now.toISOString().slice(0, 10)
 
-    const [statement, summary] = await Promise.all([
+    const [booksCurrency, statement, summary] = await Promise.all([
+      baseCurrencyOf(ctx.workspaceId),
       this.accounting.getIncomeStatement(ctx, firstOfMonth, today),
       this.insights.getPeriodSummary(ctx, firstOfMonth, today),
     ])
@@ -308,8 +335,9 @@ export class AIService {
 
     const statusEmoji = netProfit >= 0 ? '🟢' : '🔴'
     const statusText = netProfit >= 0 ? 'سود' : 'زیان'
+    const unit = unitLabel(booksCurrency)
 
-    let answer = `${statusEmoji} ${statusText} خالص این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. `
+    let answer = `${statusEmoji} ${statusText} خالص این ماه: ${Math.abs(netProfit).toLocaleString()} ${unit}. `
     answer += `درآمد: ${revenue.toLocaleString()}، هزینه: ${expenses.toLocaleString()}. `
     // Revenue is not profit: with part of the cost unrecorded there is no
     // gross profit to state.
@@ -368,7 +396,10 @@ export class AIService {
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
     const today = now.toISOString().slice(0, 10)
 
-    const statement = await this.accounting.getIncomeStatement(ctx, firstOfMonth, today)
+    const [booksCurrency, statement] = await Promise.all([
+      baseCurrencyOf(ctx.workspaceId),
+      this.accounting.getIncomeStatement(ctx, firstOfMonth, today),
+    ])
 
     // `statement.expenses` is the list of expense ACCOUNTS with their period
     // balance — the same rows the income statement renders.
@@ -378,8 +409,9 @@ export class AIService {
       .sort((a, b) => b.amount - a.amount)
 
     const totalExpenses = statement.totalExpenses
+    const unit = unitLabel(booksCurrency)
 
-    let answer = `مجموع هزینه‌های این ماه: ${totalExpenses.toLocaleString()} افغانی. `
+    let answer = `مجموع هزینه‌های این ماه: ${totalExpenses.toLocaleString()} ${unit}. `
     if (lines.length > 0) {
       answer += `بزرگ‌ترین سرفصل‌ها: ${lines
         .slice(0, 5)

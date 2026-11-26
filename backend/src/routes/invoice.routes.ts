@@ -27,7 +27,12 @@ import { PlanLimitError } from '../services/plan-limits.service'
 import { majorToTillMinor } from '@hisabche/validation'
 import { InvoiceSellerNotInstalledError, salesBySeller } from '../services/invoice-seller'
 import { errorText } from '../utils/error-text'
-import type { CreateInvoice, InvoiceFilters, UpdateInvoice } from '@hisabche/validation'
+import {
+  CURRENCY_CODES,
+  type CreateInvoice,
+  type InvoiceFilters,
+  type UpdateInvoice,
+} from '@hisabche/validation'
 
 // The create body as the clients send it: the schema's own fields, plus the
 // snake_case spellings older clients use for lines and line components. The
@@ -105,7 +110,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           customerId: q.customerId || undefined,
           supplierId: q.supplierId || undefined,
           partyId: q.partyId || undefined,
-          currency: (q.currency as 'AFN' | 'USD' | 'PKR' | 'IRR') || undefined,
+          currency: (q.currency as (typeof CURRENCY_CODES)[number]) || undefined,
           dateFrom: q.dateFrom || undefined,
           dateTo: q.dateTo || undefined,
           minTotal: q.minTotal ? Number(q.minTotal) : undefined,

@@ -10,6 +10,7 @@ import {
   isMissingIdempotencySupport,
 } from '../../utils/client-request'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
+import { baseCurrencyOf } from '../base-currency'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
@@ -139,7 +140,7 @@ export function domainErrorCode(error: unknown): string | null {
   return /\b([A-Z][A-Z_]{6,})\b/.exec(message)?.[1] ?? null
 }
 
-function mapPayment(value: unknown): PaymentRow {
+function mapPayment(value: unknown, fallbackCurrency = ''): PaymentRow {
   const raw = rowOf(value) ?? {}
   return {
     id: String(raw.id),
@@ -149,7 +150,7 @@ function mapPayment(value: unknown): PaymentRow {
     partyType: raw.party_type as PartyType,
     partyId: rowText(raw.party_id),
     amount: Number(raw.amount) || 0,
-    currency: rowText(raw.currency) ?? 'AFN',
+    currency: rowText(raw.currency) ?? fallbackCurrency,
     method: rowText(raw.method) ?? 'cash',
     entryDate: String(raw.entry_date ?? '').slice(0, 10),
     reference: rowText(raw.reference) ?? '',
@@ -188,7 +189,11 @@ export class PaymentsRepository {
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch payments', error)
-    return (data ?? []).map(mapPayment)
+    const rows = data ?? []
+    const fallbackCurrency = rows.some((r) => !rowText(rowOf(r)?.currency))
+      ? await baseCurrencyOf(workspaceId)
+      : ''
+    return rows.map((r) => mapPayment(r, fallbackCurrency))
   }
 
   /** The payment a keyed request already recorded, in this workspace. */
@@ -234,7 +239,11 @@ export class PaymentsRepository {
       .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to fetch payment', error)
-    return data ? mapPayment(data) : null
+    if (!data) return null
+    const fallbackCurrency = !rowText(rowOf(data)?.currency)
+      ? await baseCurrencyOf(workspaceId)
+      : ''
+    return mapPayment(data, fallbackCurrency)
   }
 
   /**

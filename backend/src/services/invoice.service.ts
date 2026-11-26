@@ -4680,7 +4680,8 @@ export class InvoiceService {
 
     const type = String(invoice?.type ?? 'sale')
     const rawItems = rowsOf(invoice.items ?? invoice.invoice_items).map(storedLine)
-    const items = this.withDerivedLineTotals(rawItems, String(invoice?.currency ?? 'AFN'))
+    const booksCurrency = String(invoice?.currency || (await baseCurrencyOf(ctx.workspaceId)))
+    const items = this.withDerivedLineTotals(rawItems, booksCurrency)
     const date = String(invoice?.date ?? '')
 
     const uncosted: string[] = []
@@ -4949,7 +4950,8 @@ export class InvoiceService {
     // invoice with no effect, which is the exact failure this whole gate
     // exists to prevent.
     const rawItems = rowsOf(raw.invoice_items ?? raw.items).map(storedLine)
-    const items = this.withDerivedLineTotals(rawItems, String(raw.currency ?? 'AFN'))
+    const fallbackCurrency = String(raw.currency || (await baseCurrencyOf(ctx.workspaceId)))
+    const items = this.withDerivedLineTotals(rawItems, fallbackCurrency)
 
     const exchangeRate = await this.storedExchangeRate(ctx.workspaceId, invoiceId)
     const cogs = await this.applyCosting(

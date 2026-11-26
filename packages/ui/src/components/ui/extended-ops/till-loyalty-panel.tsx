@@ -15,9 +15,9 @@ import {
   usePaymentGatewayReconciliation,
   usePaymentProcessorState,
   usePosZReport,
+  useReconcilePaymentSettlement,
   useRedeemGiftCard,
   useStoreCredit,
-  useSubmitGatewayWebhook,
   useTransitionPaymentProcessorState,
 } from '@hisabche/api'
 import { useDeviceStore } from '@hisabche/store'
@@ -59,7 +59,7 @@ export function TillLoyaltyPanel() {
   const gatewayEvents = usePaymentGatewayEvents(paymentIdInput.trim() || null)
   const gatewayReconciliation = usePaymentGatewayReconciliation()
   const transitionProcessor = useTransitionPaymentProcessorState()
-  const submitWebhook = useSubmitGatewayWebhook()
+  const reconcileSettlement = useReconcilePaymentSettlement()
 
   const currency = bookCurrency || ''
 
@@ -181,16 +181,13 @@ export function TillLoyaltyPanel() {
                 type="button"
                 variant="outline"
                 className="min-h-[44px] w-full"
-                disabled={!paymentIdInput.trim() || submitWebhook.isPending}
-                onClick={() =>
-                  submitWebhook.mutate({
-                    paymentId: paymentIdInput.trim(),
-                    processorState: 'captured',
-                    gatewayName: gatewayName.trim() || 'POS',
-                    externalRef: externalRef.trim() || 'REF',
-                    signature: '',
-                  })
-                }
+                disabled={!paymentIdInput.trim() || reconcileSettlement.isPending}
+                onClick={() => {
+                  reconcileSettlement.mutate({ paymentId: paymentIdInput.trim() })
+                  void processorState.refetch()
+                  void gatewayEvents.refetch()
+                  void gatewayReconciliation.refetch()
+                }}
               >
                 {t('till.processorFetchBtn')}
               </Button>
@@ -199,15 +196,17 @@ export function TillLoyaltyPanel() {
                 data={{
                   state: transitionProcessor.data ?? processorState.data ?? null,
                   events: gatewayEvents.data ?? null,
-                  webhook: submitWebhook.data ?? null,
+                  settlement: reconcileSettlement.data ?? null,
                   reconciliation: gatewayReconciliation.data ?? null,
                 }}
                 error={
                   transitionProcessor.error
                     ? apiErrorMessage(transitionProcessor.error, t('common.error'))
-                    : processorState.error
-                      ? apiErrorMessage(processorState.error, t('common.error'))
-                      : null
+                    : reconcileSettlement.error
+                      ? apiErrorMessage(reconcileSettlement.error, t('common.error'))
+                      : processorState.error
+                        ? apiErrorMessage(processorState.error, t('common.error'))
+                        : null
                 }
               />
             </div>

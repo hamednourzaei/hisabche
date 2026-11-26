@@ -13,6 +13,7 @@ import { generateDraft } from '../services/blog/draft.service'
 import { runQualityGate } from '../services/blog/quality-gate.service'
 import { suggestInternalLinks } from '../services/blog/internal-links.service'
 import type { TenancyContext } from '../services/tenancy.service'
+import { sweepSupportTicketSlas } from '../services/workflow/support-sla.service'
 import { errorText } from '../utils/error-text'
 
 const jobService = new JobService()
@@ -23,11 +24,8 @@ async function checkOverdueInvoices() {
 
   const { data: invoices } = await supabase
     .from('invoices')
-    // ⚠️ The invoice's OWN workspace. This used to look up "the first workspace
-    // this user belongs to" — one extra query per invoice (N+1), and for a
-    // person in two businesses, a notification filed under the wrong one.
-    // workspace_id is the security boundary (راهنمای سشن §۱٫۱).
-    .select('id, invoice_number, total, user_id, due_date, workspace_id')
+    // ⚠️ The invoice's OWN workspace (and its OWN currency — never hardcoded currency!).
+    .select('id, invoice_number, total, currency, user_id, due_date, workspace_id')
     .lt('due_date', today)
     .eq('status', 'pending')
     .limit(50)
@@ -38,11 +36,12 @@ async function checkOverdueInvoices() {
     try {
       const workspaceId = inv.workspace_id as string | null
       if (!workspaceId) continue
+      const curLabel = inv.currency ? String(inv.currency).toUpperCase() : ''
 
       await notificationService.create(workspaceId, {
         user_id: inv.user_id,
         title: 'فاکتور سررسید شده',
-        body: `فاکتور #${inv.invoice_number} به مبلغ ${inv.total} افغانی سررسید شده است.`,
+        body: `فاکتور #${inv.invoice_number} به مبلغ ${inv.total}${curLabel ? ` ${curLabel}` : ''} سررسید شده است.`,
         type: 'warning',
         action_url: `/invoices/${inv.id}`,
         entity_type: 'invoice',
@@ -216,10 +215,33 @@ async function runContentDraft(job: HandlerJob): Promise<void> {
   }
 }
 
+async function runSupportSlaSweep(job?: HandlerJob): Promise<void> {
+  const payload = (job?.payload ?? {}) as Record<string, unknown>
+  const workspaceId = typeof payload.workspaceId === 'string' ? payload.workspaceId : null
+  await sweepSupportTicketSlas({
+    workspaceId,
+    correlationId: job?.id ?? `sched-sla-${Date.now()}`,
+  })
+}
+
+export async function sweepSupportSlasPeriodic(): Promise<void> {
+  try {
+    const res = await sweepSupportTicketSlas({ correlationId: `periodic-sla-${Date.now()}` })
+    if (res.escalatedTicketIds.length > 0 || res.notificationFailures > 0) {
+      console.log(
+        `[support-sla] escalated=${res.escalatedTicketIds.length} notif_failures=${res.notificationFailures}`,
+      )
+    }
+  } catch (err) {
+    console.error('[support-sla] periodic sweep failed:', err)
+  }
+}
+
 const JOB_HANDLERS: Record<string, JobHandler> = {
   CHECK_OVERDUE_INVOICES: checkOverdueInvoices,
   CONTENT_RESEARCH: runContentResearch,
   CONTENT_DRAFT: runContentDraft,
+  SWEEP_SUPPORT_SLAS: runSupportSlaSweep,
 }
 
 /**
@@ -357,11 +379,13 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
   const webhookInterval = setInterval(() => void pollWebhooks(), WEBHOOK_POLL_MS)
   const purgeInterval = setInterval(() => void purgeApiRequestLogs(), REQUEST_LOG_PURGE_MS)
   const orderExpiryInterval = setInterval(() => void expirePendingOrders(), ORDER_EXPIRY_MS)
+  const slaSweepInterval = setInterval(() => void sweepSupportSlasPeriodic(), 5 * 60_000)
   fastify.addHook('onClose', () => {
     clearInterval(interval)
     clearInterval(emailInterval)
     clearInterval(webhookInterval)
     clearInterval(purgeInterval)
     clearInterval(orderExpiryInterval)
+    clearInterval(slaSweepInterval)
   })
 }

@@ -60,7 +60,7 @@ const LEDGER: Record<string, Record<string, Way>> = {
     '/': unproven('POST /:id/cancel'),
     '/:id/cancel': inert,
     '/:id/processor-state': inert,
-    '/:id/gateway-webhook': inert,
+    '/:id/reconcile-settlement': inert,
     '/cheques': unproven('POST /cheques/:id/transition'),
     '/cheques/:id/transition': inert,
   },

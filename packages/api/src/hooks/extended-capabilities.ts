@@ -631,8 +631,10 @@ export function useWorkspaceRestorePreview() {
             targetTable: string
             targetId: string
           }>
+          missingDependencyCount?: number
           existingConflicts: Array<{ table: string; id: string }>
           wouldCreate: number
+          wouldUpdate?: number
           wouldSkip: number
           rejectedRows: number
           errors: string[]
@@ -911,27 +913,22 @@ export function usePaymentGatewayReconciliation() {
   })
 }
 
-export function useSubmitGatewayWebhook() {
+export function useReconcilePaymentSettlement() {
   return useMutation({
-    mutationFn: async (input: {
-      paymentId: string
-      processorState: 'captured' | 'declined' | 'voided'
-      gatewayName: string
-      externalRef: string
-      feeMinor?: number
-      signature: string
-    }) => {
+    mutationFn: async (input: { paymentId: string; reason?: string | undefined }) => {
       const { data } = await apiClient.post<{
-        data: { paymentId: string; processorState: string; signatureVerified: boolean }
+        data: {
+          paymentId: string
+          currency: string
+          processorState: string
+          ledgerPosted: boolean
+          settlementStatus: string
+          reconciled: boolean
+          checkedAt: string
+        }
       }>(
-        `/payments/${input.paymentId}/gateway-webhook`,
-        {
-          processorState: input.processorState,
-          gatewayName: input.gatewayName,
-          externalRef: input.externalRef,
-          feeMinor: input.feeMinor ?? 0,
-        },
-        { headers: { 'x-hisabche-signature': input.signature } },
+        `/payments/${input.paymentId}/reconcile-settlement`,
+        input.reason ? { reason: input.reason } : {},
       )
       return data.data
     },
@@ -941,7 +938,30 @@ export function useSubmitGatewayWebhook() {
 export interface CrossCoreReconciliationResult {
   workspaceId: string
   checkedAt: string
+  status?: 'balanced' | 'unbalanced'
   balanced: boolean
+  debits?: number
+  credits?: number
+  unallocated?: number
+  underallocated?: number
+  overallocated?: number
+  orphaned?: number
+  mismatched?: number
+  missingPostings?: number
+  duplicatePostings?: number
+  advanceLiabilityMismatch?: number
+  currencyMismatch?: number
+  roundingDifference?: number
+  reversalMismatch?: number
+  exceptions?: ReadonlyArray<{
+    code: string
+    severity: 'error' | 'warning'
+    currency: string | null
+    entityType: string
+    entityId: string
+    amountMinor: number
+    message: string
+  }>
   orphanAllocationsCount: number
   perCurrency: ReadonlyArray<{
     currency: string

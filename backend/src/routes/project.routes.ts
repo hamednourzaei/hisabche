@@ -591,6 +591,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
             deltaMinor: z.number().int(),
             estimatedCostDeltaMinor: z.number().int().default(0),
             approved: z.boolean().default(false),
+            expectedVersion: z.number().int().min(1).optional(),
+            reason: z.string().trim().max(500).optional(),
           })
           .strict()
           .parse(request.body)
@@ -610,79 +612,58 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const projectCurrency =
           projRecord.currency || (await baseCurrencyOf(request.tenancy.workspaceId))
         const scale = budgetScaleForCurrency(projectCurrency)
-        const originalBudgetMinor =
-          projRecord.budget !== null &&
-          projRecord.budget !== undefined &&
-          Number.isFinite(Number(projRecord.budget))
-            ? Math.round(Number(projRecord.budget) * scale)
-            : (body.originalBudgetMinor ?? 0)
-
         const idemKey = readClientRequestId(request)
-        if (idemKey) {
-          const { data: existing } = await supabase
-            .from('project_change_orders')
-            .select('*')
-            .eq('workspace_id', request.tenancy.workspaceId)
-            .eq('idempotency_key', idemKey)
-            .maybeSingle()
-          if (existing) return reply.code(200).send({ data: existing, replay: true })
+
+        const rpcRes = await supabase.rpc('create_project_change_order', {
+          p_workspace_id: request.tenancy.workspaceId,
+          p_project_id: id,
+          p_actor_id: request.tenancy.userId,
+          p_title: body.title,
+          p_delta_minor: body.deltaMinor,
+          p_estimated_cost_delta_minor: body.estimatedCostDeltaMinor,
+          p_approved: body.approved,
+          p_scale: scale,
+          p_idempotency_key: idemKey ?? null,
+          p_expected_version: body.expectedVersion ?? null,
+          p_reason: body.reason ?? null,
+        })
+        if (rpcRes.error || !rpcRes.data) {
+          const msg = String(rpcRes.error?.message ?? '')
+          if (msg.includes('PROJECT_NOT_FOUND')) {
+            return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+          }
+          if (msg.includes('REVISED_BUDGET_CANNOT_BE_NEGATIVE')) {
+            return reply
+              .code(400)
+              .send({ error: 'REVISED_BUDGET_CANNOT_BE_NEGATIVE', code: 'BUDGET_NEGATIVE' })
+          }
+          if (msg.includes('STALE_PROJECT_VERSION_CONFLICT')) {
+            return reply.code(409).send({
+              error: 'STALE_PROJECT_VERSION_CONFLICT',
+              code: 'STALE_PROJECT_VERSION_CONFLICT',
+            })
+          }
+          throw rpcRes.error ?? new Error('ATOMIC_CHANGE_ORDER_CREATE_FAILED')
         }
 
-        if (originalBudgetMinor + body.deltaMinor < 0) {
-          return reply
-            .code(400)
-            .send({ error: 'REVISED_BUDGET_CANNOT_BE_NEGATIVE', code: 'BUDGET_NEGATIVE' })
-        }
-        const revisedBudgetMinor = originalBudgetMinor + body.deltaMinor
-        const netMarginDeltaMinor = body.deltaMinor - body.estimatedCostDeltaMinor
-        const status = body.approved ? 'approved' : 'pending_approval'
-        const now = new Date().toISOString()
-        const { data: created, error } = await supabase
-          .from('project_change_orders')
-          .insert({
-            workspace_id: request.tenancy.workspaceId,
-            project_id: id,
-            title: body.title,
-            original_budget_minor: originalBudgetMinor,
-            delta_minor: body.deltaMinor,
-            revised_budget_minor: revisedBudgetMinor,
-            estimated_cost_delta_minor: body.estimatedCostDeltaMinor,
-            net_margin_delta_minor: netMarginDeltaMinor,
-            status,
-            idempotency_key: idemKey ?? null,
-            created_by: request.tenancy.userId,
-            decided_by: body.approved ? request.tenancy.userId : null,
-            decided_at: body.approved ? now : null,
-          })
-          .select()
-          .single()
-        if (error) throw error
-        if (body.approved) {
-          const { error: budgetErr } = await supabase
-            .from('projects')
-            .update({ budget: revisedBudgetMinor / scale, updated_at: now })
-            .eq('id', id)
-            .eq('workspace_id', request.tenancy.workspaceId)
-          if (budgetErr) {
-            await supabase
-              .from('project_change_orders')
-              .update({ status: 'pending_approval', decided_by: null, decided_at: null })
-              .eq('id', (created as { id: string }).id)
-              .eq('workspace_id', request.tenancy.workspaceId)
-            throw budgetErr
-          }
-        }
-        return reply.code(201).send({
+        const created = rpcRes.data as Record<string, unknown>
+        const wasReplay =
+          Boolean(idemKey) &&
+          String(created.created_at ?? '') !== '' &&
+          Date.now() - new Date(String(created.created_at)).getTime() > 500
+        return reply.code(wasReplay ? 200 : 201).send({
           data: {
             ...created,
             projectId: id,
             currency: projectCurrency,
-            originalBudgetMinor,
-            deltaMinor: body.deltaMinor,
-            revisedBudgetMinor,
-            netMarginDeltaMinor,
-            status,
+            originalBudgetMinor: Number(created.original_budget_minor ?? 0),
+            deltaMinor: Number(created.delta_minor ?? body.deltaMinor),
+            revisedBudgetMinor: Number(created.revised_budget_minor ?? 0),
+            netMarginDeltaMinor: Number(created.net_margin_delta_minor ?? 0),
+            status: String(created.status ?? (body.approved ? 'approved' : 'pending_approval')),
+            version: Number(created.project_version_at_decision ?? 1),
           },
+          ...(wasReplay ? { replay: true } : {}),
         })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to record project change order')
@@ -699,108 +680,85 @@ export async function projectRoutes(fastify: FastifyInstance) {
         const { id, orderId } = z
           .object({ id: z.string().uuid(), orderId: z.string().uuid() })
           .parse(request.params)
-        const { decision, reason, expectedOriginalBudgetMinor } = z
+        const { decision, reason, expectedOriginalBudgetMinor, expectedVersion } = z
           .object({
             decision: z.enum(['approved', 'rejected']),
             reason: z.string().trim().max(500).optional(),
             expectedOriginalBudgetMinor: z.number().int().min(0).optional(),
+            expectedVersion: z.number().int().min(1).optional(),
           })
           .strict()
           .parse(request.body)
         const { supabase } = await import('../db')
         const { data: proj, error: projErr } = await supabase
           .from('projects')
-          .select('id, budget, currency')
+          .select('id, currency')
           .eq('id', id)
           .eq('workspace_id', request.tenancy.workspaceId)
           .maybeSingle()
         if (projErr) throw projErr
         if (!proj)
           return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
-        const projRecord = proj as { id: string; budget?: number | null; currency?: string | null }
+        const projRecord = proj as { id: string; currency?: string | null }
         const projectCurrency =
           projRecord.currency || (await baseCurrencyOf(request.tenancy.workspaceId))
         const scale = budgetScaleForCurrency(projectCurrency)
 
-        if (
-          expectedOriginalBudgetMinor !== undefined &&
-          projRecord.budget !== null &&
-          projRecord.budget !== undefined
-        ) {
-          const liveBudgetMinor = Math.round(Number(projRecord.budget) * scale)
-          if (liveBudgetMinor !== expectedOriginalBudgetMinor) {
-            return reply.code(409).send({
-              error: 'STALE_PROJECT_BUDGET_CONFLICT',
-              code: 'STALE_PROJECT_BUDGET_CONFLICT',
-            })
-          }
-        }
-
-        // Prefer atomic SQL RPC transaction when deployed in Postgres
-        const rpcRes = await supabase.rpc('decide_project_change_order', {
+        // Single authoritative atomic database transaction (FOR UPDATE row lock + version + audit)
+        const rpcRes = await supabase.rpc('decide_project_change_order_v2', {
           p_workspace_id: request.tenancy.workspaceId,
           p_project_id: id,
           p_order_id: orderId,
           p_decision: decision,
           p_actor_id: request.tenancy.userId,
           p_scale: scale,
+          p_expected_original_budget_minor: expectedOriginalBudgetMinor ?? null,
+          p_expected_version: expectedVersion ?? null,
+          p_reason: reason ?? null,
         })
-        if (!rpcRes.error && rpcRes.data) {
-          return reply.send({
-            data: { ...(rpcRes.data as Record<string, unknown>), ...(reason ? { reason } : {}) },
-          })
-        }
-        const rpcMsg = String(rpcRes.error?.message ?? '')
-        if (rpcMsg.includes('CHANGE_ORDER_NOT_PENDING')) {
-          return reply
-            .code(409)
-            .send({ error: 'CHANGE_ORDER_NOT_PENDING', code: 'CHANGE_ORDER_NOT_PENDING' })
-        }
-        if (rpcMsg.includes('PROJECT_NOT_FOUND')) {
-          return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+        if (rpcRes.error || !rpcRes.data) {
+          const rpcMsg = String(rpcRes.error?.message ?? '')
+          if (rpcMsg.includes('CHANGE_ORDER_NOT_FOUND')) {
+            return reply
+              .code(404)
+              .send({ error: 'CHANGE_ORDER_NOT_FOUND', code: 'CHANGE_ORDER_NOT_FOUND' })
+          }
+          if (rpcMsg.includes('CHANGE_ORDER_NOT_PENDING')) {
+            return reply
+              .code(409)
+              .send({ error: 'CHANGE_ORDER_NOT_PENDING', code: 'CHANGE_ORDER_NOT_PENDING' })
+          }
+          if (rpcMsg.includes('STALE_PROJECT_BUDGET_CONFLICT')) {
+            return reply.code(409).send({
+              error: 'STALE_PROJECT_BUDGET_CONFLICT',
+              code: 'STALE_PROJECT_BUDGET_CONFLICT',
+            })
+          }
+          if (rpcMsg.includes('STALE_PROJECT_VERSION_CONFLICT')) {
+            return reply.code(409).send({
+              error: 'STALE_PROJECT_VERSION_CONFLICT',
+              code: 'STALE_PROJECT_VERSION_CONFLICT',
+            })
+          }
+          if (rpcMsg.includes('REVISED_BUDGET_CANNOT_BE_NEGATIVE')) {
+            return reply
+              .code(400)
+              .send({ error: 'REVISED_BUDGET_CANNOT_BE_NEGATIVE', code: 'BUDGET_NEGATIVE' })
+          }
+          if (rpcMsg.includes('PROJECT_NOT_FOUND')) {
+            return reply.code(404).send({ error: 'PROJECT_NOT_FOUND', code: 'PROJECT_NOT_FOUND' })
+          }
+          throw rpcRes.error ?? new Error('ATOMIC_CHANGE_ORDER_DECIDE_FAILED')
         }
 
-        const now = new Date().toISOString()
-        const { data: updated, error } = await supabase
-          .from('project_change_orders')
-          .update({
-            status: decision,
-            decided_by: request.tenancy.userId,
-            decided_at: now,
-            updated_at: now,
-          })
-          .eq('id', orderId)
-          .eq('project_id', id)
-          .eq('workspace_id', request.tenancy.workspaceId)
-          .eq('status', 'pending_approval')
-          .select()
-          .maybeSingle()
-        if (error) throw error
-        if (!updated) {
-          return reply
-            .code(409)
-            .send({ error: 'CHANGE_ORDER_NOT_PENDING', code: 'CHANGE_ORDER_NOT_PENDING' })
-        }
-        if (decision === 'approved') {
-          const revised = Number(
-            (updated as { revised_budget_minor?: number }).revised_budget_minor ?? 0,
-          )
-          const { error: budgetErr } = await supabase
-            .from('projects')
-            .update({ budget: revised / scale, updated_at: now })
-            .eq('id', id)
-            .eq('workspace_id', request.tenancy.workspaceId)
-          if (budgetErr) {
-            await supabase
-              .from('project_change_orders')
-              .update({ status: 'pending_approval', decided_by: null, decided_at: null })
-              .eq('id', orderId)
-              .eq('workspace_id', request.tenancy.workspaceId)
-            throw budgetErr
-          }
-        }
+        const updated = rpcRes.data as Record<string, unknown>
         return reply.send({
-          data: { ...(updated as Record<string, unknown>), ...(reason ? { reason } : {}) },
+          data: {
+            ...updated,
+            ...(reason ? { reason } : {}),
+            currency: projectCurrency,
+            version: Number(updated.project_version_at_decision ?? 1),
+          },
         })
       } catch (err) {
         return sendFailure(reply, fastify.log, err, 'Failed to decide change order')

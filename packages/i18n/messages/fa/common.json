@@ -2158,7 +2158,8 @@
         "purchase": "فاکتور خرید",
         "pre_sale": "پیش‌فروش",
         "pre_purchase": "پیش‌خرید"
-      }
+      },
+      "loadError": "تلاش مجدد پیش‌نویس‌ها"
     },
     "exchangeWith": "تعویض با مدل دیگر",
     "exchangeNone": "بدون تعویض — فقط مرجوعی",
@@ -3109,7 +3110,20 @@
     "localStorage": "حافظه محلی",
     "syncNow_description": "داده‌ها را همین حالا همگام کن",
     "pendingLabel": "در صف ارسال",
-    "localActive": "فعال در این دستگاه"
+    "localActive": "فعال در این دستگاه",
+    "pushedCount": "ارسال‌شده",
+    "pulledCount": "دریافت‌شده",
+    "failureCount": "خطاها",
+    "conflictCount": "تعارض‌ها",
+    "outcome": {
+      "success": "همه تغییرات با موفقیت همگام‌سازی شد",
+      "partial": "همگام‌سازی ناقص بود — برخی موارد خطا خوردند",
+      "failed": "همگام‌سازی ناموفق بود — صف محلی حفظ شد",
+      "offline": "آفلاین — تغییرات تا اتصال در صف محلی می‌ماند",
+      "conflict": "همگام‌سازی به‌دلیل تعارض رکوردها متوقف شد",
+      "running": "همگام‌سازی در حال اجرا است",
+      "no_coordinator": "هماهنگ‌کننده همگام‌سازی دستگاه متصل نیست"
+    }
   },
   "validation": {
     "required": "این فیلد ضروری است",
@@ -5853,7 +5867,13 @@
       "activeSubscriptions": "اشتراک‌های فعال",
       "expiredSubscriptions": "اشتراک‌های منقضی",
       "expiringSoon": "انقضا تا ۷ روز",
-      "trialSubscriptions": "دوره آزمایشی"
+      "trialSubscriptions": "دوره آزمایشی",
+      "openSupportTickets": "تیکت‌های باز پشتیبانی",
+      "breachedSupportTickets": "تیکت‌های نقض SLA",
+      "failedJobs": "کارهای ناموفق",
+      "pendingChangeOrders": "تغییرات منتظر تأیید",
+      "securityEventsLast24h": "رخدادهای امنیتی (۲۴ ساعت)",
+      "offlineDevicesActive": "دستگاه‌های آفلاین فعال"
     },
     "notice": {
       "migrationInProgress": "مهاجرت اشتراک‌ها در جریان است — {percent}٪ به کسب‌وکار نسبت داده شده‌اند. توزیع پلن‌ها هنوز همه را پوشش نمی‌دهد."
@@ -7234,7 +7254,13 @@
         "oauthApps": "برنامه‌ها",
         "apiUsage": "مصرف API",
         "instances": "سرورها و نمونه‌ها",
-        "infrastructure": "زیرساخت و پراکسی Nginx"
+        "infrastructure": "زیرساخت و پراکسی Nginx",
+        "billingLedger": "دفتر مالی پلتفرم",
+        "financialIntegrity": "سلامت مالی میان‌هسته‌ای",
+        "gatewayEvents": "رخدادهای وب‌هوک درگاه",
+        "changeOrders": "تغییرات بودجه پروژه",
+        "featureFlags": "پرچم‌های قابلیت",
+        "capabilities": "موتور قابلیت‌ها و ۲۱ هسته"
       },
       "failedLogins": {
         "title": "ورودهای ناموفق",
@@ -7475,6 +7501,107 @@
       "stepUpDesc": "تغییر تنظیمات پراکسی معکوس Nginx، محدودسازی نرخ یا حالت نگهداری روی کل ترافیک اثر می‌گذارد.",
       "stepUpConfirm": "اعمال تنظیمات",
       "stepUpReasonLabel": "دلیل تغییر زیرساخت"
+    },
+    "controlPlane": {
+      "operationsTitle": "تله‌متری عملیاتی پلتفرم",
+      "operationsSubtitle": "شمارنده‌های زنده عملیاتی از سرویس‌های بک‌اند (بدون برآورد صوری)",
+      "common": {
+        "workspace": "کسب‌وکار",
+        "status": "وضعیت",
+        "actions": "اقدامات",
+        "active": "فعال",
+        "inactive": "غیرفعال",
+        "filterWorkspaceId": "فیلتر بر اساس شناسه UUID کسب‌وکار…"
+      },
+      "devices": {
+        "title": "دستگاه‌ها و نشست‌های آفلاین",
+        "description": "دستگاه‌های ویندوز و موبایل ثبت‌شده، آخرین زمان سینک و وضعیت ناوگان",
+        "openOfflineHub": "باز کردن بخش آفلاین",
+        "activeLicences": "لایسنس‌های فعال",
+        "registeredSeats": "دستگاه‌های ثبت‌شده",
+        "bannedLicences": "لایسنس‌های مسدود",
+        "pendingReviews": "در انتظار بررسی",
+        "deviceId": "شناسه دستگاه",
+        "seat": "نوع دستگاه",
+        "label": "برچسب",
+        "lastSeen": "آخرین فعالیت",
+        "empty": "دستگاه ثبت‌شده‌ای یافت نشد.",
+        "emptyHint": "پس از ثبت یا همگام‌سازی دستگاه‌های آفلاین، در این جدول نمایش داده می‌شوند.",
+        "loadError": "بارگذاری فهرست دستگاه‌ها ناموفق بود."
+      },
+      "support": {
+        "title": "صف عملیات پشتیبانی و SLA",
+        "description": "تیکت‌های پشتیبانی کسب‌وکارها با تغییر وضعیت اتمیک و ارزیابی خودکار SLA",
+        "code": "تیکت",
+        "priority": "اولویت",
+        "escalation": "سطح ارجاع",
+        "dueAt": "مهلت SLA",
+        "slaBreached": "نقض SLA",
+        "takeAction": "در حال بررسی",
+        "resolveAction": "بستن/حل‌شده",
+        "runSlaSweep": "ارزیابی SLA همین حالا",
+        "sweepConfirmDesc": "اجرای بررسی اتمیک سررسید SLA روی تمام تیکت‌های باز در سرور.",
+        "sweepResult": "بررسی SLA روی {evaluated} تیکت انجام شد؛ {escalated} مورد ارتقا یافت.",
+        "confirmTransitionTitle": "تغییر وضعیت تیکت پشتیبانی",
+        "confirmTransitionDesc": "انتقال تیکت {code} به وضعیت «{status}» همراه با ثبت در لاگ ممیزی.",
+        "noteLabel": "یادداشت داخلی (اختیاری)",
+        "empty": "هیچ تیکت پشتیبانی ثبت نشده است.",
+        "emptyHint": "تیکت‌های ارسالی کسب‌وکارها در این صف نمایش داده می‌شوند.",
+        "loadError": "بارگذاری صف پشتیبانی ناموفق بود."
+      },
+      "reconcile": {
+        "title": "کنترل سلامت مالی میان‌هسته‌ای کسب‌وکار",
+        "description": "تطبیق فاکتورها، تخصیص پرداخت‌ها، اسناد دفترکل و بیعانه‌های مشتریان برای یک کسب‌وکار",
+        "runAction": "اجرای کنترل سلامت مالی",
+        "confirmDesc": "اجرای تطبیق کامل حساب‌های کسب‌وکار {workspaceId} و ثبت رخداد ممیزی.",
+        "summaryCounts": "اسناد ثبت‌نشده: {missing} · تکرار سند: {duplicate} · مغایرت برگشتی: {reversal} · مغایرت ارز: {currency}",
+        "exceptionsTitle": "مغایرت‌های مالی کشف‌شده",
+        "code": "کد مغایرت",
+        "severity": "شدت",
+        "entity": "موجودیت",
+        "message": "توضیحات",
+        "cleanTitle": "حساب‌ها متوازن است",
+        "cleanDesc": "هیچ مغایرت میان‌هسته‌ای برای این کسب‌وکار یافت نشد."
+      },
+      "gatewayEvents": {
+        "title": "رخدادهای وب‌هوک درگاه‌های پرداخت",
+        "description": "نتیجه اعتبارسنجی امضا، دفعات تلاش و وضعیت پردازش (بدون افشای کلید محرمانه)",
+        "provider": "درگاه / شناسه رخداد",
+        "signature": "اعتبار امضا",
+        "validSig": "معتبر",
+        "invalidSig": "نامعتبر",
+        "amountCurrency": "مبلغ / واحد",
+        "attempts": "تلاش‌ها",
+        "receivedAt": "زمان دریافت",
+        "empty": "هیچ رخداد وب‌هوکی ثبت نشده است.",
+        "emptyHint": "تماس‌های امضاشده درگاه‌ها در این بخش ثبت می‌شوند.",
+        "loadError": "بارگذاری رخدادهای درگاه ناموفق بود."
+      },
+      "changeOrders": {
+        "title": "کنترل تغییرات بودجه پروژه‌ها",
+        "description": "بررسی و تصمیم‌گیری اتمیک درباره الحاقیه‌های بودجه پروژه‌ها در سطح پلتفرم",
+        "orderTitle": "عنوان تغییر",
+        "deltaBudget": "تغییر بودجه",
+        "createdAt": "زمان ثبت",
+        "confirmTitle": "تصمیم‌گیری روی الحاقیه پروژه",
+        "confirmDesc": "تغییر وضعیت اتمیک «{title}» به {decision} روی بودجه پروژه.",
+        "empty": "درخواست تغییر بودجه‌ای یافت نشد.",
+        "emptyHint": "تغییرات در انتظار تأیید و سوابق پروژه‌ها اینجا نمایش داده می‌شوند.",
+        "loadError": "بارگذاری تغییرات بودجه پروژه ناموفق بود."
+      },
+      "capabilities": {
+        "title": "موتور قابلیت‌ها و ماتریس ۲۱ هسته",
+        "description": "وضعیت واقعی از رجیستری @hisabche/validation در ۶۷ صنف (غیرقابل دستکاری سمت کلاینت)",
+        "industriesCount": "اصناف ثبت‌شده",
+        "enginesCount": "هسته‌های کسب‌وکار",
+        "availableCount": "قابلیت‌های کامل",
+        "partialCount": "قابلیت‌های ناقص",
+        "capabilityKey": "کلید قابلیت",
+        "requires": "وابستگی‌ها",
+        "limitations": "محدودیت‌های ثبت‌شده",
+        "empty": "قابلیتی با این فیلتر یافت نشد.",
+        "loadError": "بارگذاری وضعیت قابلیت‌ها ناموفق بود."
+      }
     }
   },
   "till": {

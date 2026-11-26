@@ -2158,7 +2158,8 @@
         "purchase": "Purchase invoice",
         "pre_sale": "Pre-sale",
         "pre_purchase": "Pre-purchase"
-      }
+      },
+      "loadError": "Retry loading drafts"
     },
     "exchangeWith": "Exchange for another model",
     "exchangeNone": "No exchange — return only",
@@ -3109,7 +3110,20 @@
     "localStorage": "Local storage",
     "syncNow_description": "Synchronize your data right away",
     "pendingLabel": "Waiting to send",
-    "localActive": "Active on this device"
+    "localActive": "Active on this device",
+    "pushedCount": "Pushed",
+    "pulledCount": "Pulled",
+    "failureCount": "Failures",
+    "conflictCount": "Conflicts",
+    "outcome": {
+      "success": "All changes synced cleanly",
+      "partial": "Sync partially completed — some items failed",
+      "failed": "Sync failed — local queue preserved",
+      "offline": "Offline — queued locally until connected",
+      "conflict": "Sync paused with record conflicts",
+      "running": "Sync currently running",
+      "no_coordinator": "Device sync coordinator not attached"
+    }
   },
   "validation": {
     "required": "This field is required",
@@ -5853,7 +5867,13 @@
       "activeSubscriptions": "Active subscriptions",
       "expiredSubscriptions": "Expired subscriptions",
       "expiringSoon": "Expiring in 7 days",
-      "trialSubscriptions": "On trial"
+      "trialSubscriptions": "On trial",
+      "openSupportTickets": "Open support tickets",
+      "breachedSupportTickets": "SLA breached tickets",
+      "failedJobs": "Failed jobs",
+      "pendingChangeOrders": "Pending change orders",
+      "securityEventsLast24h": "Security events (24h)",
+      "offlineDevicesActive": "Active offline seats"
     },
     "notice": {
       "migrationInProgress": "Subscription migration in progress — {percent}% attributed to a workspace. The plan mix below does not yet cover every business."
@@ -7234,7 +7254,13 @@
         "oauthApps": "Apps",
         "apiUsage": "API usage",
         "instances": "Servers & Instances",
-        "infrastructure": "Infrastructure & Nginx"
+        "infrastructure": "Infrastructure & Nginx",
+        "billingLedger": "Billing ledger",
+        "financialIntegrity": "Financial integrity",
+        "gatewayEvents": "Webhook events",
+        "changeOrders": "Change orders",
+        "featureFlags": "Feature flags",
+        "capabilities": "Capabilities & 21 cores"
       },
       "failedLogins": {
         "title": "Failed sign-ins",
@@ -7475,6 +7501,107 @@
       "stepUpDesc": "Changing Nginx proxy routing, edge rate limits, or maintenance mode affects live traffic across all instances.",
       "stepUpConfirm": "Apply Settings",
       "stepUpReasonLabel": "Reason for infrastructure change"
+    },
+    "controlPlane": {
+      "operationsTitle": "Operational telemetry",
+      "operationsSubtitle": "Live platform health counters from backend services (never estimated)",
+      "common": {
+        "workspace": "Workspace",
+        "status": "Status",
+        "actions": "Actions",
+        "active": "Active",
+        "inactive": "Inactive",
+        "filterWorkspaceId": "Filter by workspace UUID…"
+      },
+      "devices": {
+        "title": "Devices & Offline Seats",
+        "description": "Registered computer/mobile seats, last sync activity, and fleet status",
+        "openOfflineHub": "Open Offline Hub",
+        "activeLicences": "Active licences",
+        "registeredSeats": "Registered seats",
+        "bannedLicences": "Banned licences",
+        "pendingReviews": "Pending reviews",
+        "deviceId": "Device ID",
+        "seat": "Seat",
+        "label": "Label",
+        "lastSeen": "Last seen",
+        "empty": "No registered devices matched.",
+        "emptyHint": "Devices appear here once offline workspaces register or sync.",
+        "loadError": "Could not load offline devices."
+      },
+      "support": {
+        "title": "Support & SLA Operations Queue",
+        "description": "Cross-workspace support tickets with atomic status transitions and SLA evaluation",
+        "code": "Ticket",
+        "priority": "Priority",
+        "escalation": "Escalation",
+        "dueAt": "SLA due",
+        "slaBreached": "SLA breached",
+        "takeAction": "In progress",
+        "resolveAction": "Resolve",
+        "runSlaSweep": "Evaluate SLA now",
+        "sweepConfirmDesc": "Runs the authoritative server SLA sweep across all open support tickets.",
+        "sweepResult": "SLA sweep checked {evaluated} ticket(s); escalated {escalated}.",
+        "confirmTransitionTitle": "Update support ticket status",
+        "confirmTransitionDesc": "Transition ticket {code} to \"{status}\" with immutable audit logging.",
+        "noteLabel": "Internal resolution note (optional)",
+        "empty": "No support tickets found.",
+        "emptyHint": "Submitted workspace support tickets appear here.",
+        "loadError": "Could not load support queue."
+      },
+      "reconcile": {
+        "title": "Workspace Cross-Core Financial Integrity",
+        "description": "Verify invoices, payment allocations, journal postings, and deposit liabilities for a workspace",
+        "runAction": "Run integrity check",
+        "confirmDesc": "Runs read-only cross-core reconciliation for workspace {workspaceId} and records an audit event.",
+        "summaryCounts": "Missing postings: {missing} · Duplicates: {duplicate} · Reversals: {reversal} · Currency mismatch: {currency}",
+        "exceptionsTitle": "Detected integrity exceptions",
+        "code": "Exception code",
+        "severity": "Severity",
+        "entity": "Entity",
+        "message": "Details",
+        "cleanTitle": "Books reconciled",
+        "cleanDesc": "No cross-core financial exceptions detected for this workspace."
+      },
+      "gatewayEvents": {
+        "title": "Payment Gateway Webhook Events",
+        "description": "Verified signature results, delivery attempts, and processing status (secrets redacted)",
+        "provider": "Provider / Event",
+        "signature": "Signature",
+        "validSig": "Verified",
+        "invalidSig": "Rejected",
+        "amountCurrency": "Amount / Unit",
+        "attempts": "Attempts",
+        "receivedAt": "Received",
+        "empty": "No gateway webhook events recorded.",
+        "emptyHint": "Signed gateway callbacks appear here.",
+        "loadError": "Could not load gateway events."
+      },
+      "changeOrders": {
+        "title": "Project Change Orders Control",
+        "description": "Review and atomically approve or reject workspace budget change orders",
+        "orderTitle": "Change order",
+        "deltaBudget": "Budget delta",
+        "createdAt": "Submitted",
+        "confirmTitle": "Decide change order",
+        "confirmDesc": "Atomically mark \"{title}\" as {decision} on the project budget.",
+        "empty": "No change orders found.",
+        "emptyHint": "Pending and historical project change orders appear here.",
+        "loadError": "Could not load change orders."
+      },
+      "capabilities": {
+        "title": "Capability Engine & 21 Cores Matrix",
+        "description": "Live status from @hisabche/validation registry across 67 industries (never client-overridden)",
+        "industriesCount": "Industries",
+        "enginesCount": "Engines (Cores)",
+        "availableCount": "Available capabilities",
+        "partialCount": "Partial capabilities",
+        "capabilityKey": "Capability",
+        "requires": "Dependencies",
+        "limitations": "Declared limitations",
+        "empty": "No capabilities match this filter.",
+        "loadError": "Could not load capability snapshot."
+      }
     }
   },
   "till": {

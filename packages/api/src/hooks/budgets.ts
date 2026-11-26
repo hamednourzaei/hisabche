@@ -14,6 +14,8 @@
 // ============================================
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { CURRENCY_CODES } from '@hisabche/validation'
+type CurrencyCode = (typeof CURRENCY_CODES)[number]
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useMyCapabilities } from './governance'
@@ -55,7 +57,7 @@ export interface Budget {
   approvedBy?: string | null
   approvedAt?: string | null
   createdBy?: string | null
-  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
+  currency?: CurrencyCode | string
   amountCurrencyMinor?: number
   fxRate?: number | null
 }
@@ -121,7 +123,7 @@ export interface BudgetRevisionRow {
 
 export interface SaveBudgetInput extends Budget {
   /** The currency `amountMinor` is entered in; the server converts to AFN. */
-  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
+  currency?: CurrencyCode | string
   distributionWeightsBp?: number[] | null
   distributionMinor?: number[] | null
 }

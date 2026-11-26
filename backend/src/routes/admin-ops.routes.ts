@@ -16,6 +16,8 @@ import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { requireAdminPermission, requireAdminStepUp } from '../middleware/admin-rbac.middleware'
 import { AdminOpsService } from '../services/admin/admin-ops.service'
 import { AdminSecurityService } from '../services/admin/admin-security.service'
+import { AdminControlPlaneService } from '../services/admin/admin-control-plane.service'
+import { adminRoute } from '../middleware/admin-rbac.middleware'
 import { supabase } from '../db'
 import { isReservedFlagKey } from '../runtime/maintenance-mode'
 
@@ -242,6 +244,167 @@ export default async function adminOpsRoutes(fastify: FastifyInstance) {
           rows: data ?? [],
         }
       })
+    },
+  )
+
+  // ─── V100 CONTROL PLANE: SUPPORT & SLA QUEUE ─────────────────
+  fastify.get(
+    '/api/admin/ops/support-tickets',
+    { preHandler: adminRoute('customers.workspaces.read') },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const q = z
+        .object({
+          workspaceId: z.string().uuid().optional(),
+          status: z.string().optional(),
+          priority: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+        })
+        .parse(req.query)
+      return handle(reply, async () => {
+        const tickets = await AdminControlPlaneService.listSupportTickets(q)
+        return { tickets }
+      })
+    },
+  )
+
+  fastify.patch(
+    '/api/admin/ops/support-tickets/:id/status',
+    { preHandler: adminRoute('customers.support_sessions.open', { stepUp: true }) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+      const body = z
+        .object({
+          status: z.enum(['acknowledged', 'escalated', 'resolved', 'closed']),
+          note: z.string().trim().max(500).optional(),
+        })
+        .parse(req.body)
+      const actorId = req.userId ?? req.user?.id ?? '00000000-0000-0000-0000-000000000000'
+      const actorEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        const data = await AdminControlPlaneService.transitionSupportTicket({
+          ticketId: id,
+          status: body.status,
+          note: body.note,
+          actorId,
+          actorEmail,
+        })
+        return { ticket: data }
+      })
+    },
+  )
+
+  fastify.post(
+    '/api/admin/ops/support-tickets/evaluate-sla',
+    { preHandler: adminRoute('customers.support_sessions.open', { stepUp: true }) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const body = z
+        .object({
+          workspaceId: z.string().uuid().optional(),
+        })
+        .optional()
+        .parse(req.body)
+      const actorId = req.userId ?? req.user?.id ?? '00000000-0000-0000-0000-000000000000'
+      const actorEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        return AdminControlPlaneService.runSupportSlaSweep({
+          workspaceId: body?.workspaceId,
+          actorId,
+          actorEmail,
+        })
+      })
+    },
+  )
+
+  // ─── V100 CONTROL PLANE: GATEWAY WEBHOOK EVENTS (NO SECRETS) ─
+  fastify.get(
+    '/api/admin/ops/gateway-events',
+    { preHandler: adminRoute('billing.gateways.read') },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const q = z
+        .object({
+          workspaceId: z.string().uuid().optional(),
+          provider: z.string().optional(),
+          status: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+        })
+        .parse(req.query)
+      return handle(reply, async () => {
+        const events = await AdminControlPlaneService.listGatewayEvents(q)
+        return { events }
+      })
+    },
+  )
+
+  // ─── V100 CONTROL PLANE: WORKSPACE CROSS-CORE RECONCILIATION ─
+  fastify.post(
+    '/api/admin/ops/reconcile-workspace',
+    { preHandler: adminRoute('billing.ledger.read', { stepUp: true }) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const body = z.object({ workspaceId: z.string().uuid() }).parse(req.body)
+      const actorEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        const data = await AdminControlPlaneService.reconcileWorkspace({
+          workspaceId: body.workspaceId,
+          actorEmail,
+        })
+        return { data }
+      })
+    },
+  )
+
+  // ─── V100 CONTROL PLANE: PROJECT CHANGE ORDERS ──────────────
+  fastify.get(
+    '/api/admin/ops/change-orders',
+    { preHandler: adminRoute('operations.jobs.read') },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const q = z
+        .object({
+          workspaceId: z.string().uuid().optional(),
+          status: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+        })
+        .parse(req.query)
+      return handle(reply, async () => {
+        const orders = await AdminControlPlaneService.listChangeOrders(q)
+        return { orders }
+      })
+    },
+  )
+
+  fastify.post(
+    '/api/admin/ops/change-orders/:id/decide',
+    { preHandler: adminRoute('operations.jobs.run', { stepUp: true }) },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const { id } = z.object({ id: z.string().uuid() }).parse(req.params)
+      const body = z
+        .object({
+          decision: z.enum(['approved', 'rejected']),
+          reason: z.string().trim().max(500).optional(),
+          expectedVersion: z.number().int().min(1).optional(),
+        })
+        .parse(req.body)
+      const actorId = req.userId ?? req.user?.id ?? '00000000-0000-0000-0000-000000000000'
+      const actorEmail = req.user?.email ?? 'admin'
+      return handle(reply, async () => {
+        const data = await AdminControlPlaneService.decideChangeOrder({
+          orderId: id,
+          decision: body.decision,
+          reason: body.reason,
+          expectedVersion: body.expectedVersion,
+          actorId,
+          actorEmail,
+        })
+        return { data }
+      })
+    },
+  )
+
+  // ─── V100 CONTROL PLANE: CAPABILITIES & 21 CORES SNAPSHOT ───
+  fastify.get(
+    '/api/admin/ops/capabilities',
+    { preHandler: adminRoute('operations.health.read') },
+    async (_req: FastifyRequest, reply: FastifyReply) => {
+      return handle(reply, async () => AdminControlPlaneService.getCapabilitiesSnapshot())
     },
   )
 }

@@ -589,6 +589,41 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     evidence: [{ file: `${SVC}/admin/admin-security.service.ts`, text: 'logSecurityEvent' }],
   },
   {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'PATCH /api/admin/ops/support-tickets/:id/status',
+    mechanisms: ['db-function'],
+    evidence: [
+      { file: `${SVC}/admin/admin-control-plane.service.ts`, text: 'transition_support_ticket' },
+    ],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/support-tickets/evaluate-sla',
+    mechanisms: ['db-function'],
+    evidence: [
+      { file: `${SVC}/workflow/support-sla.service.ts`, text: 'sweep_support_ticket_slas' },
+    ],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/reconcile-workspace',
+    mechanisms: ['state-idempotent'],
+    evidence: [
+      { file: `${SVC}/admin/admin-control-plane.service.ts`, text: 'reconcileWorkspaceCrossCore' },
+    ],
+  },
+  {
+    routeFile: 'admin-ops.routes.ts',
+    route: 'POST /api/admin/ops/change-orders/:id/decide',
+    mechanisms: ['db-function'],
+    evidence: [
+      {
+        file: `${SVC}/admin/admin-control-plane.service.ts`,
+        text: 'decide_project_change_order_v2',
+      },
+    ],
+  },
+  {
     routeFile: 'admin-infrastructure.routes.ts',
     route: 'PUT /api/admin/infrastructure/settings',
     mechanisms: ['last-write-wins'],
@@ -2336,9 +2371,9 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
   },
   {
     routeFile: 'payments.routes.ts',
-    route: 'POST /:id/gateway-webhook',
+    route: 'POST /:id/reconcile-settlement',
     mechanisms: ['state-idempotent'],
-    evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/gateway-webhook'" }],
+    evidence: [{ file: `${RT}/payments.routes.ts`, text: "'/:id/reconcile-settlement'" }],
   },
   {
     routeFile: 'accounting.routes.ts',

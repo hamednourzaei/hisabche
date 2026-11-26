@@ -147,6 +147,504 @@ export class FakeDatabase {
       }
       return { ok: true }
     })
+
+    this.rpc('apply_payment_gateway_event', (args: Row) => {
+      const paymentId = String(args.p_payment_id)
+      const gatewayName = String(args.p_gateway_name)
+      const eventId = args.p_event_id ? String(args.p_event_id) : null
+      const eventType = args.p_event_type ? String(args.p_event_type) : 'payment.state_changed'
+      const toState = String(args.p_to_state)
+      const externalRef = args.p_external_ref ? String(args.p_external_ref) : ''
+      const feeMinor = Number(args.p_fee_minor ?? 0)
+      const amountMinor =
+        args.p_amount_minor !== undefined && args.p_amount_minor !== null
+          ? Number(args.p_amount_minor)
+          : null
+      const currency = args.p_currency ? String(args.p_currency).toUpperCase() : null
+      const scale = Number(args.p_scale ?? 1)
+      const payloadSha256 = args.p_payload_sha256 ? String(args.p_payload_sha256) : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+      const actorId = args.p_actor_id ? String(args.p_actor_id) : null
+
+      const payment = this.ensure('payments').find((p) => p.id === paymentId)
+      if (!payment) throw new Error('PAYMENT_NOT_FOUND')
+
+      const payCurrency = String(payment.currency ?? '').toUpperCase()
+      if (currency && currency !== payCurrency) throw new Error('GATEWAY_CURRENCY_MISMATCH')
+      const expectedMinor = Math.round(Number(payment.amount ?? 0) * scale)
+      if (amountMinor !== null && amountMinor !== expectedMinor) {
+        throw new Error('GATEWAY_AMOUNT_MISMATCH')
+      }
+
+      const wsId = String(payment.workspace_id)
+      const events = this.ensure('payment_gateway_events')
+      const replay = events.find(
+        (ev) =>
+          ev.workspace_id === wsId &&
+          ((eventId && ev.gateway_name === gatewayName && ev.event_id === eventId) ||
+            (ev.payment_id === paymentId &&
+              externalRef &&
+              ev.external_ref === externalRef &&
+              ev.to_state === toState)),
+      )
+      const states = this.ensure('payment_gateway_states')
+      const existing = states.find((s) => s.workspace_id === wsId && s.payment_id === paymentId)
+
+      if (replay && existing) {
+        replay.delivery_attempts = Number(replay.delivery_attempts ?? 1) + 1
+        return {
+          workspaceId: wsId,
+          paymentId: existing.payment_id,
+          processorState: existing.processor_state,
+          externalRef: existing.external_ref,
+          eventId: eventId ?? replay.event_id,
+          currency: payCurrency,
+          signatureVerified: true,
+          replay: true,
+        }
+      }
+
+      const fsm: Record<string, string[]> = {
+        queued_offline: ['pending_capture', 'captured', 'declined', 'voided'],
+        pending_capture: ['captured', 'declined', 'voided'],
+        captured: ['voided'],
+        declined: ['pending_capture'],
+        voided: [],
+      }
+      const current = String(
+        existing?.processor_state ?? (payment.method === 'cash' ? 'captured' : 'queued_offline'),
+      )
+      if (current !== toState && !(fsm[current] ?? []).includes(toState)) {
+        throw new Error('PROCESSOR_STATE_TRANSITION_NOT_ALLOWED')
+      }
+
+      const now = new Date().toISOString()
+      if (existing) {
+        Object.assign(existing, {
+          processor_state: toState,
+          gateway_name: gatewayName,
+          external_ref: externalRef,
+          fee_minor: feeMinor,
+          currency: payCurrency,
+          reason,
+          updated_by: actorId,
+          updated_at: now,
+        })
+      } else {
+        states.push({
+          id: `pgs-${states.length + 1}`,
+          workspace_id: wsId,
+          payment_id: paymentId,
+          processor_state: toState,
+          gateway_name: gatewayName,
+          external_ref: externalRef,
+          fee_minor: feeMinor,
+          currency: payCurrency,
+          reason,
+          updated_by: actorId,
+          created_at: now,
+          updated_at: now,
+        })
+      }
+
+      events.push({
+        id: `pge-${events.length + 1}`,
+        workspace_id: wsId,
+        payment_id: paymentId,
+        from_state: current,
+        to_state: toState,
+        gateway_name: gatewayName,
+        external_ref: externalRef,
+        fee_minor: feeMinor,
+        signature_verified: true,
+        reason,
+        actor_id: actorId,
+        event_id: eventId,
+        event_type: eventType,
+        amount_minor: amountMinor,
+        currency: payCurrency,
+        payload_sha256: payloadSha256,
+        processing_status: 'processed',
+        delivery_attempts: 1,
+        created_at: now,
+      })
+
+      return {
+        workspaceId: wsId,
+        paymentId,
+        processorState: toState,
+        externalRef,
+        eventId,
+        currency: payCurrency,
+        signatureVerified: true,
+        replay: false,
+      }
+    })
+
+    this.rpc('create_project_change_order', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const projId = String(args.p_project_id)
+      const actorId = String(args.p_actor_id)
+      const title = String(args.p_title)
+      const deltaMinor = Number(args.p_delta_minor)
+      const estCostMinor = Number(args.p_estimated_cost_delta_minor ?? 0)
+      const approved = args.p_approved === true
+      const scale = Number(args.p_scale ?? 1)
+      const idemKey = args.p_idempotency_key ? String(args.p_idempotency_key) : null
+      const expectedVersion =
+        args.p_expected_version !== undefined && args.p_expected_version !== null
+          ? Number(args.p_expected_version)
+          : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+
+      if (![1, 10, 100, 1000].includes(scale)) throw new Error('INVALID_CURRENCY_SCALE')
+      const orders = this.ensure('project_change_orders')
+      if (idemKey) {
+        const existing = orders.find(
+          (o) => o.workspace_id === wsId && o.idempotency_key === idemKey,
+        )
+        if (existing) return existing
+      }
+
+      const proj = this.ensure('projects').find((p) => p.id === projId && p.workspace_id === wsId)
+      if (!proj) throw new Error('PROJECT_NOT_FOUND')
+
+      const curVer = Number(proj.budget_version ?? 1)
+      if (expectedVersion !== null && curVer !== expectedVersion) {
+        throw new Error('STALE_PROJECT_VERSION_CONFLICT')
+      }
+
+      const origMinor = Math.round(Number(proj.budget ?? 0) * scale)
+      const revMinor = origMinor + deltaMinor
+      if (revMinor < 0) throw new Error('REVISED_BUDGET_CANNOT_BE_NEGATIVE')
+
+      const projWriteFail = this.writeFailures.get('projects')
+      const orderWriteFail = this.writeFailures.get('project_change_orders')
+      const auditWriteFail = this.writeFailures.get('audit_logs')
+      if (projWriteFail && approved) throw new Error(projWriteFail.message)
+      if (orderWriteFail) throw new Error(orderWriteFail.message)
+      if (auditWriteFail) throw new Error(auditWriteFail.message)
+
+      const now = new Date().toISOString()
+      const newVer = approved ? curVer + 1 : curVer
+      if (approved) {
+        proj.budget = revMinor / scale
+        proj.budget_version = newVer
+        proj.updated_at = now
+      }
+
+      const created: Row = {
+        id: fakeId('pco'),
+        workspace_id: wsId,
+        project_id: projId,
+        title,
+        original_budget_minor: origMinor,
+        delta_minor: deltaMinor,
+        revised_budget_minor: revMinor,
+        estimated_cost_delta_minor: estCostMinor,
+        net_margin_delta_minor: deltaMinor - estCostMinor,
+        status: approved ? 'approved' : 'pending_approval',
+        idempotency_key: idemKey,
+        created_by: actorId,
+        decided_by: approved ? actorId : null,
+        decided_at: approved ? now : null,
+        decision_reason: approved ? reason : null,
+        project_version_at_decision: newVer,
+        created_at: now,
+        updated_at: now,
+      }
+      orders.push(created)
+
+      this.ensure('audit_logs').push({
+        id: fakeId('audit'),
+        workspace_id: wsId,
+        user_id: actorId,
+        action: approved ? 'project.change_order.create_approved' : 'project.change_order.created',
+        entity_type: 'project_change_order',
+        entity_id: created.id,
+        old_data: { budgetMinor: origMinor, version: curVer },
+        new_data: { budgetMinor: revMinor, version: newVer, status: created.status },
+        reason: reason ?? title,
+        created_at: now,
+      })
+
+      return created
+    })
+
+    this.rpc('decide_project_change_order_v2', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const projId = String(args.p_project_id)
+      const orderId = String(args.p_order_id)
+      const decision = String(args.p_decision)
+      const actorId = String(args.p_actor_id)
+      const scale = Number(args.p_scale ?? 1)
+      const expectedOrigMinor =
+        args.p_expected_original_budget_minor !== undefined &&
+        args.p_expected_original_budget_minor !== null
+          ? Number(args.p_expected_original_budget_minor)
+          : null
+      const expectedVersion =
+        args.p_expected_version !== undefined && args.p_expected_version !== null
+          ? Number(args.p_expected_version)
+          : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+
+      if (decision !== 'approved' && decision !== 'rejected') throw new Error('INVALID_DECISION')
+      if (![1, 10, 100, 1000].includes(scale)) throw new Error('INVALID_CURRENCY_SCALE')
+
+      const proj = this.ensure('projects').find((p) => p.id === projId && p.workspace_id === wsId)
+      if (!proj) throw new Error('PROJECT_NOT_FOUND')
+
+      const curVer = Number(proj.budget_version ?? 1)
+      if (expectedVersion !== null && curVer !== expectedVersion) {
+        throw new Error('STALE_PROJECT_VERSION_CONFLICT')
+      }
+
+      const liveMinor = Math.round(Number(proj.budget ?? 0) * scale)
+      if (expectedOrigMinor !== null && liveMinor !== expectedOrigMinor) {
+        throw new Error('STALE_PROJECT_BUDGET_CONFLICT')
+      }
+
+      const order = this.ensure('project_change_orders').find(
+        (o) => o.id === orderId && o.project_id === projId && o.workspace_id === wsId,
+      )
+      if (!order) throw new Error('CHANGE_ORDER_NOT_FOUND')
+      if (order.status !== 'pending_approval') throw new Error('CHANGE_ORDER_NOT_PENDING')
+
+      const deltaMinor = Number(order.delta_minor ?? 0)
+      const revMinor = decision === 'approved' ? liveMinor + deltaMinor : liveMinor
+      if (decision === 'approved' && revMinor < 0) {
+        throw new Error('REVISED_BUDGET_CANNOT_BE_NEGATIVE')
+      }
+
+      const projWriteFail = this.writeFailures.get('projects')
+      const orderWriteFail = this.writeFailures.get('project_change_orders')
+      const auditWriteFail = this.writeFailures.get('audit_logs')
+      if (projWriteFail && decision === 'approved') throw new Error(projWriteFail.message)
+      if (orderWriteFail) throw new Error(orderWriteFail.message)
+      if (auditWriteFail) throw new Error(auditWriteFail.message)
+
+      const now = new Date().toISOString()
+      const newVer = decision === 'approved' ? curVer + 1 : curVer
+      if (decision === 'approved') {
+        proj.budget = revMinor / scale
+        proj.budget_version = newVer
+        proj.updated_at = now
+      }
+
+      Object.assign(order, {
+        status: decision,
+        original_budget_minor: liveMinor,
+        revised_budget_minor: revMinor,
+        decided_by: actorId,
+        decided_at: now,
+        decision_reason: reason,
+        project_version_at_decision: newVer,
+        updated_at: now,
+      })
+
+      this.ensure('audit_logs').push({
+        id: fakeId('audit'),
+        workspace_id: wsId,
+        user_id: actorId,
+        action: `project.change_order.${decision}`,
+        entity_type: 'project_change_order',
+        entity_id: orderId,
+        old_data: { budgetMinor: liveMinor, version: curVer, status: 'pending_approval' },
+        new_data: { budgetMinor: revMinor, version: newVer, status: decision },
+        reason,
+        created_at: now,
+      })
+
+      return order
+    })
+
+    this.rpc('transition_support_ticket', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const ticketId = String(args.p_ticket_id)
+      const actorId = String(args.p_actor_id)
+      const nextStatus = String(args.p_next_status)
+      const rcaSummary = args.p_rca_summary ? String(args.p_rca_summary) : null
+      const reason = args.p_reason ? String(args.p_reason) : null
+      const correlationId = args.p_correlation_id ? String(args.p_correlation_id) : null
+
+      if (!['acknowledged', 'escalated', 'resolved', 'closed'].includes(nextStatus)) {
+        throw new Error('INVALID_TICKET_STATUS')
+      }
+
+      const ticket = this.ensure('support_tickets').find(
+        (t) => t.id === ticketId && t.workspace_id === wsId,
+      )
+      if (!ticket) throw new Error('TICKET_NOT_FOUND')
+
+      const cur = String(ticket.status ?? 'open')
+      const isReopen = (cur === 'resolved' || cur === 'closed') && nextStatus === 'acknowledged'
+      if (isReopen && (!reason || !reason.trim())) throw new Error('REOPEN_REASON_REQUIRED')
+
+      const transitions: Record<string, string[]> = {
+        open: ['acknowledged', 'escalated', 'resolved'],
+        acknowledged: ['escalated', 'resolved'],
+        escalated: ['acknowledged', 'resolved'],
+        resolved: ['closed', 'acknowledged'],
+        closed: ['acknowledged'],
+      }
+      if (cur !== nextStatus && !(transitions[cur] ?? []).includes(nextStatus)) {
+        throw new Error('INVALID_TICKET_TRANSITION')
+      }
+
+      const tFail = this.writeFailures.get('support_tickets')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (tFail) throw new Error(tFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      Object.assign(ticket, {
+        status: nextStatus,
+        updated_at: now,
+        ...(rcaSummary !== null ? { rca_summary: rcaSummary } : {}),
+        ...(nextStatus === 'escalated'
+          ? { escalated_at: now, escalation_level: Number(ticket.escalation_level ?? 0) + 1 }
+          : {}),
+        ...(nextStatus === 'resolved' ? { resolved_at: now } : {}),
+        ...(nextStatus === 'closed' ? { closed_at: now } : {}),
+        ...(isReopen ? { reopened_at: now } : {}),
+      })
+
+      const action = isReopen ? 'reopened' : nextStatus === 'closed' ? 'closed' : 'status_changed'
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: ticketId,
+        actor_id: actorId,
+        action,
+        from_status: cur,
+        to_status: nextStatus,
+        note: reason ?? rcaSummary ?? null,
+        correlation_id: correlationId,
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return ticket
+    })
+
+    this.rpc('add_support_ticket_comment', (args: Row) => {
+      const wsId = String(args.p_workspace_id)
+      const ticketId = String(args.p_ticket_id)
+      const authorId = String(args.p_author_id)
+      const isInternal = args.p_is_internal === true
+      const body = String(args.p_body)
+      const correlationId = args.p_correlation_id ? String(args.p_correlation_id) : null
+
+      const ticket = this.ensure('support_tickets').find(
+        (t) => t.id === ticketId && t.workspace_id === wsId,
+      )
+      if (!ticket) throw new Error('TICKET_NOT_FOUND')
+
+      const cFail = this.writeFailures.get('support_ticket_comments')
+      const evFail = this.writeFailures.get('support_ticket_events')
+      if (cFail) throw new Error(cFail.message)
+      if (evFail) throw new Error(evFail.message)
+
+      const now = new Date().toISOString()
+      const created: Row = {
+        id: fakeId('stc'),
+        workspace_id: wsId,
+        ticket_id: ticketId,
+        author_id: authorId,
+        is_internal: isInternal,
+        body,
+        created_at: now,
+      }
+      this.ensure('support_ticket_comments').push(created)
+
+      this.ensure('support_ticket_events').push({
+        id: fakeId('ste'),
+        workspace_id: wsId,
+        ticket_id: ticketId,
+        actor_id: authorId,
+        action: 'comment_added',
+        from_status: ticket.status,
+        to_status: ticket.status,
+        note: isInternal ? 'internal_note' : 'external_reply',
+        correlation_id: correlationId,
+        notification_status: 'not_applicable',
+        created_at: now,
+      })
+
+      return created
+    })
+
+    this.rpc('sweep_support_ticket_slas', (args: Row) => {
+      const wsFilter = args.p_workspace_id ? String(args.p_workspace_id) : null
+      const actorId = args.p_actor_id ? String(args.p_actor_id) : null
+      const correlationId = args.p_correlation_id ? String(args.p_correlation_id) : null
+
+      const nowIso = new Date().toISOString()
+      const nowMs = Date.now()
+      const all = this.ensure('support_tickets').filter(
+        (t) => !wsFilter || t.workspace_id === wsFilter,
+      )
+      const overdue = all.filter((t) => {
+        const st = String(t.status ?? '')
+        const dueMs = new Date(String(t.response_due_at ?? '')).getTime()
+        return (st === 'open' || st === 'acknowledged') && Number.isFinite(dueMs) && dueMs < nowMs
+      })
+
+      const escalatedTicketIds: string[] = []
+      let notificationFailures = 0
+
+      for (const t of overdue) {
+        const evFail = this.writeFailures.get('support_ticket_events')
+        if (evFail) throw new Error(evFail.message)
+
+        const prevStatus = String(t.status ?? 'open')
+        Object.assign(t, {
+          status: 'escalated',
+          escalation_level: Number(t.escalation_level ?? 0) + 1,
+          escalated_at: nowIso,
+          updated_at: nowIso,
+        })
+        escalatedTicketIds.push(String(t.id))
+
+        const actFail = this.writeFailures.get('activities')
+        if (actFail) {
+          notificationFailures += 1
+        } else {
+          this.ensure('activities').push({
+            id: fakeId('act'),
+            workspace_id: t.workspace_id,
+            user_id: actorId ?? t.created_by,
+            entity_type: 'support_ticket',
+            entity_id: t.id,
+            action: 'sla_breached',
+            title: t.subject ? `SLA breach: ${String(t.subject)}` : 'Support ticket SLA breached',
+            created_at: nowIso,
+          })
+        }
+
+        this.ensure('support_ticket_events').push({
+          id: fakeId('ste'),
+          workspace_id: t.workspace_id,
+          ticket_id: t.id,
+          actor_id: actorId ?? t.created_by,
+          action: 'sla_breached',
+          from_status: prevStatus,
+          to_status: 'escalated',
+          note: `SLA due passed before ${nowIso}`,
+          correlation_id: correlationId,
+          notification_status: actFail ? 'failed' : 'pending',
+          created_at: nowIso,
+        })
+      }
+
+      return {
+        evaluatedCount: all.length,
+        escalatedTicketIds,
+        notificationFailures,
+        checkedAt: nowIso,
+      }
+    })
   }
 
   /**
@@ -161,6 +659,14 @@ export class FakeDatabase {
 
   fail(table: string, error: { code?: string; message: string }) {
     this.failures.set(table, error)
+    return this
+  }
+
+  /** Tables whose writes fail, so tests can verify atomic rollback or downstream warning handling. */
+  readonly writeFailures = new Map<string, { code?: string; message: string }>()
+
+  failWrite(table: string, error: { code?: string; message: string }) {
+    this.writeFailures.set(table, error)
     return this
   }
 
@@ -557,6 +1063,9 @@ class QueryBuilder implements PromiseLike<FakeResult> {
     }
 
     if (this.mode === 'insert' || this.mode === 'upsert') {
+      const writeFailure = this.db.writeFailures.get(this.table)
+      if (writeFailure) return { data: null, error: writeFailure }
+
       const written: Row[] = []
 
       for (const value of this.payload) {
@@ -597,6 +1106,9 @@ class QueryBuilder implements PromiseLike<FakeResult> {
     }
 
     if (this.mode === 'update') {
+      const writeFailure = this.db.writeFailures.get(this.table)
+      if (writeFailure) return { data: null, error: writeFailure }
+
       const target = this.matching()
       for (const row of target) Object.assign(row, this.payload[0])
       result = target

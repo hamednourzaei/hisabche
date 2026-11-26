@@ -29,6 +29,24 @@ interface BackupItem {
   status: 'completed' | 'failed'
 }
 
+export interface SyncCenterOutcomeSummary {
+  status:
+    | 'idle'
+    | 'success'
+    | 'partial'
+    | 'failed'
+    | 'running'
+    | 'offline'
+    | 'conflict'
+    | 'no_coordinator'
+  ok: boolean
+  pushedCount?: number | undefined
+  pushFailureCount?: number | undefined
+  pulledCount?: number | undefined
+  conflictCount?: number | undefined
+  error?: string | undefined
+}
+
 export interface SyncCenterPageProps {
   t: (key: string, fallback?: string) => string
   timeAgo: (ts: number) => string
@@ -36,6 +54,7 @@ export interface SyncCenterPageProps {
   isSyncing: boolean
   pendingCount: number
   lastSyncedAt: number | null
+  lastSyncOutcome?: SyncCenterOutcomeSummary | null | undefined
   backups: BackupItem[]
   /** اندازه‌ی واقعی داده‌ی محلی (hisabche-* در localStorage)، نه عدد ساختگی. */
   localStorageSize: string
@@ -50,6 +69,7 @@ export function SyncCenterPage({
   isSyncing,
   pendingCount,
   lastSyncedAt,
+  lastSyncOutcome,
   backups,
   localStorageSize,
   onSync,
@@ -144,6 +164,44 @@ export function SyncCenterPage({
             <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-sm text-[hsl(var(--fg-secondary))]">
               <Clock className="size-4 text-[hsl(var(--color-success))]" aria-hidden="true" />
               {t('sync.lastSynced', 'آخرین همگام‌سازی')}: {timeAgo(lastSyncedAt)}
+            </div>
+          )}
+
+          {lastSyncOutcome && lastSyncOutcome.status !== 'idle' && (
+            <div
+              role="status"
+              data-sync-outcome={lastSyncOutcome.status}
+              className={cn(
+                'rounded-xl border p-4 text-sm',
+                lastSyncOutcome.status === 'success'
+                  ? 'border-[hsl(var(--color-success)/0.4)] bg-[hsl(var(--color-success)/0.08)] text-[hsl(var(--fg-primary))]'
+                  : lastSyncOutcome.status === 'failed'
+                    ? 'border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.08)] text-[hsl(var(--fg-primary))]'
+                    : 'border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.08)] text-[hsl(var(--fg-primary))]',
+              )}
+            >
+              <div className="font-semibold">
+                {t(`sync.outcome.${lastSyncOutcome.status}`, lastSyncOutcome.status)}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-3 text-xs text-[hsl(var(--fg-secondary))]">
+                <span>
+                  {t('sync.pushedCount', 'ارسال‌شده')}: {lastSyncOutcome.pushedCount ?? 0}
+                </span>
+                <span>
+                  {t('sync.pulledCount', 'دریافت‌شده')}: {lastSyncOutcome.pulledCount ?? 0}
+                </span>
+                <span>
+                  {t('sync.failureCount', 'خطاها')}: {lastSyncOutcome.pushFailureCount ?? 0}
+                </span>
+                <span>
+                  {t('sync.conflictCount', 'تعارض‌ها')}: {lastSyncOutcome.conflictCount ?? 0}
+                </span>
+              </div>
+              {lastSyncOutcome.error ? (
+                <p className="mt-1 text-xs text-[hsl(var(--color-destructive))]">
+                  {lastSyncOutcome.error}
+                </p>
+              ) : null}
             </div>
           )}
         </div>

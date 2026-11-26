@@ -100,3 +100,32 @@
   1. **۶ فایل SQL (`PENDING HUMAN CONFIRMATION`):** `project-change-orders-01`, `project-change-orders-02-rpc`, `support-tickets-01`, `support-tickets-02-lifecycle`, `payment-processor-states-01`, `payment-gateway-events-01` باید توسط مالک روی Supabase زنده اجرا شوند و خروجی `VERIFY-*.sql` تایید گردد (`docs/MIGRATIONS-PENDING.md`).
   2. **تست واقعی Postgres روی لینوکس CI:** `*.pg.test.ts` روی محیط ویندوز اجرا نمی‌شود و نیازمند تایید در پایپ‌لاین GitHub Actions لینوکس است.
   3. **سایر موارد مرزبندی‌شده:** ۱۳ قابلیت عمودی در وضعیت `planned` قرار دارند؛ بازیابی خودکار از بکاپ (`export-restore-preview`) عمداً در سطح پیش‌نمایش و ممیزی بدون نوشتن نگه داشته شده است؛ و بیلد نهایی (`next build`، `electron-builder`، Gradle اندروید) طبق قاعده اجرا نشده است.
+
+---
+
+## ۵. مرحله چهارم (مأموریت V100) — سخت‌گیری P0، بی‌طرفی کامل ارزی/فلزی و تکمیل Admin Control Plane
+
+> وضعیت رسمی: `IMPLEMENTED_NOT_LIVE_VERIFIED` · اجرای تست‌های واقعی `*.pg.test.ts` در نشست ویندوز به‌دلیل دسترسی Administrator (`assertPostgresCanStart -> elevated`) مسدود (`BLOCKED`) است و باید در ترمینال غیرادمین یا لینوکس CI اجرا شود.
+
+### ۵.۱. خلاصه اصلاحات اجراشده در V100
+
+1. **وب‌هوک خام درگاه پرداخت، حذف الگوی جعلی مرورگر و دقت ارزی (`P0 4.1`):**
+   - پیاده‌سازی مسیر عمومی `POST /api/payments/gateway/webhook/:provider` (`backend/src/routes/payment-webhook.routes.ts`) با پارس خام بدنه (`addContentTypeParser`), بررسی امضای HMAC-SHA256 با محدودیت زمانی ±۳۰۰ ثانیه، و فراخوانی RPC اتمیک `apply_payment_gateway_event` (`docs/payment-gateway-events-02-rpc-migration.sql`).
+   - تفکیک مسیر داخلی اپراتور به `POST /api/payments/:id/reconcile-settlement` و جایگزینی هوک/دکمه مرورگر (`useReconcilePaymentSettlement` در `packages/api/src/hooks/extended-capabilities.ts` و `TillLoyaltyPanel`).
+   - رفع تقسیم صوری `/ 100` در `CustomerGatewayService` با استفاده از `tillMinorToMajor(amountMinor, currency)`.
+2. **اتمیک‌سازی کامل Change Orders و بسط Cross-Core Reconciliation (`P0 4.2 & 4.3`):**
+   - افزودن `docs/project-change-orders-03-atomic-migration.sql` (`budget_version`, قفل `FOR UPDATE`, کنترل تراز پایه و ثبت `audit_logs` درون همان تراکنش در `create_project_change_order` و `decide_project_change_order_v2`) و حذف مسیر fallback غیراتمیک در `backend/src/routes/project.routes.ts`.
+   - استخراج منطق مشترک `reconcileWorkspaceCrossCore(workspaceId)` به `backend/src/services/accounting/cross-core-reconcile.ts` و گزارش‌دهی `missingPostings`, `duplicatePostings`, `reversalMismatch`, `advanceLiabilityMismatch`, `currencyMismatch` و `roundingDifference`.
+3. **اتمیک‌سازی تیکت پشتیبانی، SLA دوره‌ای، اعتبارسنجی بازیابی و وضعیت ۶-گانه سینک (`P0 4.4–4.6`):**
+   - افزودن `docs/support-tickets-03-atomic-sla-migration.sql` و سرویس مشترک `sweepSupportTicketSlas` (`backend/src/services/workflow/support-sla.service.ts`) متصل به `jobSchedulerPlugin`.
+   - حذف سقف ۵۰۰ ردیفی در `export-restore-preview` (`backend/src/routes/workspace.routes.ts`) با اسکن تکه‌ای ۲۰۰تایی، کنترل FK واقعی، و انتشار خطای دیتابیس (`DATABASE_VALIDATION_QUERY_FAILED`).
+   - نگهداری `lastSyncStatus` / `lastSyncOutcome` در `useSyncStore` (`packages/store/src/slices/sync.slice.ts`) و بازتاب آن در `SyncCenterContainer` و ترجمه‌های سه‌زبانه `fa/af/en`.
+4. **بی‌طرفی کامل ارز و فلزات گران‌بها (`Currency & Metal Neutrality`):**
+   - افزودن `docs/budget-currency-02-any-unit-migration.sql` برای پذیرش همه ارزها و فلزات گران‌بها (`USD`, `IRT`, `AFN`, `XAU`, `XAG` و غیره)؛ رفع هاردکدهای `'افغانی'` در `AIService` و `job-scheduler.plugin.ts` و سطوح بودجه/فاکتور و پرداخت (`payments.repository.ts`, `invoice.service.ts`, `invoice.routes.ts`, `migration.service.ts`).
+5. **تکمیل Admin Control Plane در ۸ هاب موجود (`apps/admin` + `backend`):**
+   - جایگزینی دو تب استاب `EmptyState` در `customers?tab=devices` و `customers?tab=support` با پنل‌های زنده `AdminDevicesOpsPanel` و `AdminSupportOpsPanel`.
+   - افزودن بخش `Financial Integrity` (`reconcile-workspace`) و `Webhook Events` (با حذف کامل فیلدهای محرمانه) در هاب `revenue`؛ افزودن کنترل `Change Orders` در `operations?tab=jobs`؛ افزودن ماتریس واقعی قابلیت‌ها و ۲۱ هسته در `product?tab=features`؛ و تله‌متری عملیاتی زنده در `GET /api/admin/metrics` و `dashboard`.
+   - ثبت تمام کلیدهای جدید در ۳ فایل ترجمه `en/fa/af` و پوشش با `v100-admin-control-plane.test.ts`.
+6. **پوشش مسیر خطای پیش‌نویس فاکتور و مایگریشن PG:**
+   - افزودن شاخه خطای قابل مشاهده و تلاش مجدد در `InvoiceDraftsButton` (`packages/ui/src/components/ui/invoices/invoice-drafts-button.tsx`).
+   - نوشتن تست `backend/src/__tests__/v100-hardening-migrations.pg.test.ts` برای ۴ مایگریشن جدید (`321 migrations · 195 with VERIFY · 210 with a PG test`).

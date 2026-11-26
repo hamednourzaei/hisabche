@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "totalEndpoints": 1119,
+  "totalEndpoints": 1127,
   "counts": {
     "NO_DIRECT_UI_CALLER": 557,
     "CONNECTED_TO_UI": 336,
-    "ADMIN_OR_INTERNAL": 164,
+    "ADMIN_OR_INTERNAL": 172,
     "PUBLIC_OR_WEBHOOK": 50,
     "HEALTH_OR_INFRA": 3,
     "SYNC_OR_OFFLINE": 9
@@ -924,6 +924,62 @@
       "routeFile": "backend/src/routes/admin-ops.routes.ts",
       "method": "POST",
       "path": "/api/admin/ops/export-csv",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "GET",
+      "path": "/api/admin/ops/support-tickets",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "PATCH",
+      "path": "/api/admin/ops/support-tickets/:id/status",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "POST",
+      "path": "/api/admin/ops/support-tickets/evaluate-sla",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "GET",
+      "path": "/api/admin/ops/gateway-events",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "POST",
+      "path": "/api/admin/ops/reconcile-workspace",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "GET",
+      "path": "/api/admin/ops/change-orders",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "POST",
+      "path": "/api/admin/ops/change-orders/:id/decide",
+      "classification": "ADMIN_OR_INTERNAL",
+      "tenantScoped": true
+    },
+    {
+      "routeFile": "backend/src/routes/admin-ops.routes.ts",
+      "method": "GET",
+      "path": "/api/admin/ops/capabilities",
       "classification": "ADMIN_OR_INTERNAL",
       "tenantScoped": true
     },
@@ -5613,7 +5669,7 @@
     {
       "routeFile": "backend/src/routes/payments.routes.ts",
       "method": "POST",
-      "path": "/api/:id/gateway-webhook",
+      "path": "/api/:id/reconcile-settlement",
       "classification": "NO_DIRECT_UI_CALLER",
       "tenantScoped": true
     },

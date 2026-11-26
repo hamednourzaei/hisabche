@@ -217,80 +217,94 @@ describe('P0 Remediation — Processor State, Cross-Core Reconcile & Export Prev
     expect(eventsRes.statusCode).toBe(200)
     expect(eventsRes.json().data).toHaveLength(2)
 
-    // HMAC-verified webhook: bad signature rejected 401; valid signature accepted 200 & logged
+    // Raw-body HMAC webhook (t=<unix>,v1=<hex>) on public provider callback + internal settle reconcile
     process.env.PAYMENT_WEBHOOK_SECRET = 'test-webhook-secret-256'
-    const webhookPayload = {
+    const webhookObj = {
+      eventId: 'evt-melli-77',
+      eventType: 'payment.captured',
+      paymentId: PAY_CARD,
       processorState: 'captured',
-      gatewayName: 'MelliWebhook',
       externalRef: 'WH-EXT-77',
       feeMinor: 150,
+      amountMinor: 5000,
+      currency: 'AFN',
     }
+    const rawWebhook = JSON.stringify(webhookObj)
+    const nowSec = Math.floor(Date.now() / 1000)
+
     const badSig = await app.inject({
       method: 'POST',
-      url: `/api/payments/${PAY_CARD}/gateway-webhook`,
+      url: '/api/payments/gateway/webhook/melli',
       headers: {
-        authorization: `Bearer ${OWNER.token}`,
-        'x-workspace-id': SHOP_A,
-        'x-hisabche-signature': 'deadbeef',
+        'content-type': 'application/json',
+        'x-hisabche-signature': `t=${nowSec},v1=deadbeef`,
       },
-      payload: webhookPayload,
+      payload: rawWebhook,
     })
     expect(badSig.statusCode).toBe(401)
 
-    const canonical = `${PAY_CARD}:${webhookPayload.processorState}:${webhookPayload.externalRef}:${webhookPayload.feeMinor}`
-    const sig = createHmac('sha256', process.env.PAYMENT_WEBHOOK_SECRET)
-      .update(canonical)
+    const sigHex = createHmac('sha256', process.env.PAYMENT_WEBHOOK_SECRET)
+      .update(`${nowSec}.${rawWebhook}`)
       .digest('hex')
+    const sigHeader = `t=${nowSec},v1=${sigHex}`
     const goodSig = await app.inject({
       method: 'POST',
-      url: `/api/payments/${PAY_CARD}/gateway-webhook`,
+      url: '/api/payments/gateway/webhook/melli',
       headers: {
-        authorization: `Bearer ${OWNER.token}`,
-        'x-workspace-id': SHOP_A,
-        'x-hisabche-signature': sig,
+        'content-type': 'application/json',
+        'x-hisabche-signature': sigHeader,
       },
-      payload: webhookPayload,
+      payload: rawWebhook,
     })
-    expect(goodSig.statusCode).toBe(200)
+    expect(goodSig.statusCode, goodSig.body).toBe(200)
     expect(goodSig.json().data.externalRef).toBe('WH-EXT-77')
     expect(goodSig.json().data.replay).toBe(false)
 
-    // Replay with exact same externalRef + state is deduplicated idempotently without appending another event
+    // Replay with same eventId / externalRef is deduplicated idempotently without appending another event
     const replaySig = await app.inject({
       method: 'POST',
-      url: `/api/payments/${PAY_CARD}/gateway-webhook`,
+      url: '/api/payments/gateway/webhook/melli',
       headers: {
-        authorization: `Bearer ${OWNER.token}`,
-        'x-workspace-id': SHOP_A,
-        'x-hisabche-signature': sig,
+        'content-type': 'application/json',
+        'x-hisabche-signature': sigHeader,
       },
-      payload: webhookPayload,
+      payload: rawWebhook,
     })
     expect(replaySig.statusCode).toBe(200)
     expect(replaySig.json().data.replay).toBe(true)
 
-    // Currency mismatch webhook must be refused 409
-    const badCurrencyPayload = {
-      processorState: 'captured',
-      gatewayName: 'MelliWebhook',
+    // Currency mismatch signed webhook must be refused 409
+    const badCurrencyRaw = JSON.stringify({
+      ...webhookObj,
+      eventId: 'evt-melli-badcur',
       externalRef: 'WH-EXT-BADCUR',
       feeMinor: 100,
       currency: 'USD',
-    }
-    const curSig = createHmac('sha256', process.env.PAYMENT_WEBHOOK_SECRET)
-      .update(`${PAY_CARD}:captured:WH-EXT-BADCUR:100`)
+    })
+    const curSigHex = createHmac('sha256', process.env.PAYMENT_WEBHOOK_SECRET)
+      .update(`${nowSec}.${badCurrencyRaw}`)
       .digest('hex')
     const mismatchRes = await app.inject({
       method: 'POST',
-      url: `/api/payments/${PAY_CARD}/gateway-webhook`,
+      url: '/api/payments/gateway/webhook/melli',
       headers: {
-        authorization: `Bearer ${OWNER.token}`,
-        'x-workspace-id': SHOP_A,
-        'x-hisabche-signature': curSig,
+        'content-type': 'application/json',
+        'x-hisabche-signature': `t=${nowSec},v1=${curSigHex}`,
       },
-      payload: badCurrencyPayload,
+      payload: badCurrencyRaw,
     })
     expect(mismatchRes.statusCode).toBe(409)
+
+    // Authenticated internal settlement reconciliation endpoint
+    const settleRes = await app.inject({
+      method: 'POST',
+      url: `/api/payments/${PAY_CARD}/reconcile-settlement`,
+      headers: { authorization: `Bearer ${OWNER.token}`, 'x-workspace-id': SHOP_A },
+      payload: {},
+    })
+    expect(settleRes.statusCode).toBe(200)
+    expect(settleRes.json().data.settlementStatus).toBe('captured')
+    expect(settleRes.json().data.reconciled).toBe(true)
 
     const eventsAfterWebhook = await app.inject({
       method: 'GET',

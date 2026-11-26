@@ -20,6 +20,8 @@ import {
 import { WalletClient } from '../wallet/wallet-client'
 import { GatewaysPanel } from './gateways/gateways-panel'
 import { GatewayAnalyticsPanel } from './gateways/gateway-analytics-panel'
+import { AdminGatewayEventsPanel } from '@/components/ops/admin-gateway-events-panel'
+import { AdminFinancialIntegrityPanel } from '@/components/ops/admin-financial-integrity-panel'
 import { TabSections } from '@/components/admin-shell/tab-sections'
 import {
   useAdminPlanPrices,
@@ -59,7 +61,23 @@ export function RevenueClient() {
 
       {tab === 'plans' && <PlanPricesCatalog />}
 
-      {tab === 'ledger' && <BillingLedgerTabContent />}
+      {tab === 'ledger' && (
+        <TabSections
+          label={t('admin.hubs.revenue.ledger')}
+          sections={[
+            {
+              id: 'ledger',
+              label: t('admin.insights.sections.billingLedger'),
+              render: () => <BillingLedgerTabContent />,
+            },
+            {
+              id: 'reconcile',
+              label: t('admin.insights.sections.financialIntegrity'),
+              render: () => <AdminFinancialIntegrityPanel />,
+            },
+          ]}
+        />
+      )}
 
       {tab === 'maker_checker' && <MakerCheckerTabContent />}
 
@@ -78,6 +96,11 @@ export function RevenueClient() {
               id: 'analytics',
               label: t('admin.insights.sections.gatewayAnalytics'),
               render: () => <GatewayAnalyticsPanel />,
+            },
+            {
+              id: 'events',
+              label: t('admin.insights.sections.gatewayEvents'),
+              render: () => <AdminGatewayEventsPanel />,
             },
           ]}
         />

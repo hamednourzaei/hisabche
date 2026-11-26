@@ -472,7 +472,7 @@ const InvoiceBuilderGrid = memo(function InvoiceBuilderGrid() {
       },
       {
         onSuccess: (saved) => {
-          if (saved?.id) state.setField('serverDraftId', saved.id)
+          if (saved?.id) useInvoiceDraftStore.getState().setField('serverDraftId', saved.id)
           setSaveStatus('saved')
           toast.success(t('invoiceBuilder.draftSaved', 'پیش‌نویس ذخیره شد'))
           setTimeout(() => setSaveStatus('idle'), 1500)

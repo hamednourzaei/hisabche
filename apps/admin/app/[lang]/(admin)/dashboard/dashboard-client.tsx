@@ -203,6 +203,54 @@ export function DashboardClient() {
             })}
           </div>
 
+          {metrics.operations ? (
+            <section aria-labelledby="ops-telemetry-heading" className="space-y-3">
+              <div>
+                <h2 id="ops-telemetry-heading" className="text-lg font-bold">
+                  {t('admin.controlPlane.operationsTitle')}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {t('admin.controlPlane.operationsSubtitle')}
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[
+                  {
+                    key: 'openSupportTickets',
+                    value: metrics.operations.openSupportTickets,
+                  },
+                  {
+                    key: 'breachedSupportTickets',
+                    value: metrics.operations.breachedSupportTickets,
+                  },
+                  {
+                    key: 'failedJobs',
+                    value: metrics.operations.failedJobs,
+                  },
+                  {
+                    key: 'pendingChangeOrders',
+                    value: metrics.operations.pendingChangeOrders,
+                  },
+                  {
+                    key: 'securityEventsLast24h',
+                    value: metrics.operations.securityEventsLast24h,
+                  },
+                  {
+                    key: 'offlineDevicesActive',
+                    value: metrics.operations.offlineDevicesActive,
+                  },
+                ].map((item) => (
+                  <Card key={item.key} className="p-4">
+                    <p className="text-sm text-muted-foreground">{t(`admin.kpi.${item.key}`)}</p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums">
+                      {adminNumber(item.value, locale)}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {planEntries.length > 0 && (
             <section aria-labelledby="plan-mix-heading" className="space-y-4">
               <h2 id="plan-mix-heading" className="text-lg font-bold">

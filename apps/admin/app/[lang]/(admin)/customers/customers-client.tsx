@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Card,
   DataTable,
   EmptyState,
   HubTabs,
@@ -16,6 +15,8 @@ import { WorkspacesClient } from '../workspaces/workspaces-client'
 import { UsersClient } from '../users/users-client'
 import { UpgradeRequestsPanel } from '../subscriptions/upgrade-requests-panel'
 import { PlanLimitsPanel } from '../subscriptions/plan-limits-panel'
+import { AdminDevicesOpsPanel } from '@/components/ops/admin-devices-ops-panel'
+import { AdminSupportOpsPanel } from '@/components/ops/admin-support-ops-panel'
 import { Workspace360Sheet } from '@/components/customers/workspace-360-sheet'
 import { useTrialAbuseSignals, type TrialAbuseSignalItem } from '@/hooks/use-admin-customers'
 import { ErrorState, useAdminTableT } from '@/components/admin-shell/admin-ui'
@@ -73,23 +74,9 @@ export function CustomersClient() {
 
       {tab === 'plan_limits' && <PlanLimitsPanel />}
 
-      {tab === 'devices' && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.hubs.customers.devices')}
-            description={t('admin.customers.devicesNotice')}
-          />
-        </Card>
-      )}
+      {tab === 'devices' && <AdminDevicesOpsPanel />}
 
-      {tab === 'support' && (
-        <Card className="p-8">
-          <EmptyState
-            title={t('admin.hubs.customers.support')}
-            description={t('admin.customers.supportNoticeGeneral')}
-          />
-        </Card>
-      )}
+      {tab === 'support' && <AdminSupportOpsPanel />}
 
       {tab === 'trial_abuse' && <TrialAbuseTabContent />}
 

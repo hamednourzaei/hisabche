@@ -5,10 +5,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAppEdition, onSyncRequested, registerSyncCoordinator } from '@hisabche/api'
+import { useSyncStore } from '@hisabche/store'
 
 import { bridge } from '@/shared/lib/bridge'
 import { loadSyncedTables, resetSyncedTables } from './device-sync-state'
-import { resetTransientFailuresOnReconnect, runSync, startSyncStream } from './sync-engine'
+import {
+  resetTransientFailuresOnReconnect,
+  runSync,
+  startSyncStream,
+  type SyncLifecycleStatus,
+  type SyncRunOutcome,
+} from './sync-engine'
 import type { QueueEntry } from '@hisabche/app-bridge'
 
 const QUEUE_KEY = ['desktop', 'sync', 'queue'] as const
@@ -27,9 +34,13 @@ export function useSyncQueue() {
 export interface SyncStatus {
   pendingCount: number
   failedCount: number
+  conflictCount: number
+  status: SyncLifecycleStatus | 'idle'
+  lastError: string | null
+  lastOutcome: SyncRunOutcome | null
   isOffline: boolean
   isSyncing: boolean
-  sync: () => Promise<void>
+  sync: () => Promise<SyncRunOutcome>
 }
 
 export function useSyncStatus(): SyncStatus {
@@ -38,6 +49,8 @@ export function useSyncStatus(): SyncStatus {
   const queue = useSyncQueue()
   const [isSyncing, setIsSyncing] = useState(false)
   const [isOffline, setIsOffline] = useState(() => isOfflineEdition || !navigator.onLine)
+  const [lastOutcome, setLastOutcome] = useState<SyncRunOutcome | null>(null)
+  const storedOutcome = useSyncStore((s) => s.lastSyncOutcome)
 
   useEffect(() => {
     const online = () => setIsOffline(false)
@@ -54,8 +67,22 @@ export function useSyncStatus(): SyncStatus {
   const sync = useCallback(async () => {
     setIsSyncing(true)
     try {
-      await runSync(queryClient)
+      const outcome = await runSync(queryClient)
+      setLastOutcome(outcome)
+      useSyncStore.getState().setSyncOutcome({
+        status: outcome.status,
+        ok: outcome.ok,
+        pushedCount: outcome.pushedCount,
+        pushFailureCount: outcome.pushFailureCount,
+        pulledCount: outcome.pulledCount,
+        conflictCount: outcome.conflictCount,
+        error: outcome.error,
+      })
+      if (outcome.status === 'success' && outcome.ok) {
+        useSyncStore.getState().setLastSynced(Date.now())
+      }
       await queryClient.invalidateQueries({ queryKey: QUEUE_KEY })
+      return outcome
     } finally {
       setIsSyncing(false)
     }
@@ -66,6 +93,12 @@ export function useSyncStatus(): SyncStatus {
   return {
     pendingCount: entries.length,
     failedCount: entries.filter((entry) => entry.status === 'failed').length,
+    conflictCount: lastOutcome?.conflictCount ?? storedOutcome?.conflictCount ?? 0,
+    status:
+      lastOutcome?.status ??
+      (storedOutcome?.status === 'no_coordinator' ? 'failed' : (storedOutcome?.status ?? 'idle')),
+    lastError: lastOutcome?.error ?? storedOutcome?.error ?? null,
+    lastOutcome,
     isOffline,
     isSyncing,
     sync,
@@ -86,14 +119,29 @@ export function useBackgroundSync(workspaceId: string | null): void {
 
   useEffect(() => {
     if (typeof getAppEdition === 'function' && getAppEdition() === 'offline') return
-    const trigger = () => void runSync(queryClient)
-    const onReconnect = () =>
-      void resetTransientFailuresOnReconnect().then(() => runSync(queryClient))
+    const runAndPublish = async () => {
+      const outcome = await runSync(queryClient)
+      useSyncStore.getState().setSyncOutcome({
+        status: outcome.status,
+        ok: outcome.ok,
+        pushedCount: outcome.pushedCount,
+        pushFailureCount: outcome.pushFailureCount,
+        pulledCount: outcome.pulledCount,
+        conflictCount: outcome.conflictCount,
+        error: outcome.error,
+      })
+      if (outcome.status === 'success' && outcome.ok) {
+        useSyncStore.getState().setLastSynced(Date.now())
+      }
+      return outcome
+    }
+    const trigger = () => void runAndPublish()
+    const onReconnect = () => void resetTransientFailuresOnReconnect().then(() => runAndPublish())
 
     trigger()
     const unsubSyncRequested = onSyncRequested(trigger)
     const unsubCoordinator = registerSyncCoordinator(async () => {
-      const outcome = await runSync(queryClient)
+      const outcome = await runAndPublish()
       await queryClient.invalidateQueries({ queryKey: QUEUE_KEY })
       return {
         ok: outcome.ok,

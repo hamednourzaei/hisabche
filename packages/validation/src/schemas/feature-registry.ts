@@ -386,6 +386,7 @@ export const FEATURE_REGISTRY = {
   'purchase.three_way_match': { execution: 'server', plans: ALL },
   'operations.quality': { execution: 'server', plans: ALL },
   'payments.cheques': { execution: 'server', plans: ALL },
+  'payments.gateway_settlement': { execution: 'server', plans: ALL },
   'hr.expense_claims': { execution: 'server', plans: ALL },
   // V61 audit (12 Nov 2026): the screens for routes that had no client.
   'purchase.rfq': { execution: 'server', plans: ALL },
