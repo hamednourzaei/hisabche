@@ -83,13 +83,14 @@ export function fullAmount(value: number, locale: string): string {
 export function valueFontClass(text: string): string {
   const len = text.length
   // One step per group of three digits («۰۰۰,» = 4 characters): the owner
-  // asked that every added thousand make the figure visibly smaller.
-  if (len <= 5) return 'text-lg sm:text-2xl'
-  if (len <= 8) return 'text-base sm:text-xl'
-  if (len <= 11) return 'text-sm sm:text-lg'
-  if (len <= 15) return 'text-xs sm:text-base'
-  if (len <= 20) return 'text-[11px] sm:text-sm'
-  return 'text-[10px] sm:text-xs'
+  // asked that every added thousand/zero make the figure visibly smaller on ALL cards.
+  if (len <= 4) return 'text-lg sm:text-2xl'
+  if (len <= 7) return 'text-base sm:text-xl'
+  if (len <= 10) return 'text-sm sm:text-base'
+  if (len <= 14) return 'text-xs sm:text-sm'
+  if (len <= 18) return 'text-[10px] sm:text-xs'
+  if (len <= 23) return 'text-[9px] sm:text-[11px] leading-tight'
+  return 'text-[9px] sm:text-[10px] leading-tight'
 }
 
 /**
@@ -296,6 +297,7 @@ export function KpiCard({
         SURFACE_CLASS[surface],
         STAT_PADDING,
         TONE_SURFACE[tone],
+        'overflow-hidden',
         // RTL-safe: `text-start`, never `text-left`. A button centre-aligns
         // its content by default, which would silently re-align every figure
         // the moment a card became clickable.
@@ -304,18 +306,18 @@ export function KpiCard({
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
         {Icon ? (
           <Icon className={cn('size-3.5 shrink-0 sm:size-4', TONE_ICON[tone])} aria-hidden="true" />
         ) : null}
-        <span className={STAT_LABEL}>{label}</span>
-        {labelAddon}
+        <span className={cn(STAT_LABEL, 'min-w-0 flex-1')}>{label}</span>
+        {labelAddon ? <span className="shrink-0">{labelAddon}</span> : null}
       </div>
 
       {text !== null ? (
         <p
           className={cn(
-            'mt-1.5 truncate font-bold tabular-nums sm:mt-2',
+            'mt-1.5 max-w-full truncate font-bold tabular-nums sm:mt-2',
             valueFontClass(text),
             // Only a real number carries a sign worth colouring; a formatted
             // string (a name, a date, money with its own symbol) stays neutral.
@@ -335,10 +337,10 @@ export function KpiCard({
       )}
 
       {hasDelta && (
-        <div className="mt-1 flex items-center gap-1">
+        <div className="mt-1 flex flex-wrap items-center gap-1">
           <span
             className={cn(
-              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
+              'inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
               isGood
                 ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
                 : 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
@@ -348,7 +350,7 @@ export function KpiCard({
             {formatPercent(delta, locale)}
           </span>
           {deltaLabel && (
-            <span className="truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
+            <span className="min-w-0 truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
               {deltaLabel}
             </span>
           )}
@@ -367,7 +369,7 @@ export function KpiCard({
 
 KpiCard.displayName = 'KpiCard'
 
-/** Four across on desktop, two on mobile — the dashboard's own row. */
+/** Four across on desktop (md+), two on mobile/narrow panes — the dashboard's own row. */
 export function KpiGrid({
   children,
   className,
@@ -375,5 +377,5 @@ export function KpiGrid({
   children: React.ReactNode
   className?: string
 }) {
-  return <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-4', className)}>{children}</div>
+  return <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-4', className)}>{children}</div>
 }

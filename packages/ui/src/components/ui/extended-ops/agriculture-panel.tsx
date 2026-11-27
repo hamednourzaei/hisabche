@@ -13,8 +13,12 @@ import {
 import { Button } from '../button'
 import { Input } from '../input'
 import { ExpressCard, ExpressResultBox } from './express-card'
+import { useBusinessProfile } from '../../../hooks/use-business-profile'
 
-export function AgriculturePanel() {
+const AGRI_INDUSTRIES = new Set(['agriculture', 'livestock', 'seedsFertilizer', 'flowers'])
+
+export function AgriculturePanel({ industryOnly = false }: { industryOnly?: boolean }) {
+  const { profile } = useBusinessProfile()
   const t = useTranslations('extendedOps')
   const cropsQuery = useCropCycles()
   const livestockQuery = useLivestockGroups()
@@ -27,6 +31,10 @@ export function AgriculturePanel() {
 
   const [category, setCategory] = useState('')
   const [headCount, setHeadCount] = useState('10')
+
+  if (industryOnly && (!profile.primary || !AGRI_INDUSTRIES.has(profile.primary))) {
+    return null
+  }
 
   return (
     <section data-extended-panel="agriculture-ops" className="mt-4 space-y-3">

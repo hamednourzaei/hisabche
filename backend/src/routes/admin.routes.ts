@@ -83,6 +83,12 @@ const updateStatusBody = z.object({
   reason: z.string().max(1000).optional(),
 })
 
+const ensureWorkspaceSubscriptionBody = z.object({
+  plan: planEnum.optional(),
+  status: subscriptionStatusEnum.optional(),
+  reason: z.string().max(1000).optional(),
+})
+
 export default async function adminRoutes(fastify: FastifyInstance) {
   const adminService = new AdminService()
 
@@ -479,6 +485,33 @@ export default async function adminRoutes(fastify: FastifyInstance) {
           { ...actorOf(request), reason: body.reason },
           parsed.data,
           body.status,
+        ),
+      )
+    },
+  )
+
+  // ─── PUT /api/admin/workspaces/:id/subscription — ensure + update ─
+  fastify.put(
+    '/api/admin/workspaces/:id/subscription',
+    {
+      preHandler: [
+        authenticate,
+        platformAdminGuard,
+        requireAdminPermission('billing.subscriptions.status'),
+        requireAdminStepUp,
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = uuidParam.safeParse((request.params as { id: string }).id)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid workspace id', code: 'INVALID_PARAM' })
+      }
+      const body = ensureWorkspaceSubscriptionBody.parse(request.body ?? {})
+      return send(request, reply, () =>
+        adminService.ensureWorkspaceSubscription(
+          { ...actorOf(request), reason: body.reason },
+          parsed.data,
+          { plan: body.plan, status: body.status },
         ),
       )
     },

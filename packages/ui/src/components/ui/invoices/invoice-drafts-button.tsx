@@ -49,6 +49,7 @@ export function InvoiceDraftsButton({ t }: { t: (key: string, fallback?: string)
       <Button
         variant="outline"
         size="sm"
+        className="min-h-[44px] sm:min-h-[36px] rounded-xl"
         onClick={() => void query.refetch()}
         data-guide="invoices-drafts-retry"
       >
@@ -70,6 +71,7 @@ export function InvoiceDraftsButton({ t }: { t: (key: string, fallback?: string)
       <Button
         variant="outline"
         size="sm"
+        className="min-h-[44px] sm:min-h-[36px] rounded-xl"
         onClick={() => setOpen(true)}
         data-guide="invoices-drafts"
       >

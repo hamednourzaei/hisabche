@@ -2173,7 +2173,12 @@
     "finalizePurchaseBody": "Finalizing will create an authoritative purchase invoice, post ledger entries, and receive inventory into the warehouse.",
     "finalizeSaleTitle": "Finalize Sale Invoice",
     "finalizeSaleBody": "Finalizing will create an authoritative sales invoice, post ledger entries, and deduct delivered inventory from the warehouse.",
-    "finalized": "Finalized"
+    "finalized": "Finalized",
+    "overviewLabel": "Invoices financial overview",
+    "collectionRate": "Collected",
+    "unitInvoice": "invoices",
+    "advancesPendingPosting": "Pending finalization",
+    "advancesSummaryCount": "{count} advance documents"
   },
   "warehouse": {
     "deleteWarehouse": "Delete warehouse",
@@ -11816,7 +11821,8 @@
     },
     "tabs": {
       "goldRates": "Gold Rates & Operations"
-    }
+    },
+    "activeSummary": "{active} active of {total}"
   },
   "notes": {
     "title": "Notes",
@@ -12268,7 +12274,8 @@
       "validity": "Valid",
       "status": "Status",
       "actions": "Actions"
-    }
+    },
+    "activeSummary": "{active} active of {total}"
   },
   "lateFees": {
     "title": "Late fee",
@@ -14675,7 +14682,8 @@
       "GOLD_KYC_REQUIRED": "Customer identity (KYC) is required above threshold",
       "GOLD_WEIGHT_INVALID": "Invalid weight",
       "GOLD_RECOVERED_EXCEEDS_INPUT": "Recovered weight cannot exceed input weight"
-    }
+    },
+    "operationsDesk": "Gold Operations Desk"
   },
   "returns": {
     "condition": {

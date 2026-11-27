@@ -48,6 +48,7 @@ subprojects { project ->
     plugins.withId("com.android.library") {
         if (project.hasProperty('android')) {
             project.android.defaultConfig.externalNativeBuild.cmake.arguments "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            project.android.packagingOptions.doNotStrip "**/*.so"
         }
     }
     plugins.withId("com.android.application") {
@@ -56,9 +57,6 @@ subprojects { project ->
         }
     }
     tasks.configureEach { task ->
-        if (task.name.startsWith("strip") && task.name.contains("DebugSymbols")) {
-            task.enabled = false
-        }
         if (task.name.contains("NativeDebugMetadata") || task.name.contains("NativeSymbolTables")) {
             task.enabled = false
         }

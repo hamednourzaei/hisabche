@@ -16,6 +16,12 @@ import {
   Boxes,
   Activity as ActivityIcon,
   Filter,
+  Plus,
+  Receipt,
+  Users,
+  Wallet,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react'
 import type { ChartDataPoint } from './sales-chart'
 import { DateRangePicker, type DateRange, type PresetKey } from './date-range-picker'
@@ -212,49 +218,105 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
     }
   }
 
+  const urgencyOf = (
+    insight: AIInsight,
+  ): {
+    level: 'critical' | 'attention' | 'info'
+    badge: string
+    border: string
+    badgeClass: string
+    Icon: ElementType
+  } => {
+    const sig =
+      `${insight.code ?? ''} ${insight.type ?? ''} ${(insight as { severity?: string }).severity ?? ''}`.toLowerCase()
+    if (/stock|low|negative|overdue|debt|critical|high|alert/.test(sig)) {
+      return {
+        level: 'critical',
+        badge: t('dashboard.insightUrgency.critical', 'فوری'),
+        border: 'border-s-2 border-s-[hsl(var(--color-destructive))]',
+        badgeClass: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
+        Icon: AlertTriangle,
+      }
+    }
+    if (/pending|unpaid|warn|medium|due/.test(sig)) {
+      return {
+        level: 'attention',
+        badge: t('dashboard.insightUrgency.attention', 'پیگیری'),
+        border: 'border-s-2 border-s-[hsl(var(--color-warning))]',
+        badgeClass: 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
+        Icon: Clock,
+      }
+    }
+    return {
+      level: 'info',
+      badge: t('dashboard.insightUrgency.info', 'پیشنهاد'),
+      border: 'border-s-2 border-s-[hsl(var(--color-primary))]',
+      badgeClass: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
+      Icon: Sparkles,
+    }
+  }
+
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
-      <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
-        <Sparkles
-          className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
-          aria-hidden="true"
-        />
-        <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t('dashboard.aiInsights', 'پیشنهادهای هوشمند')}
-        </h2>
+      <div className="flex items-center justify-between gap-2 border-b border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.35)] px-3.5 sm:px-4 py-2.5">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('dashboard.aiInsights', 'پیشنهادهای هوشمند')}
+          </h2>
+        </div>
+        {insights.length > 0 ? (
+          <span className="rounded-full bg-[hsl(var(--color-primary)/0.12)] px-2 py-0.5 text-[11px] font-medium tabular-nums text-[hsl(var(--color-primary))]">
+            {formatNumber(insights.length, locale)}
+          </span>
+        ) : null}
       </div>
-      {/* دو کارت در هر ردیف، در همه‌ی اندازه‌ها — `grid-cols-2` بدون breakpoint.
-          کارت‌ها `h-full` می‌گیرند تا در هر ردیف هم‌ارتفاع بمانند، وگرنه یک
-          پیشنهاد با توضیح بلندتر ردیف را ناهموار می‌کند. */}
-      <div className="px-4 sm:px-6 pb-4 sm:pb-5">
+      <div className="p-3 sm:p-3.5">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-            <div className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="h-14 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+            <div className="h-14 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
           </div>
         ) : insights.length === 0 ? (
           <p className="text-xs text-[hsl(var(--fg-tertiary))] py-4 text-center">
             {t('dashboard.noInsights', 'فعلاً پیشنهادی وجود ندارد')}
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             {insights.map((insight, i) => {
               const words = written(insight)
+              const urg = urgencyOf(insight)
+              const UrgIcon = urg.Icon
               return (
                 <div
                   key={i}
-                  className="flex h-full flex-col rounded-xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3"
+                  className={cn(
+                    'flex h-full min-w-0 flex-col rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-2.5',
+                    urg.border,
+                  )}
                 >
-                  <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">
+                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
+                        urg.badgeClass,
+                      )}
+                    >
+                      <UrgIcon className="size-2.5 shrink-0" aria-hidden="true" />
+                      {urg.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-[hsl(var(--fg-primary))] line-clamp-1">
                     {words.title}
                   </p>
-                  <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-secondary))] mt-0.5">
+                  <p className="mt-0.5 text-[11px] leading-snug text-[hsl(var(--fg-secondary))] line-clamp-2">
                     {words.text}
                   </p>
                   {insight.action && (
                     <button
+                      type="button"
                       onClick={() => onAction(insight.action!)}
-                      className="mt-auto pt-1.5 text-start text-[11px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md"
+                      className="mt-auto pt-1.5 min-h-[44px] sm:min-h-0 flex items-center self-start text-[11px] font-medium text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] rounded-md"
                     >
                       {words.action || t('dashboard.aiInsight.action')}
                     </button>
@@ -364,14 +426,23 @@ const RecentActivities = memo(function RecentActivities({
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
       {/* هدر با جداکننده‌ی بالا/پایین تا بخش فعالیت‌ها تفکیک بصری واضح‌تری داشته باشد */}
-      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.35)] px-4 sm:px-6 py-3 sm:py-3.5">
-        <ActivityIcon
-          className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
-          aria-hidden="true"
-        />
-        <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t('dashboard.recentActivities', 'فعالیت‌های اخیر')}
-        </h2>
+      <div className="flex items-center justify-between gap-2 border-b border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.35)] px-4 sm:px-6 py-3 sm:py-3.5">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <ActivityIcon
+            className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+            aria-hidden="true"
+          />
+          <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
+            {t('dashboard.recentActivities', 'فعالیت‌های اخیر')}
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate('/activities')}
+          className="text-xs font-medium text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] rounded-md"
+        >
+          {t('dashboard.viewAllActivities', 'مشاهده همه')}
+        </button>
       </div>
       <div className="border-t border-[hsl(var(--border-default)/0.35)] px-4 sm:px-6 py-3 sm:py-4">
         {isLoading ? (
@@ -411,7 +482,7 @@ const RecentActivities = memo(function RecentActivities({
               the class silently does nothing. `1fr` plus `min-w-0` on the
               first cell is the same behaviour, spelled in a way that compiles.
             */}
-            <div className="grid grid-cols-[1fr_5rem_6rem] items-center gap-3 px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--fg-tertiary))]">
+            <div className="hidden sm:grid sm:grid-cols-[1fr_5rem_6rem] items-center gap-3 px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--fg-tertiary))]">
               <span className="min-w-0 text-start">
                 {t('dashboard.activityColumnEvent', 'رویداد')}
               </span>
@@ -424,37 +495,31 @@ const RecentActivities = memo(function RecentActivities({
                   <button
                     type="button"
                     onClick={() => a.entitySummary.route && onNavigate(a.entitySummary.route)}
-                    className="w-full grid grid-cols-[1fr_5rem_6rem] items-center gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
+                    className="w-full flex flex-col gap-1.5 sm:grid sm:grid-cols-[1fr_5rem_6rem] sm:items-center sm:gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150 min-h-[44px]"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 w-full">
                       <p className="text-sm text-[hsl(var(--fg-primary))] truncate">{a.title}</p>
                       <p className="text-[11px] text-[hsl(var(--fg-tertiary))] truncate">
                         {a.entitySummary.label}
                       </p>
                     </div>
-                    {/* Who did it, as a role.
-                      ⚠️ An activity whose actor has no CURRENT membership
-                      arrives with `actorRole: null` and is rendered neutral
-                      and «unknown». It is never coloured as `member` or
-                      `viewer`: guessing the lowest role would put a false
-                      statement about a real person on the dashboard.
-
-                      `justify-self-start` so the chip sits at the column's
-                      edge and every chip lines up, whatever its text width. */}
-                    <span
-                      className={cn(
-                        'justify-self-start rounded-md px-2 py-0.5 text-[11px] font-medium',
-                        roleTone(a.actorRole),
-                      )}
-                      title={a.actor}
-                    >
-                      {t(roleLabelKey(a.actorRole), ROLE_LABEL_FALLBACK[a.actorRole ?? 'unknown'])}
-                    </span>
-                    {/* `tabular-nums` so the digits share a width and the
-                        dates form a straight edge rather than a ragged one. */}
-                    <span className="justify-self-start text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
-                      {fmtIntlDate(a.timestamp)}
-                    </span>
+                    <div className="flex items-center justify-between gap-2 sm:contents">
+                      <span
+                        className={cn(
+                          'justify-self-start rounded-md px-2 py-0.5 text-[11px] font-medium',
+                          roleTone(a.actorRole),
+                        )}
+                        title={a.actor}
+                      >
+                        {t(
+                          roleLabelKey(a.actorRole),
+                          ROLE_LABEL_FALLBACK[a.actorRole ?? 'unknown'],
+                        )}
+                      </span>
+                      <span className="justify-self-start text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
+                        {fmtIntlDate(a.timestamp)}
+                      </span>
+                    </div>
                   </button>
                 </li>
               ))}
@@ -486,8 +551,10 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     t,
     fmt,
     totalSales,
+    todaySales,
     rangeSalesTotal,
     previousRangeSalesTotal,
+    rangeLoading,
     customerDebt,
     warehouseValue,
     negativeStockProducts,
@@ -517,139 +584,211 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   }, [order])
   const orderOf = (id: string) => rank.get(id) ?? 99
 
+  const showHeroSales = show?.kpis !== false && !hiddenFigures.includes('sales')
+  const showChart = show?.chart !== false
+  const showDebt = show?.kpis !== false && !hiddenFigures.includes('customers')
+  const showAdvances =
+    show?.kpis !== false &&
+    !hiddenFigures.includes('customers') &&
+    !hiddenFigures.includes('sales') &&
+    openAdvancesText !== undefined
+  const showStock = show?.kpis !== false && !hiddenFigures.includes('stockValue')
+  const hasFinancialPosition = showDebt || showAdvances || showStock
+
+  const totalSalesText = fmt(totalSales)
+  const todaySalesText = fmt(todaySales)
+  const rangeSalesText = rangeSalesTotal !== null ? fmt(rangeSalesTotal) : '—'
+  const customerDebtText = fmt(customerDebt)
+  const advancesText = openAdvancesText ?? t('dashboard.openAdvancesUnread', 'خوانده نشد')
+  const warehouseValueText = fmt(warehouseValue)
+  const hasGrowth = monthlyGrowth !== undefined && monthlyGrowth !== null
+
   return (
-    <div className="flex flex-col gap-4 sm:gap-6" data-guide="dashboard-page">
-      {/* Level 1: Context — always first; it names the page, not a section. */}
-      <div data-guide="dashboard-overview">
+    <div className="flex flex-col gap-3 sm:gap-3.5" data-guide="dashboard-page">
+      {/* Level 1: Compact Command Header + Quick Operational Actions (~48px laptop budget) */}
+      <div
+        data-guide="dashboard-overview"
+        className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between border-b border-[hsl(var(--border-default)/0.6)] pb-2.5"
+      >
         <Greeting t={t} />
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+          {hiddenFigures.includes('sales') ? null : (
+            <button
+              type="button"
+              onClick={() => onNavigate('/invoices/new')}
+              className="inline-flex min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl bg-[hsl(var(--color-primary))] px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-[hsl(var(--color-primary-fg))] shadow-sm hover:opacity-95 transition-opacity"
+            >
+              <Plus className="size-4 shrink-0" aria-hidden="true" />
+              <span>{t('nav.recordSale', 'فاکتور جدید')}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onNavigate('/till')}
+            className="inline-flex min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-1.5 text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
+          >
+            <Receipt
+              className="size-4 shrink-0 text-[hsl(var(--color-primary))]"
+              aria-hidden="true"
+            />
+            <span>{t('nav.till', 'صندوق')}</span>
+          </button>
+          {hiddenFigures.includes('stockValue') ? null : (
+            <button
+              type="button"
+              onClick={() => onNavigate('/warehouse')}
+              className="inline-flex min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-1.5 text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
+            >
+              <Boxes
+                className="size-4 shrink-0 text-[hsl(var(--color-primary))]"
+                aria-hidden="true"
+              />
+              <span>{t('nav.stock', 'انبار')}</span>
+            </button>
+          )}
+          {hiddenFigures.includes('customers') ? null : (
+            <button
+              type="button"
+              onClick={() => onNavigate('/customers')}
+              className="inline-flex min-h-[44px] sm:min-h-[36px] items-center justify-center gap-1.5 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-1.5 text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
+            >
+              <Users
+                className="size-4 shrink-0 text-[hsl(var(--color-primary))]"
+                aria-hidden="true"
+              />
+              <span>{t('nav.buyers', 'مشتریان')}</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Level 2: KPI cards — `KpiGrid`, the same row `/invoices`,
-          `/warehouse` and `/customers` draw. A local grid here is what made
-          the dashboard look like a different page. */}
-      <div style={{ order: orderOf('kpis') }}>
-        {show?.kpis === false ? null : (
-          <div data-guide="dashboard-kpis">
-            <KpiGrid>
-              {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
-            کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
-            trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
-              {/* H1 — every figure opens the rows it was computed from.
-            `invoiceListHref` and the list's own parser come from one table
-            (invoice-filter-link.ts), so a card cannot link to a filter the
-            list ignores. */}
-              {hiddenFigures.includes('sales') ? null : (
-                <KpiCard
-                  icon={TrendingUp}
-                  label={t('dashboard.totalSales', 'فروش کل')}
-                  value={fmt(totalSales)}
-                  delta={monthlyGrowth ?? null}
-                  deltaLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
-                  showEmptyDelta
-                  isLoading={kpiLoading}
-                  onOpen={() => onNavigate(invoiceListHref('totalSales'))}
-                  openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
-                />
-              )}
-              {hiddenFigures.includes('customers') ? null : (
-                <KpiCard
-                  icon={CreditCard}
-                  label={t('dashboard.customerDebt', 'بدهی مشتریان')}
-                  value={fmt(customerDebt)}
-                  delta={null}
-                  // ⚠️ Debt is the one card here where rising is BAD. It carries no
-                  // comparison today, so nothing is coloured — but the flag is set so
-                  // a future delta cannot inherit «up is green».
-                  invertDelta
-                  showEmptyDelta
-                  isLoading={kpiLoading}
-                  onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
-                  openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
-                />
-              )}
-              {hiddenFigures.includes('customers') ||
-              hiddenFigures.includes('sales') ||
-              openAdvancesText === undefined ? null : (
-                <KpiCard
-                  icon={CreditCard}
-                  label={t('dashboard.openAdvances', 'پیش‌دریافت / پیش‌پرداخت باز')}
-                  value={openAdvancesText ?? t('dashboard.openAdvancesUnread', 'خوانده نشد')}
-                  delta={null}
-                  showEmptyDelta
-                  isLoading={kpiLoading}
-                  onOpen={() => onNavigate('/invoices?type=pre_sale')}
-                  openLabel={t('dashboard.openAdvancesOpen', 'پیش‌فروش و پیش‌خرید')}
-                />
-              )}
-              {hiddenFigures.includes('stockValue') ? null : (
-                <KpiCard
-                  icon={Boxes}
-                  label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
-                  value={fmt(warehouseValue)}
-                  delta={null}
-                  showEmptyDelta
-                  {...(negativeStockProducts
-                    ? {
-                        // The count leads; the message has no ICU placeholder
-                        // (a bare t() on one returns the raw key).
-                        hint: `${formatNumber(negativeStockProducts, locale, 0)} ${t(
-                          'dashboard.negativeStockHint',
-                          'کالا زیر صفر — در ارزش شمرده نشد',
-                        )}`,
-                      }
-                    : {})}
-                  isLoading={kpiLoading}
-                  onOpen={() => onNavigate('/warehouse')}
-                  openLabel={t('dashboard.openWarehouse', 'انبار')}
-                />
-              )}
-              {/* Up to four more, chosen by the person from figures other pages
-                  already show; never more than 8 cards in all (owner, 9 Nov 2026). */}
-              <CustomKpiCards locale={locale} onNavigate={onNavigate} />
-            </KpiGrid>
-          </div>
-        )}
-      </div>
+      {/* Level 2: Shared KpiGrid + KpiCard(surface="none") inside a unified horizontal Financial Overview band */}
+      {showHeroSales || hasFinancialPosition ? (
+        <section
+          style={{ order: orderOf('kpis') }}
+          data-guide="dashboard-kpis"
+          aria-label={t('dashboard.financialPosition', 'وضعیت مالی و دارایی')}
+          className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2.5 sm:p-3"
+        >
+          <KpiGrid>
+            {showHeroSales ? (
+              <KpiCard
+                surface="none"
+                tone="primary"
+                className="rounded-xl p-2 sm:p-2.5"
+                icon={TrendingUp}
+                label={t('dashboard.totalSales', 'فروش کل')}
+                value={totalSalesText}
+                delta={hasGrowth ? monthlyGrowth : null}
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate(invoiceListHref('totalSales'))}
+                openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
+                hint={
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-[hsl(var(--fg-secondary))]">
+                    <span>
+                      {t('dashboard.todaySales', 'امروز')}:{' '}
+                      <strong className="font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                        {kpiLoading ? '…' : todaySalesText}
+                      </strong>
+                    </span>
+                    <span>
+                      {t('dashboard.rangeSalesTotal', 'بازه')}:{' '}
+                      <strong className="font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+                        {rangeLoading ? '…' : rangeSalesText}
+                      </strong>
+                    </span>
+                  </div>
+                }
+              />
+            ) : null}
 
-      {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
-      <div className="flex flex-col gap-4 sm:gap-6">
-        {show?.chart === false ? null : (
-          <div style={{ order: orderOf('chart') }} data-guide="dashboard-chart">
-            <div
+            {showDebt ? (
+              <KpiCard
+                surface="none"
+                tone="warning"
+                className="rounded-xl p-2 sm:p-2.5"
+                icon={CreditCard}
+                label={t('dashboard.customerDebt', 'بدهی مشتریان')}
+                invertDelta
+                value={customerDebtText}
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
+                openLabel={t('dashboard.customerDebt', 'بدهی مشتریان')}
+              />
+            ) : null}
+
+            {showAdvances ? (
+              <KpiCard
+                surface="none"
+                tone="info"
+                className="rounded-xl p-2 sm:p-2.5"
+                icon={Wallet}
+                label={t('dashboard.openAdvances', 'پیش‌دریافت / پیش‌پرداخت')}
+                value={advancesText}
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate('/invoices?type=pre_sale')}
+                openLabel={t('dashboard.openAdvances', 'پیش‌دریافت / پیش‌پرداخت')}
+              />
+            ) : null}
+
+            {showStock ? (
+              <KpiCard
+                surface="none"
+                tone="default"
+                className="rounded-xl p-2 sm:p-2.5"
+                icon={Boxes}
+                label={t('dashboard.warehouseValue', 'ارزش کل انبار')}
+                value={warehouseValueText}
+                isLoading={kpiLoading}
+                onOpen={() => onNavigate('/warehouse')}
+                openLabel={t('dashboard.warehouseValue', 'ارزش کل انبار')}
+                hint={
+                  negativeStockProducts ? (
+                    <span className="truncate text-[10px] font-medium text-[hsl(var(--color-warning))]">
+                      {`${formatNumber(negativeStockProducts, locale, 0)} ${t(
+                        'dashboard.negativeStockHint',
+                        'کالا زیر صفر — در ارزش شمرده نشد',
+                      )}`}
+                    </span>
+                  ) : undefined
+                }
+              />
+            ) : null}
+          </KpiGrid>
+        </section>
+      ) : null}
+
+      {/* Level 3: Main Trend Chart (7 cols, compact 175px) + Urgency-Differentiated Insights (5 cols) */}
+      {showChart || show?.insights !== false ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-3.5 items-start">
+          {showChart ? (
+            <section
+              style={{ order: orderOf('chart') }}
+              data-guide="dashboard-chart"
               className={cn(
-                'rounded-2xl border border-[hsl(var(--border-default))]',
-                'bg-[hsl(var(--surface-elevated))]',
-                'p-4 sm:p-5',
+                'min-w-0 flex flex-col rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5 sm:p-4 overflow-hidden',
+                show?.insights === false ? 'lg:col-span-12' : 'lg:col-span-7',
               )}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] pb-3 mb-4">
-                <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-[hsl(var(--border-default)/0.5)]">
+                <div className="flex items-center gap-1.5">
                   {view === 'chart' ? (
                     <TrendingUp
-                      className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                      className="size-4 text-[hsl(var(--color-primary))]"
                       aria-hidden="true"
                     />
                   ) : (
                     <Filter
-                      className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                      className="size-4 text-[hsl(var(--color-primary))]"
                       aria-hidden="true"
                     />
                   )}
-                  <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
+                  <h2 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
                     {t('dashboard.salesChartTitle', 'نمودار فروش')}
                   </h2>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  {/*
-                  ⚠️ A SEGMENTED CONTROL WITH WORDS, NOT TWO BARE ICONS.
-
-                  An icon-only pair forces the reader to decode a picture: a
-                  funnel glyph at 14px is a triangle, and «which one am I
-                  looking at» has to be inferred from which square is lit.
-                  `aria-pressed` states the selection for a screen reader; the
-                  LABEL states it for everyone else.
-                */}
+                <div className="flex flex-wrap items-center gap-2">
                   <div
                     role="group"
                     aria-label={t('dashboard.viewSwitch', 'نمای نمودار')}
@@ -672,16 +811,6 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                     />
                   </div>
 
-                  {/*
-                  ⚠️ THE RANGE PICKER STAYS ON BOTH VIEWS.
-
-                  An earlier version hid it on the funnel, reasoning that a
-                  funnel is a snapshot. That was wrong for THIS funnel: it is
-                  built from `salesChartData`, so the window the picker selects
-                  is exactly what it counts and compares. Hiding the control
-                  that drives it would leave the reader unable to see — or
-                  change — the period the numbers belong to.
-                */}
                   <DateRangePicker
                     value={dateRange}
                     onChange={onDateRangeChange}
@@ -692,20 +821,15 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               </div>
 
               {pendingInvoicesLabel ? (
-                <p className="mb-3 text-xs text-[hsl(var(--fg-secondary))]">
+                <p className="mb-2 text-xs text-[hsl(var(--fg-secondary))]">
                   {pendingInvoicesLabel}
                 </p>
               ) : null}
 
-              {/*
-              One body, two views. `min-h` so switching does not make the card
-              jump, and a short fade so the swap reads as one surface changing
-              rather than two cards replacing each other.
-            */}
               <div
                 key={view}
                 className={cn(
-                  'relative min-h-[200px] w-full',
+                  'relative min-h-[175px] w-full flex-1',
                   'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
                 )}
               >
@@ -714,13 +838,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                     data={salesChartData}
                     isLoading={chartLoading}
                     fmt={fmt}
-                    height={180}
+                    height={175}
                     previousPeriodTotal={previousRangeSalesTotal ?? 0}
                     currentPeriodTotal={rangeSalesTotal ?? 0}
-                    // `/reports` was never a route — the chart's "full report" link
-                    // 404'd on web and would have redirected to the dashboard on
-                    // desktop's catch-all. Accounting («پول و سود») is the destination
-                    // the navigation contract actually gives for revenue detail.
                     onViewFullReport={() => onNavigate('/accounting')}
                   />
                 ) : (
@@ -729,36 +849,46 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                     total={totalSales}
                     fmt={fmt}
                     isLoading={chartLoading}
-                    height={180}
+                    height={175}
                     t={t}
                   />
                 )}
               </div>
+            </section>
+          ) : null}
+
+          {show?.insights === false ? null : (
+            <div
+              style={{ order: orderOf('insights') }}
+              className={cn('min-w-0', !showChart ? 'lg:col-span-12' : 'lg:col-span-5')}
+            >
+              <AIInsightsPanel
+                insights={insights}
+                isLoading={insightsLoading}
+                onAction={onInsightAction}
+              />
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      ) : null}
 
-        {show?.insights === false ? null : (
-          <div style={{ order: orderOf('insights') }}>
-            <AIInsightsPanel
-              insights={insights}
-              isLoading={insightsLoading}
-              onAction={onInsightAction}
-            />
-          </div>
-        )}
-      </div>
+      {/* Custom Pinned KPIs (only renders when user pinned custom metrics) */}
+      {show?.kpis === false ? null : (
+        <KpiGrid className="empty:hidden">
+          <CustomKpiCards locale={locale} onNavigate={onNavigate} />
+        </KpiGrid>
+      )}
 
-      {/* Level 4: Recent Activities — انتهای صفحه */}
-      <div style={{ order: orderOf('activities') }}>
-        {show?.activities === false ? null : (
+      {/* Level 4: Recent Business Activity */}
+      {show?.activities === false ? null : (
+        <div style={{ order: orderOf('activities') }} className="min-w-0">
           <RecentActivities
             groups={recentActivities}
             isLoading={activitiesLoading}
             onNavigate={onNavigate}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 })

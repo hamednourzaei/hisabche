@@ -1,0 +1,23 @@
+# Hisabche UX Reconstruction — Component Reuse Map
+
+> **Phase 1 Deliverable** | Generated: `2026-11-26` | Rule: Extend, never duplicate (`packages/ui/src/components/ui/`).
+
+## 1. Canonical Shared Components (81 Root Primitives + Subpackages)
+
+| Need                               | Canonical Component(s)                                                                                                                                                      | Location (`packages/ui/src/components/ui/`)             | Notes                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------- |
+| **Hub Navigation & Sections**      | `PageHub`, `HubTabs`, `SegmentedControl`                                                                                                                                    | `page-hub.tsx`, `hub-tabs.tsx`, `segmented-control.tsx` | Mandatory for all hubs (`?tab=` & `?view=`)                     |
+| **Lists, Tables, Search, Filters** | `DataTable`, `SearchableTable`, `TableToolbar`, `TableFilterSelect`, `TableFilterMenu`, `BulkActionBar`, `Pagination`                                                       | `data-table/`, `pagination.tsx`                         | Includes `data-table-cards.tsx` for mobile                      |
+| **KPI & Stats**                    | `KpiCard` / `KpiGrid`, `BentoStats`, `StatSurface`                                                                                                                          | `kpi-card.tsx`, `bento-stats.tsx`, `stat-surface.ts`    | Fix physical `ml-/mr-` in `kpi-card.tsx`                        |
+| **Inputs & Pickers**               | `Input`, `MoneyInput`, `PhoneInput`, `NumberStepper`, `SearchInput`, `Textarea`, `Checkbox`, `Switch`, `SelectField`, `JalaliDatePicker`, `CustomerPicker`, `ProductPicker` | Root primitives                                         | Replace 3 raw `<select>` usages with `SelectField`              |
+| **Overlays & Express Forms**       | `Dialog`, `AlertDialog`, `Sheet`, `Modal`, `DropdownMenu`, `Tooltip`                                                                                                        | Root primitives                                         | Prefer `Sheet` (side desktop / bottom mobile) for express forms |
+| **Charts**                         | `Chart`, `TrendChart`                                                                                                                                                       | `chart.tsx`, `trend-chart.tsx`                          | Remove hex literals in `chart.tsx`                              |
+| **Feedback & States**              | `EmptyState`, `ErrorBoundary`, `PageSkeleton`, `Skeleton`, `ToastProvider`/`Sonner`, `SaveIndicator`                                                                        | Root primitives                                         | Wire explicit error + empty states on every route               |
+| **Offline & Permissions**          | `OfflineBanner`, `OfflinePageGate`, `OfflineQueue`, `OfflineRefusalNotice`, `CloudRequiredNotice`, `NoAccessNotice`                                                         | Root primitives                                         | Mandatory for offline-first & RBAC                              |
+| **Entity Shared Panels**           | `EntityNotes`, `CustomFieldsPanel`, `UndoDisclosure`, `GlobalPageCustomizer`                                                                                                | Root primitives                                         | Reuse across `:id` detail routes                                |
+| **Locked Global Chrome**           | `DashboardHeader`, `DashboardSidebar`, `Breadcrumb`, `CommandPalette`, `NotificationBell`                                                                                   | Root primitives                                         | **LOCKED (§0.1) — DO NOT MODIFY**                               |
+
+## 2. Consolidation Rule for Phase 2+
+
+- Never create a second table, select, tab bar, KPI card, or empty state.
+- If a route needs a new variant (e.g., compact mobile KPI card or responsive filter drawer), extend the existing shared primitive in `packages/ui/src/components/ui/` so all 30 workspace routes benefit.

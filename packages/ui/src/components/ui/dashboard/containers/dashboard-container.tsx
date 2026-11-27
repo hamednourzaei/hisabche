@@ -236,42 +236,7 @@ export function DashboardContainer() {
   const hasSessions = Boolean(sess.data && sess.data.length > 0)
 
   return (
-    <>
-      <FirstValueChecklist
-        hasProducts={hasProducts}
-        hasCustomers={hasCustomers}
-        hasInvoices={hasInvoices}
-        hasSessions={hasSessions}
-        unavailable={prods.isError || custs.isError || invs.isError}
-        className="mb-6"
-      />
-
-      {operationalProfile.data?.dna && (roleStart.setupGaps.length > 0 || terminologyUnresolved) ? (
-        <div
-          role="note"
-          data-dna-setup-gaps={roleStart.setupGaps.join(',')}
-          data-dna-terminology-unresolved={terminologyUnresolved ? 'true' : 'false'}
-          className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--color-warning)/0.45)] bg-[hsl(var(--color-warning)/0.08)] px-4 py-2.5 text-sm"
-        >
-          <span className="text-[hsl(var(--fg-primary))]">
-            {t(
-              'dashboard.setupGapsPrompt',
-              'برخی بخش‌های پروفایل کاری هنوز مشخص نشده‌اند؛ تنظیمات پایه را کامل کنید.',
-            )}{' '}
-            <span className="text-xs text-[hsl(var(--fg-secondary))]">
-              ({term('transactionLabelKey')} / {term('itemLabelKey')})
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => push('/settings')}
-            className="text-xs font-semibold text-[hsl(var(--color-primary))] underline-offset-2 hover:underline"
-          >
-            {t('dashboard.completeSetupAction', 'تکمیل پروفایل کاری')}
-          </button>
-        </div>
-      ) : null}
-
+    <div className="space-y-3 sm:space-y-3.5 pb-20 lg:pb-0">
       {/* §12 — what needs doing, above what happened.
           `capabilities` is empty deliberately: no endpoint reports the
           capabilities the SERVER granted this actor, and inventing a list
@@ -289,7 +254,7 @@ export function DashboardContainer() {
           suppliers reads them in dollars. The picker only offers currencies
           the workspace has an actual rate for, so it cannot select a basis
           that would then render «نرخ ثبت نشده» on every card. */}
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-col items-stretch gap-2 rounded-2xl border border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-elevated)/0.6)] px-3 py-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* T13 — renders nothing until a provider is configured. */}
           {/* The prefix comes from the route: `useLocale()` is the UI
@@ -445,68 +410,114 @@ export function DashboardContainer() {
         hiddenFigures={kpis?.hidden ?? []}
       />
 
-      {look.shows('manufacturing') ? (
-        <ManufacturingDashboardCard
-          t={t}
-          locale={intlLocale}
-          from={toIsoDay(dateRange.from)}
-          to={toIsoDay(dateRange.to)}
-          onOpen={() => push('/manufacturing')}
-        />
+      <FirstValueChecklist
+        hasProducts={hasProducts}
+        hasCustomers={hasCustomers}
+        hasInvoices={hasInvoices}
+        hasSessions={hasSessions}
+        unavailable={prods.isError || custs.isError || invs.isError}
+      />
+
+      {operationalProfile.data?.dna && (roleStart.setupGaps.length > 0 || terminologyUnresolved) ? (
+        <div
+          role="note"
+          data-dna-setup-gaps={roleStart.setupGaps.join(',')}
+          data-dna-terminology-unresolved={terminologyUnresolved ? 'true' : 'false'}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[hsl(var(--color-warning)/0.45)] bg-[hsl(var(--color-warning)/0.08)] px-4 py-2.5 text-sm"
+        >
+          <span className="text-[hsl(var(--fg-primary))]">
+            {t(
+              'dashboard.setupGapsPrompt',
+              'برخی بخش‌های پروفایل کاری هنوز مشخص نشده‌اند؛ تنظیمات پایه را کامل کنید.',
+            )}{' '}
+            <span className="text-xs text-[hsl(var(--fg-secondary))]">
+              ({term('transactionLabelKey')} / {term('itemLabelKey')})
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => push('/settings')}
+            className="text-xs font-semibold text-[hsl(var(--color-primary))] underline-offset-2 hover:underline"
+          >
+            {t('dashboard.completeSetupAction', 'تکمیل پروفایل کاری')}
+          </button>
+        </div>
       ) : null}
 
-      {profile.dashboard.includes('lowStockVariants') && look.shows('lowStockVariants') ? (
-        <LowStockVariantsCard
-          t={t}
-          locale={intlLocale}
-          enabled={look.active('lowStockVariants')}
-          onOpen={() => push('/warehouse')}
-        />
-      ) : null}
-
-      {profile.dashboard.includes('todaySessions') && look.shows('todaySessions') ? (
-        <TodaySessionsCard
-          t={t}
-          locale={intlLocale}
-          enabled={look.active('todaySessions')}
-          onOpen={() => push('/customers?tab=sessions')}
-        />
-      ) : null}
-
-      {profile.dashboard.includes('packageCreditsLow') && look.shows('packageCreditsLow') ? (
-        <PackageCreditsLowCard
-          t={t}
-          locale={intlLocale}
-          enabled={look.active('packageCreditsLow')}
-          onOpen={() => push('/customers')}
-        />
-      ) : null}
-
-      {profile.dashboard.includes('openRepairTickets') && look.shows('openRepairTickets') ? (
-        <OpenRepairTicketsCard
-          t={t}
-          locale={intlLocale}
-          enabled={look.active('openRepairTickets')}
-          onOpen={() => push('/customers?tab=sessions&view=repairs')}
-        />
-      ) : null}
-
-      {(operationalProfile.data?.dna?.archetypeHint === 'SALON_MULTI_STAFF' ||
+      {look.shows('manufacturing') ||
+      (profile.dashboard.includes('lowStockVariants') && look.shows('lowStockVariants')) ||
+      (profile.dashboard.includes('todaySessions') && look.shows('todaySessions')) ||
+      (profile.dashboard.includes('packageCreditsLow') && look.shows('packageCreditsLow')) ||
+      (profile.dashboard.includes('openRepairTickets') && look.shows('openRepairTickets')) ||
+      ((operationalProfile.data?.dna?.archetypeHint === 'SALON_MULTI_STAFF' ||
         operationalProfile.data?.dna?.archetypeHint === 'NAIL_TECH_BEAUTY' ||
         profile.primary === 'beautySalon') &&
-      may('invoice.read') ? (
-        <SalonOperationsCard
-          t={t}
-          locale={intlLocale}
-          from={toIsoDay(dateRange.from)}
-          to={toIsoDay(dateRange.to)}
-          enabled={
-            access !== undefined &&
-            access.capabilities.includes('payroll.read') &&
-            (profile.isGeneric ||
-              profile.primaryDefinition.requestedCapabilities.includes('resource_capacity'))
-          }
-        />
+        may('invoice.read')) ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+          {look.shows('manufacturing') ? (
+            <ManufacturingDashboardCard
+              t={t}
+              locale={intlLocale}
+              from={toIsoDay(dateRange.from)}
+              to={toIsoDay(dateRange.to)}
+              onOpen={() => push('/manufacturing')}
+            />
+          ) : null}
+
+          {profile.dashboard.includes('lowStockVariants') && look.shows('lowStockVariants') ? (
+            <LowStockVariantsCard
+              t={t}
+              locale={intlLocale}
+              enabled={look.active('lowStockVariants')}
+              onOpen={() => push('/warehouse')}
+            />
+          ) : null}
+
+          {profile.dashboard.includes('todaySessions') && look.shows('todaySessions') ? (
+            <TodaySessionsCard
+              t={t}
+              locale={intlLocale}
+              enabled={look.active('todaySessions')}
+              onOpen={() => push('/customers?tab=sessions')}
+            />
+          ) : null}
+
+          {profile.dashboard.includes('packageCreditsLow') && look.shows('packageCreditsLow') ? (
+            <PackageCreditsLowCard
+              t={t}
+              locale={intlLocale}
+              enabled={look.active('packageCreditsLow')}
+              onOpen={() => push('/customers')}
+            />
+          ) : null}
+
+          {profile.dashboard.includes('openRepairTickets') && look.shows('openRepairTickets') ? (
+            <OpenRepairTicketsCard
+              t={t}
+              locale={intlLocale}
+              enabled={look.active('openRepairTickets')}
+              onOpen={() => push('/customers?tab=sessions&view=repairs')}
+            />
+          ) : null}
+
+          {(operationalProfile.data?.dna?.archetypeHint === 'SALON_MULTI_STAFF' ||
+            operationalProfile.data?.dna?.archetypeHint === 'NAIL_TECH_BEAUTY' ||
+            profile.primary === 'beautySalon') &&
+          may('invoice.read') ? (
+            <SalonOperationsCard
+              t={t}
+              locale={intlLocale}
+              from={toIsoDay(dateRange.from)}
+              to={toIsoDay(dateRange.to)}
+              enabled={
+                access !== undefined &&
+                access.capabilities.includes('payroll.read') &&
+                (profile.isGeneric ||
+                  profile.primaryDefinition.requestedCapabilities.includes('resource_capacity'))
+              }
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <OwnerCommandCenterSection
@@ -517,6 +528,6 @@ export function DashboardContainer() {
         blockedModules={access?.blockedModules ?? []}
         onNavigate={(href) => push(href)}
       />
-    </>
+    </div>
   )
 }

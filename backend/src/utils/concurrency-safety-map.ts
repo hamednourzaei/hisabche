@@ -506,6 +506,12 @@ export const CONCURRENCY_SAFETY_MAP: readonly RouteSafety[] = [
     ],
   },
   {
+    routeFile: 'admin.routes.ts',
+    route: 'PUT /api/admin/workspaces/:id/subscription',
+    mechanisms: ['last-write-wins'],
+    evidence: [{ file: `${SVC}/admin.service.ts`, text: 'ensureWorkspaceSubscription' }],
+  },
+  {
     routeFile: 'admin-billing.routes.ts',
     route: 'POST /api/admin/billing/prices',
     mechanisms: ['last-write-wins'],

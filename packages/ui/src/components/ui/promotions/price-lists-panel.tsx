@@ -19,6 +19,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Plus } from 'lucide-react'
 import { formatNumber } from '@hisabche/formatting'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
 import { CURRENCY_CODES, priceListInputSchema, type SavedPriceList } from '@hisabche/validation'
@@ -42,6 +43,8 @@ import { productPrice, readProducts } from '../../../lib/invoices/products'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
+import { Input } from '../input'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SelectField } from '../select-field'
@@ -186,25 +189,59 @@ export function PriceListsPanel() {
     () => (lists.data ?? []).filter((list) => matchesSearch(search, [list.name, list.currency])),
     [lists.data, search],
   )
+  const totalCount = lists.data?.length ?? 0
+  const activeCount = useMemo(
+    () => (lists.data ?? []).filter((l) => l.isActive).length,
+    [lists.data],
+  )
   const opened = (lists.data ?? []).find((list) => list.id === openId) ?? null
 
   return (
     <section className="space-y-3" aria-labelledby="price-lists-title">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 id="price-lists-title" className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t('title')}
-          </h2>
-          <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{t('subtitle')}</p>
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id="price-lists-title"
+              className="text-lg font-bold sm:text-xl text-[hsl(var(--fg-primary))]"
+            >
+              {t('title')}
+            </h2>
+            {totalCount > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[hsl(var(--color-primary))]">
+                {t('activeSummary', { active: count(activeCount), total: count(totalCount) })}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
+            {t('subtitle')}
+          </p>
         </div>
         {!adding ? (
-          <Button variant="outline" onClick={() => setAdding(true)}>
+          <Button
+            variant="default"
+            className="min-h-[44px] sm:min-h-[36px] shrink-0 gap-1.5 rounded-xl"
+            onClick={() => setAdding(true)}
+          >
+            <Plus className="size-4" aria-hidden="true" />
             {t('add')}
           </Button>
         ) : null}
       </header>
 
-      {adding ? <PriceListForm onDone={() => setAdding(false)} errorText={errorText} /> : null}
+      <Dialog
+        open={adding}
+        onOpenChange={(open) => {
+          if (!open) setAdding(false)
+        }}
+      >
+        <DialogContent size="md">
+          <DialogHeader className="relative z-10 border-b border-[hsl(var(--border-default)/0.6)] pb-3 pe-10">
+            <DialogTitle>{t('newTitle')}</DialogTitle>
+          </DialogHeader>
+          {adding ? <PriceListForm onDone={() => setAdding(false)} errorText={errorText} /> : null}
+        </DialogContent>
+      </Dialog>
 
       {lists.isLoading ? (
         <div className="space-y-2">
@@ -220,9 +257,10 @@ export function PriceListsPanel() {
           {status === 403 ? t('forbidden') : errorText(lists.error)}
         </p>
       ) : lists.data.length === 0 ? (
-        <p className={cn(card, 'p-6 text-center text-sm text-[hsl(var(--fg-secondary))]')}>
-          {t('empty')}
-        </p>
+        <div className={cn(card, 'p-6 text-center space-y-2')}>
+          <p className="text-sm font-medium text-[hsl(var(--fg-secondary))]">{t('empty')}</p>
+          <p className={faint}>{t('note')}</p>
+        </div>
       ) : (
         <>
           <DataTable
@@ -231,7 +269,7 @@ export function PriceListsPanel() {
             rows={rows}
             columns={columns}
             rowKey={(list) => list.id}
-            // Pressing a row opens its prices and customers under the table.
+            // Pressing a row opens its prices and customers inside the responsive modal.
             onRowClick={(list) => setOpenId(openId === list.id ? null : list.id)}
             searchValue={search}
             onSearchChange={setSearch}
@@ -242,24 +280,30 @@ export function PriceListsPanel() {
               </p>
             }
           />
-          {opened ? (
-            <div className={cn(card, 'p-4')}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
-                  {opened.name}{' '}
-                  <span dir="ltr" className="text-xs font-normal text-[hsl(var(--fg-secondary))]">
-                    {opened.currency}
-                  </span>
-                </h3>
-                <Button size="sm" variant="ghost" onClick={() => setOpenId(null)}>
-                  {t('close')}
-                </Button>
-              </div>
-              <PriceListEditor list={opened} errorText={errorText} />
-            </div>
-          ) : (
-            <p className={faint}>{t('openHint')}</p>
-          )}
+          <Dialog
+            open={opened !== null}
+            onOpenChange={(open) => {
+              if (!open) setOpenId(null)
+            }}
+          >
+            <DialogContent size="xl">
+              <DialogHeader className="relative z-10 border-b border-[hsl(var(--border-default)/0.6)] pb-3 pe-10">
+                <DialogTitle className="flex flex-wrap items-center gap-2">
+                  <span>{opened?.name ?? ''}</span>
+                  {opened ? (
+                    <span
+                      dir="ltr"
+                      className="rounded-md border border-[hsl(var(--color-primary)/0.25)] bg-[hsl(var(--color-primary)/0.08)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[hsl(var(--color-primary))]"
+                    >
+                      {opened.currency}
+                    </span>
+                  ) : null}
+                </DialogTitle>
+              </DialogHeader>
+              {opened ? <PriceListEditor list={opened} errorText={errorText} /> : null}
+            </DialogContent>
+          </Dialog>
+          {!opened ? <p className={faint}>{t('openHint')}</p> : null}
         </>
       )}
       {setActive.error ? (
@@ -267,7 +311,7 @@ export function PriceListsPanel() {
           {errorText(setActive.error)}
         </p>
       ) : null}
-      <p className={faint}>{t('note')}</p>
+      {lists.data && lists.data.length > 0 ? <p className={faint}>{t('note')}</p> : null}
     </section>
   )
 }
@@ -302,18 +346,17 @@ function PriceListForm({ onDone, errorText }: { onDone: () => void; errorText: E
   }
 
   return (
-    <div className={cn(card, 'space-y-4 p-4')}>
-      <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t('newTitle')}</h3>
+    <div className="relative z-10 space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1">
           <span className={label}>{t('name')}</span>
-          <input
+          <Input
             name="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={80}
             placeholder={t('namePlaceholder')}
-            className={field}
+            className="min-h-[44px] sm:min-h-[38px]"
           />
         </label>
         <div className="space-y-1">
@@ -328,7 +371,7 @@ function PriceListForm({ onDone, errorText }: { onDone: () => void; errorText: E
               value: code,
               label: `${tCurrency(code.toLowerCase())} (${code})`,
             }))}
-            className={field}
+            className="min-h-[44px] sm:min-h-[38px] w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 text-sm text-[hsl(var(--fg-primary))]"
           />
         </div>
         <div className="space-y-1" data-field="validFrom">
@@ -347,12 +390,20 @@ function PriceListForm({ onDone, errorText }: { onDone: () => void; errorText: E
           {problem ?? errorText(save.error)}
         </p>
       ) : null}
-      <div className="flex gap-2">
-        <Button disabled={save.isPending} onClick={submit}>
-          {t('save')}
-        </Button>
-        <Button variant="ghost" onClick={onDone}>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[hsl(var(--border-default)/0.6)] pt-3">
+        <Button
+          variant="ghost"
+          className="min-h-[44px] sm:min-h-[36px] rounded-xl"
+          onClick={onDone}
+        >
           {t('cancel')}
+        </Button>
+        <Button
+          className="min-h-[44px] sm:min-h-[36px] rounded-xl"
+          disabled={save.isPending}
+          onClick={submit}
+        >
+          {t('save')}
         </Button>
       </div>
     </div>
@@ -374,10 +425,10 @@ function PriceListEditor({ list, errorText }: { list: SavedPriceList; errorText:
     return unit ? labelOfUnit(unit) : (code ?? '')
   }
 
-  if (detail.isLoading) return <p className={cn('mt-3', faint)}>{t('loading')}</p>
+  if (detail.isLoading) return <p className={cn('mt-2', faint)}>{t('loading')}</p>
   if (detail.error || !detail.data) {
     return (
-      <p role="alert" className={cn('mt-3', danger)}>
+      <p role="alert" className={cn('mt-2', danger)}>
         {errorText(detail.error)}
       </p>
     )
@@ -385,21 +436,26 @@ function PriceListEditor({ list, errorText }: { list: SavedPriceList; errorText:
   const { items, customers } = detail.data
 
   return (
-    <div className="mt-4 grid gap-4 border-t border-[hsl(var(--border-default))] pt-4 lg:grid-cols-2">
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('prices')}</h3>
+    <div className="grid gap-5 lg:grid-cols-12">
+      <div className="space-y-3 lg:col-span-7">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('prices')}</h3>
+          <span className={cn('tabular-nums', faint)}>{formatNumber(items.length, locale, 0)}</span>
+        </div>
         {items.length === 0 ? (
           <p className={faint}>{t('noPrices')}</p>
         ) : (
-          <ul className="divide-y divide-[hsl(var(--border-default))]">
+          <ul className="divide-y divide-[hsl(var(--border-default))] rounded-xl border border-[hsl(var(--border-default)/0.8)] px-3">
             {items.map((item) => (
-              <li key={item.productId} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                <span className="min-w-0 flex-1 truncate text-[hsl(var(--fg-primary))]">
+              <li key={item.productId} className="flex flex-wrap items-center gap-2 py-2.5 text-sm">
+                <span className="min-w-0 flex-1 truncate font-medium text-[hsl(var(--fg-primary))]">
                   {item.name}
                 </span>
-                <span className="tabular-nums text-[hsl(var(--fg-primary))]">
+                <span className="tabular-nums font-semibold text-[hsl(var(--fg-primary))]">
                   {money(item.unitPrice)}
-                  {item.unit ? <span className={faint}> / {unitLabel(item.unit)}</span> : null}
+                  {item.unit ? (
+                    <span className={cn('font-normal', faint)}> / {unitLabel(item.unit)}</span>
+                  ) : null}
                 </span>
                 <span className={cn('tabular-nums', faint)}>
                   {t('ownPrice', { price: formatNumber(item.ownPrice, locale, 2) })}
@@ -407,6 +463,7 @@ function PriceListEditor({ list, errorText }: { list: SavedPriceList; errorText:
                 <Button
                   size="sm"
                   variant="ghost"
+                  className="min-h-[44px] sm:min-h-[32px]"
                   disabled={setItems.isPending}
                   onClick={() =>
                     setItems.mutate({
@@ -437,8 +494,13 @@ function PriceListEditor({ list, errorText }: { list: SavedPriceList; errorText:
         ) : null}
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('customers')}</h3>
+      <div className="space-y-3 lg:col-span-5 lg:border-s lg:border-[hsl(var(--border-default)/0.7)] lg:ps-5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{t('customers')}</h3>
+          <span className={cn('tabular-nums', faint)}>
+            {formatNumber(customers.length, locale, 0)}
+          </span>
+        </div>
         {customers.length === 0 ? (
           <p className={faint}>{t('noCustomers')}</p>
         ) : (
@@ -449,7 +511,7 @@ function PriceListEditor({ list, errorText }: { list: SavedPriceList; errorText:
                   type="button"
                   disabled={assign.isPending}
                   onClick={() => assign.mutate({ customerId: customer.id, priceListId: null })}
-                  className="rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-xs text-[hsl(var(--color-primary))]"
+                  className="inline-flex min-h-[36px] sm:min-h-[28px] items-center rounded-full bg-[hsl(var(--color-primary)/0.1)] px-3 py-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.18)]"
                   aria-label={`${t('takeOff')}: ${customer.name}`}
                 >
                   {customer.name} ×

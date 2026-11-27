@@ -2173,7 +2173,12 @@
     "finalizePurchaseBody": "با ثبت نهایی، فاکتور خرید رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای خریداری‌شده به انبار اضافه خواهد شد.",
     "finalizeSaleTitle": "ثبت نهایی فاکتور فروش",
     "finalizeSaleBody": "با ثبت نهایی، فاکتور فروش رسمی ایجاد شده، سند حسابداری ثبت و موجودی کالاهای تحویل‌شده از انبار کسر خواهد شد.",
-    "finalized": "نهایی‌شده"
+    "finalized": "نهایی‌شده",
+    "overviewLabel": "نمای کلی مالی بل‌ها",
+    "collectionRate": "نرخ وصول",
+    "unitInvoice": "بل",
+    "advancesPendingPosting": "نیازمند ثبت نهایی",
+    "advancesSummaryCount": "{count} سند پیش‌پرداخت"
   },
   "warehouse": {
     "deleteWarehouse": "حذف انبار",
@@ -11816,7 +11821,8 @@
     },
     "tabs": {
       "goldRates": "نرخ طلا و عملیات"
-    }
+    },
+    "activeSummary": "{active} فعال از {total}"
   },
   "notes": {
     "title": "یادداشت‌ها",
@@ -12268,7 +12274,8 @@
       "validity": "اعتبار",
       "status": "وضعیت",
       "actions": "عملیات"
-    }
+    },
+    "activeSummary": "{active} فعال از {total}"
   },
   "lateFees": {
     "title": "جریمه‌ی تأخیر",
@@ -14675,7 +14682,8 @@
       "GOLD_KYC_REQUIRED": "برای این مبلغ ثبت هویت مشتری ضروری است",
       "GOLD_WEIGHT_INVALID": "وزن واردشده معتبر نیست",
       "GOLD_RECOVERED_EXCEEDS_INPUT": "وزن بازیافتی از وزن ورودی بیشتر بوده نمی‌تواند"
-    }
+    },
+    "operationsDesk": "میز عملیات طلا و کارگاه"
   },
   "returns": {
     "condition": {

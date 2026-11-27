@@ -41,32 +41,43 @@ DialogOverlay.displayName = 'DialogOverlay'
 
 // ─── Content ───────────────────────────────────────────────────────────────
 
+type DialogSize = 'sm' | 'md' | 'lg' | 'xl'
+
+const DIALOG_SIZES: Record<DialogSize, string> = {
+  sm: 'w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-sm sm:max-w-md',
+  md: 'w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-lg sm:max-w-xl',
+  lg: 'w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-lg sm:max-w-xl md:max-w-2xl',
+  xl: 'w-[calc(100vw-24px)] sm:w-[calc(100vw-48px)] max-w-lg sm:max-w-2xl md:max-w-3xl lg:max-w-4xl',
+}
+
 interface DialogContentProps extends React.ComponentPropsWithoutRef<
   typeof DialogPrimitive.Content
 > {
   showCloseButton?: boolean
+  size?: DialogSize | undefined
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showCloseButton = true, ...props }, ref) => (
+>(({ className, children, showCloseButton = true, size = 'md', ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Layout — centered (RTL-safe with left/translate)
-        'fixed z-50 w-[calc(100%-32px)] max-w-lg',
+        // Layout — centered across all viewports (RTL-safe with left/translate)
+        'fixed z-50',
+        DIALOG_SIZES[size],
         'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2',
-        'grid gap-4 p-6',
-        'max-h-[90vh] overflow-y-auto',
-        // Colors
+        'grid gap-4 p-5 sm:p-6',
+        'max-h-[88dvh] overflow-y-auto',
+        // Colors — brand emerald accent ring + gradient wash
         'rounded-2xl',
-        'border border-[hsl(var(--border-strong))]',
+        'border border-[hsl(var(--color-primary)/0.25)]',
         'bg-[hsl(var(--surface-elevated))]',
         'text-[hsl(var(--fg-primary))]',
-        'shadow-xl',
+        'shadow-2xl shadow-black/20',
         // Animation
         'duration-200',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
@@ -79,12 +90,20 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-[image:var(--gradient-brand)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 rounded-t-2xl bg-gradient-to-b from-[hsl(var(--color-primary)/0.12)] via-[hsl(var(--color-primary)/0.04)] to-transparent"
+      />
       {children}
 
       {showCloseButton && (
         <DialogPrimitive.Close
           className={cn(
-            'absolute end-4 top-4',
+            'absolute end-4 top-4 z-10',
             'rounded-full p-1.5',
             'text-[hsl(var(--fg-tertiary))]',
             'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',

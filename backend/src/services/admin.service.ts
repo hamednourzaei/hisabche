@@ -937,13 +937,17 @@ export class AdminService {
     actor: AdminActorContext,
     subscriptionId: string,
     plan: Plan,
+    workspaceId?: string,
   ): Promise<Record<string, unknown>> {
     const parsed = planEnum.safeParse(plan)
     if (!parsed.success) {
       throw new DatabaseError(`Invalid plan "${String(plan)}" — refused, nothing was changed`)
     }
-    return this.auditedSubscriptionUpdate(actor, subscriptionId, (row) =>
-      this.billingService.upgradeSubscriptionRow(row.id, parsed.data, 'month'),
+    return this.auditedSubscriptionUpdate(
+      actor,
+      subscriptionId,
+      (row) => this.billingService.upgradeSubscriptionRow(row.id, parsed.data, 'month'),
+      workspaceId,
     )
   }
 
@@ -952,14 +956,51 @@ export class AdminService {
     actor: AdminActorContext,
     subscriptionId: string,
     status: SubscriptionStatus,
+    workspaceId?: string,
   ): Promise<Record<string, unknown>> {
     const parsed = subscriptionStatusEnum.safeParse(status)
     if (!parsed.success) {
       throw new DatabaseError(`Invalid status "${String(status)}" — refused, nothing was changed`)
     }
-    return this.auditedSubscriptionUpdate(actor, subscriptionId, (row) =>
-      this.billingService.setSubscriptionRowStatus(row.id, parsed.data),
+    return this.auditedSubscriptionUpdate(
+      actor,
+      subscriptionId,
+      (row) => this.billingService.setSubscriptionRowStatus(row.id, parsed.data),
+      workspaceId,
     )
+  }
+
+  /**
+   * Ensure a workspace has a subscription row, then apply any requested plan/status.
+   * Used when an admin manages or resets a workspace that currently has `بدون اشتراک`
+   * (`subscriptionId === null`).
+   */
+  async ensureWorkspaceSubscription(
+    actor: AdminActorContext,
+    workspaceId: string,
+    input: { plan?: Plan | undefined; status?: SubscriptionStatus | undefined },
+  ): Promise<Record<string, unknown>> {
+    const { data: workspace, error } = await supabase
+      .from('workspaces')
+      .select('id, owner_id')
+      .eq('id', workspaceId)
+      .maybeSingle()
+    if (error) throw new DatabaseError('Failed to fetch workspace', error)
+    if (!workspace || !workspace.owner_id) throw new NotFoundError('Workspace')
+
+    const ensured = await this.billingService.getOrCreateSubscription(
+      workspace.owner_id as string,
+      workspaceId,
+    )
+    if (!ensured.id) throw new DatabaseError('Failed to resolve subscription id')
+    let result: Record<string, unknown> = { subscription: ensured }
+    if (input.plan) {
+      result = await this.updateSubscriptionPlan(actor, ensured.id, input.plan, workspaceId)
+    }
+    if (input.status) {
+      result = await this.updateSubscriptionStatus(actor, ensured.id, input.status, workspaceId)
+    }
+    return result
   }
 
   /**
@@ -972,6 +1013,7 @@ export class AdminService {
     actor: AdminActorContext,
     subscriptionId: string,
     mutate: (row: SubscriptionRow) => Promise<unknown>,
+    explicitWorkspaceId?: string,
   ): Promise<Record<string, unknown>> {
     const before = await this.fetchSubscriptionRow(subscriptionId)
     if (!before) throw new NotFoundError('Subscription')
@@ -982,8 +1024,22 @@ export class AdminService {
     const after = await this.fetchSubscriptionRow(subscriptionId)
     if (!after) throw new DatabaseError('Subscription disappeared during update')
 
+    let auditWorkspaceId = after.workspace_id ?? before.workspace_id ?? explicitWorkspaceId ?? null
+    if (!auditWorkspaceId && (after.user_id ?? before.user_id)) {
+      const ownerId = (after.user_id ?? before.user_id) as string
+      const { data: member } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', ownerId)
+        .order('joined_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      auditWorkspaceId = (member?.workspace_id as string | undefined) ?? null
+    }
+
     await this.auditService.log({
       userId: actor.adminUserId,
+      workspaceId: auditWorkspaceId ?? undefined,
       action: 'update',
       entityType: 'subscription',
       entityId: subscriptionId,

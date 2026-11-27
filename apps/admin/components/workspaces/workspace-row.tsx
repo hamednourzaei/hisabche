@@ -21,6 +21,7 @@ import type { AdminWorkspace } from '@/hooks/use-admin-workspaces'
 import {
   PLANS,
   STATUSES,
+  useEnsureWorkspaceSubscription,
   useUpdateSubscriptionPlan,
   useUpdateSubscriptionStatus,
   type Plan,
@@ -50,39 +51,68 @@ export function WorkspaceRow({
   const dateLocale = useAdminLocale()
   const [expanded, setExpanded] = useState(false)
   const [purgeOpen, setPurgeOpen] = useState(false)
+  const [nowMs] = useState(() => Date.now())
   const regionId = useId()
 
   const updatePlan = useUpdateSubscriptionPlan()
   const updateStatus = useUpdateSubscriptionStatus()
+  const ensureSubscription = useEnsureWorkspaceSubscription()
   const purge = usePurgeWorkspace()
 
   const periodEndMs = workspace.subscriptionPeriodEnd
     ? new Date(workspace.subscriptionPeriodEnd).getTime()
     : null
-  const expired = periodEndMs !== null && Number.isFinite(periodEndMs) && periodEndMs < Date.now()
-  const hasSubscription = Boolean(workspace.plan && workspace.subscriptionId)
+  const trialEndMs = workspace.trialEndsAt ? new Date(workspace.trialEndsAt).getTime() : null
+  const expired =
+    (periodEndMs !== null && Number.isFinite(periodEndMs) && periodEndMs < nowMs) ||
+    (workspace.isTrial === true &&
+      trialEndMs !== null &&
+      Number.isFinite(trialEndMs) &&
+      trialEndMs < nowMs)
+  const hasSubscription = Boolean(workspace.subscriptionId)
   const status: SubscriptionStatus = expired
     ? 'expired'
     : isStatus(workspace.subscriptionStatus)
       ? workspace.subscriptionStatus
       : 'active'
   const busy =
-    updateStatus.isPending && updateStatus.variables?.subscriptionId === workspace.subscriptionId
+    (updateStatus.isPending &&
+      updateStatus.variables?.subscriptionId === workspace.subscriptionId) ||
+    (updatePlan.isPending && updatePlan.variables?.subscriptionId === workspace.subscriptionId) ||
+    (ensureSubscription.isPending && ensureSubscription.variables?.workspaceId === workspace.id)
 
   const reset = () => {
-    if (!workspace.subscriptionId) return
-    updateStatus.mutate({
-      subscriptionId: workspace.subscriptionId,
+    const reason = t('admin.subscriptions.resetReason')
+    if (workspace.subscriptionId) {
+      updateStatus.mutate({
+        subscriptionId: workspace.subscriptionId,
+        status: 'active',
+        reason,
+      })
+      return
+    }
+    ensureSubscription.mutate({
+      workspaceId: workspace.id,
       status: 'active',
-      reason: t('admin.subscriptions.resetReason'),
+      reason,
     })
   }
   const changePlan = (next: string) => {
-    if (!workspace.subscriptionId || !isPlan(next) || next === workspace.plan) return
-    updatePlan.mutate({
-      subscriptionId: workspace.subscriptionId,
+    if (!isPlan(next)) return
+    const reason = t('admin.subscriptions.upgradeReason')
+    if (workspace.subscriptionId) {
+      if (next === workspace.plan) return
+      updatePlan.mutate({
+        subscriptionId: workspace.subscriptionId,
+        plan: next,
+        reason,
+      })
+      return
+    }
+    ensureSubscription.mutate({
+      workspaceId: workspace.id,
       plan: next,
-      reason: t('admin.subscriptions.upgradeReason'),
+      reason,
     })
   }
 
@@ -183,83 +213,96 @@ export function WorkspaceRow({
             regionId={regionId}
           />
 
-          {hasSubscription && (
-            <div
-              className="mx-2 space-y-3 rounded-xl border border-border bg-card p-3"
-              data-subscription-controls=""
-            >
-              <div className="text-xs font-semibold text-foreground">
+          <div
+            className="mx-2 space-y-3 rounded-xl border border-border bg-card p-3"
+            data-subscription-controls=""
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-foreground">
                 {t('admin.subscriptions.managementTitle')}
-              </div>
-
-              {(updatePlan.isError || updateStatus.isError) && (
-                <p role="alert" className="text-xs text-destructive">
-                  {t('admin.subscriptions.updateError')}
-                </p>
+              </span>
+              {!hasSubscription && (
+                <span className="text-xs text-muted-foreground">
+                  {t('admin.workspaces.noSubscription')}
+                </span>
               )}
+            </div>
 
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-muted-foreground">{t('admin.subscriptions.status')}</span>
-                  <Select
-                    value={status}
-                    disabled={busy}
-                    onValueChange={(next) => {
-                      if (!workspace.subscriptionId || !isStatus(next) || next === status) return
+            {(updatePlan.isError || updateStatus.isError || ensureSubscription.isError) && (
+              <p role="alert" className="text-xs text-destructive">
+                {t('admin.subscriptions.updateError')}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted-foreground">{t('admin.subscriptions.status')}</span>
+                <Select
+                  value={status}
+                  disabled={busy}
+                  onValueChange={(next) => {
+                    if (!isStatus(next)) return
+                    const reason = t('admin.subscriptions.changeReason')
+                    if (workspace.subscriptionId) {
+                      if (next === status) return
                       updateStatus.mutate({
                         subscriptionId: workspace.subscriptionId,
                         status: next,
-                        reason: t('admin.subscriptions.changeReason'),
+                        reason,
                       })
-                    }}
+                      return
+                    }
+                    ensureSubscription.mutate({
+                      workspaceId: workspace.id,
+                      status: next,
+                      reason,
+                    })
+                  }}
+                >
+                  <SelectTrigger
+                    className="h-10 w-40 rounded-xl"
+                    aria-label={t('admin.subscriptions.changeStatus')}
                   >
-                    <SelectTrigger
-                      className="h-10 w-40 rounded-xl"
-                      aria-label={t('admin.subscriptions.changeStatus')}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`admin.status.${s}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`admin.status.${s}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
 
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-muted-foreground">{t('admin.subscriptions.plan')}</span>
-                  <Select
-                    value={isPlan(workspace.plan) ? workspace.plan : 'free'}
-                    disabled={busy}
-                    onValueChange={changePlan}
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted-foreground">{t('admin.subscriptions.plan')}</span>
+                <Select
+                  value={isPlan(workspace.plan) ? workspace.plan : 'free'}
+                  disabled={busy}
+                  onValueChange={changePlan}
+                >
+                  <SelectTrigger
+                    className="h-10 w-40 rounded-xl"
+                    aria-label={t('admin.subscriptions.changePlan')}
                   >
-                    <SelectTrigger
-                      className="h-10 w-40 rounded-xl"
-                      aria-label={t('admin.subscriptions.changePlan')}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PLANS.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {t(`admin.plan.${p}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLANS.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {t(`admin.plan.${p}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
 
-                {expired && (
-                  <Button size="sm" variant="outline" disabled={busy} onClick={reset}>
-                    {t('admin.subscriptions.resetSubscription')}
-                  </Button>
-                )}
-              </div>
+              <Button size="sm" variant="outline" disabled={busy} onClick={reset}>
+                {t('admin.subscriptions.resetSubscription')}
+              </Button>
             </div>
-          )}
+          </div>
 
           <div
             className="mx-2 mb-2 space-y-2 rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.05)] p-3"

@@ -134,11 +134,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/billing/subscription',
     {
-      preHandler: [
-        authenticate,
-        requireWorkspaceContext,
-        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'subscription' }),
-      ],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const subscription = await billingService.getCurrentSubscription(
@@ -358,11 +354,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/billing/usage',
     {
-      preHandler: [
-        authenticate,
-        requireWorkspaceContext,
-        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'usage' }),
-      ],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       // ⚠️ The report IS the response: { usage, limits, plan, isTrial }. It was

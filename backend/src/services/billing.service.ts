@@ -271,20 +271,10 @@ export class BillingService {
     // ids live in the same UUID space, so one shared key shape can collide —
     // and the bare `??` is the fail-open pattern the tenancy guard forbids
     // elsewhere, which should not be normalised just because this is a cache.
-    const cacheKey = workspaceId
-      ? this.getWorkspaceSubscriptionCacheKey(workspaceId)
-      : this.getSubscriptionCacheKey(userId)
-
-    // ✅ ابتدا از کش بخوان
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached as Subscription
-
     const existing = await this.findSubscriptionRow(userId, workspaceId)
 
     if (existing) {
-      const subscription = this.mapSubscription(existing)
-      await memoryCache.set(cacheKey, subscription, 300) // 5 دقیقه
-      return subscription
+      return this.mapSubscription(existing)
     }
 
     const now = new Date()
@@ -311,7 +301,6 @@ export class BillingService {
     if (error) throw new DatabaseError('Failed to create subscription', error)
 
     const result = this.mapSubscription(subscription)
-    await memoryCache.set(cacheKey, result, 300)
     return result
   }
 
@@ -320,26 +309,13 @@ export class BillingService {
   // در ثبت‌نام) دیگر باعث 500 نمی‌شود — به همان مسیر getOrCreateSubscription
   // برمی‌گردد که یک اشتراک آزمایشی می‌سازد.
   async getCurrentSubscription(userId: string, workspaceId?: string): Promise<Subscription> {
-    // Two DIFFERENT keys, never `workspaceId ?? userId`. Workspace ids and user
-    // ids live in the same UUID space, so one shared key shape can collide —
-    // and the bare `??` is the fail-open pattern the tenancy guard forbids
-    // elsewhere, which should not be normalised just because this is a cache.
-    const cacheKey = workspaceId
-      ? this.getWorkspaceSubscriptionCacheKey(workspaceId)
-      : this.getSubscriptionCacheKey(userId)
-
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached as Subscription
-
     const data = await this.findSubscriptionRow(userId, workspaceId)
 
     if (!data) {
       return this.getOrCreateSubscription(userId, workspaceId)
     }
 
-    const subscription = this.mapSubscription(data)
-    await memoryCache.set(cacheKey, subscription, 300)
-    return subscription
+    return this.mapSubscription(data)
   }
 
   // ─── Workspace access (read-only, never creates) ────────────
@@ -357,13 +333,9 @@ export class BillingService {
     workspaceId: string,
     now: Date = new Date(),
   ): Promise<SubscriptionAccess> {
-    const cacheKey = this.getWorkspaceAccessCacheKey(workspaceId)
-    const cached = await memoryCache.get<SubscriptionAccess>(cacheKey)
-    if (cached) return cached
-
     const row = await this.findWorkspaceSubscriptionRow(workspaceId)
 
-    const access: SubscriptionAccess = row
+    return row
       ? {
           expired: isSubscriptionExpired(
             {
@@ -377,11 +349,6 @@ export class BillingService {
           periodEnd: row.period_end ?? null,
         }
       : { expired: false, periodEnd: null }
-
-    // Short TTL: expiry is a moment in time, and renewal flushes this key
-    // (invalidateCache) so paying unlocks immediately rather than in a minute.
-    await memoryCache.set(cacheKey, access, 60)
-    return access
   }
 
   /**
@@ -487,14 +454,7 @@ export class BillingService {
     if (subscription.isTrial) return true
     if (limit === null) return true
 
-    const usageCacheKey = `${this.getUsageCacheKey(userId)}:${feature}`
-    const cached = await memoryCache.get<number>(usageCacheKey)
-    if (cached !== null) return cached < limit
-
     const count = await this.countUsage(userId, feature, workspaceId)
-
-    // ✅ ذخیره در کش با TTL 60 ثانیه
-    await memoryCache.set(usageCacheKey, count, 60)
 
     return count < limit
   }
@@ -841,11 +801,6 @@ export class BillingService {
   // before this runs, so a missing id here is a misordered route, not a
   // fallback opportunity.
   async getUsageReport(userId: string, workspaceId: string): Promise<UsageReport> {
-    const cacheKey = `usage:ws:${workspaceId}:report`
-
-    const cached = await memoryCache.get<UsageReport>(cacheKey)
-    if (cached) return cached
-
     const [invoices, users, transactions, subscription] = await Promise.all([
       this.countUsage(userId, 'invoices', workspaceId),
       this.countUsage(userId, 'users', workspaceId),
@@ -857,7 +812,7 @@ export class BillingService {
 
     const plan = PLANS[subscription.plan as Plan]
 
-    const result = {
+    return {
       usage: {
         invoices,
         users,
@@ -870,10 +825,6 @@ export class BillingService {
       plan: subscription.plan,
       isTrial: subscription.isTrial,
     }
-
-    // ✅ ذخیره در کش با TTL 60 ثانیه
-    await memoryCache.set(cacheKey, result, 60)
-    return result
   }
 
   // ─── Invalidate Cache ──────────────────────────────────────

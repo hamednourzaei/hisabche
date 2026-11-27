@@ -80,7 +80,13 @@ export function RecurringInvoicesButton({ t }: { t: T }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-h-[44px] sm:min-h-[36px] rounded-xl"
+        onClick={() => setOpen(true)}
+      >
         <Repeat className="size-4" aria-hidden="true" />
         {t('invoices.recurring.title', 'فاکتورهای تکراری')}
       </Button>

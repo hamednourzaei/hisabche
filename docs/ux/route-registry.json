@@ -1,0 +1,611 @@
+{
+  "generatedAt": "2026-11-26",
+  "phase": "PHASE_0_DISCOVERY_VERIFIED",
+  "counts": {
+    "webDashboardRoutes": 30,
+    "webPublicAuthRoutes": 37,
+    "webTotalRoutes": 67,
+    "webMovedRedirects": 31,
+    "appShellTotalEntries": 74,
+    "appShellActiveRoutes": 36,
+    "appShellNavigateRedirects": 38,
+    "adminRoutes": 27,
+    "navContractItems": 17,
+    "industryKeys": 67,
+    "industryTradeProfilesDefined": 66,
+    "capabilitiesTotal": 53,
+    "capabilitiesAvailable": 4,
+    "capabilitiesPartial": 36,
+    "capabilitiesPlanned": 13,
+    "engineKeys": 21,
+    "packIds": 7
+  },
+  "workspaceRoutes": [
+    {
+      "id": "dashboard",
+      "path": "/dashboard",
+      "shellPath": "/",
+      "container": "DashboardContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "invoices",
+      "path": "/invoices",
+      "shellPath": "/invoices",
+      "container": "SalesHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "invoices-new",
+      "path": "/invoices/new",
+      "shellPath": "/invoices/new",
+      "container": "InvoiceBuilderContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "invoices-new-preview",
+      "path": "/invoices/new/preview",
+      "shellPath": "/invoices/new/preview",
+      "container": "InvoicePreviewContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "invoices-detail",
+      "path": "/invoices/:id",
+      "shellPath": "/invoices/:id",
+      "container": "InvoiceDetailContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "till",
+      "path": "/till",
+      "shellPath": "/till",
+      "container": "TillContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "warehouse",
+      "path": "/warehouse",
+      "shellPath": "/warehouse",
+      "container": "WarehouseTabsContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "warehouse-detail",
+      "path": "/warehouse/:id",
+      "shellPath": "/warehouse/:id",
+      "container": "ProductDetailContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "accounting",
+      "path": "/accounting",
+      "shellPath": "/accounting",
+      "container": "AccountingPage",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "customers",
+      "path": "/customers",
+      "shellPath": "/customers",
+      "container": "CustomersHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "customers-detail",
+      "path": "/customers/:id",
+      "shellPath": "/customers/:id",
+      "container": "CustomerDetailContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "team-and-payroll",
+      "path": "/team-and-payroll",
+      "shellPath": "/team-and-payroll",
+      "container": "TeamAndPayrollContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "team-and-payroll-detail",
+      "path": "/team-and-payroll/:id",
+      "shellPath": "/team-and-payroll/:id",
+      "container": "EmployeeDetailContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "approvals",
+      "path": "/approvals",
+      "shellPath": "/approvals",
+      "container": "ApprovalsHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "manufacturing",
+      "path": "/manufacturing",
+      "shellPath": "/manufacturing",
+      "container": "ManufacturingContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "analysis",
+      "path": "/analysis",
+      "shellPath": "/analysis",
+      "container": "AnalysisContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "market-seller",
+      "path": "/market-seller",
+      "shellPath": "/market-seller",
+      "container": "MarketSellerContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "disabled": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "marketplace",
+      "path": "/marketplace",
+      "shellPath": "/marketplace",
+      "container": "MarketplaceContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "disabled": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "operations",
+      "path": "/operations",
+      "shellPath": "/operations",
+      "container": "InventoryOpsContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": true,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "stock-count",
+      "path": "/stock-count",
+      "shellPath": "/stock-count",
+      "container": "CycleCountContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "settings",
+      "path": "/settings",
+      "shellPath": "/settings",
+      "container": "SettingsHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": true,
+      "drawers": true,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "activities",
+      "path": "/activities",
+      "shellPath": "/activities",
+      "container": "ActivitiesPage",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": true,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "data-and-sync",
+      "path": "/data-and-sync",
+      "shellPath": "/data-and-sync",
+      "container": "DataHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "sync-center",
+      "path": "/sync-center",
+      "shellPath": "/sync-center",
+      "container": "SyncCenterContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "billing",
+      "path": "/billing",
+      "shellPath": "/billing",
+      "container": "BillingHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "assistant",
+      "path": "/assistant",
+      "shellPath": "/assistant",
+      "container": "AiAssistantContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": true,
+      "hubTabs": false,
+      "segmentedControl": true,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "governance",
+      "path": "/governance",
+      "shellPath": "/governance",
+      "container": "GovernanceHubContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": false,
+      "mobileHook": false,
+      "hubTabs": true,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "developers",
+      "path": "/developers",
+      "shellPath": "/developers",
+      "container": "DevelopersContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": true,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "audit",
+      "path": "/audit",
+      "shellPath": "/audit",
+      "container": "AuditContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": false,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "onboarding",
+      "path": "/onboarding",
+      "shellPath": "/onboarding",
+      "container": "OnboardingContainer",
+      "platforms": { "web": true, "admin": false, "desktop": true, "mobileWebView": true },
+      "responsive": true,
+      "mobileHook": false,
+      "hubTabs": false,
+      "segmentedControl": true,
+      "dialogs": false,
+      "drawers": false,
+      "status": "DISCOVERED"
+    }
+  ],
+  "adminRoutes": [
+    {
+      "id": "admin-ai",
+      "path": "/ai",
+      "source": "apps/admin/app/[lang]/(admin)/ai/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-audit-logs",
+      "path": "/audit-logs",
+      "source": "apps/admin/app/[lang]/(admin)/audit-logs/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-blog",
+      "path": "/blog",
+      "source": "apps/admin/app/[lang]/(admin)/blog/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-blog-new",
+      "path": "/blog/new",
+      "source": "apps/admin/app/[lang]/(admin)/blog/new/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-blog-detail",
+      "path": "/blog/:id",
+      "source": "apps/admin/app/[lang]/(admin)/blog/[id]/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-cms-globals",
+      "path": "/cms/globals",
+      "source": "apps/admin/app/[lang]/(admin)/cms/globals/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-cms-media",
+      "path": "/cms/media",
+      "source": "apps/admin/app/[lang]/(admin)/cms/media/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-cms-pages",
+      "path": "/cms/pages",
+      "source": "apps/admin/app/[lang]/(admin)/cms/pages/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-cms-pages-new",
+      "path": "/cms/pages/new",
+      "source": "apps/admin/app/[lang]/(admin)/cms/pages/new/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-cms-pages-detail",
+      "path": "/cms/pages/:id",
+      "source": "apps/admin/app/[lang]/(admin)/cms/pages/[id]/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-content",
+      "path": "/content",
+      "source": "apps/admin/app/[lang]/(admin)/content/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-customers",
+      "path": "/customers",
+      "source": "apps/admin/app/[lang]/(admin)/customers/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-dashboard",
+      "path": "/dashboard",
+      "source": "apps/admin/app/[lang]/(admin)/dashboard/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-market",
+      "path": "/market",
+      "source": "apps/admin/app/[lang]/(admin)/market/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-oauth-apps",
+      "path": "/oauth-apps",
+      "source": "apps/admin/app/[lang]/(admin)/oauth-apps/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-offline",
+      "path": "/offline",
+      "source": "apps/admin/app/[lang]/(admin)/offline/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-operations",
+      "path": "/operations",
+      "source": "apps/admin/app/[lang]/(admin)/operations/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-product",
+      "path": "/product",
+      "source": "apps/admin/app/[lang]/(admin)/product/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-revenue",
+      "path": "/revenue",
+      "source": "apps/admin/app/[lang]/(admin)/revenue/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-security",
+      "path": "/security",
+      "source": "apps/admin/app/[lang]/(admin)/security/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-servers",
+      "path": "/servers",
+      "source": "apps/admin/app/[lang]/(admin)/servers/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-subscriptions",
+      "path": "/subscriptions",
+      "source": "apps/admin/app/[lang]/(admin)/subscriptions/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-users",
+      "path": "/users",
+      "source": "apps/admin/app/[lang]/(admin)/users/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-wallet",
+      "path": "/wallet",
+      "source": "apps/admin/app/[lang]/(admin)/wallet/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-workspaces",
+      "path": "/workspaces",
+      "source": "apps/admin/app/[lang]/(admin)/workspaces/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-login",
+      "path": "/login",
+      "source": "apps/admin/app/[lang]/login/page.tsx",
+      "status": "DISCOVERED"
+    },
+    {
+      "id": "admin-wall",
+      "path": "/wall",
+      "source": "apps/admin/app/[lang]/wall/page.tsx",
+      "status": "DISCOVERED"
+    }
+  ]
+}

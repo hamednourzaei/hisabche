@@ -215,3 +215,33 @@ export function useDecideUpgradeRequest() {
     },
   })
 }
+
+export function useEnsureWorkspaceSubscription() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      workspaceId,
+      plan,
+      status,
+      reason,
+    }: {
+      workspaceId: string
+      plan?: Plan
+      status?: SubscriptionStatus
+      reason?: string
+    }) => {
+      const response = await apiClient.put(`/admin/workspaces/${workspaceId}/subscription`, {
+        ...(plan ? { plan } : {}),
+        ...(status ? { status } : {}),
+        ...(reason ? { reason } : {}),
+      })
+      return response.data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: adminSubscriptionKeys.all })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'workspaces'] })
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'metrics'] })
+    },
+  })
+}

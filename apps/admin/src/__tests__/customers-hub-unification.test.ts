@@ -50,15 +50,21 @@ describe('Customers hub unification', () => {
     ).toBe(false)
   })
 
-  it('the workspace card carries subscription info and expired controls', () => {
+  it('the workspace card carries subscription info and always shows reset controls', () => {
     const row = flat(read('components/workspaces/workspace-row.tsx'))
     expect(row).toContain('data-expired=')
     expect(row).toContain('subscriptionPeriodEnd')
+    expect(row).toContain('trialEndsAt')
     expect(row).toContain("expired ? 'expired'")
     expect(row).toContain('admin.subscriptions.expiredAlert')
     expect(row).toContain('admin.subscriptions.resetSubscription')
+    expect(row).not.toContain('{hasSubscription && (')
+    expect(row).not.toContain(
+      'expired && ( <Button size="sm" variant="outline" disabled={busy} onClick={reset}',
+    )
     expect(row).toContain('useUpdateSubscriptionPlan')
     expect(row).toContain('useUpdateSubscriptionStatus')
+    expect(row).toContain('useEnsureWorkspaceSubscription')
     expect(row).toContain('STATUSES.map')
     expect(row).toContain('PLANS.map')
   })

@@ -19,8 +19,10 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { Plus } from 'lucide-react'
 import { formatNumber } from '@hisabche/formatting'
 import { useBookCurrency } from '../../../hooks/use-book-currency'
+import { useBusinessProfile } from '../../../hooks/use-business-profile'
 import {
   CURRENCY_CODES,
   promotionInputSchema,
@@ -41,6 +43,8 @@ import { readProducts } from '../../../lib/invoices/products'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Button } from '../button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
+import { Input } from '../input'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { SegmentedControl } from '../segmented-control'
@@ -73,6 +77,8 @@ export function PromotionsContainer() {
   const t = useTranslations('promotions')
   const locale = useIntlLocale()
   const { date } = useDateFormat()
+  const { profile } = useBusinessProfile()
+  const isJewellery = profile.primary === 'jewellery'
   const promotions = usePromotions()
   const setActive = useSetPromotionActive()
   const [adding, setAdding] = useState(false)
@@ -186,6 +192,7 @@ export function PromotionsContainer() {
         <Button
           size="sm"
           variant="outline"
+          className="min-h-[44px] sm:min-h-[32px] rounded-xl"
           disabled={setActive.isPending && setActive.variables?.id === promotion.id}
           onClick={() => setActive.mutate({ id: promotion.id, isActive: !promotion.isActive })}
         >
@@ -198,19 +205,14 @@ export function PromotionsContainer() {
     () => (promotions.data ?? []).filter((promotion) => matchesSearch(search, [promotion.name])),
     [promotions.data, search],
   )
+  const totalCount = promotions.data?.length ?? 0
+  const activeCount = useMemo(
+    () => (promotions.data ?? []).filter((promotion) => promotion.isActive).length,
+    [promotions.data],
+  )
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5 px-4">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t('title')}</h1>
-          <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{t('subtitle')}</p>
-        </div>
-        {section === 'promotions' && !adding ? (
-          <Button onClick={() => setAdding(true)}>{t('add')}</Button>
-        ) : null}
-      </header>
-
+    <div className="space-y-3 sm:space-y-3.5" data-guide="pricing-workspace">
       <SegmentedControl
         branch
         label={t('sectionsLabel')}
@@ -219,16 +221,67 @@ export function PromotionsContainer() {
         options={[
           { value: 'promotions', label: t('sections.promotions') },
           { value: 'lists', label: t('sections.lists') },
-          { value: 'goldRates', label: tableT('gold.rateBoardTitle', 'تابلوی نرخ طلا') },
+          ...(isJewellery
+            ? [
+                {
+                  value: 'goldRates' as const,
+                  label: tableT('gold.rateBoardTitle', 'تابلوی نرخ طلا'),
+                },
+              ]
+            : []),
         ]}
       />
 
-      {section === 'lists' ? <PriceListsPanel /> : null}
-      {section === 'goldRates' ? <GoldRateBoardPanel /> : null}
-
-      {section === 'promotions' && adding ? (
-        <PromotionForm onDone={() => setAdding(false)} errorText={errorText} />
+      {section === 'promotions' ? (
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold sm:text-xl text-[hsl(var(--fg-primary))]">
+                {t('title')}
+              </h1>
+              {totalCount > 0 ? (
+                <span className="inline-flex items-center rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2.5 py-0.5 text-xs font-semibold tabular-nums text-[hsl(var(--color-primary))]">
+                  {t('activeSummary', {
+                    active: formatNumber(activeCount, locale, 0),
+                    total: formatNumber(totalCount, locale, 0),
+                  })}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
+              {t('subtitle')}
+            </p>
+          </div>
+          {section === 'promotions' && !adding ? (
+            <Button
+              className="min-h-[44px] sm:min-h-[36px] shrink-0 gap-1.5 rounded-xl"
+              onClick={() => setAdding(true)}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t('add')}
+            </Button>
+          ) : null}
+        </header>
       ) : null}
+
+      {section === 'lists' ? <PriceListsPanel /> : null}
+      {isJewellery && section === 'goldRates' ? <GoldRateBoardPanel /> : null}
+
+      <Dialog
+        open={section === 'promotions' && adding}
+        onOpenChange={(open) => {
+          if (!open) setAdding(false)
+        }}
+      >
+        <DialogContent size="lg">
+          <DialogHeader className="relative z-10 border-b border-[hsl(var(--border-default)/0.6)] pb-3 pe-10">
+            <DialogTitle>{t('newTitle')}</DialogTitle>
+          </DialogHeader>
+          {section === 'promotions' && adding ? (
+            <PromotionForm onDone={() => setAdding(false)} errorText={errorText} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {section !== 'promotions' ? null : promotions.isLoading ? (
         <div className="space-y-2">
@@ -241,9 +294,10 @@ export function PromotionsContainer() {
           {status === 403 ? t('forbidden') : errorText(promotions.error)}
         </p>
       ) : promotions.data.length === 0 ? (
-        <p className={cn(card, 'p-6 text-center text-sm text-[hsl(var(--fg-secondary))]')}>
-          {t('empty')}
-        </p>
+        <div className={cn(card, 'p-6 text-center space-y-2')}>
+          <p className="text-sm font-medium text-[hsl(var(--fg-secondary))]">{t('empty')}</p>
+          <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
+        </div>
       ) : (
         <DataTable
           tableId="promotions"
@@ -266,7 +320,7 @@ export function PromotionsContainer() {
           {errorText(setActive.error)}
         </p>
       ) : null}
-      {section === 'promotions' ? (
+      {section === 'promotions' && promotions.data && promotions.data.length > 0 ? (
         <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('note')}</p>
       ) : null}
     </div>
@@ -319,18 +373,16 @@ function PromotionForm({
   }
 
   return (
-    <section className={cn(card, 'space-y-4 p-4')}>
-      <h2 className="font-semibold text-[hsl(var(--fg-primary))]">{t('newTitle')}</h2>
-
+    <div className="relative z-10 space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1">
           <span className={label}>{t('name')}</span>
-          <input
+          <Input
             name="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={80}
-            className={field}
+            className="min-h-[44px] sm:min-h-[38px]"
           />
         </label>
         <div className="space-y-1">
@@ -350,13 +402,13 @@ function PromotionForm({
         </div>
         <label className="space-y-1">
           <span className={label}>{kind === 'percentage' ? t('percent') : t('amount')}</span>
-          <input
+          <Input
             name="value"
             inputMode="decimal"
             dir="ltr"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            className={cn(field, 'tabular-nums')}
+            className="min-h-[44px] sm:min-h-[38px] tabular-nums"
           />
         </label>
         {kind === 'fixed_amount' ? (
@@ -397,7 +449,7 @@ function PromotionForm({
           name="stacking"
           checked={stacking}
           onChange={(event) => setStacking(event.target.checked)}
-          className="mt-1"
+          className="mt-1 size-4 accent-[hsl(var(--color-primary))]"
         />
         <span>
           {t('stackingLabel')}
@@ -411,15 +463,23 @@ function PromotionForm({
         </p>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button disabled={save.isPending} onClick={submit}>
-          {t('save')}
-        </Button>
-        <Button variant="ghost" onClick={onDone}>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[hsl(var(--border-default)/0.6)] pt-3">
+        <Button
+          variant="ghost"
+          className="min-h-[44px] sm:min-h-[36px] rounded-xl"
+          onClick={onDone}
+        >
           {t('cancel')}
         </Button>
+        <Button
+          className="min-h-[44px] sm:min-h-[36px] rounded-xl"
+          disabled={save.isPending}
+          onClick={submit}
+        >
+          {t('save')}
+        </Button>
       </div>
-    </section>
+    </div>
   )
 }
 

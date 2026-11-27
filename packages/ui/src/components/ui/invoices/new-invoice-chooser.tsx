@@ -131,10 +131,10 @@ export function NewInvoiceChooser({
         data-new-invoice-trigger=""
         className={cn(
           'inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-4 sm:px-5',
-          'min-h-[44px] sm:min-h-[40px]',
-          'text-sm font-bold text-[hsl(var(--color-primary-fg))]',
-          'bg-[hsl(var(--color-primary))]',
-          'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
+          'min-h-[44px] sm:min-h-[38px]',
+          'text-sm font-bold text-white',
+          'bg-[image:var(--gradient-brand)]',
+          'shadow-sm shadow-[hsl(var(--color-primary)/0.2)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
           FOCUS_RING,
           'motion-reduce:transition-none motion-reduce:active:scale-100',

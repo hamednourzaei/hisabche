@@ -135,172 +135,238 @@ export function OpsReorderSection({ t }: OpsSectionProps) {
     }
   }
 
+  const rows = reorder.data ?? []
+  const criticalCount = rows.filter((r) => r.onHand <= 0).length
+  const openPoCount = (purchaseOrders.data ?? []).filter(
+    (po) => po.status !== 'cancelled' && po.status !== 'received',
+  ).length
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3">
-        <div className="min-w-44 flex-1">
-          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
-            {tr('ops.supplierForDraft', 'تأمین‌کننده')}
-          </label>
-          <SelectField
-            value={selectedSupplierId}
-            onChange={setSelectedSupplierId}
-            options={supplierOptions}
-            placeholder={tr('ops.selectSupplier', 'انتخاب تأمین‌کننده')}
-            searchable
-          />
-        </div>
-        <div className="w-28">
-          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
-            {tr('ops.packSize', 'ضریب بسته')}
-          </label>
-          <input
-            type="number"
-            min={1}
-            value={packSizeInput}
-            onChange={(e) => setPackSizeInput(e.target.value)}
-            className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
-          />
-        </div>
-        <div className="w-36">
-          <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
-            {tr('ops.unitPriceForDraft', 'قیمت واحد پیشنهادی')}
-          </label>
-          <input
-            type="number"
-            min={0}
-            value={unitPriceInput}
-            onChange={(e) => setUnitPriceInput(e.target.value)}
-            className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={handleDraftAll}
-          disabled={createDraftPos.isPending || (reorder.data?.length ?? 0) === 0}
-          className="h-9 rounded-md bg-[hsl(var(--color-primary))] px-3 text-xs font-medium text-[hsl(var(--color-primary-fg))] disabled:opacity-50"
-        >
-          {tr('ops.createDraftPo', 'ایجاد پیش‌نویس سفارش خرید')}
-        </button>
-        {draftFeedback ? (
-          <p className="w-full text-xs text-[hsl(var(--fg-secondary))]">{draftFeedback}</p>
-        ) : null}
-      </div>
-
-      <SearchableTable
-        tableId="ops-reorder"
-        rows={reorder.data ?? []}
-        rowKey={(item) => item.productId}
-        words={(item) => [item.productName]}
-        empty={
-          <EmptyState
-            title={tr('ops.reorderEmpty', 'هیچ کالایی به نقطه‌ی سفارش نرسیده')}
-            description={tr('ops.reorderEmptyHint', 'موجودی همه‌ی کالاها بالای حد تعیین‌شده است.')}
-          />
-        }
-        columns={[
-          {
-            id: 'product',
-            labelKey: 'ops.product',
-            labelFallback: 'کالا',
-            locked: true,
-            sortValue: (item) => item.productName,
-            render: (item) => <span className="font-medium">{item.productName}</span>,
-          },
-          {
-            id: 'onHand',
-            labelKey: 'ops.onHand',
-            labelFallback: 'موجودی',
-            align: 'end',
-            sortValue: (item) => item.onHand,
-            render: (item) => <span className="tabular-nums">{num(item.onHand)}</span>,
-          },
-          {
-            id: 'reorderLevel',
-            labelKey: 'ops.reorderLevel',
-            labelFallback: 'نقطه‌ی سفارش',
-            align: 'end',
-            showFrom: 'md',
-            sortValue: (item) => item.reorderLevel,
-            render: (item) => <span className="tabular-nums">{num(item.reorderLevel)}</span>,
-          },
-          {
-            id: 'suggested',
-            labelKey: 'ops.suggested',
-            labelFallback: 'پیشنهاد',
-            align: 'end',
-            sortValue: (item) => item.suggestedQuantity,
-            render: (item) => (
-              <span className="font-semibold tabular-nums">{num(item.suggestedQuantity)}</span>
-            ),
-          },
-          {
-            id: 'daysOfCover',
-            labelKey: 'ops.daysOfCover',
-            labelFallback: 'کفایت (روز)',
-            align: 'end',
-            showFrom: 'md',
-            sortValue: (item) => item.daysOfCover ?? null,
-            render: (item) => <span className="tabular-nums">{orDash(item.daysOfCover, num)}</span>,
-          },
-        ]}
-      />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-[hsl(var(--border-default))] p-3">
-          <h4 className="mb-2 text-sm font-medium">
-            {tr('ops.threeWayMatchTitle', 'تطبیق سه‌جانبه (سفارش / رسید / فاکتور)')}
-          </h4>
-          <SelectField
-            value={selectedPoId}
-            onChange={setSelectedPoId}
-            options={poOptions}
-            placeholder={tr('ops.selectPoForMatch', 'انتخاب سفارش خرید')}
-            searchable
-          />
-          {selectedPoId && threeWayMatch.isError ? (
-            <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
-              {apiErrorMessage(threeWayMatch.error, tr('ops.loadFailed', 'این بخش خوانده نشد.'))}
+    <div className="space-y-3.5 sm:space-y-4">
+      {/* Compact Replenishment Summary Strip (88-104px laptop budget) */}
+      <section
+        aria-label={tr('ops.reorderSummaryTitle', 'خلاصه تأمین مجدد انبار')}
+        className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0">
+          <div className="min-w-0 px-4 py-3">
+            <p className="text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.reorderItemsCount', 'اقلام نیازمند سفارش')}
             </p>
-          ) : selectedPoId && threeWayMatch.data ? (
-            <div className="mt-2 space-y-2 text-xs">
-              <p className="font-medium">
-                {threeWayMatch.data.matched
-                  ? tr('ops.threeWayMatched', 'تطبیق کامل — آماده تأیید پرداخت')
-                  : tr('ops.threeWayBlocked', 'مغایرت یافت شد — پرداخت متوقف است')}
-              </p>
-              {threeWayMatch.data.mismatches.map((m, idx) => (
-                <p key={`${m.code}-${idx}`} className="text-[hsl(var(--color-destructive))]">
-                  {m.code}: {m.detail}
-                </p>
-              ))}
-              <ReceiptQualitySection poId={selectedPoId} t={t} />
-            </div>
+            <p className="mt-1 text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+              {num(rows.length)}
+            </p>
+          </div>
+          <div className="min-w-0 px-4 py-3 sm:border-s sm:border-[hsl(var(--border-default)/0.6)]">
+            <p className="text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.reorderCriticalCount', 'کمبود بحرانی (موجودی صفر یا منفی)')}
+            </p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-[hsl(var(--color-destructive))]">
+              {num(criticalCount)}
+            </p>
+          </div>
+          <div className="min-w-0 px-4 py-3 sm:border-s sm:border-[hsl(var(--border-default)/0.6)]">
+            <p className="text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.openPoCount', 'سفارش‌های خرید باز')}
+            </p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+              {num(openPoCount)}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Only show Purchase Order Draft controls when there are actual reorder suggestions */}
+      {rows.length > 0 ? (
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5">
+          <div className="min-w-44 flex-1">
+            <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.supplierForDraft', 'تأمین‌کننده')}
+            </label>
+            <SelectField
+              value={selectedSupplierId}
+              onChange={setSelectedSupplierId}
+              options={supplierOptions}
+              placeholder={tr('ops.selectSupplier', 'انتخاب تأمین‌کننده')}
+              searchable
+            />
+          </div>
+          <div className="w-28">
+            <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.packSize', 'ضریب بسته')}
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={packSizeInput}
+              onChange={(e) => setPackSizeInput(e.target.value)}
+              className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
+            />
+          </div>
+          <div className="w-36">
+            <label className="mb-1 block text-xs text-[hsl(var(--fg-secondary))]">
+              {tr('ops.unitPriceForDraft', 'قیمت واحد پیشنهادی')}
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={unitPriceInput}
+              onChange={(e) => setUnitPriceInput(e.target.value)}
+              className="h-9 w-full rounded-md border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 text-sm tabular-nums"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleDraftAll}
+            disabled={createDraftPos.isPending}
+            className="min-h-[44px] sm:min-h-[36px] rounded-xl bg-[hsl(var(--color-primary))] px-3.5 text-xs font-semibold text-[hsl(var(--color-primary-fg))] disabled:opacity-50"
+          >
+            {tr('ops.createDraftPo', 'ایجاد پیش‌نویس سفارش خرید')}
+          </button>
+          {draftFeedback ? (
+            <p className="w-full text-xs text-[hsl(var(--fg-secondary))]">{draftFeedback}</p>
           ) : null}
         </div>
+      ) : null}
 
-        <div className="rounded-lg border border-[hsl(var(--border-default))] p-3">
-          <h4 className="mb-2 text-sm font-medium">
-            {tr('ops.supplierScorecardTitle', 'کارنامه تأمین‌کنندگان')}
-          </h4>
-          {(scorecard.data ?? []).length === 0 ? (
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {tr('ops.supplierScorecardEmpty', 'داده‌ای برای ارزیابی تأمین‌کنندگان موجود نیست.')}
-            </p>
-          ) : (
-            <ul className="space-y-1 text-xs">
-              {(scorecard.data ?? []).slice(0, 6).map((row) => (
-                <li key={row.supplierId} className="flex items-center justify-between gap-2">
-                  <span className="truncate font-medium">{row.name}</span>
-                  <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
-                    {row.band} ({row.evidence.purchases})
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3">
+        <SearchableTable
+          tableId="ops-reorder"
+          rows={rows}
+          rowKey={(item) => item.productId}
+          words={(item) => [item.productName]}
+          empty={
+            <EmptyState
+              title={tr('ops.reorderEmpty', 'هیچ کالایی به نقطه‌ی سفارش نرسیده')}
+              description={tr(
+                'ops.reorderEmptyHint',
+                'موجودی همه‌ی کالاها بالای حد تعیین‌شده است.',
+              )}
+            />
+          }
+          columns={[
+            {
+              id: 'product',
+              labelKey: 'ops.product',
+              labelFallback: 'کالا',
+              locked: true,
+              sortValue: (item) => item.productName,
+              render: (item) => <span className="font-medium">{item.productName}</span>,
+            },
+            {
+              id: 'onHand',
+              labelKey: 'ops.onHand',
+              labelFallback: 'موجودی',
+              align: 'end',
+              sortValue: (item) => item.onHand,
+              render: (item) => (
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <span
+                    className={
+                      item.onHand <= 0
+                        ? 'rounded-md bg-[hsl(var(--color-destructive)/0.12)] px-1.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--color-destructive))]'
+                        : 'rounded-md bg-[hsl(var(--color-warning)/0.12)] px-1.5 py-0.5 text-[10px] font-semibold text-[hsl(var(--color-warning))]'
+                    }
+                  >
+                    {item.onHand <= 0
+                      ? tr('ops.priorityCritical', 'بحرانی')
+                      : tr('ops.priorityLow', 'کمبود')}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  <span>{num(item.onHand)}</span>
+                </span>
+              ),
+            },
+            {
+              id: 'reorderLevel',
+              labelKey: 'ops.reorderLevel',
+              labelFallback: 'نقطه‌ی سفارش',
+              align: 'end',
+              showFrom: 'md',
+              sortValue: (item) => item.reorderLevel,
+              render: (item) => <span className="tabular-nums">{num(item.reorderLevel)}</span>,
+            },
+            {
+              id: 'suggested',
+              labelKey: 'ops.suggested',
+              labelFallback: 'پیشنهاد',
+              align: 'end',
+              sortValue: (item) => item.suggestedQuantity,
+              render: (item) => (
+                <span className="font-semibold tabular-nums">{num(item.suggestedQuantity)}</span>
+              ),
+            },
+            {
+              id: 'daysOfCover',
+              labelKey: 'ops.daysOfCover',
+              labelFallback: 'کفایت (روز)',
+              align: 'end',
+              showFrom: 'md',
+              sortValue: (item) => item.daysOfCover ?? null,
+              render: (item) => (
+                <span className="tabular-nums">{orDash(item.daysOfCover, num)}</span>
+              ),
+            },
+          ]}
+        />
       </div>
+
+      {poOptions.length > 0 || (scorecard.data?.length ?? 0) > 0 ? (
+        <div className="grid gap-3.5 md:grid-cols-2">
+          <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5">
+            <h4 className="mb-2 text-sm font-semibold">
+              {tr('ops.threeWayMatchTitle', 'تطبیق سه‌جانبه (سفارش / رسید / فاکتور)')}
+            </h4>
+            <SelectField
+              value={selectedPoId}
+              onChange={setSelectedPoId}
+              options={poOptions}
+              placeholder={tr('ops.selectPoForMatch', 'انتخاب سفارش خرید')}
+              searchable
+            />
+            {selectedPoId && threeWayMatch.isError ? (
+              <p role="alert" className="mt-2 text-xs text-[hsl(var(--color-destructive))]">
+                {apiErrorMessage(threeWayMatch.error, tr('ops.loadFailed', 'این بخش خوانده نشد.'))}
+              </p>
+            ) : selectedPoId && threeWayMatch.data ? (
+              <div className="mt-2 space-y-2 text-xs">
+                <p className="font-medium">
+                  {threeWayMatch.data.matched
+                    ? tr('ops.threeWayMatched', 'تطبیق کامل — آماده تأیید پرداخت')
+                    : tr('ops.threeWayBlocked', 'مغایرت یافت شد — پرداخت متوقف است')}
+                </p>
+                {threeWayMatch.data.mismatches.map((m, idx) => (
+                  <p key={`${m.code}-${idx}`} className="text-[hsl(var(--color-destructive))]">
+                    {m.code}: {m.detail}
+                  </p>
+                ))}
+                <ReceiptQualitySection poId={selectedPoId} t={t} />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5">
+            <h4 className="mb-2 text-sm font-semibold">
+              {tr('ops.supplierScorecardTitle', 'کارنامه تأمین‌کنندگان')}
+            </h4>
+            {(scorecard.data ?? []).length === 0 ? (
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {tr('ops.supplierScorecardEmpty', 'داده‌ای برای ارزیابی تأمین‌کنندگان موجود نیست.')}
+              </p>
+            ) : (
+              <ul className="space-y-1.5 text-xs">
+                {(scorecard.data ?? []).slice(0, 6).map((row) => (
+                  <li key={row.supplierId} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium">{row.name}</span>
+                    <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+                      {row.band} ({row.evidence.purchases})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

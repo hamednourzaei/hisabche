@@ -439,9 +439,10 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
   ]
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <section className="space-y-3.5 sm:space-y-4">
+      <div className="flex w-full justify-center border-b border-[hsl(var(--border-default)/0.6)] pb-2.5">
         <SegmentedControl
+          branch
           label={t('salesHub.orders.viewLabel', 'بخش سفارش و ارسال')}
           value={view}
           onChange={setView}
@@ -453,9 +454,9 @@ export const SalesOrdersContainer = memo(function SalesOrdersContainer() {
       </div>
 
       {view === 'orders' ? (
-        <div className="space-y-4">
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:p-4 space-y-4">
           <form
-            className="grid gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:grid-cols-5"
+            className="grid gap-2 rounded-xl border border-[hsl(var(--border-default)/0.7)] bg-[hsl(var(--surface-muted)/0.3)] p-3 sm:grid-cols-5"
             onSubmit={(e) => {
               e.preventDefault()
               const qty = Number(quantity)

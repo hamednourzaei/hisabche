@@ -94,25 +94,15 @@ export class EntitlementService {
     return `limits:${userId}`
   }
 
-  // ─── Get all entitlements (with cache) ──────────────────────
+  // ─── Get all entitlements (live from DB, no stale cache) ─────
   async getEntitlements(userId: string): Promise<Entitlements> {
-    const cacheKey = this.getEntitlementsCacheKey(userId)
-
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached as Entitlements
-
     const subscription = await this.billingService.getCurrentSubscription(userId)
     const plan = subscription.plan as string
 
-    let entitlements: Entitlements
     if (subscription.isTrial && plan !== 'free' && plan !== 'FREE') {
-      entitlements = this.getFullEntitlements()
-    } else {
-      entitlements = this.getEntitlementsForPlan(plan)
+      return this.getFullEntitlements()
     }
-
-    await memoryCache.set(cacheKey, entitlements, 300) // 5 minutes
-    return entitlements
+    return this.getEntitlementsForPlan(plan)
   }
 
   // ─── Check a single entitlement ─────────────────────────────

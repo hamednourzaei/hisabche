@@ -225,46 +225,43 @@ function AddedKpiCard({
   const iconButton =
     'inline-flex size-7 items-center justify-center rounded-md text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] disabled:opacity-50'
   return (
-    <div data-custom-kpi={id}>
+    <div
+      data-custom-kpi={id}
+      className="flex flex-col justify-between rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden"
+    >
       <KpiCard
+        surface="none"
         icon={ICON[id]}
         label={tr(labelKey(id))}
-        labelAddon={
-          <span className="ms-auto flex items-center gap-0.5">
-            <button
-              type="button"
-              className={iconButton}
-              aria-label={tr('dashboard.customKpi.replace')}
-              title={tr('dashboard.customKpi.replace')}
-              disabled={busy}
-              onClick={(event) => {
-                event.stopPropagation()
-                onReplace()
-              }}
-            >
-              <ArrowLeftRight className="size-3.5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={iconButton}
-              aria-label={tr('dashboard.customKpi.remove')}
-              title={tr('dashboard.customKpi.remove')}
-              disabled={busy}
-              onClick={(event) => {
-                event.stopPropagation()
-                onRemove()
-              }}
-            >
-              <Trash2 className="size-3.5" aria-hidden="true" />
-            </button>
-          </span>
-        }
         value={figure.value}
         delta={null}
         isLoading={figure.loading}
         onOpen={() => onNavigate(HREF[id])}
         openLabel={tr(labelKey(id))}
+        className="flex-1 rounded-none"
       />
+      <div className="flex items-center justify-end gap-1 border-t border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.25)] px-2.5 py-1">
+        <button
+          type="button"
+          className={iconButton}
+          aria-label={tr('dashboard.customKpi.replace')}
+          title={tr('dashboard.customKpi.replace')}
+          disabled={busy}
+          onClick={onReplace}
+        >
+          <ArrowLeftRight className="size-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className={iconButton}
+          aria-label={tr('dashboard.customKpi.remove')}
+          title={tr('dashboard.customKpi.remove')}
+          disabled={busy}
+          onClick={onRemove}
+        >
+          <Trash2 className="size-3.5" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   )
 }

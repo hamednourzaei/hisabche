@@ -232,39 +232,46 @@ function WarehouseHub() {
   }, [oldMapAddress, mapWarehouse, localeReplace])
 
   return (
-    <div className="relative space-y-4" data-guide="warehouse-page">
-      <RegisterCustomizer
-        groups={[
-          {
-            title: t('pageLook.hubSections' as never),
-            look,
-            keepOne: true,
-            items: [
-              ...(allowedTabs.includes('expiry')
-                ? [{ id: hubLookId('expiry', 'expiry'), label: t('warehouseHub.tabs.expiry') }]
-                : []),
-              ...(allowedTabs.includes('stock')
-                ? STOCK_SECTIONS.map((sec) => ({
-                    id: hubLookId('stock', sec),
-                    label: t(`warehouseHub.sections.${sec}`),
-                  }))
-                : []),
-            ],
-          },
-        ]}
-      />
-      <HubTabs
-        label={t('warehouseHub.label')}
-        items={offered.map((tab) => ({
-          id: tab,
-          label: t(`warehouseHub.tabs.${tab}`),
-          icon: TAB_ICON[tab],
-        }))}
-        active={active}
-        onSelect={select}
-      />
+    <div className="relative space-y-3.5 sm:space-y-4 pb-20 lg:pb-0" data-guide="warehouse-page">
+      <div className="flex flex-col items-center gap-2.5 border-b border-[hsl(var(--border-default)/0.6)] pb-3 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center">
+        <div className="hidden md:block" aria-hidden="true" />
+        <div className="flex justify-center">
+          <HubTabs
+            label={t('warehouseHub.label')}
+            items={offered.map((tab) => ({
+              id: tab,
+              label: t(`warehouseHub.tabs.${tab}`),
+              icon: TAB_ICON[tab],
+            }))}
+            active={active}
+            onSelect={select}
+          />
+        </div>
+        <div className="flex justify-center md:justify-end">
+          <RegisterCustomizer
+            groups={[
+              {
+                title: t('pageLook.hubSections' as never),
+                look,
+                keepOne: true,
+                items: [
+                  ...(allowedTabs.includes('expiry')
+                    ? [{ id: hubLookId('expiry', 'expiry'), label: t('warehouseHub.tabs.expiry') }]
+                    : []),
+                  ...(allowedTabs.includes('stock')
+                    ? STOCK_SECTIONS.map((sec) => ({
+                        id: hubLookId('stock', sec),
+                        label: t(`warehouseHub.sections.${sec}`),
+                      }))
+                    : []),
+                ],
+              },
+            ]}
+          />
+        </div>
+      </div>
 
-      <div role="tabpanel" className="space-y-4">
+      <div role="tabpanel" className="space-y-3.5 sm:space-y-4">
         {active === 'expiry' ? (
           <Suspense
             fallback={
@@ -277,19 +284,21 @@ function WarehouseHub() {
           </Suspense>
         ) : (
           <>
-            <SegmentedControl
-              branch
-              label={t('warehouseHub.sectionsLabel')}
-              options={STOCK_SECTION_BAR_ORDER.map((value) => ({
-                value,
-                label: t(`warehouseHub.sections.${value}`),
-                icon: STOCK_SECTION_ICON[value],
-              }))}
-              value={section}
-              onChange={selectSection}
-              overflowAfter={STOCK_SECTION_BAR_COUNT}
-              moreLabel={t('nav.more')}
-            />
+            <div className="flex w-full justify-center">
+              <SegmentedControl
+                branch
+                label={t('warehouseHub.sectionsLabel')}
+                options={STOCK_SECTION_BAR_ORDER.map((value) => ({
+                  value,
+                  label: t(`warehouseHub.sections.${value}`),
+                  icon: STOCK_SECTION_ICON[value],
+                }))}
+                value={section}
+                onChange={selectSection}
+                overflowAfter={STOCK_SECTION_BAR_COUNT}
+                moreLabel={t('nav.more')}
+              />
+            </div>
             {/* Both branches are ELEMENTS. See WarehouseStockTab above for why. */}
             {section === 'reorder' || section === 'deadStock' ? (
               <Suspense
@@ -319,8 +328,10 @@ function WarehouseHub() {
           </>
         )}
       </div>
-      <WarehouseDiagnosticsPanel />
-      <AgriculturePanel />
+      {active === 'stock' && (section === 'products' || section === 'warehouses') ? (
+        <WarehouseDiagnosticsPanel />
+      ) : null}
+      {active === 'stock' && section === 'warehouses' ? <AgriculturePanel industryOnly /> : null}
     </div>
   )
 }

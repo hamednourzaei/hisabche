@@ -27,7 +27,7 @@
 
 import { Suspense, lazy } from 'react'
 import { useTranslations } from 'next-intl'
-import { PackageCheck, ReceiptText, Tags } from 'lucide-react'
+import { ReceiptText, Tags } from 'lucide-react'
 import { useMyCapabilities } from '@hisabche/api'
 import { isNavLocked } from '@hisabche/ui-contract'
 
@@ -37,14 +37,11 @@ import { RegisterCustomizer } from '../../register-customizer'
 import { hubLookId } from '../../page-hub'
 import { InvoicesContainer } from './invoices-container'
 
-const SalesOrdersContainer = lazy(() =>
-  import('./sales-orders-container').then((m) => ({ default: m.SalesOrdersContainer })),
-)
 const PromotionsContainer = lazy(() =>
   import('../../promotions/promotions-container').then((m) => ({ default: m.PromotionsContainer })),
 )
 
-export const SALES_HUB_TABS = ['invoices', 'orders', 'pricing'] as const
+export const SALES_HUB_TABS = ['invoices', 'pricing'] as const
 export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
 
 /**
@@ -53,11 +50,10 @@ export type SalesHubTab = (typeof SALES_HUB_TABS)[number]
  */
 export const SALES_HUB_SOURCE: Record<SalesHubTab, string> = {
   invoices: '/invoices',
-  orders: '/invoices',
   pricing: '/promotions',
 }
 
-const TAB_ICON = { invoices: ReceiptText, orders: PackageCheck, pricing: Tags } as const
+const TAB_ICON = { invoices: ReceiptText, pricing: Tags } as const
 
 export function SalesHubContainer() {
   return <SalesHub />
@@ -72,26 +68,37 @@ function SalesHub() {
   const [active, select] = useHubTab(offered)
 
   return (
-    <div className="relative space-y-4">
-      <RegisterCustomizer
-        groups={[
-          {
-            title: tGlobal('pageLook.hubSections' as Parameters<typeof tGlobal>[0]),
-            look,
-            keepOne: true,
-            items: SALES_HUB_TABS.map((tab) => ({
-              id: hubLookId(tab, tab),
-              label: t(`tabs.${tab}` as Parameters<typeof t>[0]),
-            })),
-          },
-        ]}
-      />
-      <HubTabs
-        label={t('label')}
-        items={offered.map((tab) => ({ id: tab, label: t(`tabs.${tab}`), icon: TAB_ICON[tab] }))}
-        active={active}
-        onSelect={select}
-      />
+    <div className="relative space-y-2.5 sm:space-y-3 pb-20 lg:pb-0" data-guide="sales-hub">
+      <div className="flex flex-col items-center gap-2 border-b border-[hsl(var(--border-default)/0.6)] pb-2.5 md:grid md:grid-cols-[1fr_auto_1fr] md:items-center">
+        <div className="hidden md:block" aria-hidden="true" />
+        <div className="flex justify-center">
+          <HubTabs
+            label={t('label')}
+            items={offered.map((tab) => ({
+              id: tab,
+              label: t(`tabs.${tab}`),
+              icon: TAB_ICON[tab],
+            }))}
+            active={active}
+            onSelect={select}
+          />
+        </div>
+        <div className="flex justify-center md:justify-end">
+          <RegisterCustomizer
+            groups={[
+              {
+                title: tGlobal('pageLook.hubSections' as Parameters<typeof tGlobal>[0]),
+                look,
+                keepOne: true,
+                items: SALES_HUB_TABS.map((tab) => ({
+                  id: hubLookId(tab, tab),
+                  label: t(`tabs.${tab}` as Parameters<typeof t>[0]),
+                })),
+              },
+            ]}
+          />
+        </div>
+      </div>
 
       <div role="tabpanel">
         {active === 'pricing' ? (
@@ -103,16 +110,6 @@ function SalesHub() {
             }
           >
             <PromotionsContainer />
-          </Suspense>
-        ) : active === 'orders' ? (
-          <Suspense
-            fallback={
-              <p role="status" className="p-4 text-sm text-[hsl(var(--fg-secondary))]">
-                {t('loading')}
-              </p>
-            }
-          >
-            <SalesOrdersContainer />
           </Suspense>
         ) : (
           <InvoicesContainer />
